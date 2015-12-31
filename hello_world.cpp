@@ -195,6 +195,7 @@ private:
 		callback_data->second.SetWeak(callback_data, V8ClassWrapper<T>::v8_destructor);
 	}
 	
+	// users of the library should call get_instance, not the constructor directly
 	V8ClassWrapper(Isolate * isolate) : isolate(isolate) {
 		// create a function template even if no javascript constructor will be used so 
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
@@ -225,13 +226,22 @@ public:
 	}
 	
 	/**
+	* V8ClassWrapper objects shouldn't be deleted during the normal flow of your program unless the associated isolate
+	*   is going away forever.   Things will break otherwise as no additional objects will be able to be created
+	*   even though V8 will still present the ability to your javascript (I think)
+	*/
+	virtual ~V8ClassWrapper(){
+		isolate_to_wrapper_map.erase(this->isolate);
+	}
+	
+	/**
 	* Creates a javascript method of the specified name which, when called with the "new" keyword, will return
 	*   a new object of this type
 	*/
-	V8ClassWrapper<T> & add_constructor(std::string class_name, Local<ObjectTemplate> & parent_template) {
+	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, Local<ObjectTemplate> & parent_template) {
 				
 		// Add the constructor function to the parent object template (often the global template)
-		parent_template->Set(v8::String::NewFromUtf8(isolate, class_name.c_str()), this->constructor_template);
+		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), this->constructor_template);
 		
 		return *this;
 	}
