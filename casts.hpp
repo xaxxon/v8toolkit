@@ -24,7 +24,6 @@ struct CastToNative<std::string> {
 
 
 
-
 template<>
 struct CastToJS<int> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Integer::New(isolate, value);}
@@ -40,5 +39,5 @@ struct CastToJS<const char *> {
 
 template<typename T>
 struct CastToJS<T*> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){return V8ClassWrapper<T>::wrap_existing_cpp_object(cpp_object);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){return V8ClassWrapper<T>::get_instance(isolate).wrap_existing_cpp_object(cpp_object);}
 };

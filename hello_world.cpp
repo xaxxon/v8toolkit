@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <map>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -125,7 +126,7 @@ class Caller {};
 /**
 * Specialization for when there are no parameters left to process, so it is time to actually
 * call the function
-*/
+*/	
 template<int depth, typename METHOD_TYPE, typename RET, typename CLASS_TYPE>
 class Caller<depth, METHOD_TYPE, RET(CLASS_TYPE::*)()> {
 public:
@@ -176,6 +177,8 @@ template<class T>
 class V8ClassWrapper {
 private:
 	
+	static std::map<Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
+	
 	// Common tasks to do for any new js object regardless of how it is created
 	static void _initialize_new_js_object(Isolate * isolate, Local<Object> js_object, T * cpp_object) {
 	    js_object->SetInternalField(0, External::New(isolate, cpp_object));
@@ -191,30 +194,44 @@ private:
 		callback_data->second.SetWeak(callback_data, V8ClassWrapper<T>::v8_destructor);
 	}
 	
-protected:
-	static Local<FunctionTemplate> constructor_template;
-	static Isolate * isolate;
-	
-public:
-	
-	// This doesn't work well with multiple isolates. 
-	V8ClassWrapper(std::string class_name, Isolate * isolate, Local<ObjectTemplate> & parent_template) {
-		
-		V8ClassWrapper<T>::isolate = isolate;
-		
-		// Create the function template for the JS constructor method
+	V8ClassWrapper(Isolate * isolate) : isolate(isolate) {
+		// create a function template even if no javascript constructor will be used so 
+		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
+		//   later the FunctionTemplate will be ready to go
 		this->constructor_template = FunctionTemplate::New(isolate, V8ClassWrapper<T>::v8_constructor);
 		
 		// When creating a new object, make sure they have room for a c++ object to shadow it
 		this->constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
 		
+	}
+	
+protected:
+	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
+	Local<FunctionTemplate> constructor_template;
+	Isolate * isolate;
+	
+public:
+	
+	
+	static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
+		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
+			isolate_to_wrapper_map.insert(std::make_pair(isolate, new V8ClassWrapper<T>(isolate)));
+		}
+		return *isolate_to_wrapper_map[isolate];
+	}
+	
+	// This doesn't work well with multiple isolates. 
+	V8ClassWrapper<T> & add_constructor(std::string class_name, Local<ObjectTemplate> & parent_template) {
+				
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, class_name.c_str()), this->constructor_template);
+		
+		return *this;
 	}
 	
 	// Not sure if this properly sets the prototype of the new object like when the constructor functiontemplate is called as
 	//   a constructor from javascript
-	static Local<v8::Object> wrap_existing_cpp_object(T * existing_cpp_object) {
+	Local<v8::Object> wrap_existing_cpp_object(T * existing_cpp_object) {
 		auto new_js_object = constructor_template->InstanceTemplate()->NewInstance();
 		_initialize_new_js_object(isolate, new_js_object, existing_cpp_object);
 		return new_js_object;
@@ -258,7 +275,7 @@ public:
 	}
 	
 	template<typename MEMBER_TYPE>
-	V8ClassWrapper & add_member(MEMBER_TYPE T::* member, std::string member_name) {
+	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) {
 		typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE; 
 
 		// this lambda is shared between the getter and the setter so it can only do work needed by both
@@ -272,7 +289,7 @@ public:
 	
 	
 	template<typename METHOD_TYPE>
-	V8ClassWrapper & add_method(METHOD_TYPE method, std::string method_name) {
+	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name) {
 		
 		// this is leaked if this ever isn't used anymore
 		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) {
@@ -327,9 +344,8 @@ public:
 	}
 };
 
-template <class T> Local<FunctionTemplate> V8ClassWrapper<T>::constructor_template;
+template <class T> std::map<Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
 
-template <class T> Isolate * V8ClassWrapper<T>::isolate = nullptr;
 
 
 // getter and setter for looking up the .x field in a Point object
@@ -414,8 +430,8 @@ int main(int argc, char* argv[]) {
 	// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 	
 	// make the Point constructor function available to JS
-	V8ClassWrapper<Point> wrapped_point("Point", isolate, global_templ);
-	wrapped_point.add_method(&Point::thing, "thing");
+	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate).add_constructor("Point", global_templ).add_method(&Point::thing, "thing");
+	// wrapped_point
 	
 	// overloaded functions can be individually addressed, but they can't be the same name to javascript
 	//   at least not without some serious finagling of storing a mapping between a singlne name and 
