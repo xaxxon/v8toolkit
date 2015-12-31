@@ -24,7 +24,7 @@ using namespace std;
 // call non-default constructors for objects based on javascript parameters 
 //   var my_class = new MyClass(1,2,3); 
 //   right now this ignores the 1,2,3 and uses default constructor
-// 
+//   use best guess based on parameter types?  or maybe not do this at all
 
 
 
@@ -43,6 +43,7 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 #include <iostream>
 #include <fstream>
 
+// helper for testing code, not a part of the library
 // read the contents of the file and return it as a std::string
 std::string get_file_contents(const char *filename)
 {
@@ -62,7 +63,7 @@ std::string get_file_contents(const char *filename)
 
 
 
-
+// random sample class for wrapping - not actually a part of the library
 class Point {
 public:
 	Point() : x_(0), y_(0) {printf("created Point\n");}
@@ -212,7 +213,10 @@ protected:
 	
 public:
 	
-	
+	/**
+	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
+	* For each isolate you need to add constructors/methods/members separately.
+	*/
 	static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
 		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
 			isolate_to_wrapper_map.insert(std::make_pair(isolate, new V8ClassWrapper<T>(isolate)));
@@ -220,7 +224,10 @@ public:
 		return *isolate_to_wrapper_map[isolate];
 	}
 	
-	// This doesn't work well with multiple isolates. 
+	/**
+	* Creates a javascript method of the specified name which, when called with the "new" keyword, will return
+	*   a new object of this type
+	*/
 	V8ClassWrapper<T> & add_constructor(std::string class_name, Local<ObjectTemplate> & parent_template) {
 				
 		// Add the constructor function to the parent object template (often the global template)
@@ -231,6 +238,9 @@ public:
 	
 	// Not sure if this properly sets the prototype of the new object like when the constructor functiontemplate is called as
 	//   a constructor from javascript
+	/**
+	* Used when wanting to return an object from a c++ function call back to javascript
+	*/
 	Local<v8::Object> wrap_existing_cpp_object(T * existing_cpp_object) {
 		auto new_js_object = constructor_template->InstanceTemplate()->NewInstance();
 		_initialize_new_js_object(isolate, new_js_object, existing_cpp_object);
@@ -274,6 +284,10 @@ public:
 		auto & m2 = (*member_reference_getter)(cpp_object);
 	}
 	
+	/**
+	* Adds a getter and setter method for the specified class member
+	* add_member(&ClassName::member_name, "javascript_attribute_name");
+	*/
 	template<typename MEMBER_TYPE>
 	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) {
 		typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE; 
@@ -288,6 +302,10 @@ public:
 	}
 	
 	
+	/**
+	* adds the ability to call the specified class instance method on an object of this type
+	* add_method(&ClassName::method_name, "javascript_attribute_name");
+	*/
 	template<typename METHOD_TYPE>
 	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name) {
 		
@@ -313,6 +331,7 @@ public:
 	
 	typedef std::pair<T*, Global<Object>> SetWeakCallbackParameter;
 	
+	// Helper for creating objects when "new MyClass" is called from java
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
 		
@@ -326,6 +345,8 @@ public:
 		args.GetReturnValue().Set(args.This());
 	}
 
+	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
+	// garbage collected
 	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
 		auto isolate = data.GetIsolate();
 	
@@ -346,25 +367,6 @@ public:
 
 template <class T> std::map<Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
 
-
-
-// getter and setter for looking up the .x field in a Point object
-void GetPointX(Local<String> property,
-               const PropertyCallbackInfo<Value>& info) {
-   Local<Object> self = info.Holder();				   
-  Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-  void* ptr = wrap->Value();
-  int value = static_cast<Point*>(ptr)->x_;
-  info.GetReturnValue().Set(value);
-}
-
-void SetPointX(Local<String> property, Local<Value> value,
-               const PropertyCallbackInfo<void>& info) {
-  Local<Object> self = info.Holder();
-  Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-  void* ptr = wrap->Value();
-  static_cast<Point*>(ptr)->x_ = value->Int32Value();
-}
 
 
 #include "casts.hpp"
@@ -482,93 +484,10 @@ int main(int argc, char* argv[]) {
 }
 
 
-// TODO:
 
 
 // decent example:  http://www.codeproject.com/Articles/29109/Using-V-Google-s-Chrome-JavaScript-Virtual-Machin
 
-
-
-
-
-
-// void v8_Point(const v8::FunctionCallbackInfo<v8::Value>& args) {
-//
-// 	auto isolate = args.GetIsolate();
-//
-//     HandleScope scope(args.GetIsolate());
-//
-// 	// whether or not it was called as "new Point()" or just "Point()"
-// 	// printf("Is constructor call: %s\n", args.IsConstructCall()?"yes":"no");
-//
-// 	Point * p = new Point(1,1);
-// 	isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(Point));
-// 	isolate->IdleNotificationDeadline(500);
-//
-// 	// printf("Just allocated %p\n", p);
-//
-// 	auto data = new PointAndPersistent;
-// 	data->p = p;
-// 	data->handle.Reset(isolate, args.This());
-// 	data->handle.SetWeak<PointAndPersistent>(data, v8_Point_Destructor);
-//
-//
-// 	// how to do it with a std::pair
-// 	// Pap2 * pap2 = new Pap2();
-// 	// pap2->first = p;
-// 	// pap2->second.Reset(isolate, args.This());
-//
-//
-// 	// Persistent<Local<Object>>::New(args.GetIsolate(), args.This());
-// 	// V8::MakeWeak(args.GetIsolate(), p, v8_Point_Destructor);
-//
-//
-// 	// printf("Internal field count: %d\n",args.This()->InternalFieldCount());
-//     args.This()->SetInternalField(0, External::New(isolate, p));
-// 	args.GetReturnValue().Set(args.This());
-// }
-
-
-
-// void v8_Point_Destructor(const v8::WeakCallbackData<v8::Object, PointAndPersistent>& info)
-// {
-// 	printf("About to delete %p\n", info.GetParameter());
-// 	auto isolate = info.GetIsolate();
-// 	isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(Point));
-//
-// 	auto data = info.GetParameter();
-// 	delete data->p;
-// 	data->handle.Reset();
-// 	delete data;
-// }
-//
-//
-//
-
-
-
-// int x = 10;
-// void XGetter(Local<String> property,
-//               const PropertyCallbackInfo<Value>& info) {
-//   info.GetReturnValue().Set(x);
-// }
-//
-// void XSetter(Local<String> property, Local<Value> value,
-//              const PropertyCallbackInfo<void>& info) {
-//   x = value->Int32Value() + 1; // being tricky, add one to their requested valuex
-// }
-
-
-
-// void four(const v8::FunctionCallbackInfo<v8::Value>& args)
-// {
-// 	auto isolate = args.GetIsolate();
-// 	args.GetReturnValue().Set(Integer::New(isolate, 4));
-//
-// 	// floats use the type Number which is a parent type of integer
-// 	// args.GetReturnValue().Set(Number::New(isolate, 4.2));
-// }
-//
 
 
 // code xecycle on freenode:##c++ gave me to call a function from values in a tuple
