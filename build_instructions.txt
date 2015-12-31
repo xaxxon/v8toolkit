@@ -1,0 +1,3 @@
+This is how I build it from inside the v8 directory.  Not very useful as is, but useful for figuring something out based on your environmetn
+
+clang++ -std=c++11 -I.  hello_world.cpp -o h2 out/x64.release/libv8_base.a out/x64.release/libv8_libbase.a out/x64.release/libicudata.a out/x64.release/libicuuc.a out/x64.release/libicui18n.a out/x64.release/libv8_base.a out/x64.release/libv8_external_snapshot.a out/x64.release/libv8_libplatform.a
