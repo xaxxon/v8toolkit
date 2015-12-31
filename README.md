@@ -9,6 +9,7 @@ public:
 };
 
 auto wrapper = V8ClassWrapper<MyClass> wrapped_point("MyClass", isolate, global_templ);
+	
 wrapper.add_method(&MyClass::some_method, "someMethod").add_member(&MyClass::value, "value");
 ```
 
