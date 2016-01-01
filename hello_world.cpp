@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 #include <utility>
 
 #include "include/libplatform/libplatform.h"
@@ -232,19 +233,17 @@ private:
 	
 	// users of the library should call get_instance, not the constructor directly
 	V8ClassWrapper(Isolate * isolate) : isolate(isolate) {
-		// create a function template even if no javascript constructor will be used so 
-		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
-		//   later the FunctionTemplate will be ready to go
-		this->constructor_template = FunctionTemplate::New(isolate, V8ClassWrapper<T>::v8_constructor);
-		
-		// When creating a new object, make sure they have room for a c++ object to shadow it
-		this->constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+		// this is a bit weird and there's probably a better way, but create an unbound functiontemplate for use
+		//   when wrapping an object that is created outside javascript when there is no way to create that
+		//   class type directly from javascript (no js constructor)
+		this->constructor_templates.push_back(v8::FunctionTemplate::New(isolate));
 	}
 	
 protected:
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
-	Local<FunctionTemplate> constructor_template;
+	std::vector<Local<FunctionTemplate>> constructor_templates;
 	Isolate * isolate;
+	bool member_or_method_added = false;
 	
 public:
 	
@@ -275,8 +274,27 @@ public:
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, Local<ObjectTemplate> & parent_template) {
 				
+		// if you add a constructor after adding a member or method, it will be missing on objects created with
+		//   this constructor
+		assert(member_or_method_added == false);		
+				
+		// create a function template even if no javascript constructor will be used so 
+		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
+		//   later the FunctionTemplate will be ready to go
+		auto constructor_template = FunctionTemplate::New(isolate, V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>);
+		
+		// When creating a new object, make sure they have room for a c++ object to shadow it
+		constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+		
+		// store it so it doesn't go away
+		this->constructor_templates.push_back(constructor_template);
+		
+				
+				
 		// Add the constructor function to the parent object template (often the global template)
-		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), this->constructor_template);
+		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
+		
+		this->constructor_templates.push_back(constructor_template);
 		
 		return *this;
 	}
@@ -287,7 +305,7 @@ public:
 	* Used when wanting to return an object from a c++ function call back to javascript
 	*/
 	Local<v8::Object> wrap_existing_cpp_object(T * existing_cpp_object) {
-		auto new_js_object = constructor_template->InstanceTemplate()->NewInstance();
+		auto new_js_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
 		_initialize_new_js_object(isolate, new_js_object, existing_cpp_object);
 		return new_js_object;
 	}
@@ -335,14 +353,19 @@ public:
 	*/
 	template<typename MEMBER_TYPE>
 	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) {
+
+		// stop additional constructors from being added
+		member_or_method_added = true;
+		
 		typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE; 
 
 		// this lambda is shared between the getter and the setter so it can only do work needed by both
 		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
 			return cpp_object->*member;
 		});
-		constructor_template->InstanceTemplate()->SetAccessor(String::NewFromUtf8(isolate, "x"), GetterHelper<MEMBER_TYPE>, SetterHelper<MEMBER_TYPE>, v8::External::New(isolate, get_member_reference));
-		
+		for(auto constructor_template : this->constructor_templates) {
+			constructor_template->InstanceTemplate()->SetAccessor(String::NewFromUtf8(isolate, member_name.c_str()), GetterHelper<MEMBER_TYPE>, SetterHelper<MEMBER_TYPE>, v8::External::New(isolate, get_member_reference));
+		}
 		return *this;
 	}
 	
@@ -353,6 +376,10 @@ public:
 	*/
 	template<typename METHOD_TYPE>
 	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name) {
+		
+		// stop additional constructors from being added
+		member_or_method_added = true;
+		
 		
 		// this is leaked if this ever isn't used anymore
 		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) {
@@ -368,8 +395,10 @@ public:
 		});
 		
 		auto function_template = FunctionTemplate::New(this->isolate, callback_helper, External::New(this->isolate, f));
-		this->constructor_template->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		
+		for(auto constructor_template : this->constructor_templates) {
+			constructor_template->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+		}
 		return *this;
 	}
 	
@@ -380,15 +409,15 @@ public:
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
 		
-		T * new_cpp_object = fuckthis(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
 		_initialize_new_js_object(isolate, args.This(), new_cpp_object);
 		
 		// return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
 	}
-	
-	template <typename ...Fs, size_t...ns>
-	static T * fuckthis(const v8::FunctionCallbackInfo<v8::Value>& args, std::index_sequence<ns...>){
+
+	template <typename ...Fs, size_t...ns, class WHY> 
+	static T * call_cpp_constructor(const WHY & args, std::index_sequence<ns...>){
 		return new T(CastToNative<Fs>()(args[ns])...);
 	}
 
@@ -396,16 +425,16 @@ public:
 	// garbage collected
 	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
 		auto isolate = data.GetIsolate();
-	
+
 		SetWeakCallbackParameter * parameter = data.GetParameter();
 		
 		// delete our internal c++ object and tell V8 the memory has been removed
 		delete parameter->first;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
-		
+
 		// Clear out the Global<Object> handle
 		parameter->second.Reset();
-		
+
 		// Delete the heap-allocated std::pair from v8_constructor
 		delete parameter;
 	}
@@ -478,9 +507,10 @@ int main(int argc, char* argv[]) {
 	// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 	
 	// make the Point constructor function available to JS
-	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate).add_method(&Point::thing, "thing");
+	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
 	wrapped_point.add_constructor("Point", global_templ);
-	// wrapped_point.add_constructor<int,int>("Pii", global_templ);
+	wrapped_point.add_constructor<int,int>("Pii", global_templ);
+	wrapped_point.add_method(&Point::thing, "thing");
 	
 	// overloaded functions can be individually addressed, but they can't be the same name to javascript
 	//   at least not without some serious finagling of storing a mapping between a singlne name and 
