@@ -40,6 +40,6 @@ var o = new MyClass();
 var result = o.some_method(5);
 o.value = result;
 ```
-If the types you want to use aren't supported, just add them to casts.hpp.  It's pretty straightforward.  Any wrapped class is automatically supported as long as V8ClassWrapper<Type>::get_instance(the_correct_isolate); was called for the isolate you're running your code in.   
+If the types you want to use aren't supported, just add them to casts.hpp.  It's pretty straightforward.  Any wrapped class is automatically supported as long as V8ClassWrapper\<Type\>::get_instance(the_correct_isolate); was called for the isolate you're running your code in.   
 
 Obviously this is not a polished library and I'm not sure how much more work this will get, but it's at least something good to look at, if you're reasonably good with intermediate-level c++ templating syntax.
