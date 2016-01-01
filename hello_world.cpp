@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <map>
+#include <utility>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -25,6 +26,9 @@ using namespace std;
 //   var my_class = new MyClass(1,2,3); 
 //   right now this ignores the 1,2,3 and uses default constructor
 //   use best guess based on parameter types?  or maybe not do this at all
+//   maybe allow user to specify the constructor type as template parameteres to
+//     add_constructor as in add_constructor<int,int>(...) 
+//   that way they could assign different names to them to allow the js user to pick
 
 
 
@@ -66,8 +70,8 @@ std::string get_file_contents(const char *filename)
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-	Point() : x_(0), y_(0) {printf("created Point\n");}
-	Point(int x, int y) : x_(0), y_(0) { printf("created Point\n");}
+	Point() : x_(69), y_(69) {printf("created Point\n");}
+	Point(int x, int y) : x_(x), y_(y) { printf("created Point with 2 ints\n");}
 	Point(const Point & p) { assert(false); /* This is to help make sure none of the helpers are creating copies */ }
 	~Point(){printf("****Point destructor called on %p\n", this);}
 	int x_, y_;
@@ -91,11 +95,8 @@ struct RunMethod {};
 template<typename RETURN_TYPE, typename CLASS_TYPE, typename ... PARAMETERS>
 struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
 	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-	CLASS_TYPE & object;
-	METHOD_TYPE method;
-	RunMethod(CLASS_TYPE & object, METHOD_TYPE method) : object(object), method(method) {}
 
-	void operator()(const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
+	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
 		RETURN_TYPE return_value = (object.*method)(parameters...);
 		CastToJS<RETURN_TYPE> cast;
 		info.GetReturnValue().Set(cast(info.GetIsolate(), return_value));
@@ -108,11 +109,8 @@ struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
 template<typename CLASS_TYPE, typename ... PARAMETERS>
 struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...)> {
 	typedef void(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-	CLASS_TYPE & object;
-	METHOD_TYPE method;
-	RunMethod(CLASS_TYPE & object, METHOD_TYPE method) : object(object), method(method) {}
 	
-	void operator()(const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
+	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
 		(object.*method)(parameters...);
 	}
 };
@@ -124,6 +122,7 @@ struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...)> {
 template<int depth, typename T, typename U> 
 class Caller {};
 
+
 /**
 * Specialization for when there are no parameters left to process, so it is time to actually
 * call the function
@@ -132,17 +131,14 @@ template<int depth, typename METHOD_TYPE, typename RET, typename CLASS_TYPE>
 class Caller<depth, METHOD_TYPE, RET(CLASS_TYPE::*)()> {
 public:
 	// the final class in the call chain stores the actual method to be called
-	METHOD_TYPE method;
-	Caller(METHOD_TYPE method):method(method){}
 
 	enum {DEPTH=depth, ARITY=0};
 	
 	// This call method actually calls the method with the specified object and the
 	//   parameter pack that was built up via the chain of calls between templated types
 	template<typename ... Ts>
-	void call(CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		RunMethod<METHOD_TYPE> run_method(object, this->method);
-		run_method(info, ts...);
+	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+		RunMethod<METHOD_TYPE>()(object, method, info, ts...);
 	}
 };
 
@@ -159,18 +155,57 @@ template<int depth, typename METHOD_TYPE, typename CLASS_TYPE, typename RET, typ
 class Caller<depth, METHOD_TYPE, RET(CLASS_TYPE::*)(HEAD,TAIL...)> : public Caller<depth+1, METHOD_TYPE, RET(CLASS_TYPE::*)(TAIL...)> {
 public:
 	typedef Caller<depth+1, METHOD_TYPE, RET(CLASS_TYPE::*)(TAIL...)> super;
-	typedef RET return_type;
 	enum {DEPTH = depth, ARITY=super::ARITY + 1};
-	Caller(METHOD_TYPE func):super(func) {printf("Depth: %d\n", DEPTH);}
+
 
 	template<typename ... Ts>
-	void call(CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
 		CastToNative<HEAD> cast;
-		printf("Caller call about to recurse\n");
-		this->super::call(object, info, ts..., cast(info[depth])); 
+		this->super::operator()(method, object, info, ts..., cast(info[depth])); 
 	}
 };
 
+
+// template <size_t... i, class Function, class Tuple>
+// auto spread_call(std::index_sequence<i...>, Function f, Tuple&& t)
+//   -> decltype(f(std::get<i>(t)...))
+// {
+//   return f(std::get<i>(t)...);
+// }
+//
+// } // namespace tuple_util_impl
+//
+// template <class Function, class Tuple>
+// auto spread_call(Function&& f, Tuple&& t) -> decltype(
+//   tuple_util_impl::spread_call(
+//     std::make_index_sequence<std::tuple_size<typename std::decay<Tuple>::type>::value>(),
+//     f, t))
+// {
+//   return tuple_util_impl::spread_call(
+//     std::make_index_sequence<std::tuple_size<typename std::decay<Tuple>::type>::value>(),
+//     std::forward<Function>(f), std::forward<Tuple>(t));
+// }
+
+
+// template<int depth, class CLASS, typename CONSTRUCTOR_PARAMETER_LIST_HEAD, typename ... CONSTRUCTOR_PARAMETER_LIST_TAIL>
+// class ConstructorCaller {
+//
+// 	typedef ConstructorCaller<CLASS, CONSTRUCTOR_PARAMETER_LIST_TAIL> super;
+//
+// 	template<typename ... Ts>
+// 	CLASS * operator()(const v8::FunctionCallbackInfo<v8::Value>& args, Ts... ts) {
+// 		return super::operator()(args, );
+// 	}
+//
+//
+// };
+//
+// template<class CLASS, class TUPLE, size_t... i>
+// class ConstructorCaller {
+// 	CLASS * operator()(TUPLE & tuple) {
+// 		new T(std::get<i>(tuple)...);
+// 	}
+// };
 
 // Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 // Can provide a JS constructor method or wrap objects created in another c++ function
@@ -204,7 +239,6 @@ private:
 		
 		// When creating a new object, make sure they have room for a c++ object to shadow it
 		this->constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-		
 	}
 	
 protected:
@@ -238,6 +272,7 @@ public:
 	* Creates a javascript method of the specified name which, when called with the "new" keyword, will return
 	*   a new object of this type
 	*/
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, Local<ObjectTemplate> & parent_template) {
 				
 		// Add the constructor function to the parent object template (often the global template)
@@ -321,7 +356,6 @@ public:
 		
 		// this is leaked if this ever isn't used anymore
 		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) {
-			Caller<0, METHOD_TYPE, METHOD_TYPE> caller(method);
 
 			// get the behind-the-scenes c++ object
 			Local<Object> self = info.Holder();
@@ -329,7 +363,7 @@ public:
 			void* ptr = wrap->Value();
 			auto backing_object_pointer = static_cast<T*>(ptr);
 			
-			caller.call(*backing_object_pointer, info);
+			Caller<0, METHOD_TYPE, METHOD_TYPE>()(method, *backing_object_pointer, info);
 			
 		});
 		
@@ -342,17 +376,20 @@ public:
 	typedef std::pair<T*, Global<Object>> SetWeakCallbackParameter;
 	
 	// Helper for creating objects when "new MyClass" is called from java
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
 		
-		// Create the new c++ object and bind it to the javascript object
-		T * t = new T();
-		printf("Created new object at %p\n", t);
-
-		_initialize_new_js_object(isolate, args.This(), t);
+		T * new_cpp_object = fuckthis(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+		_initialize_new_js_object(isolate, args.This(), new_cpp_object);
 		
 		// return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
+	}
+	
+	template <typename ...Fs, size_t...ns>
+	static T * fuckthis(const v8::FunctionCallbackInfo<v8::Value>& args, std::index_sequence<ns...>){
+		return new T(CastToNative<Fs>()(args[ns])...);
 	}
 
 	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
@@ -361,7 +398,6 @@ public:
 		auto isolate = data.GetIsolate();
 	
 		SetWeakCallbackParameter * parameter = data.GetParameter();
-		printf("In destructor with callback data at %p\n", parameter);
 		
 		// delete our internal c++ object and tell V8 the memory has been removed
 		delete parameter->first;
@@ -442,8 +478,9 @@ int main(int argc, char* argv[]) {
 	// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 	
 	// make the Point constructor function available to JS
-	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate).add_constructor("Point", global_templ).add_method(&Point::thing, "thing");
-	// wrapped_point
+	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate).add_method(&Point::thing, "thing");
+	wrapped_point.add_constructor("Point", global_templ);
+	// wrapped_point.add_constructor<int,int>("Pii", global_templ);
 	
 	// overloaded functions can be individually addressed, but they can't be the same name to javascript
 	//   at least not without some serious finagling of storing a mapping between a singlne name and 
