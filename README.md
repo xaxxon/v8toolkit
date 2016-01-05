@@ -1,7 +1,7 @@
 # v8-class-wrapper
 Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016)
 
-# These docs may be out of date but hello_world.cpp:main always has up-to-date usage
+# These docs may be out of date but sample.cpp:main always has up-to-date usage
 
 ```
 class MyClass {
