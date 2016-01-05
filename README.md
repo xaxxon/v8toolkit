@@ -17,7 +17,7 @@ public:
 	// any object that will every be created or returned by your c++ code must have it's type wrapped for each v8::Isolate it will be used in
 	// even if you don't expose a constructor method to javascript
 	auto & wrapper = V8ClassWrapper<MyClass>::get_instance(isolate);
-	auto & different_wrapper = V8ClassWrapper<MyClass>::get_instance(a_different_isolate); // constructors/method/members must be added to this separately
+	auto & different_wrapper = V8ClassWrapper<MyClass>::get_instance(a_different_isolate); // constructors/method/members must be added to this instance separately
 	
 	wrapped_point.add_constructor("MyClass", global_templ); // makes the default constructor available
 	
