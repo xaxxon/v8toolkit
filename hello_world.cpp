@@ -21,58 +21,6 @@
 #include <iostream>
 #include <fstream>
 
-// ****** CODE FOR WATCHING DIRECTORIES FOR FILE CHANGES *******/
-//
-// /** OS X ONLY **/
-// #include <CoreServices/CoreServices.h>
-//
-// CFStringRef mypath = CFSTR("/path/to/scan");
-// CFArrayRef pathsToWatch = CFArrayCreate(NULL, (const void **)&mypath, 1, NULL);
-// void *callbackInfo = NULL; // could put stream-specific data here.
-// FSEventStreamRef stream;
-// CFAbsoluteTime latency = 3.0; /* Latency in seconds */
-//
-//
-// void mycallback(
-//     ConstFSEventStreamRef streamRef,
-//     void *clientCallBackInfo,
-//     size_t numEvents,
-//     void *eventPaths,
-//     const FSEventStreamEventFlags eventFlags[],
-//     const FSEventStreamEventId eventIds[])
-// {
-//     int i;
-//     char **paths = eventPaths;
-//
-//     // printf("Callback called\n");
-//     for (i=0; i<numEvents; i++) {
-//         int count;
-//         /* flags are unsigned long, IDs are uint64_t */
-//         printf("Change %llu in %s, flags %lu\n", eventIds[i], paths[i], eventFlags[i]);
-//    }
-// }
-//
-//
-//
-// /* Create the stream, passing in a callback */
-// stream = FSEventStreamCreate(NULL,
-//     &myCallback,
-//     callbackInfo,
-//     pathsToWatch,
-//     kFSEventStreamEventIdSinceNow, /* Or a previous event ID */
-//     latency,
-//     kFSEventStreamCreateFlagNone /* Flags explained in reference */
-// );
-//
-//
-//
-//
-//
-// /*** END OS X SPECIFIC CODE **
-
-
-
-
 
 
 // Responsible for calling the actual method and populating the return type for non-void return type methods
@@ -454,123 +402,125 @@ public:
 
 int main(int argc, char* argv[]) {
 	
-  // Initialize V8.
-  v8::V8::InitializeICU();
-  v8::V8::InitializeExternalStartupData(argv[0]);
-  v8::Platform* platform = v8::platform::CreateDefaultPlatform();
-  v8::V8::InitializePlatform(platform);
-  v8::V8::Initialize();
-
-  // an Isolate is a V8 instance where multiple applications can run at the same time, but only 
-  //   on thread can be running an Isolate at a time.  
-
-  // an context represents the resources needed to run a javascript program
-  //   if a program monkey patches core javascript functionality in one context it won't be 
-  //   visible to another context
-  //   Local<Context> context = Context::New(isolate);
-  //   A context has a global object template, but function templates can be added to it
-  
-  // A handle is a reference to a javascript object and while active will stop the object from being 
-  //   garbage collected
-  //   handles exist within a stack-only allocated handle scope. (cannot new() a handle scope) 
-  //   UniquePersistent handle is like a unique_ptr
-  //   Persistent handle is must be released manually with ::Reset() method
-  
-  // EscapableHandleScope lets you return a handle scope created inside a function, otherwise
-  //   all handles created in that function will be destroyed before a value is returned
-  //   Return with: return handle_scope.Escape(array);
-
-  // Templates allow c++ functions and objects to be made visible in javascript.
-  //   templates are created within a context and must be created in each context they are to be used in
-  //   Templates have accessors and interceptors
-  //      accessors are tied to specific field names
-  //      interceptors are called on ALL field name gets/sets (either by name foo.bar or by index as in foo[2])
-   
-  // Templates can have prototype templates to simulate prototypical inheritance
-  
 
 
-  // Create a new Isolate and make it the current one.
-  ArrayBufferAllocator allocator;
-  v8::Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator = &allocator;
-  v8::Isolate* isolate = v8::Isolate::New(create_params);
-  {
-    v8::Isolate::Scope isolate_scope(isolate);
+	// Initialize V8.
+	v8::V8::InitializeICU();
+	v8::V8::InitializeExternalStartupData(argv[0]);
+	v8::Platform* platform = v8::platform::CreateDefaultPlatform();
+	v8::V8::InitializePlatform(platform);
+	v8::V8::Initialize();
 
-    // Create a stack-allocated handle scope.
-    v8::HandleScope handle_scope(isolate);
+	// an Isolate is a V8 instance where multiple applications can run at the same time, but only 
+	//   on thread can be running an Isolate at a time.  
 
-	// how to expose global variables as javascript variables "x" and "y"
-    // global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
-    // global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
-	
-	// wrap the constructor and add it to the global template
-	// Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
-    v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
-	
-	// // add the function "four()" to javascript
-	// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
-	
-	// make the Point constructor function available to JS
-	auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
-	wrapped_point.add_constructor("Point", global_templ);
-	wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
-	
-	wrapped_point.add_constructor<int,int>("Pii", global_templ);
-	wrapped_point.add_method(&Point::thing, "thing");
-	
-	// overloaded functions can be individually addressed, but they can't be the same name to javascript
-	//   at least not without some serious finagling of storing a mapping between a singlne name and 
-	//   multiple function templates as well as some sort of "closeness" function for determining
-	//   which primitive type parameters most closely match the javascript values provided
-	wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
-	wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
-	wrapped_point.add_method(&Point::make_point, "make_point");
-	
-	wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
-	wrapped_point.add_member(&Point::x_, "x");
-	wrapped_point.add_member(&Point::y_, "y");		
-	
-    v8::Local<v8::Context> x_context = v8::Context::New(isolate, NULL, global_templ);
-	v8::Context::Scope context_scope_x(x_context);
-	
-		
-    // Create a string containing the JavaScript source code.
-	auto js_code = get_file_contents("code.js");
-    v8::Local<v8::String> source =
-        v8::String::NewFromUtf8(isolate, js_code.c_str(),
-                            v8::NewStringType::kNormal).ToLocalChecked();
+	// an context represents the resources needed to run a javascript program
+	//   if a program monkey patches core javascript functionality in one context it won't be 
+	//   visible to another context
+	//   Local<Context> context = Context::New(isolate);
+	//   A context has a global object template, but function templates can be added to it
 
-    // Compile the source code.
-    v8::Local<v8::Script> script = v8::Script::Compile(x_context, source).ToLocalChecked();
-	
-    v8::Local<v8::String> source_init =
-        v8::String::NewFromUtf8(isolate, "x=0;",
-                            v8::NewStringType::kNormal).ToLocalChecked();
-	
-    v8::Local<v8::Script> script_init = v8::Script::Compile(x_context, source_init).ToLocalChecked();
-	(void)script_init->Run(x_context);
-	
+	// A handle is a reference to a javascript object and while active will stop the object from being 
+	//   garbage collected
+	//   handles exist within a stack-only allocated handle scope. (cannot new() a handle scope) 
+	//   UniquePersistent handle is like a unique_ptr
+	//   Persistent handle is must be released manually with ::Reset() method
 
-	// this code shows that scripts run in the same context keep the values from the previous runs
-	for (int i = 0; i < 10; i++) {
-	    // Run the script to get the result.
-	    v8::Local<v8::Value> result = script->Run(x_context).ToLocalChecked();
-	
+	// EscapableHandleScope lets you return a handle scope created inside a function, otherwise
+	//   all handles created in that function will be destroyed before a value is returned
+	//   Return with: return handle_scope.Escape(array);
 
-	    // Convert the result to an UTF8 string and print it.
-	    v8::String::Utf8Value utf8(result);
-	    printf("%s\n", *utf8);
+	// Templates allow c++ functions and objects to be made visible in javascript.
+	//   templates are created within a context and must be created in each context they are to be used in
+	//   Templates have accessors and interceptors
+	//      accessors are tied to specific field names
+	//      interceptors are called on ALL field name gets/sets (either by name foo.bar or by index as in foo[2])
+
+	// Templates can have prototype templates to simulate prototypical inheritance
+
+
+
+	// Create a new Isolate and make it the current one.
+	ArrayBufferAllocator allocator;
+	v8::Isolate::CreateParams create_params;
+	create_params.array_buffer_allocator = &allocator;
+	v8::Isolate* isolate = v8::Isolate::New(create_params);
+	{
+		v8::Isolate::Scope isolate_scope(isolate);
+
+		// Create a stack-allocated handle scope.
+		v8::HandleScope handle_scope(isolate);
+
+		// how to expose global variables as javascript variables "x" and "y"
+		// global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
+		// global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
+
+		// wrap the constructor and add it to the global template
+		// Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
+		v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
+
+		// // add the function "four()" to javascript
+		// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
+
+		// make the Point constructor function available to JS
+		auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
+		wrapped_point.add_constructor("Point", global_templ);
+		wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
+
+		wrapped_point.add_constructor<int,int>("Pii", global_templ);
+		wrapped_point.add_method(&Point::thing, "thing");
+
+		// overloaded functions can be individually addressed, but they can't be the same name to javascript
+		//   at least not without some serious finagling of storing a mapping between a singlne name and
+		//   multiple function templates as well as some sort of "closeness" function for determining
+		//   which primitive type parameters most closely match the javascript values provided
+		wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
+		wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
+		wrapped_point.add_method(&Point::make_point, "make_point");
+
+		wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
+		wrapped_point.add_member(&Point::x_, "x");
+		wrapped_point.add_member(&Point::y_, "y");
+
+		v8::Local<v8::Context> x_context = v8::Context::New(isolate, NULL, global_templ);
+		v8::Context::Scope context_scope_x(x_context);
+
+
+		// Create a string containing the JavaScript source code.
+		auto js_code = get_file_contents("code.js");
+		v8::Local<v8::String> source =
+		    v8::String::NewFromUtf8(isolate, js_code.c_str(),
+		                        v8::NewStringType::kNormal).ToLocalChecked();
+
+		// Compile the source code.
+		v8::Local<v8::Script> script = v8::Script::Compile(x_context, source).ToLocalChecked();
+
+		v8::Local<v8::String> source_init =
+		    v8::String::NewFromUtf8(isolate, "x=0;",
+		                        v8::NewStringType::kNormal).ToLocalChecked();
+
+		v8::Local<v8::Script> script_init = v8::Script::Compile(x_context, source_init).ToLocalChecked();
+		(void)script_init->Run(x_context);
+
+
+		// this code shows that scripts run in the same context keep the values from the previous runs
+		for (int i = 0; i < 10; i++) {
+		    // Run the script to get the result.
+		    v8::Local<v8::Value> result = script->Run(x_context).ToLocalChecked();
+
+
+		    // Convert the result to an UTF8 string and print it.
+		    v8::String::Utf8Value utf8(result);
+		    printf("%s\n", *utf8);
+		}
 	}
-  }
 
-  // Dispose the isolate and tear down V8.
-  isolate->Dispose();
-  v8::V8::Dispose();
-  v8::V8::ShutdownPlatform();
-  delete platform;
-  return 0;
+	// Dispose the isolate and tear down V8.
+	isolate->Dispose();
+	v8::V8::Dispose();
+	v8::V8::ShutdownPlatform();
+	delete platform;
+	return 0;
 }
 
 
