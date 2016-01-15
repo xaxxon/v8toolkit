@@ -26,7 +26,8 @@ struct CastToNative {};
 
 // casts from a primitive to a v8::Value
 template<typename T>
-struct CastToJS {};
+struct CastToJS {
+};
 
 
 
@@ -44,8 +45,8 @@ struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
 
 	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
 		RETURN_TYPE return_value = (object.*method)(parameters...);
-		CastToJS<RETURN_TYPE> cast;
-		info.GetReturnValue().Set(cast(info.GetIsolate(), return_value));
+		auto casted_result = CastToJS<RETURN_TYPE>()(info.GetIsolate(), return_value);
+		info.GetReturnValue().Set(casted_result);
 	}
 };
 
@@ -114,6 +115,8 @@ public:
 
 
 
+
+
 // Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 // Can provide a JS constructor method or wrap objects created in another c++ function
 template<class T>
@@ -142,7 +145,9 @@ private:
 		// this is a bit weird and there's probably a better way, but create an unbound functiontemplate for use
 		//   when wrapping an object that is created outside javascript when there is no way to create that
 		//   class type directly from javascript (no js constructor)
-		this->constructor_templates.push_back(v8::FunctionTemplate::New(isolate));
+		auto constructor_template = v8::FunctionTemplate::New(isolate);
+		constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+		this->constructor_templates.push_back(constructor_template);
 	}
 	
 protected:
@@ -158,10 +163,17 @@ public:
 	* For each isolate you need to add constructors/methods/members separately.
 	*/
 	static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
+		// printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
 		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
-			isolate_to_wrapper_map.insert(std::make_pair(isolate, new V8ClassWrapper<T>(isolate)));
+			auto new_object = new V8ClassWrapper<T>(isolate);
+			isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));
+			// printf("Creating instance %p for isolate: %p\n", new_object, isolate);
 		}
-		return *isolate_to_wrapper_map[isolate];
+		// printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+		
+		auto object = isolate_to_wrapper_map[isolate];
+		// printf("Returning v8 wrapper: %p\n", object);
+		return *object;
 	}
 	
 	/**
@@ -170,7 +182,10 @@ public:
 	*   even though V8 will still present the ability to your javascript (I think)
 	*/
 	virtual ~V8ClassWrapper(){
-		isolate_to_wrapper_map.erase(this->isolate);
+
+		// this was happening when it wasn't supposed to, like when making temp copies.   need to disable copying or something
+		//   if this line is to be added back
+		// isolate_to_wrapper_map.erase(this->isolate);
 	}
 	
 	/**
@@ -194,7 +209,6 @@ public:
 		
 		// store it so it doesn't go away
 		this->constructor_templates.push_back(constructor_template);
-		
 				
 				
 		// Add the constructor function to the parent object template (often the global template)
@@ -210,12 +224,17 @@ public:
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript
 	*/
-	v8::Local<v8::Object> wrap_existing_cpp_object(T * existing_cpp_object) {
+	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) {
+		auto isolate = this->isolate;
+		// fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+		
+		v8::Isolate::Scope is(isolate);
+		v8::Context::Scope cs(context);
+		
 		auto new_js_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
 		_initialize_new_js_object(isolate, new_js_object, existing_cpp_object);
 		return new_js_object;
 	}
-	
 
 
 	typedef std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> StdFunctionCallbackType;
@@ -263,7 +282,7 @@ public:
 		// stop additional constructors from being added
 		member_or_method_added = true;
 		
-		typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE; 
+		// typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE;
 
 		// this lambda is shared between the getter and the setter so it can only do work needed by both
 		static auto get_member_reference = std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
@@ -314,6 +333,8 @@ public:
 	
 	typedef std::pair<T*, v8::Global<v8::Object>> SetWeakCallbackParameter;
 	
+	
+	
 	// Helper for creating objects when "new MyClass" is called from java
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -326,10 +347,14 @@ public:
 		args.GetReturnValue().Set(args.This());
 	}
 
+
+
 	template <typename ...Fs, size_t...ns> 
 	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
 		return new T(CastToNative<Fs>()(args[ns])...);
 	}
+	
+	
 
 	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
 	// garbage collected

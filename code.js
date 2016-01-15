@@ -1,11 +1,5 @@
-// // var p = new Pii(5,6);
-// var p = new Pii(5,6);
-// var p2 = new Point;
-// var p3 = new SameAsPoint;
-// p.x;
-// p.x;
-//
-// p.void_func();
+var line = new Line();
 
-x = x + 1;
-x;
+line.get_point().get_foo().i;
+
+line.get_point().get_foo().i;

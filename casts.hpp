@@ -99,5 +99,33 @@ struct CastToJS<std::string> {
 // That type must have had its methods and members added beforehand in the same isolate
 template<typename T>
 struct CastToJS<T*> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){return V8ClassWrapper<T>::get_instance(isolate).wrap_existing_cpp_object(cpp_object);}
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){fprintf(stderr, "In CastToJS T*\n");return V8ClassWrapper<T>::get_instance(isolate).wrap_existing_cpp_object(isolate->GetCurrentContext(), cpp_object);}
 };
+
+template<typename T>
+struct CastToJS<T&> {
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		return CastToJS<T*>()(isolate, &cpp_object);		
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
