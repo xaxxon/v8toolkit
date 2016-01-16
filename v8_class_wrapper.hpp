@@ -27,6 +27,17 @@ struct CastToNative {};
 // casts from a primitive to a v8::Value
 template<typename T>
 struct CastToJS {
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		return CastToJS<T*>()(isolate, &cpp_object);		
+	}
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
+		printf("Asked to convert rvalue type, so copying it first\n");
+
+		// this memory will be owned by the javascript object and cleaned up when (if) the GC
+		//   cleans up the object
+		auto copy = new T(cpp_object);
+		return CastToJS<T*>()(isolate, copy);		
+	}
 };
 
 
@@ -36,6 +47,14 @@ struct CastToJS {
 template<typename METHOD_TYPE>
 struct RunMethod {};
 
+
+template<typename CLASS_TYPE, typename METHOD_TYPE, typename ... PARAMETERS>
+void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
+	// decltype((object.*method)(parameters...)) return_value = (object.*method)(parameters...);
+	auto casted_result = CastToJS<decltype((object.*method)(parameters...))>()(info.GetIsolate(), (object.*method)(parameters...));
+	info.GetReturnValue().Set(casted_result);
+}
+
 /**
 * Specialization for methods that don't return void.  Sets v8::FunctionCallbackInfo::GetReturnValue to value returned by the method
 */
@@ -44,11 +63,20 @@ struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
 	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
 
 	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
-		RETURN_TYPE return_value = (object.*method)(parameters...);
-		auto casted_result = CastToJS<RETURN_TYPE>()(info.GetIsolate(), return_value);
-		info.GetReturnValue().Set(casted_result);
+		run_non_void(object, method, info, parameters...);
 	}
 };
+
+// const method version 
+template<typename RETURN_TYPE, typename CLASS_TYPE, typename ... PARAMETERS>
+struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...) const>{
+	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
+
+	void operator()(const CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
+		run_non_void(object, method, info, parameters...);
+	}
+};
+
 
 /**
 * Specialization for methods that return void.  No value set for v8::FunctionCallbackInfo::GetReturnValue
@@ -57,11 +85,22 @@ struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
 template<typename CLASS_TYPE, typename ... PARAMETERS>
 struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...)> {
 	typedef void(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-	
+
 	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
 		(object.*method)(parameters...);
 	}
 };
+
+// const method version 
+template<typename CLASS_TYPE, typename ... PARAMETERS>
+struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...) const> {
+	typedef void(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
+
+	void operator()(const CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
+		(object.*method)(parameters...);
+	}
+};
+
 
 
 /**
@@ -91,6 +130,7 @@ public:
 };
 
 
+
 /**
 * specialization that strips off the first remaining parameter off the method type, stores that and then
 *   inherits from another instance that either strips the next one off, or if none remaining, actually calls
@@ -105,7 +145,6 @@ public:
 	typedef Caller<depth+1, METHOD_TYPE, RET(CLASS_TYPE::*)(TAIL...)> super;
 	enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
-
 	template<typename ... Ts>
 	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
 		CastToNative<HEAD> cast;
@@ -113,6 +152,28 @@ public:
 	}
 };
 
+
+
+// simple class to forward calls on to Caller without caring about the const-ness of the method
+template<class T>
+struct CallerQualifierRemover {};
+
+template<class RETURN_TYPE, class CLASS_TYPE, class ... PARAMETERS>
+struct CallerQualifierRemover<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)> {
+	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
+	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info) {
+		Caller<0, METHOD_TYPE, METHOD_TYPE>()(method, object, info);
+	}
+};
+
+// take a const method and strip the const off
+template<class RETURN_TYPE, class CLASS_TYPE, class ... PARAMETERS>
+struct CallerQualifierRemover<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...) const> {
+	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
+	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info) {
+		Caller<0, METHOD_TYPE, RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>()(method, object, info);
+	}
+};
 
 
 
@@ -127,7 +188,7 @@ private:
 	
 	// Common tasks to do for any new js object regardless of how it is created
 	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) {
-	    js_object->SetInternalField(0, v8::External::New(isolate, cpp_object));
+	    js_object->SetInternalField(0, v8::External::New(isolate, (void*) cpp_object));
 		
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
@@ -319,7 +380,7 @@ public:
 			void* ptr = wrap->Value();
 			auto backing_object_pointer = static_cast<T*>(ptr);
 			
-			Caller<0, METHOD_TYPE, METHOD_TYPE>()(method, *backing_object_pointer, info);
+			CallerQualifierRemover<METHOD_TYPE>()(method, *backing_object_pointer, info);
 			
 		});
 		
@@ -348,12 +409,10 @@ public:
 	}
 
 
-
 	template <typename ...Fs, size_t...ns> 
 	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
 		return new T(CastToNative<Fs>()(args[ns])...);
 	}
-	
 	
 
 	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is

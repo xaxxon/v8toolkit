@@ -38,15 +38,16 @@ std::string get_file_contents(const char *filename)
 
 
 struct Foo {
-	
-	int i = 42;
-	
+	Foo(){printf("Created Foo %p (default constructor)\n", this);}
+	Foo(const Foo &){printf("Foo copy constructor\n");}
+	~Foo(){printf("deleted Foo %p\n", this);}
+	int i = 421;
 };
 
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-	Point() : x_(69), y_(69) {printf("created Point\n");}
+	Point() : x_(69), y_(69) {printf("created Point (default constructor)\n");}
 	Point(int x, int y) : x_(x), y_(y) { printf("created Point with 2 ints\n");}
 	Point(const Point & p) { assert(false); /* This is to help make sure none of the helpers are creating copies */ }
 	~Point(){printf("****Point destructor called on %p\n", this);}
@@ -60,15 +61,19 @@ public:
 	// returns a new point object that should be managed by V8 GC
 	Point * make_point(){return new Point();}
 	
-	Foo f;
-	Foo & get_foo(){return f;}
+	// Foo & get_foo(Foo & f)  {return f;}
+	
+	// Leave this as an r-value return for testing purposes	Foo f;
+	Foo get_foo() {return Foo();}
 };
 
-struct Line {
 
+struct Line {
+	Line(){printf("Created line %p (default constructor)\n", this);}
+	~Line(){printf("Deleted line %p\n", this);}
 	Point p;
     Point & get_point(){return this->p;}
-
+	Point get_rvalue_point(){return Point();}
 };
 
 
@@ -87,8 +92,6 @@ void print_maybe_value(v8::MaybeLocal<v8::Value> maybe_value)
 
 
 int main(int argc, char* argv[]) {
-	
-
 
 	// Initialize V8.
 	v8::V8::InitializeICU();
@@ -137,12 +140,14 @@ int main(int argc, char* argv[]) {
 		wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
 		wrapped_point.add_member(&Point::x_, "x");
 		wrapped_point.add_member(&Point::y_, "y");
-		wrapped_point.add_method(&Point::get_foo, "get_foo");
 		
+		// if you register a function that returns an r-value, a copy will be made using the copy constsructor
+		wrapped_point.add_method(&Point::get_foo, "get_foo");
 		
 		auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
 		wrapped_line.add_constructor("Line", global_templ);
 		wrapped_line.add_method(&Line::get_point, "get_point");
+		wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
 		
 		auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
 		wrapped_foo.add_member(&Foo::i, "i");
