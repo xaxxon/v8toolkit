@@ -1,3 +1,5 @@
+## This code is very rough and not polished in any way.   It should generally be working for the functionalty demonstrated in sample.cpp
+
 # v8-class-wrapper
 Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016)
 
