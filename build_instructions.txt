@@ -4,3 +4,9 @@ clang++ -std=c++14 -I/users/xaxxon/v8  sample.cpp -o h2 /users/xaxxon/v8/out/x64
 
 
 hint: Don't forget to copy in the v8 .bin files, too.
+
+
+// This is how I have to build it under ubuntu
+// remember, library order matters.   Things that depend on a symbol come before
+//   things that resolve the symbol (important for libicu*.a)
+g++ -std=c++14 -I/home/xaxxon/v8  sample.cpp -o h2 /home/xaxxon/v8/out/native/obj.target/tools/gyp/{libv8_base.a,libv8_libbase.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} /home/xaxxon/v8/out/native/obj.target/third_party/icu/libicu*.a /home/xaxxon/v8/out/native/obj.target/third_party/icu/{libicui18n.a,libicuuc.a,libicudata.a} -lpthread -ldl 
