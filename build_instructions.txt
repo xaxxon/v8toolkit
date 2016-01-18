@@ -4,3 +4,26 @@ clang++ -std=c++14 -I/users/xaxxon/v8  sample.cpp -o h2 /users/xaxxon/v8/out/x64
 
 
 hint: Don't forget to copy in the v8 .bin files, too.
+
+
+
+
+how to build v8:
+
+git clone depot_tools and add it to your PATH
+
+https://www.chromium.org/developers/how-tos/install-depot-tools
+
+
+
+get v8 using depot tools:
+
+https://github.com/v8/v8/wiki/Using%20Git
+
+(may want to run gclient sync to update a failed fetch)
+
+run "make native"
+
+and then wait a long time
+
+

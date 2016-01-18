@@ -30,11 +30,12 @@ struct CastToJS {
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
 		return CastToJS<T*>()(isolate, &cpp_object);		
 	}
+	
+	// If an rvalue is passed in, a copy must be made.
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
 		printf("Asked to convert rvalue type, so copying it first\n");
 
-		// this memory will be owned by the javascript object and cleaned up when (if) the GC
-		//   cleans up the object
+		// this memory will be owned by the javascript object and cleaned up when (if) the GC cleans the object
 		auto copy = new T(cpp_object);
 		return CastToJS<T*>()(isolate, copy);		
 	}
