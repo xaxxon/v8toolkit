@@ -118,6 +118,8 @@ int main(int argc, char* argv[]) {
 		// wrap the constructor and add it to the global template
 		// Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
 		v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
+		
+		add_print(isolate, global_templ);
 
 		// // add the function "four()" to javascript
 		// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));

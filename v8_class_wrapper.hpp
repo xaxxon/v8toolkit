@@ -17,32 +17,35 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
+/***
+* set of classes for determining what to do do the underlying c++
+*   object when the javascript object is garbage collected
+*/
+template<class T>
+struct DestructorBehavior {
+	virtual void operator()(T* object) const = 0;
+
+};
+
+template<class T>
+struct DestructorBehaviorDelete : DestructorBehavior<T> {
+	void operator()(T* object) const {
+		printf("Deleting object at %p during V8 garbage collection\n", object);
+		delete object;
+	}
+};
+
+template<class T>
+struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> {
+	void operator()(T* object) const {
+		printf("Not deleting object %p during V8 garbage collection\n", object);
+	}
+};
 
 
 // Specialized types that know how to convert from a v8::Value to a primitive type
 template<typename T>
 struct CastToNative {};
-
-
-
-// casts from a primitive to a v8::Value
-template<typename T>
-struct CastToJS {
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
-		return CastToJS<T*>()(isolate, &cpp_object);		
-	}
-	
-	// If an rvalue is passed in, a copy must be made.
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
-		printf("Asked to convert rvalue type, so copying it first\n");
-
-		// this memory will be owned by the javascript object and cleaned up when (if) the GC cleans the object
-		auto copy = new T(cpp_object);
-		return CastToJS<T*>()(isolate, copy);		
-	}
-};
-
-
 
 
 // Responsible for calling the actual method and populating the return type for non-void return type methods
@@ -51,11 +54,7 @@ struct RunMethod {};
 
 
 template<typename CLASS_TYPE, typename METHOD_TYPE, typename ... PARAMETERS>
-void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
-	// decltype((object.*method)(parameters...)) return_value = (object.*method)(parameters...);
-	auto casted_result = CastToJS<decltype((object.*method)(parameters...))>()(info.GetIsolate(), (object.*method)(parameters...));
-	info.GetReturnValue().Set(casted_result);
-}
+void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters);
 
 /**
 * Specialization for methods that don't return void.  Sets v8::FunctionCallbackInfo::GetReturnValue to value returned by the method
@@ -179,7 +178,6 @@ struct CallerQualifierRemover<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...) const> {
 
 
 
-
 // Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 // Can provide a JS constructor method or wrap objects created in another c++ function
 template<class T>
@@ -189,6 +187,7 @@ private:
 	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
 	
 	// Common tasks to do for any new js object regardless of how it is created
+	template<class BEHAVIOR>
 	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) {
 	    js_object->SetInternalField(0, v8::External::New(isolate, (void*) cpp_object));
 		
@@ -198,9 +197,14 @@ private:
 		// set up a callback so we can clean up our internal object when the javascript
 		//   object is garbage collected
 		auto callback_data = new SetWeakCallbackParameter();
-		callback_data->first = cpp_object;
-		callback_data->second.Reset(isolate, js_object);
-		callback_data->second.SetWeak(callback_data, V8ClassWrapper<T>::v8_destructor);
+		callback_data->cpp_object = cpp_object;
+		callback_data->javascript_object.Reset(isolate, js_object);
+		// callback_data->behavior = std::make_unique<typename std::enable_if<std::is_base_of<DestructorBehavior<T>,BEHAVIOR>::value, BEHAVIOR>::type>();
+
+		// this guarantees BEHAVIOR is a subclass of DestructorBehavior or operator= will fail to compile
+		callback_data->behavior = std::make_unique<BEHAVIOR>();
+
+		callback_data->javascript_object.SetWeak(callback_data, V8ClassWrapper<T>::v8_destructor);
 	}
 	
 	// users of the library should call get_instance, not the constructor directly
@@ -220,6 +224,7 @@ protected:
 	bool member_or_method_added = false;
 	
 public:
+	
 	
 	/**
 	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
@@ -287,6 +292,7 @@ public:
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript
 	*/
+	template<class BEHAVIOR>
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) {
 		auto isolate = this->isolate;
 		// fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
@@ -294,9 +300,9 @@ public:
 		v8::Isolate::Scope is(isolate);
 		v8::Context::Scope cs(context);
 		
-		auto new_js_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
-		_initialize_new_js_object(isolate, new_js_object, existing_cpp_object);
-		return new_js_object;
+		auto new_javascript_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
+		_initialize_new_js_object<BEHAVIOR>(isolate, new_javascript_object, existing_cpp_object);
+		return new_javascript_object;
 	}
 
 
@@ -312,15 +318,7 @@ public:
 	
 	template<typename VALUE_T>
 	static void GetterHelper(v8::Local<v8::String> property,
-			               const v8::PropertyCallbackInfo<v8::Value>& info) {
-		v8::Local<v8::Object> self = info.Holder();				   
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-
-		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-		auto & member_ref = (*member_reference_getter)(cpp_object);
-		info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
-	}
+			               const v8::PropertyCallbackInfo<v8::Value>& info);
 
 	template<typename VALUE_T>
 	static void SetterHelper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
@@ -394,7 +392,11 @@ public:
 		return *this;
 	}
 	
-	typedef std::pair<T*, v8::Global<v8::Object>> SetWeakCallbackParameter;
+	struct SetWeakCallbackParameter {
+		T * cpp_object;
+		v8::Global<v8::Object> javascript_object;
+		std::unique_ptr<DestructorBehavior<T>> behavior;
+	};
 	
 	
 	
@@ -404,7 +406,7 @@ public:
 		auto isolate = args.GetIsolate();
 		
 		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
-		_initialize_new_js_object(isolate, args.This(), new_cpp_object);
+		_initialize_new_js_object<DestructorBehaviorLeaveAlone<T>>(isolate, args.This(), new_cpp_object);
 		
 		// return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
@@ -425,11 +427,12 @@ public:
 		SetWeakCallbackParameter * parameter = data.GetParameter();
 		
 		// delete our internal c++ object and tell V8 the memory has been removed
-		delete parameter->first;
+		(*parameter->behavior)(parameter->cpp_object);
+
 		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
 
 		// Clear out the Global<Object> handle
-		parameter->second.Reset();
+		parameter->javascript_object.Reset();
 
 		// Delete the heap-allocated std::pair from v8_constructor
 		delete parameter;
@@ -440,7 +443,97 @@ template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T
 
 
 
+
+
+
+
+// casts from a primitive to a v8::Value
+template<typename T>
+struct CastToJS {
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		return CastToJS<T*>()(isolate, &cpp_object);
+	}
+	
+	// If an rvalue is passed in, a copy must be made.
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
+		printf("Asked to convert rvalue type, so copying it first\n");
+
+		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
+		auto copy = new T(cpp_object);
+		auto context = isolate->GetCurrentContext();
+		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorDelete<T>>(context, copy);
+	}
+};
+
+
+template<typename CLASS_TYPE, typename METHOD_TYPE, typename ... PARAMETERS>
+void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
+	// decltype((object.*method)(parameters...)) return_value = (object.*method)(parameters...);
+	auto casted_result = CastToJS<decltype((object.*method)(parameters...))>()(info.GetIsolate(), (object.*method)(parameters...));
+	info.GetReturnValue().Set(casted_result);
+}
+
+
+template<class T>
+template<class VALUE_T>
+void V8ClassWrapper<T>::GetterHelper(v8::Local<v8::String> property,
+		               const v8::PropertyCallbackInfo<v8::Value>& info) {
+	v8::Local<v8::Object> self = info.Holder();				   
+	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+	T * cpp_object = static_cast<T *>(wrap->Value());
+
+	auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
+	auto & member_ref = (*member_reference_getter)(cpp_object);
+	info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
+}
+
+
 #include "casts.hpp"
+
+
+
+#include <boost/format.hpp>
+static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+
+	if (args.Length() > 0) {
+		auto string = *v8::String::Utf8Value(args[0]);
+		auto format = boost::format(string);
+		
+		for (int i = 1; i < args.Length(); i++) {
+			format % *v8::String::Utf8Value(args[i]);
+		}
+		std::cout << format;	
+		if (append_newline) {
+			std::cout << std::endl;
+		}
+	}
+}
+
+
+
+static void print_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	return print_helper(args, false);
+}
+
+static void println_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	return print_helper(args, true);
+}
+
+
+
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
+{
+	v8::HandleScope hs(isolate);
+	auto print_template = v8::FunctionTemplate::New(isolate, &print_callback);
+	global_template->Set(isolate, "print", print_template);
+	
+	auto println_template = v8::FunctionTemplate::New(isolate, &println_callback);
+	global_template->Set(isolate, "println", println_template);
+	
+}
+
+
 
 
 

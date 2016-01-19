@@ -101,7 +101,8 @@ template<typename T>
 struct CastToJS<T*> {
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){
 		auto context = isolate->GetCurrentContext();
-		return V8ClassWrapper<T>::get_instance(isolate).wrap_existing_cpp_object(context, cpp_object);
+		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorLeaveAlone<T>>(context, cpp_object);
 	}
 };
 
