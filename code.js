@@ -14,7 +14,7 @@ var p2 = line.get_point();
 
 printobj(p1);
 printobj(p2);
-println("(known limitation) These objects should be the same javascript object as well: %s", p1===p2?"same": "different");
+println("These objects should be the same javascript object as well: %s", p1===p2?"same": "different");
 
 // getting two objects by rvalue should have different underlying c++ objects
 //   because they return on object as an rvalue that must have a copy made

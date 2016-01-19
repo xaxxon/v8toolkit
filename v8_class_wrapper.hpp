@@ -17,27 +17,29 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
+#include "v8_toolbox.hpp"
+
 /***
 * set of classes for determining what to do do the underlying c++
 *   object when the javascript object is garbage collected
 */
 template<class T>
 struct DestructorBehavior {
-	virtual void operator()(T* object) const = 0;
-
+	virtual void operator()(v8::Isolate * isolate, T* object) const = 0;
 };
 
 template<class T>
 struct DestructorBehaviorDelete : DestructorBehavior<T> {
-	void operator()(T* object) const {
+	void operator()(v8::Isolate * isolate, T* object) const {
 		printf("Deleting object at %p during V8 garbage collection\n", object);
 		delete object;
+		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
 	}
 };
 
 template<class T>
 struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> {
-	void operator()(T* object) const {
+	void operator()(v8::Isolate * isolate, T* object) const {
 		printf("Not deleting object %p during V8 garbage collection\n", object);
 	}
 };
@@ -219,7 +221,8 @@ private:
 	
 protected:
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
-	std::vector<v8::Local<v8::FunctionTemplate>> constructor_templates;
+	std::vector<v8::Local<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
+	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects; // TODO: This can't be a strong reference global or the object will never be GC'd
 	v8::Isolate * isolate;
 	bool member_or_method_added = false;
 	
@@ -296,12 +299,27 @@ public:
 		auto isolate = this->isolate;
 		// fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
-		v8::Isolate::Scope is(isolate);
-		v8::Context::Scope cs(context);
 		
-		auto new_javascript_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
-		_initialize_new_js_object<BEHAVIOR>(isolate, new_javascript_object, existing_cpp_object);
-		return new_javascript_object;
+		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
+		v8::Local<v8::Object> javascript_object;
+		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
+			printf("Found existing javascript object for c++ object %p\n", existing_cpp_object);
+			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
+			
+		} else {
+		
+			printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
+		
+			v8::Isolate::Scope is(isolate);
+			v8::Context::Scope cs(context);
+		
+			javascript_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
+			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
+			
+			this->existing_wrapped_objects.insert(std::pair<T*, v8::Global<v8::Object>>(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object)));
+			
+		}
+		return javascript_object;
 	}
 
 
@@ -332,6 +350,8 @@ public:
 		auto & m2 = (*member_reference_getter)(cpp_object);
 	}
 	
+	
+	
 	/**
 	* Adds a getter and setter method for the specified class member
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
@@ -357,6 +377,7 @@ public:
 		}
 		return *this;
 	}
+	
 	
 	
 	/**
@@ -391,6 +412,7 @@ public:
 		return *this;
 	}
 	
+	// data to pass into a setweak callback
 	struct SetWeakCallbackParameter {
 		T * cpp_object;
 		v8::Global<v8::Object> javascript_object;
@@ -426,10 +448,11 @@ public:
 		SetWeakCallbackParameter * parameter = data.GetParameter();
 		
 		// delete our internal c++ object and tell V8 the memory has been removed
-		(*parameter->behavior)(parameter->cpp_object);
-
-		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
-
+		(*parameter->behavior)(isolate, parameter->cpp_object);
+		
+		// TODO: Need to remove object from existing_wrapped_objects hash properly resetting the global 
+		
+		
 		// Clear out the Global<Object> handle
 		parameter->javascript_object.Reset();
 
@@ -491,65 +514,6 @@ void V8ClassWrapper<T>::GetterHelper(v8::Local<v8::String> property,
 #include "casts.hpp"
 
 
-
-#include <boost/format.hpp>
-static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
-	if (args.Length() > 0) {
-		auto string = *v8::String::Utf8Value(args[0]);
-		auto format = boost::format(string);
-		
-		for (int i = 1; i < args.Length(); i++) {
-			format % *v8::String::Utf8Value(args[i]);
-		}
-		std::cout << ">>> ";
-		std::cout << format;	
-		if (append_newline) {
-			std::cout << std::endl;
-		}
-	}
-}
-
-
-
-
-// Helpers for print debugging, not actually core to the library
-void print_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	return print_helper(args, false);
-}
-
-void println_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	return print_helper(args, true);
-}
-
-void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	for (int i = 0; i < args.Length(); i++) {
-		auto object = v8::Object::Cast(*args[i]);
-		if(object->InternalFieldCount() > 0) {
-			v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-			printf(">>> Object %p: %s\n", wrap->Value(), *v8::String::Utf8Value(args[i]));
-		} else {
-			printf(">>> Object does not appear to be a wrapped c++ class (no internal fields): %s\n", *v8::String::Utf8Value(args[i]));
-		}
-	}
-	// v8::Local<v8::Object> self = info.Holder();
-	// v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-	// T * cpp_object = static_cast<T *>(wrap->Value());
-}
-
-// call this to add a function called "print" to whatever object template you pass in (probably the global one)
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
-{
-	v8::HandleScope hs(isolate);
-	auto print_template = v8::FunctionTemplate::New(isolate, &print_callback);
-	global_template->Set(isolate, "print", print_template);
-	
-	auto println_template = v8::FunctionTemplate::New(isolate, &println_callback);
-	global_template->Set(isolate, "println", println_template);
-	
-	auto printobj_template = v8::FunctionTemplate::New(isolate, &printobj_callback);
-	global_template->Set(isolate, "printobj", printobj_template);
-	
-}
 
 
 
