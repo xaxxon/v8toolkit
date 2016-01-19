@@ -23,6 +23,7 @@ void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object
 
 
 #include <boost/format.hpp>
+// takes a format string and some javascript objects and does a printf-style print using boost::format
 static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
 	if (args.Length() > 0) {
 		auto string = *v8::String::Utf8Value(args[0]);
@@ -39,8 +40,7 @@ static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool a
 	}
 }
 
-
-
+// prints out information about the guts of an object
 void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	for (int i = 0; i < args.Length(); i++) {
 		auto object = v8::Object::Cast(*args[i]);
@@ -51,20 +51,14 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			printf(">>> Object does not appear to be a wrapped c++ class (no internal fields): %s\n", *v8::String::Utf8Value(args[i]));
 		}
 	}
-	// v8::Local<v8::Object> self = info.Holder();
-	// v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-	// T * cpp_object = static_cast<T *>(wrap->Value());
 }
 
 // call this to add a function called "print" to whatever object template you pass in (probably the global one)
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
 {
-	v8::HandleScope hs(isolate);
-	// auto print_template = v8::FunctionTemplate::New(isolate, &print_callback);
 	add_function(isolate, global_template, "print", [&](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
 	add_function(isolate, global_template, "println", [&](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, true);});
-	add_function(isolate, global_template, "printobj", [&](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
-	
+	add_function(isolate, global_template, "printobj", [&](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});	
 }
 
 
