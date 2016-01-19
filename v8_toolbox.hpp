@@ -19,6 +19,11 @@ void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
+template<class GLOBAL_INTERNAL_TYPE, class CALLBACK_FUNCTION>
+void global_set_weak(v8::Global<GLOBAL_INTERNAL_TYPE> global, CALLBACK_FUNCTION function)
+{
+	
+}
 
 
 
