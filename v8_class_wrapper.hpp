@@ -414,6 +414,14 @@ struct CastToJS<T*> {
 	}
 };
 
+template<typename T>
+struct CastToJS<T&> {
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		return CastToJS<T*>()(isolate, &cpp_object);		
+	}
+};
+
+
 
 
 template<typename T>
