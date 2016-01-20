@@ -427,7 +427,10 @@ public:
 		auto isolate = args.GetIsolate();
 		
 		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
-		_initialize_new_js_object<DestructorBehaviorLeaveAlone<T>>(isolate, args.This(), new_cpp_object);
+
+		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
+		//   GC's the javascript object, there should be no c++ references to it
+		_initialize_new_js_object<DestructorBehaviorDelete<T>>(isolate, args.This(), new_cpp_object);
 		
 		// return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
@@ -512,10 +515,6 @@ void V8ClassWrapper<T>::GetterHelper(v8::Local<v8::String> property,
 
 
 #include "casts.hpp"
-
-
-
-
 
 
 

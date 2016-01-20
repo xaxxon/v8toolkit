@@ -37,6 +37,7 @@ std::string get_file_contents(const char *filename)
 }
 
 
+
 struct Foo {
 	Foo(){printf("Created Foo %p (default constructor)\n", this);}
 	Foo(const Foo &){printf("Foo copy constructor\n");}
@@ -91,8 +92,13 @@ void print_maybe_value(v8::MaybeLocal<v8::Value> maybe_value)
 
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
 
+	// parse out any v8-specific command line flags
+	process_v8_flags(argc, argv);
+	expose_gc(); // force garbage collection to be exposed even if no command line parameter for it
+		
 	// Initialize V8.
 	v8::V8::InitializeICU();
 	v8::V8::InitializeExternalStartupData(argv[0]);
@@ -154,10 +160,11 @@ int main(int argc, char* argv[]) {
 		auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
 		wrapped_foo.add_member(&Foo::i, "i");
 		
-
 		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
 		v8::Context::Scope context_scope_x(context);
 
+
+		
 
 		// Create a string containing the JavaScript source code.
 		auto js_code = get_file_contents("code.js");

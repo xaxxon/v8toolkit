@@ -1,8 +1,39 @@
 #pragma once
 
 
+/**
+* Library of standalone helper functions for using V8.   Can be used independently of V8ClassWrapper
+*
+*/
+
+
+
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
+
+
+
+
+
+
+
+
+// parses v8-related flags and removes them, adjusting argc as needed
+void process_v8_flags(int & argc, char ** argv)
+{
+	v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
+}
+
+
+// exposes the garbage collector to javascript
+// same as passing --expose-gc as a command-line flag
+// To "help" javascript garbage collection from c++, use: 
+//   while(!V8::IdleNotification()) {};
+void expose_gc()
+{
+	const char * EXPOSE_GC = "--expose-gc";
+	v8::V8::SetFlagsFromString("--expose-gc", strlen("--expose-gc"));	
+}
 
 
 
@@ -19,10 +50,28 @@ void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
-template<class GLOBAL_INTERNAL_TYPE, class CALLBACK_FUNCTION>
-void global_set_weak(v8::Global<GLOBAL_INTERNAL_TYPE> global, CALLBACK_FUNCTION function)
+/**
+* Sets global as a weak reference and sets the specified function to be called on garbage collection
+*/
+template<class CALLBACK_FUNCTION>
+void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Value> javascript_object, CALLBACK_FUNCTION function)
 {
+	struct SetWeakCallbackData{
+		SetWeakCallbackData(CALLBACK_FUNCTION * function, v8::Global<v8::Value> * global) : function(function), global(global){}
+		CALLBACK_FUNCTION * function;
+		v8::Global<v8::Value> * global;
+	};
+	auto global = new v8::Global<v8::Value>(isolate, javascript_object);
+	auto foo = new SetWeakCallbackData(&function, global);
 	
+	global->SetWeak<SetWeakCallbackData>(foo,
+		[](const v8::WeakCallbackData<v8::Value, SetWeakCallbackData> & data){
+			SetWeakCallbackData * foo = data.GetParameter();
+			(*foo->function)();
+			foo->global->Reset();
+			delete foo->global;
+			delete foo;
+		});
 }
 
 
@@ -33,17 +82,27 @@ static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool a
 	if (args.Length() > 0) {
 		auto string = *v8::String::Utf8Value(args[0]);
 		auto format = boost::format(string);
-		
-		for (int i = 1; i < args.Length(); i++) {
-			format % *v8::String::Utf8Value(args[i]);
+
+		int i;
+		for (i = 1; format.remaining_args() > 0; i++) {
+			if (i < args.Length()) {
+				format % *v8::String::Utf8Value(args[i]);
+			} else {
+				format % "";
+			}
 		}
 		std::cout << ">>> ";
-		std::cout << format;	
+		std::cout << format;
+		while (i < args.Length()) {
+			std::cout << " " << *v8::String::Utf8Value(args[i]);
+			i++;
+		}
 		if (append_newline) {
 			std::cout << std::endl;
 		}
 	}
 }
+
 
 // prints out information about the guts of an object
 void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -59,6 +118,11 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 // call this to add a function called "print" to whatever object template you pass in (probably the global one)
+// if the first parameter is a format string, the appropriate number of following parameters will be used to fill the format
+//   any additional strings will be printed, space separated, after the format string.   If the first string has no formatting
+//   in it, all strings will simply be printed space-separated.   If there are not enough parameters to fulfill the format, the empty
+//   string will be used
+// Currently there is no way to print strings that look like formatting strings but aren't.
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
 {
 	add_function(isolate, global_template, "print", [&](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
