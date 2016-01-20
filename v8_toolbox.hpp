@@ -3,19 +3,10 @@
 
 /**
 * Library of standalone helper functions for using V8.   Can be used independently of V8ClassWrapper
-*
 */
-
-
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
-
-
-
-
-
-
 
 
 // parses v8-related flags and removes them, adjusting argc as needed
@@ -36,41 +27,45 @@ void expose_gc()
 }
 
 
-
 template<class CALLBACK_FUNCTION>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, CALLBACK_FUNCTION function)
 {		
-	return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args){
+	return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		(*(CALLBACK_FUNCTION *)v8::External::Cast(*(args.Data()))->Value())(args);
 	}, v8::External::New(isolate, (void*)&function));
 }
 
+
+/**
+* Helper to both create a function template and bind it with the specified name to the specified object template
+*/
 template<class CALLBACK_FUNCTION>
 void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object_template, const char * name, CALLBACK_FUNCTION function) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 /**
-* Sets global as a weak reference and sets the specified function to be called on garbage collection
+* Takes a local and creates a weak global reference callback for it
 */
 template<class CALLBACK_FUNCTION>
-void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Value> javascript_object, CALLBACK_FUNCTION function)
+void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
 {
 	struct SetWeakCallbackData{
-		SetWeakCallbackData(CALLBACK_FUNCTION * function, v8::Global<v8::Value> * global) : function(function), global(global){}
-		CALLBACK_FUNCTION * function;
-		v8::Global<v8::Value> * global;
+		SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, v8::Local<v8::Object> & javascript_object) : 
+			function(function) {
+				this->global.Reset(isolate, javascript_object);
+		}
+		CALLBACK_FUNCTION function;
+		v8::Global<v8::Object> global;
 	};
-	auto global = new v8::Global<v8::Value>(isolate, javascript_object);
-	auto foo = new SetWeakCallbackData(&function, global);
 	
-	global->SetWeak<SetWeakCallbackData>(foo,
-		[](const v8::WeakCallbackData<v8::Value, SetWeakCallbackData> & data){
-			SetWeakCallbackData * foo = data.GetParameter();
-			(*foo->function)();
-			foo->global->Reset();
-			delete foo->global;
-			delete foo;
+	auto callback_data = new SetWeakCallbackData(function, isolate, javascript_object);
+	callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
+		[](const v8::WeakCallbackData<v8::Object, SetWeakCallbackData> & data){
+			SetWeakCallbackData * callback_data = data.GetParameter();			
+			callback_data->function();
+			callback_data->global.Reset();
+			delete callback_data;
 		});
 }
 

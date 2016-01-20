@@ -31,7 +31,6 @@ if (typeof gc == 'function') {
 	gc();
 	println("Testing garbage collection, one Point object (but not two) should be GC'd and deleted");
 	var gc_test_1 = new Point();
-	var gc_test_2 = new Point();
 	gc_test_1 = undefined;
 	gc();
 	println("Done running GC");

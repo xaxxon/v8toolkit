@@ -13,10 +13,6 @@
 #include <utility>
 #include <assert.h>
 
-// V8 includes
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
-
 #include "v8_toolbox.hpp"
 
 /***
@@ -196,17 +192,10 @@ private:
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
 		
-		// set up a callback so we can clean up our internal object when the javascript
-		//   object is garbage collected
-		auto callback_data = new SetWeakCallbackParameter();
-		callback_data->cpp_object = cpp_object;
-		callback_data->javascript_object.Reset(isolate, js_object);
-		// callback_data->behavior = std::make_unique<typename std::enable_if<std::is_base_of<DestructorBehavior<T>,BEHAVIOR>::value, BEHAVIOR>::type>();
-
-		// this guarantees BEHAVIOR is a subclass of DestructorBehavior or operator= will fail to compile
-		callback_data->behavior = std::make_unique<BEHAVIOR>();
-
-		callback_data->javascript_object.SetWeak(callback_data, V8ClassWrapper<T>::v8_destructor);
+		global_set_weak(isolate, js_object, [isolate, cpp_object]() {
+				BEHAVIOR()(isolate, cpp_object);
+			}
+		);
 	}
 	
 	// users of the library should call get_instance, not the constructor directly
