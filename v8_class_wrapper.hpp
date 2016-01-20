@@ -15,6 +15,27 @@
 
 #include "v8_toolbox.hpp"
 
+/**
+* Design Decisions:
+* - When a c++ object returns a new object represented by one of its members, should it
+*   return the same javascript object each time as well?  
+*     class Thing {
+*       OtherClass other_class;
+*       OtherClass & get_other_class(){return this->other_class;} <== should this return the same javascript object on each call for the same Thing object
+*     }
+*   - that's currently what the existing_wrapped_objects map is for, but if a new object
+*     of the same time is created at the same address as an old one, the old javascript 
+*     object will be returned.
+*     - how would you track if the c++ object source object for an object went away?
+*     - how would you actually GC the old object when containing object went away?
+*   - Maybe allow some type of optional class customization to help give hints to V8ClassWrapper to have better behavior
+*
+*/
+
+
+
+
+
 /***
 * set of classes for determining what to do do the underlying c++
 *   object when the javascript object is garbage collected
@@ -24,6 +45,7 @@ struct DestructorBehavior {
 	virtual void operator()(v8::Isolate * isolate, T* object) const = 0;
 };
 
+
 template<class T>
 struct DestructorBehaviorDelete : DestructorBehavior<T> {
 	void operator()(v8::Isolate * isolate, T* object) const {
@@ -32,6 +54,7 @@ struct DestructorBehaviorDelete : DestructorBehavior<T> {
 		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
 	}
 };
+
 
 template<class T>
 struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> {
@@ -43,7 +66,15 @@ struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> {
 
 // Specialized types that know how to convert from a v8::Value to a specific primitive type
 template<typename T>
-struct CastToNative {};
+struct CastToNative {
+	T & operator()(v8::Local<v8::Value> & value){
+		auto object = v8::Object::Cast(*value);
+		assert(object->InternalFieldCount() > 0);
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+		T * cpp_object = static_cast<T *>(wrap->Value());
+		return *cpp_object;	
+	}
+};
 
 
 // Responsible for calling the actual method and populating the return type for non-void return type methods
@@ -306,7 +337,7 @@ public:
 			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
 			this->existing_wrapped_objects.insert(std::pair<T*, v8::Global<v8::Object>>(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object)));
-			
+			printf("Inserting new object into existing_wrapped_objects hash that is now of size: %d\n", (int)this->existing_wrapped_objects.size());			
 		}
 		return javascript_object;
 	}
@@ -465,11 +496,13 @@ template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T
 template<typename T>
 struct CastToJS {
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		// printf("In base cast to js struct with lvalue ref\n");
 		return CastToJS<T*>()(isolate, &cpp_object);
 	}
 	
 	// If an rvalue is passed in, a copy must be made.
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
+		// printf("In base cast to js struct with rvalue ref");
 		printf("Asked to convert rvalue type, so copying it first\n");
 
 		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
@@ -489,15 +522,18 @@ void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCal
 }
 
 
-template<class T>
-template<class VALUE_T>
+template<class T> // containing V8ClassWrapper<T> type
+template<class VALUE_T> // type being returned
 void V8ClassWrapper<T>::GetterHelper(v8::Local<v8::String> property,
 		               const v8::PropertyCallbackInfo<v8::Value>& info) {
+						   
 	v8::Local<v8::Object> self = info.Holder();				   
 	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 	T * cpp_object = static_cast<T *>(wrap->Value());
 
+	// This function returns a reference to member in question
 	auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
+	
 	auto & member_ref = (*member_reference_getter)(cpp_object);
 	info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
 }

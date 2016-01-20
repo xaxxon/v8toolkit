@@ -48,3 +48,11 @@ o.value = result;
 If the types you want to use aren't supported, just add them to casts.hpp.  It's pretty straightforward.  Any wrapped class is automatically supported as long as V8ClassWrapper\<Type\>::get_instance(the_correct_isolate); was called for the isolate you're running your code in.   
 
 Obviously this is not a polished library and I'm not sure how much more work this will get, but it's at least something good to look at, if you're reasonably good with intermediate-level c++ templating syntax.
+
+
+# Behaviors:
+If a wrapped class type r-value is returned from a function, a default copy will be made and the underlying object will be deleted when the javascript object is garbage collected.
+Subsequent calls to that function will return different javascript objects backed by different c++ objects.
+
+If a wrapped class type reference or pointer value is returned from a function, the first time it will create a new javascript object for the object.   Subsequent calls will return the same javascript object (not different javascript objects wrapping the same c++ object).   This means you can customize the object in javascript outside of the c++ interactions and get it again later.
+

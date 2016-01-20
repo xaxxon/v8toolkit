@@ -66,6 +66,8 @@ public:
 	
 	// Leave this as an r-value return for testing purposes	Foo f;
 	Foo get_foo() {return Foo();}
+	
+	
 };
 
 
@@ -156,6 +158,7 @@ int main(int argc, char* argv[])
 		wrapped_line.add_constructor("Line", global_templ);
 		wrapped_line.add_method(&Line::get_point, "get_point");
 		wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
+		wrapped_line.add_member(&Line::p, "p");
 		
 		auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
 		wrapped_foo.add_member(&Foo::i, "i");

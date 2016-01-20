@@ -92,9 +92,9 @@ static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool a
 			std::cout << " " << *v8::String::Utf8Value(args[i]);
 			i++;
 		}
-		if (append_newline) {
-			std::cout << std::endl;
-		}
+	}
+	if (append_newline) {
+		std::cout << std::endl;
 	}
 }
 
