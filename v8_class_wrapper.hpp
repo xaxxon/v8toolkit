@@ -13,7 +13,11 @@
 #include <utility>
 #include <assert.h>
 
+#include "casts.h"
+
 #include "v8_toolbox.hpp"
+
+#define DEBUG false
 
 /**
 * Design Decisions:
@@ -33,9 +37,6 @@
 */
 
 
-
-
-
 /***
 * set of classes for determining what to do do the underlying c++
 *   object when the javascript object is garbage collected
@@ -49,7 +50,7 @@ struct DestructorBehavior {
 template<class T>
 struct DestructorBehaviorDelete : DestructorBehavior<T> {
 	void operator()(v8::Isolate * isolate, T* object) const {
-		printf("Deleting object at %p during V8 garbage collection\n", object);
+		if (DEBUG) printf("Deleting object at %p during V8 garbage collection\n", object);
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
 	}
@@ -59,149 +60,7 @@ struct DestructorBehaviorDelete : DestructorBehavior<T> {
 template<class T>
 struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> {
 	void operator()(v8::Isolate * isolate, T* object) const {
-		printf("Not deleting object %p during V8 garbage collection\n", object);
-	}
-};
-
-
-// Specialized types that know how to convert from a v8::Value to a specific primitive type
-template<typename T>
-struct CastToNative {
-	T & operator()(v8::Local<v8::Value> & value){
-		auto object = v8::Object::Cast(*value);
-		assert(object->InternalFieldCount() > 0);
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-		return *cpp_object;	
-	}
-};
-
-
-// Responsible for calling the actual method and populating the return type for non-void return type methods
-template<typename METHOD_TYPE>
-struct RunMethod {};
-
-
-template<typename CLASS_TYPE, typename METHOD_TYPE, typename ... PARAMETERS>
-void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters);
-
-/**
-* Specialization for methods that don't return void.  Sets v8::FunctionCallbackInfo::GetReturnValue to value returned by the method
-*/
-template<typename RETURN_TYPE, typename CLASS_TYPE, typename ... PARAMETERS>
-struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>{
-	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-
-	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
-		run_non_void(object, method, info, parameters...);
-	}
-};
-
-// const method version 
-template<typename RETURN_TYPE, typename CLASS_TYPE, typename ... PARAMETERS>
-struct RunMethod<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...) const>{
-	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
-
-	void operator()(const CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
-		run_non_void(object, method, info, parameters...);
-	}
-};
-
-
-/**
-* Specialization for methods that return void.  No value set for v8::FunctionCallbackInfo::GetReturnValue
-*   The javascript call will return the javascript "undefined" value
-*/
-template<typename CLASS_TYPE, typename ... PARAMETERS>
-struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...)> {
-	typedef void(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-
-	void operator()(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
-		(object.*method)(parameters...);
-	}
-};
-
-// const method version 
-template<typename CLASS_TYPE, typename ... PARAMETERS>
-struct RunMethod<void(CLASS_TYPE::*)(PARAMETERS...) const> {
-	typedef void(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
-
-	void operator()(const CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> &, PARAMETERS... parameters) {
-		(object.*method)(parameters...);
-	}
-};
-
-
-
-/**
-* Class for turning a function parameter list into a parameter pack useful for actually calling the function
-*/
-template<int depth, typename T, typename U> 
-struct Caller {};
-
-
-/**
-* Specialization for when there are no parameters left to process, so it is time to actually
-* call the function
-*/	
-template<int depth, typename METHOD_TYPE, typename RET, typename CLASS_TYPE>
-struct Caller<depth, METHOD_TYPE, RET(CLASS_TYPE::*)()> {
-public:
-	// the final class in the call chain stores the actual method to be called
-
-	enum {DEPTH=depth, ARITY=0};
-	
-	// This call method actually calls the method with the specified object and the
-	//   parameter pack that was built up via the chain of calls between templated types
-	template<typename ... Ts>
-	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		RunMethod<METHOD_TYPE>()(object, method, info, ts...);
-	}
-};
-
-
-
-/**
-* specialization that strips off the first remaining parameter off the method type, stores that and then
-*   inherits from another instance that either strips the next one off, or if none remaining, actually calls
-*   the method
-* The method type is specified twice because the first is actually used by the final specialization to hold the 
-*   method type while the second one has its input parameter list stripped off one at a time to determine when
-*   the inheritance chain ends
-*/
-template<int depth, typename METHOD_TYPE, typename CLASS_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct Caller<depth, METHOD_TYPE, RET(CLASS_TYPE::*)(HEAD,TAIL...)> : public Caller<depth+1, METHOD_TYPE, RET(CLASS_TYPE::*)(TAIL...)> {
-public:
-	typedef Caller<depth+1, METHOD_TYPE, RET(CLASS_TYPE::*)(TAIL...)> super;
-	enum {DEPTH = depth, ARITY=super::ARITY + 1};
-
-	template<typename ... Ts>
-	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		CastToNative<HEAD> cast;
-		this->super::operator()(method, object, info, ts..., cast(info[depth])); 
-	}
-};
-
-
-
-// simple class to forward calls on to Caller without caring about the const-ness of the method
-template<class T>
-struct CallerQualifierRemover {};
-
-template<class RETURN_TYPE, class CLASS_TYPE, class ... PARAMETERS>
-struct CallerQualifierRemover<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)> {
-	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...);
-	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info) {
-		Caller<0, METHOD_TYPE, METHOD_TYPE>()(method, object, info);
-	}
-};
-
-// take a const method and strip the const off
-template<class RETURN_TYPE, class CLASS_TYPE, class ... PARAMETERS>
-struct CallerQualifierRemover<RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...) const> {
-	typedef RETURN_TYPE(CLASS_TYPE::*METHOD_TYPE)(PARAMETERS...) const;
-	void operator()(METHOD_TYPE method, CLASS_TYPE & object, const v8::FunctionCallbackInfo<v8::Value> & info) {
-		Caller<0, METHOD_TYPE, RETURN_TYPE(CLASS_TYPE::*)(PARAMETERS...)>()(method, object, info);
+		if (DEBUG) printf("Not deleting object %p during V8 garbage collection\n", object);
 	}
 };
 
@@ -254,16 +113,16 @@ public:
 	* For each isolate you need to add constructors/methods/members separately.
 	*/
 	static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
-		// printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
+		// if (DEBUG) printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
 		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
 			auto new_object = new V8ClassWrapper<T>(isolate);
 			isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));
-			// printf("Creating instance %p for isolate: %p\n", new_object, isolate);
+			// if (DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
 		}
-		// printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+		// if (DEBUG) printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
 		
 		auto object = isolate_to_wrapper_map[isolate];
-		// printf("Returning v8 wrapper: %p\n", object);
+		// if (DEBUG) printf("Returning v8 wrapper: %p\n", object);
 		return *object;
 	}
 	
@@ -317,18 +176,18 @@ public:
 	template<class BEHAVIOR>
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) {
 		auto isolate = this->isolate;
-		// fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+		if (DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
 		v8::Local<v8::Object> javascript_object;
 		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
-			printf("Found existing javascript object for c++ object %p\n", existing_cpp_object);
+			if (DEBUG) printf("Found existing javascript object for c++ object %p\n", existing_cpp_object);
 			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
 			
 		} else {
 		
-			printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
+			if (DEBUG) printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
 		
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
@@ -337,7 +196,7 @@ public:
 			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
 			this->existing_wrapped_objects.insert(std::pair<T*, v8::Global<v8::Object>>(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object)));
-			printf("Inserting new object into existing_wrapped_objects hash that is now of size: %d\n", (int)this->existing_wrapped_objects.size());			
+			if (DEBUG) printf("Inserting new object into existing_wrapped_objects hash that is now of size: %d\n", (int)this->existing_wrapped_objects.size());			
 		}
 		return javascript_object;
 	}
@@ -404,8 +263,8 @@ public:
 	* adds the ability to call the specified class instance method on an object of this type
 	* add_method(&ClassName::method_name, "javascript_attribute_name");
 	*/
-	template<typename METHOD_TYPE>
-	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name) {
+	template<class METHOD_TYPE>
+	V8ClassWrapper<T> & add_method( METHOD_TYPE method, std::string method_name) {
 		
 		// stop additional constructors from being added
 		member_or_method_added = true;
@@ -420,7 +279,10 @@ public:
 			void* ptr = wrap->Value();
 			auto backing_object_pointer = static_cast<T*>(ptr);
 			
-			CallerQualifierRemover<METHOD_TYPE>()(method, *backing_object_pointer, info);
+			auto bound_method = bind(*backing_object_pointer, method);
+			ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);
+			
+			// CallerQualifierRemover<METHOD_TYPE>()(method, *backing_object_pointer, info);
 			
 		});
 		
@@ -447,6 +309,7 @@ public:
 		auto isolate = args.GetIsolate();
 		
 		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+		if (DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
 		//   GC's the javascript object, there should be no c++ references to it
@@ -491,29 +354,6 @@ template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T
 
 
 
-
-// casts from a primitive to a v8::Value
-template<typename T>
-struct CastToJS {
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
-		// printf("In base cast to js struct with lvalue ref\n");
-		return CastToJS<T*>()(isolate, &cpp_object);
-	}
-	
-	// If an rvalue is passed in, a copy must be made.
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
-		// printf("In base cast to js struct with rvalue ref");
-		printf("Asked to convert rvalue type, so copying it first\n");
-
-		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
-		auto copy = new T(cpp_object);
-		auto context = isolate->GetCurrentContext();
-		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorDelete<T>>(context, copy);
-	}
-};
-
-
 template<typename CLASS_TYPE, typename METHOD_TYPE, typename ... PARAMETERS>
 void run_non_void(CLASS_TYPE & object, METHOD_TYPE method, const v8::FunctionCallbackInfo<v8::Value> & info, PARAMETERS... parameters) {
 	// decltype((object.*method)(parameters...)) return_value = (object.*method)(parameters...);
@@ -541,8 +381,54 @@ void V8ClassWrapper<T>::GetterHelper(v8::Local<v8::String> property,
 
 #include "casts.hpp"
 
+template<typename T>
+struct CastToJS {
+
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+		if (DEBUG) printf("In base cast to js struct with lvalue ref\n");
+		return CastToJS<T*>()(isolate, &cpp_object);
+	}
+
+	// If an rvalue is passed in, a copy must be made.
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
+		if (DEBUG) printf("In base cast to js struct with rvalue ref");
+		if (DEBUG) printf("Asked to convert rvalue type, so copying it first\n");
+
+		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
+		auto copy = new T(cpp_object);
+		auto context = isolate->GetCurrentContext();
+		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorDelete<T>>(context, copy);
+	}
+};
+
+// Attempt to use V8ClassWrapper to wrap any remaining types
+// That type must have had its methods and members added beforehand in the same isolate
+template<typename T>
+struct CastToJS<T*> {
+	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){
+		if (DEBUG) printf("CastToJS from T*\n");
+		auto context = isolate->GetCurrentContext();
+		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorLeaveAlone<T>>(context, cpp_object);
+	}
+};
 
 
+
+template<typename T>
+struct CastToNative
+{
+	// implementation for above struct's operator()
+	T & operator()(v8::Local<v8::Value> & value){
+		if (DEBUG) printf("cast to native\n");
+		auto object = v8::Object::Cast(*value);
+		assert(object->InternalFieldCount() > 0);
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+		T * cpp_object = static_cast<T *>(wrap->Value());
+		return *cpp_object;
+	}
+};
 
 // decent example:  http://www.codeproject.com/Articles/29109/Using-V-Google-s-Chrome-JavaScript-Virtual-Machin
 

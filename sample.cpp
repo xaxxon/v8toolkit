@@ -5,6 +5,7 @@
 
 #include "v8_class_wrapper.hpp"
 
+#define SAMPLE_DEBUG true
 
 // bog standard allocator code from V8 Docs
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
@@ -39,21 +40,21 @@ std::string get_file_contents(const char *filename)
 
 
 struct Foo {
-	Foo(){printf("Created Foo %p (default constructor)\n", this);}
-	Foo(const Foo &){printf("Foo copy constructor\n");}
-	~Foo(){printf("deleted Foo %p\n", this);}
-	int i = 421;
+	Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
+	Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n");}
+	~Foo(){if (SAMPLE_DEBUG) printf("deleted Foo %p\n", this);}
+	int i = 42;
 };
 
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-	Point() : x_(69), y_(69) {printf("created Point (default constructor)\n");}
-	Point(int x, int y) : x_(x), y_(y) { printf("created Point with 2 ints\n");}
-	Point(const Point & p) { assert(false); /* This is to help make sure none of the helpers are creating copies */ }
-	~Point(){printf("****Point destructor called on %p\n", this);}
+	Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor)\n");}
+	Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
+	Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
+	~Point(){instance_count--; if (SAMPLE_DEBUG) printf("Point destructor called on %p\n", this);}
 	int x_, y_;
-	int thing(int z, char * zz){printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
+	int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
 	int overloaded_method(char * foo){return 0;}
 	int overloaded_method(int foo){return 1;}
 	const char * stringthing() {return "hello";}
@@ -67,13 +68,20 @@ public:
 	// Leave this as an r-value return for testing purposes	Foo f;
 	Foo get_foo() {return Foo();}
 	
+	static int get_instance_count(){
+		printf("Point::get_instance_count: %d\n", Point::instance_count);
+		return instance_count;
+	}
+	static int instance_count;
 	
 };
 
+int Point::instance_count = 0;
+
 
 struct Line {
-	Line(){printf("Created line %p (default constructor)\n", this);}
-	~Line(){printf("Deleted line %p\n", this);}
+	Line(){if (SAMPLE_DEBUG) printf("Created line %p (default constructor)\n", this);}
+	~Line(){if (SAMPLE_DEBUG) printf("Deleted line %p\n", this);}
 	Point p;
     Point & get_point(){return this->p;}
 	Point get_rvalue_point(){return Point();}
@@ -138,6 +146,8 @@ int main(int argc, char* argv[])
 		wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
 		wrapped_point.add_constructor<int,int>("Pii", global_templ);
 		wrapped_point.add_method(&Point::thing, "thing");
+		add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
+		
 
 		// overloaded functions can be individually addressed, but they can't be the same name to javascript
 		//   at least not without some serious finagling of storing a mapping between a singlne name and
@@ -178,7 +188,7 @@ int main(int argc, char* argv[])
 		// Compile the source code.
 		v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
 
-
+		printf("About to start running script\n");
 		auto result = script->Run(context);
 		print_maybe_value(result);
 		

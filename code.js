@@ -1,20 +1,27 @@
-var line = new Line();
 
 
 // run garbage collector tests if javascript-exposed GC is enabled
 if (typeof gc == 'function') {
 	gc(); // make sure any existig garbage is gone
-	println("Testing garbage collection, one Point object (but not two) should be GC'd and deleted");
+	println("Testing garbage collection, one Point object should be GC'd and deleted");
 	var gc_test_1 = new Point();
+	println("C++ Point object count should be 1: ", point_instance_count())
+
 	gc_test_1 = undefined;
+	println("Running GC");
 	gc();
+	println("C++ Point object count should be 0: ", point_instance_count())
+
 	println("Done running GC");
 } else {
 	println("Not running garbage collector from javascript because it's not exposed via --enable-gc")
 }
 println();
 
-println("line.get_point().get_foo().i = %d\n", line.get_point().get_foo().i);
+
+var line = new Line();
+println("line.get_point().get_foo().i should be 42: '%d'\n", line.get_point().get_foo().i);
+println();
 
 
 println("This object is not a c++ wrapped object");
@@ -26,6 +33,7 @@ println();
 println("These two objects should have the same backing c++ object");
 var p1 = line.get_point();
 var p2 = line.get_point();
+
 
 printobj(p1);
 printobj(p2);
@@ -44,9 +52,12 @@ println("These objects should not be the same javascript object, either: %s", l1
 println();
 
 
-println("Comparing objects obtained from data members of class types");
+println("Comparing objects obtained from data members of class types should have the same c++ object");
 var line_point_1 = line.p;
 var line_point_2 = line.p;
 printobj(line_point_1);
 printobj(line_point_2);
 println("These objects should be the same javascript object: %s\n", line_point_1 === line_point_2 ? "same" : "different");
+
+gc();
+"yay"

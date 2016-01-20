@@ -1,8 +1,15 @@
 #pragma once
 
+#include <string>
+
+#include "include/libplatform/libplatform.h"
+#include "include/v8.h"
+
+
 /**
 * Casts from a boxed Javascript type to a native type
 */
+
 
 // integers
 template<>
@@ -53,6 +60,7 @@ struct CastToNative<std::string> {
 * Casts from a native type to a boxed Javascript type
 */
 
+
 // integers
 template<>
 struct CastToJS<short> {
@@ -60,7 +68,7 @@ struct CastToJS<short> {
 };
 template<>
 struct CastToJS<int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){printf("Casting int %d to js\n", value);return v8::Integer::New(isolate, value);}
 };
 template<>
 struct CastToJS<long> {
@@ -95,16 +103,6 @@ struct CastToJS<std::string> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
 };
 
-// Attempt to use V8ClassWrapper to wrap any remaining types
-// That type must have had its methods and members added beforehand in the same isolate
-template<typename T>
-struct CastToJS<T*> {
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){
-		auto context = isolate->GetCurrentContext();
-		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorLeaveAlone<T>>(context, cpp_object);
-	}
-};
 
 
 template<typename T>
