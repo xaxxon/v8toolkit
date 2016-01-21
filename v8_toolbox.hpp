@@ -259,3 +259,28 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
 	return sf;
 }
 
+
+template<class CALLABLE>
+void scoped_run(v8::Isolate * isolate, CALLABLE callable)
+{
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+	
+	if (isolate->InContext()) {
+		auto context = isolate->GetCurrentContext();
+		v8::Context::Scope context_scope(context);
+		callable();
+	} else {
+		callable();
+	}
+}
+
+template<class CALLABLE>
+void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE callable)
+{
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+	v8::Context::Scope context_scope(context);
+	
+	callable();
+}
