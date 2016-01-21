@@ -8,5 +8,8 @@ exposed_variable = 420;
 println(exposed_variable);
 
 // This line should be ignored
-exposed_variable_readonly=4;	
+exposed_variable_readonly=4;
 printfln("This should still be 420: %d", exposed_variable_readonly);
+
+
+printfln("This should be 101: %d",lambda_function(100));

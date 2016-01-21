@@ -90,6 +90,9 @@ int main(int argc, char* argv[])
 		expose_variable(isolate, global_templ, "exposed_variable", i);
 		expose_variable_readonly(isolate, global_templ, "exposed_variable_readonly", i);
 		
+		int lambda_function_int = 1;
+		add_function(isolate, global_templ, "lambda_function", [lambda_function_int](int j)->int{return lambda_function_int + j;});
+		
 		
 		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
 		

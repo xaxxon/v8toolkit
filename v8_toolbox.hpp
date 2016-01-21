@@ -100,9 +100,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 	}
 };
 
-
-// Specialization to handle functions that want the javascript callback info directly
-// Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library)
+/**
+* Specialization to handle functions that want the javascript callback info directly
+* Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library)
+* Any return value must be handled directly by the function itself by populating the "info" parameter
+*/
 template<int depth, class T>
 struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
 {
@@ -111,7 +113,9 @@ struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackI
 	}
 };
 
-
+/**
+* Creates a function template from a std::function
+*/
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
 {
@@ -122,12 +126,25 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 	}, v8::External::New(isolate, (void*)copy));
 }
 
+template<class R, class CLASS, class... Args>
+std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable ) 
+{
+	return std::function<R(Args...)>(callable);
+}
 
+template<class T>
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable) 
+{
+	return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
+}
+
+/**
+* Creates a function template from a c-style function pointer
+*/
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(*f)(Args...))
 {
-	auto callable = new std::function<R(Args...)>(f);
-	return make_function_template(isolate, *callable);
+	return make_function_template(isolate, std::function<R(Args...)>(f));
 }
 
 
@@ -138,6 +155,11 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 template<class R, class... Args>
 void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
+}
+
+template<class T>
+void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
+	object_template->Set(isolate, name, make_function_template(isolate, callable));
 }
 
 template<class R, class... Args>
@@ -287,7 +309,7 @@ void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_templ
 #endif
 	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
 	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, true);});
-	
+
 	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
 }
 
