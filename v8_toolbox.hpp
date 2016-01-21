@@ -291,6 +291,11 @@ void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_templ
 	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
 }
 
+/**
+* Accepts an object and a method on that object to be called later via its operator()
+* Does not require knowledge of how many parameters the method takes or any placeholder arguments
+* Good for wrapping with a std::function
+*/
 template<class T, class U>
 struct Bind{};
 
@@ -308,12 +313,15 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
 	}
 };
 
+
+/**
+* Helper function to create a Bind object using type deduction and wrap it in a
+* std::function object.
+*/
 template <class CLASS, class R, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
 {
-	auto bind = new Bind<CLASS, R(CLASS::*)(Args...)>(object, method);
-	std::function<R(Args...)> sf(*bind);
-	return sf;
+	return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
 }
 
 
