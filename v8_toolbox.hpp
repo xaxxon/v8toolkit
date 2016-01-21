@@ -134,22 +134,47 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 * Helper to both create a function template and bind it with the specified name to the specified object template
 */
 template<class R, class... Args>
-void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
+void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 template<class R, class... Args>
-void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
+void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 // add a function that directly handles the v8 callback data
-void add_function(v8::Isolate * isolate, v8::Handle<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
+// explicit function typing needed to coerce non-capturing lambdas into c-style function pointers
+void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 
+template<class VARIABLE_TYPE>
+void VariableGetter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
+{
+	auto isolate = info.GetIsolate();
+	info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value()));
+}
 
+
+template<class VARIABLE_TYPE>
+void VariableSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
+{
+	auto isolate = info.GetIsolate();
+	*(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
+}
+
+
+template<class VARIABLE_TYPE>
+void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, VariableSetter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+}
+
+template<class VARIABLE_TYPE>
+void expose_variable_readonly(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+}
 
 
 /**
@@ -228,7 +253,6 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 // Currently there is no way to print strings that look like formatting strings but aren't.
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
 {
-	printf("Adding print functions to javascript\n");
 	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
 	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, true);});
 	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});

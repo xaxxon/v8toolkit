@@ -93,7 +93,14 @@ int main(int argc, char* argv[])
 		add_function(isolate, global_templ, "bar", &bar);
 		Point p;
 		add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
+		
+		int i = 42;
+		expose_variable(isolate, global_templ, "exposed_variable", i);
+		expose_variable_readonly(isolate, global_templ, "exposed_variable_readonly", i);
+		
+		
 		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
+		
 		
 		// runs the following code in an isolate, handle, and context scope
 		scoped_run(isolate, context, [isolate, context](){
