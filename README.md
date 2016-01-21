@@ -1,4 +1,4 @@
-## This code is very rough and not polished in any way.   It should generally be working for the functionalty demonstrated in sample.cpp
+## This code is very rough and not polished in any way.   It should generally be working for the functionalty demonstrated in sample.cpp and toolbox_sample.cpp
 
 # v8_toolbox.hpp
 Standalone tools for using V8.  Does not require using V8ClassWrapper.   V8ClassWrapper uses toolbox.   Right now methods are not in a namespace and pollute global
