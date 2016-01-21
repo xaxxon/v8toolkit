@@ -9,4 +9,4 @@ println(exposed_variable);
 
 // This line should be ignored
 exposed_variable_readonly=4;	
-println("This should still be 420: %d", exposed_variable_readonly);
+printfln("This should still be 420: %d", exposed_variable_readonly);

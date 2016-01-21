@@ -1,18 +1,10 @@
 #include <string>
 #include <fstream>
 
+
+#define USE_BOOST
 #include "v8_toolbox.hpp"
 
-// bog standard allocator code from V8 Docs
-class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
- public:
-  virtual void* Allocate(size_t length) {
-    void* data = AllocateUninitialized(length);
-    return data == NULL ? data : memset(data, 0, length);
-  }
-  virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-  virtual void Free(void* data, size_t) { free(data); }
-};
 
 
 // helper for testing code, not a part of the library
@@ -62,8 +54,8 @@ public:
 int Point::instance_count = 0;
 
 
-int foo(int i){printf("IN FOO\n");return i;}
-void bar(){printf("IN BAR\n");}
+int foo(int i){return i;}
+void bar(){}
 
 int main(int argc, char* argv[]) 
 {

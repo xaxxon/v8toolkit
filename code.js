@@ -20,7 +20,7 @@ println();
 
 
 var line = new Line();
-println("line.get_point().get_foo().i should be 42: '%d'\n", line.get_point().get_foo().i);
+printfln("line.get_point().get_foo().i should be 42: '%d'\n", line.get_point().get_foo().i);
 println();
 
 
@@ -37,7 +37,7 @@ var p2 = line.get_point();
 
 printobj(p1);
 printobj(p2);
-println("These objects should be the same javascript object as well: objects are %s", p1===p2?"same": "different");
+printfln("These objects should be the same javascript object as well: objects are %s", p1===p2?"same": "different");
 println();
 
 
@@ -48,7 +48,7 @@ var l1 = line.get_point().get_foo();
 var l2 = line.get_point().get_foo();
 printobj(l1);
 printobj(l2);
-println("These objects should not be the same javascript object, either: %s", l1===l2?"same": "different");
+printfln("These objects should not be the same javascript object, either: %s", l1===l2?"same": "different");
 println();
 
 
@@ -57,7 +57,7 @@ var line_point_1 = line.p;
 var line_point_2 = line.p;
 printobj(line_point_1);
 printobj(line_point_2);
-println("These objects should be the same javascript object: %s\n", line_point_1 === line_point_2 ? "same" : "different");
+printfln("These objects should be the same javascript object: %s\n", line_point_1 === line_point_2 ? "same" : "different");
 
 gc();
 "yay"

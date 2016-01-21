@@ -14,6 +14,8 @@
 #include "casts.hpp"
 
 
+
+
 // parses v8-related flags and removes them, adjusting argc as needed
 void process_v8_flags(int & argc, char ** argv)
 {
@@ -166,11 +168,18 @@ void VariableSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, 
 }
 
 
+/**
+* Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
+* Allows reads and writes to the variable
+*/
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
 	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, VariableSetter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
-
+/**
+* Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
+* Allows reads to the variable.  Writes are ignored.
+*/
 template<class VARIABLE_TYPE>
 void expose_variable_readonly(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
 	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
@@ -203,10 +212,11 @@ void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_o
 }
 
 
+#ifdef USE_BOOST
 
 #include <boost/format.hpp>
 // takes a format string and some javascript objects and does a printf-style print using boost::format
-static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+void printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
 	if (args.Length() > 0) {
 		auto string = *v8::String::Utf8Value(args[0]);
 		auto format = boost::format(string);
@@ -219,7 +229,6 @@ static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool a
 				format % "";
 			}
 		}
-		std::cout << ">>> ";
 		std::cout << format;
 		while (i < args.Length()) {
 			std::cout << " " << *v8::String::Utf8Value(args[i]);
@@ -230,6 +239,25 @@ static void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool a
 		std::cout << std::endl;
 	}
 }
+
+#endif // USE_BOOST
+
+void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+	if (args.Length() > 0) {
+		for (int i = 0; i < args.Length(); i++) {
+			if (i > 0) {
+				std::cout << " ";
+			}
+			std::cout << *v8::String::Utf8Value(args[i]);
+		}
+	}
+	if (append_newline) {
+		std::cout << std::endl;
+	}
+	
+}
+
+
 
 
 // prints out information about the guts of an object
@@ -253,8 +281,13 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 // Currently there is no way to print strings that look like formatting strings but aren't.
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
 {
+#ifdef USE_BOOST
+	add_function(isolate, global_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){printf_helper(args, false);});
+	add_function(isolate, global_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){printf_helper(args, true);});
+#endif
 	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
 	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, true);});
+	
 	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
 }
 
@@ -318,3 +351,17 @@ void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE 
 	
 	callable();
 }
+
+/**
+* bog standard allocator code from V8 Docs
+*/
+class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+ public:
+  virtual void* Allocate(size_t length) {
+    void* data = AllocateUninitialized(length);
+    return data == NULL ? data : memset(data, 0, length);
+  }
+  virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
+  virtual void Free(void* data, size_t) { free(data); }
+};
+

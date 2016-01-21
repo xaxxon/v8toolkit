@@ -20,7 +20,7 @@
 #define DEBUG false
 
 /**
-* Design Decisions:
+* Design Questions:
 * - When a c++ object returns a new object represented by one of its members, should it
 *   return the same javascript object each time as well?  
 *     class Thing {

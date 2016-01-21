@@ -1,12 +1,10 @@
-## This code is very rough and not polished in any way.   It should generally be working for the functionalty demonstrated in sample.cpp and toolbox_sample.cpp
-
 # v8_toolbox.hpp
-Standalone tools for using V8.  Does not require using V8ClassWrapper.   V8ClassWrapper uses toolbox.   Right now methods are not in a namespace and pollute global
+Standalone tools for using V8.  Does not require using V8ClassWrapper.  Right now methods are not in a namespace and pollute global.  For usage, see toolbox_sample.cpp
 
 # v8-class-wrapper
-Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016)
+Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp
 
-# These docs may be out of date but sample.cpp:main always has up-to-date usage
+# These docs may be out of date but sample.cpp and toolbox_sample.cpp show current usage
 
 ```
 class MyClass {
