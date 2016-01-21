@@ -23,18 +23,19 @@ void process_v8_flags(int & argc, char ** argv)
 
 // exposes the garbage collector to javascript
 // same as passing --expose-gc as a command-line flag
-// To "help" javascript garbage collection from c++, use: 
-//   while(!V8::IdleNotification()) {};
+// To encourage javascript garbage collection run from c++, use: 
+//   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 void expose_gc()
 {
-	const char * EXPOSE_GC = "--expose-gc";
-	v8::V8::SetFlagsFromString("--expose-gc", strlen("--expose-gc"));	
+	static const char * EXPOSE_GC = "--expose-gc";
+	v8::V8::SetFlagsFromString(EXPOSE_GC, strlen(EXPOSE_GC));	
 }
 
 
 template<class T>
 struct CallCallable{};
 
+// specialization for functions with a non-void return type so the value is sent back to javascript
 template<class RETURN_TYPE, typename ... PARAMETERS>
 struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
 	void operator()(std::function<RETURN_TYPE(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
@@ -42,6 +43,7 @@ struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
 	}
 };
 
+// specialization for functions with a void return type and there is nothing to be sent back to javascript
 template<typename ... PARAMETERS>
 struct CallCallable<std::function<void(PARAMETERS...)>> {
 	void operator()(std::function<void(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
@@ -77,7 +79,6 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 };
 
 
-
 /**
 * specialization that strips off the first remaining parameter off the function type, stores that and then
 *   inherits from another instance that either strips the next one off, or if none remaining, actually calls
@@ -98,7 +99,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 };
 
 
-
+// Specialization to handle functions that want the javascript callback info directly
+// Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library)
 template<int depth, class T>
 struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
 {
@@ -106,7 +108,6 @@ struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackI
 		function(info);
 	}
 };
-
 
 
 template <class R, class... Args>
@@ -118,7 +119,6 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 		ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>()(callable, args);
 	}, v8::External::New(isolate, (void*)copy));
 }
-
 
 
 template <class R, class... Args>
@@ -260,6 +260,11 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
 }
 
 
+/**
+* Helper function to run the callable inside contexts.
+* If the isolate is currently inside a context, it will use that context automatically
+*   otherwise no context::scope will be created
+*/
 template<class CALLABLE>
 void scoped_run(v8::Isolate * isolate, CALLABLE callable)
 {
@@ -275,6 +280,11 @@ void scoped_run(v8::Isolate * isolate, CALLABLE callable)
 	}
 }
 
+/**
+* Helper function to run the callable inside contexts.
+* This version is good when the isolate isn't currently within a context but a context
+*   has been created to be used
+*/
 template<class CALLABLE>
 void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE callable)
 {
