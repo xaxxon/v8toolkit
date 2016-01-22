@@ -29,7 +29,7 @@ void process_v8_flags(int & argc, char ** argv)
 * same as passing --expose-gc as a command-line flag
 * To encourage javascript garbage collection run from c++, use: 
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
-*/
+*/	
 void expose_gc()
 {
 	static const char * EXPOSE_GC = "--expose-gc";
@@ -45,20 +45,20 @@ struct CallCallable{};
 /**
 * specialization for functions with a non-void return type so the value is sent back to javascript
 */
-template<class RETURN_TYPE, typename ... PARAMETERS>
-struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
-	void operator()(std::function<RETURN_TYPE(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
-		args.GetReturnValue().Set(v8toolkit::CastToJS<RETURN_TYPE>()(args.GetIsolate(), callable(parameters...)));
+template<class R, typename ... Args>
+struct CallCallable<std::function<R(Args...)>> {
+	void operator()(std::function<R(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+		info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
 	}
 };
 
 /**
 * specialization for functions with a void return type and there is nothing to be sent back to javascript
 */
-template<typename ... PARAMETERS>
-struct CallCallable<std::function<void(PARAMETERS...)>> {
-	void operator()(std::function<void(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
-		callable(parameters...);
+template<typename ... Args>
+struct CallCallable<std::function<void(Args...)>> {
+	void operator()(std::function<void(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+		callable(args...);
 	}
 };
 
@@ -257,31 +257,56 @@ void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_o
 
 
 #ifdef USE_BOOST
+
+} // end the namespace temporarily to import boost::format
+#include <boost/format.hpp>
+namespace v8toolkit { // re-start the namespace
+	
+	
+// Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
+//   contained values (but not subsequent arrays for no particular reason)
+std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	std::vector<v8::Local<v8::Value>> values;
+	
+	auto isolate = args.GetIsolate();
+	auto context = isolate->GetCurrentContext();
+	
+	for (int i = 0; i < args.Length(); i++) {
+		if (args[i]->IsArray()) {
+			auto array = v8::Object::Cast(*args[i]);
+			int i = 0;
+			while(array->Has(context, i).FromMaybe(false)) {
+				values.push_back(array->Get(context, i).ToLocalChecked());
+				i++;
+			}
+		} else {
+			values.push_back(args[i]);
+		}
+	}
+	return values;
 }
 
 
-#include <boost/format.hpp>
-
-namespace v8toolkit {
-	
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
 void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+	auto values = get_all_values(args);
+	
 	if (args.Length() > 0) {
-		auto string = *v8::String::Utf8Value(args[0]);
+		auto string = *v8::String::Utf8Value(values[0]);
 		auto format = boost::format(string);
 
 		int i;
 		for (i = 1; format.remaining_args() > 0; i++) {
-			if (i < args.Length()) {
-				format % *v8::String::Utf8Value(args[i]);
+			if (i < values.size()) {
+				format % *v8::String::Utf8Value(values[i]);
 			} else {
 				format % "";
 			}
 		}
 		std::cout << format;
-		while (i < args.Length()) {
-			std::cout << " " << *v8::String::Utf8Value(args[i]);
+		while (i < values.size()) {
+			std::cout << " " << *v8::String::Utf8Value(values[i]);
 			i++;
 		}
 	}
@@ -292,20 +317,24 @@ void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append
 
 #endif // USE_BOOST
 
+
+
 // prints out arguments with a space between them
 void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
-	if (args.Length() > 0) {
-		for (int i = 0; i < args.Length(); i++) {
-			if (i > 0) {
-				std::cout << " ";
-			}
-			std::cout << *v8::String::Utf8Value(args[i]);
+
+	auto values = get_all_values(args);
+	int i = 0;
+	for (auto value : values) {
+		if (i > 0) {
+			std::cout << " ";
 		}
+		std::cout << *v8::String::Utf8Value(value);
+		i++;	
 	}
 	if (append_newline) {
 		std::cout << std::endl;
 	}
-	
+
 }
 
 
