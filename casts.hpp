@@ -6,7 +6,8 @@
 #include "include/v8.h"
 
 
-
+template<typename T>
+struct CastToNative;
 
 /**
 * Casts from a boxed Javascript type to a native type
@@ -106,6 +107,9 @@ struct CastToNative<std::string> {
 /**
 * Casts from a native type to a boxed Javascript type
 */
+
+template<typename T>
+struct CastToJS;
 
 
 // integers

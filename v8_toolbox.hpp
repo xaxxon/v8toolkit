@@ -10,34 +10,40 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
-#include "casts.h"
 #include "casts.hpp"
 
 
 
-
-// parses v8-related flags and removes them, adjusting argc as needed
+/**
+* parses v8-related flags and removes them, adjusting argc as needed
+*/
 void process_v8_flags(int & argc, char ** argv)
 {
 	v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
 }
 
 
-// exposes the garbage collector to javascript
-// same as passing --expose-gc as a command-line flag
-// To encourage javascript garbage collection run from c++, use: 
-//   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
+/**
+* exposes the garbage collector to javascript
+* same as passing --expose-gc as a command-line flag
+* To encourage javascript garbage collection run from c++, use: 
+*   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
+*/
 void expose_gc()
 {
 	static const char * EXPOSE_GC = "--expose-gc";
 	v8::V8::SetFlagsFromString(EXPOSE_GC, strlen(EXPOSE_GC));	
 }
 
-
+/**
+* Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript
+*/
 template<class T>
 struct CallCallable{};
 
-// specialization for functions with a non-void return type so the value is sent back to javascript
+/**
+* specialization for functions with a non-void return type so the value is sent back to javascript
+*/
 template<class RETURN_TYPE, typename ... PARAMETERS>
 struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
 	void operator()(std::function<RETURN_TYPE(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
@@ -45,7 +51,9 @@ struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
 	}
 };
 
-// specialization for functions with a void return type and there is nothing to be sent back to javascript
+/**
+* specialization for functions with a void return type and there is nothing to be sent back to javascript
+*/
 template<typename ... PARAMETERS>
 struct CallCallable<std::function<void(PARAMETERS...)>> {
 	void operator()(std::function<void(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
@@ -81,6 +89,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 };
 
 
+
 /**
 * specialization that strips off the first remaining parameter off the function type, stores that and then
 *   inherits from another instance that either strips the next one off, or if none remaining, actually calls
@@ -100,6 +109,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 	}
 };
 
+
+
 /**
 * Specialization to handle functions that want the javascript callback info directly
 * Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library)
@@ -112,6 +123,8 @@ struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackI
 		function(info);
 	}
 };
+
+
 
 /**
 * Creates a function template from a std::function
@@ -126,17 +139,23 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 	}, v8::External::New(isolate, (void*)copy));
 }
 
+
+
 template<class R, class CLASS, class... Args>
 std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable ) 
 {
 	return std::function<R(Args...)>(callable);
 }
 
+
+
 template<class T>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable) 
 {
 	return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
 }
+
+
 
 /**
 * Creates a function template from a c-style function pointer
@@ -146,7 +165,6 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 {
 	return make_function_template(isolate, std::function<R(Args...)>(f));
 }
-
 
 
 /**
@@ -167,23 +185,26 @@ void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
-// add a function that directly handles the v8 callback data
-// explicit function typing needed to coerce non-capturing lambdas into c-style function pointers
+/**
+* add a function that directly handles the v8 callback data
+* explicit function typing needed to coerce non-capturing lambdas into c-style function pointers
+*/
 void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 
+// helper for getting exposed variables
 template<class VARIABLE_TYPE>
-void VariableGetter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
+void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
 	auto isolate = info.GetIsolate();
 	info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value()));
 }
 
-
+// helper for setting exposed variables
 template<class VARIABLE_TYPE>
-void VariableSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
+void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
 	auto isolate = info.GetIsolate();
 	*(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
@@ -196,7 +217,7 @@ void VariableSetter(v8::Local<v8::String> property, v8::Local<v8::Value> value, 
 */
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, VariableSetter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
@@ -204,7 +225,7 @@ void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & obje
 */
 template<class VARIABLE_TYPE>
 void expose_variable_readonly(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), VariableGetter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
 }
 
 
@@ -238,7 +259,8 @@ void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_o
 
 #include <boost/format.hpp>
 // takes a format string and some javascript objects and does a printf-style print using boost::format
-void printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+// fills missing parameters with empty strings and prints any extra parameters with spaces between them
+void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
 	if (args.Length() > 0) {
 		auto string = *v8::String::Utf8Value(args[0]);
 		auto format = boost::format(string);
@@ -264,7 +286,8 @@ void printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_
 
 #endif // USE_BOOST
 
-void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+// prints out arguments with a space between them
+void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
 	if (args.Length() > 0) {
 		for (int i = 0; i < args.Length(); i++) {
 			if (i > 0) {
@@ -281,7 +304,6 @@ void print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_n
 
 
 
-
 // prints out information about the guts of an object
 void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	for (int i = 0; i < args.Length(); i++) {
@@ -295,6 +317,7 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 }
 
+
 // call this to add a function called "print" to whatever object template you pass in (probably the global one)
 // if the first parameter is a format string, the appropriate number of following parameters will be used to fill the format
 //   any additional strings will be printed, space separated, after the format string.   If the first string has no formatting
@@ -304,19 +327,20 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
 {
 #ifdef USE_BOOST
-	add_function(isolate, global_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){printf_helper(args, false);});
-	add_function(isolate, global_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){printf_helper(args, true);});
+	add_function(isolate, global_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, false);});
+	add_function(isolate, global_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, true);});
 #endif
-	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, false);});
-	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){print_helper(args, true);});
+	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
+	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
 
 	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
 }
 
+
 /**
 * Accepts an object and a method on that object to be called later via its operator()
 * Does not require knowledge of how many parameters the method takes or any placeholder arguments
-* Good for wrapping with a std::function
+* Can be wrapped with a std::function
 */
 template<class T, class U>
 struct Bind{};
