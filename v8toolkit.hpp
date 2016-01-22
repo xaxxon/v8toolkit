@@ -13,6 +13,7 @@
 #include "casts.hpp"
 
 
+namespace v8toolkit {
 
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
@@ -256,8 +257,13 @@ void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_o
 
 
 #ifdef USE_BOOST
+}
+
 
 #include <boost/format.hpp>
+
+namespace v8toolkit {
+	
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
 void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
@@ -407,7 +413,7 @@ void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE 
 }
 
 /**
-* bog standard allocator code from V8 Docs
+* Example allocator code from V8 Docs
 */
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
@@ -419,3 +425,4 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
   virtual void Free(void* data, size_t) { free(data); }
 };
 
+}

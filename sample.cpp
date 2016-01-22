@@ -6,6 +6,8 @@
 #define USE_BOOST
 #include "v8_class_wrapper.hpp"
 
+using namespace v8toolkit;
+
 #define SAMPLE_DEBUG true
 
 

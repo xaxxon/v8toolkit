@@ -3,8 +3,8 @@
 
 
 #define USE_BOOST
-#include "v8_toolbox.hpp"
-
+#include "v8toolkit.hpp"
+using namespace v8toolkit;
 
 
 // helper for testing code, not a part of the library

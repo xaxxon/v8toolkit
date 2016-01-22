@@ -13,7 +13,7 @@
 #include <utility>
 #include <assert.h>
 
-#include "v8_toolbox.hpp"
+#include "v8toolkit.hpp"
 
 #define DEBUG false
 
@@ -88,7 +88,7 @@ private:
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
 		
-		global_set_weak(isolate, js_object, [isolate, cpp_object]() {
+		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object]() {
 				BEHAVIOR()(isolate, cpp_object);
 			}
 		);
@@ -361,8 +361,8 @@ public:
 			void* ptr = wrap->Value();
 			auto backing_object_pointer = static_cast<T*>(ptr);
 			
-			auto bound_method = bind(*backing_object_pointer, method);
-			ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);
+			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
+			v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);
 			
 			// CallerQualifierRemover<METHOD_TYPE>()(method, *backing_object_pointer, info);
 			
