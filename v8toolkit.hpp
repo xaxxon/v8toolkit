@@ -48,7 +48,7 @@ struct CallCallable{};
 template<class RETURN_TYPE, typename ... PARAMETERS>
 struct CallCallable<std::function<RETURN_TYPE(PARAMETERS...)>> {
 	void operator()(std::function<RETURN_TYPE(PARAMETERS...)> callable, const v8::FunctionCallbackInfo<v8::Value> & args, PARAMETERS... parameters) {
-		args.GetReturnValue().Set(CastToJS<RETURN_TYPE>()(args.GetIsolate(), callable(parameters...)));
+		args.GetReturnValue().Set(v8toolkit::CastToJS<RETURN_TYPE>()(args.GetIsolate(), callable(parameters...)));
 	}
 };
 

@@ -15,6 +15,8 @@
 
 #include "v8toolkit.hpp"
 
+namespace v8toolkit {
+
 #define DEBUG false
 
 /**
@@ -469,3 +471,4 @@ struct CastToNative
 // }
 
 
+}

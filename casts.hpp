@@ -5,6 +5,7 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
+namespace v8toolkit {
 
 template<typename T>
 struct CastToNative;
@@ -207,17 +208,4 @@ struct CastToJS<std::string> {
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
