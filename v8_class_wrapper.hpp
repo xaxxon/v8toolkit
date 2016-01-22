@@ -13,7 +13,6 @@
 #include <utility>
 #include <assert.h>
 
-
 #include "v8_toolbox.hpp"
 
 #define DEBUG false
@@ -106,7 +105,97 @@ private:
 		this->constructor_templates.push_back(constructor_template);
 	}
 	
-protected:
+	template<class VALUE_T> // type being returned
+	static void _getter_helper(v8::Local<v8::String> property,
+	                  const v8::PropertyCallbackInfo<v8::Value>& info) 
+	{
+						   
+		v8::Local<v8::Object> self = info.Holder();				   
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		T * cpp_object = static_cast<T *>(wrap->Value());
+
+		// This function returns a reference to member in question
+		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
+	
+		auto & member_ref = (*member_reference_getter)(cpp_object);
+		info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
+	}
+
+	template<typename VALUE_T>
+	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
+	               const v8::PropertyCallbackInfo<void>& info) 
+	{
+		v8::Local<v8::Object> self = info.Holder();				   
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		T * cpp_object = static_cast<T *>(wrap->Value());
+
+		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
+		auto & member_ref = (*member_reference_getter)(cpp_object);
+	  	member_ref = CastToNative<VALUE_T>()(value);
+		auto & m2 = (*member_reference_getter)(cpp_object);
+	}
+	
+	// Helper for creating objects when "new MyClass" is called from java
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
+	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
+		auto isolate = args.GetIsolate();
+		
+		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+		if (DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
+
+		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
+		//   GC's the javascript object, there should be no c++ references to it
+		_initialize_new_js_object<DestructorBehaviorDelete<T>>(isolate, args.This(), new_cpp_object);
+		
+		// return the object to the javascript caller
+		args.GetReturnValue().Set(args.This());
+	}
+
+
+	template <typename ...Fs, size_t...ns> 
+	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
+		return new T(CastToNative<Fs>()(args[ns])...);
+	}
+	
+	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
+	//   Useful because capturing lambdas don't have a traditional function pointer type
+	static void callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) 
+	{
+		StdFunctionCallbackType * callback_lambda = (StdFunctionCallbackType *)v8::External::Cast(*(args.Data()))->Value();		
+		(*callback_lambda)(args);
+	}
+	
+	// data to pass into a setweak callback
+	struct SetWeakCallbackParameter 
+	{
+		T * cpp_object;
+		v8::Global<v8::Object> javascript_object;
+		std::unique_ptr<DestructorBehavior<T>> behavior;
+	};
+	
+	
+	
+	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
+	// garbage collected
+	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
+		auto isolate = data.GetIsolate();
+
+		SetWeakCallbackParameter * parameter = data.GetParameter();
+		
+		// delete our internal c++ object and tell V8 the memory has been removed
+		(*parameter->behavior)(isolate, parameter->cpp_object);
+		
+		// TODO: Need to remove object from existing_wrapped_objects hash properly resetting the global 
+		
+		
+		// Clear out the Global<Object> handle
+		parameter->javascript_object.Reset();
+
+		// Delete the heap-allocated std::pair from v8_constructor
+		delete parameter;
+	}
+	
+	
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
 	std::vector<v8::Local<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects; // TODO: This can't be a strong reference global or the object will never be GC'd
@@ -216,44 +305,8 @@ public:
 
 	typedef std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> StdFunctionCallbackType;
 	
-	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
-	//   Useful because capturing lambdas don't have a traditional function pointer type
-	static void callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) 
-	{
-		StdFunctionCallbackType * callback_lambda = (StdFunctionCallbackType *)v8::External::Cast(*(args.Data()))->Value();		
-		(*callback_lambda)(args);
-	}
 	
 	
-	template<class VALUE_T> // type being returned
-	static void _getter_helper(v8::Local<v8::String> property,
-	                  const v8::PropertyCallbackInfo<v8::Value>& info) 
-	{
-						   
-		v8::Local<v8::Object> self = info.Holder();				   
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-
-		// This function returns a reference to member in question
-		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-	
-		auto & member_ref = (*member_reference_getter)(cpp_object);
-		info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
-	}
-
-	template<typename VALUE_T>
-	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
-	               const v8::PropertyCallbackInfo<void>& info) 
-	{
-		v8::Local<v8::Object> self = info.Holder();				   
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-
-		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-		auto & member_ref = (*member_reference_getter)(cpp_object);
-	  	member_ref = CastToNative<VALUE_T>()(value);
-		auto & m2 = (*member_reference_getter)(cpp_object);
-	}
 	
 	
 	
@@ -323,58 +376,8 @@ public:
 		return *this;
 	}
 	
-	// data to pass into a setweak callback
-	struct SetWeakCallbackParameter 
-	{
-		T * cpp_object;
-		v8::Global<v8::Object> javascript_object;
-		std::unique_ptr<DestructorBehavior<T>> behavior;
-	};
-	
-	
-	
-	// Helper for creating objects when "new MyClass" is called from java
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto isolate = args.GetIsolate();
-		
-		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
-		if (DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
-
-		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
-		//   GC's the javascript object, there should be no c++ references to it
-		_initialize_new_js_object<DestructorBehaviorDelete<T>>(isolate, args.This(), new_cpp_object);
-		
-		// return the object to the javascript caller
-		args.GetReturnValue().Set(args.This());
-	}
-
-
-	template <typename ...Fs, size_t...ns> 
-	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
-		return new T(CastToNative<Fs>()(args[ns])...);
-	}
 	
 
-	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
-	// garbage collected
-	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
-		auto isolate = data.GetIsolate();
-
-		SetWeakCallbackParameter * parameter = data.GetParameter();
-		
-		// delete our internal c++ object and tell V8 the memory has been removed
-		(*parameter->behavior)(isolate, parameter->cpp_object);
-		
-		// TODO: Need to remove object from existing_wrapped_objects hash properly resetting the global 
-		
-		
-		// Clear out the Global<Object> handle
-		parameter->javascript_object.Reset();
-
-		// Delete the heap-allocated std::pair from v8_constructor
-		delete parameter;
-	}
 };
 
 template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
