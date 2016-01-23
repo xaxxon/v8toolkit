@@ -81,6 +81,12 @@ void for_each_own_property(v8::Local<v8::Context> context, v8::Local<v8::Object>
 }
 
 
+void set_global_object_alias(v8::Isolate * isolate, v8::Local<v8::Context> context, std::string alias_name)
+{
+	auto global_object = context->Global();
+	(void)global_object->Set(context, v8::String::NewFromUtf8(isolate, alias_name.c_str()), global_object);
+	
+}
 
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
@@ -610,7 +616,6 @@ void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vec
 			// if any failures, try the next path if it exists
 		}
 		return v8::Object::New(isolate);
-
 	});
 }
 
