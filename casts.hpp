@@ -208,4 +208,20 @@ struct CastToJS<std::string> {
 };
 
 
+template<>
+struct CastToJS<v8::Local<v8::Object>> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Object> object){
+		return v8::Local<v8::Value>::New(isolate, object);
+	}
+};
+template<>
+struct CastToJS<v8::Local<v8::Value>> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+		return value;
+	}
+};
+
+
+
+
 }

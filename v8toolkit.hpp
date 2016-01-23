@@ -562,50 +562,62 @@ void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vec
 	auto global_object = context->Global();
 	
 	
-	(void)add_function(context, global_object, "require", [isolate, paths](std::string filename){
+	(void)add_function(context, global_object, "require", [isolate, paths](std::string filename)->v8::Local<v8::Value>{
 		if(filename.find_first_of("..") == std::string::npos) {
 			printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
-			return;
+			return v8::Object::New(isolate);
 		}
 		
 		auto context = isolate->GetCurrentContext();
 		for(auto path : paths) {
 			try {
-				auto contents = get_file_contents((path + filename).c_str());
-				v8::Local<v8::String> source =
-				    v8::String::NewFromUtf8(isolate, contents.c_str(),
-				                        	v8::NewStringType::kNormal).ToLocalChecked();
 											
 				// create a new context for it (this may be the wrong thing to do)
 				auto module_global_template = v8::ObjectTemplate::New(isolate);		
 				add_print(isolate, module_global_template);			
+
+				// Create module context
 				auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
+				
+				// Get module global object
 				auto module_global_object = module_context->Global();
 				
+				// set up the module and exports stuff
 				auto module_object = v8::Object::New(isolate);
 				add_variable(module_context, module_object, "exports", v8::Object::New(isolate));
 				add_variable(module_context, module_global_object, "module", module_object);
-				
-				
 				(void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
 				
+
+
+				auto contents = get_file_contents((path + filename).c_str());
+				v8::Local<v8::String> source =
+				    v8::String::NewFromUtf8(isolate, contents.c_str(),
+				                        	v8::NewStringType::kNormal).ToLocalChecked();
+
 
 				// Compile the source code.
 				v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
 
 				printf("About to start running script\n");
 				auto result = script->Run(context);
-				// print_maybe_value(result);
-				printf("Not dealing with EXPORTS from required module yet\n");
-				break; // if the module was successfully loaded, require is done
 				
+				return module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports")).ToLocalChecked();
+
 			}catch(...) {
 
 			}
 			// if any failures, try the next path if it exists
 		}
+		return v8::Object::New(isolate);
+
 	});
 }
+
+
+
+
+
 
 
 

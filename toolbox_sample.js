@@ -21,7 +21,7 @@ println("This should print out '1 2 3': ", [1,2,3]);
 function some_global_function(){
 	println("In some global function");
 }
-require("module.js");
+var require_result = require("module.js");
+require_result();
 
-
-'yay';
+'yay'
