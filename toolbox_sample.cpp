@@ -73,10 +73,10 @@ int main(int argc, char* argv[])
 		
 		int lambda_function_int = 1;
 		add_function(isolate, global_templ, "lambda_function", [lambda_function_int](int j)->int{return lambda_function_int + j;});
-		
+		add_require(isolate, global_templ, paths);
 		
 		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
-		add_require(isolate, context, paths); // this must go after creating the context because I don't know how to get the global object otherwise
+
 		
 		
 		// runs the following code in an isolate, handle, and context scope

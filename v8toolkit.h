@@ -153,6 +153,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 
 
 
+
+
 /**
 * specialization that strips off the first remaining parameter off the function type, stores that and then
 *   inherits from another instance that either strips the next one off, or if none remaining, actually calls
@@ -171,6 +173,23 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 		this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
 	}
 };
+
+/**
+* specialization for functions that want to take a v8::FunctionCallbackInfo object in addition
+*   to javascript-provided parameters.  depth parameter isn't incremented because this doesn't
+*   eat one of the javascript parameter values
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+	typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+	enum {DEPTH = depth, ARITY=super::ARITY};
+
+	template<typename ... Ts>
+	void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+		this->super::operator()(function, info, ts..., info); 
+	}
+};
+
 
 
 
@@ -452,7 +471,7 @@ std::string get_file_contents(const char *filename);
 */
 // Node modules must share the global object with the running script that requires them
 // node modules expect "global" to be an alias to the global object
-void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vector<std::string> & paths);
+void add_require(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> context, std::vector<std::string> & paths);
 
 
 

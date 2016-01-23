@@ -180,7 +180,7 @@ std::string get_file_contents(const char *filename)
 
 
 
-void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vector<std::string> & paths)
+void add_require(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::vector<std::string> & paths)
 {
 	// once a module has been successfully required (in an isolate), its return value will be cached here
 	//   and subsequent requires of the same module won't re-run the module, just return the
@@ -192,16 +192,25 @@ void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vec
 		printf("Require already added, not doing anything\n");
 	}
 	require_added = true;
-	auto global_object = context->Global();
 	
 	
-	(void)add_function(context, global_object, "require", [isolate, paths](std::string filename)->v8::Local<v8::Value>{
+	// if there's no entry for cached results for this isolate, make one now
+	if(require_results.find(isolate) == require_results.end()) {
+		require_results.insert(make_pair(isolate, std::map<std::string, v8::Global<v8::Value>&>()));
+	}
+	
+	
+	(void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{
+		
+		auto isolate = info.GetIsolate();
+		auto context = isolate->GetCurrentContext();
+		
+		printf("require got callback info object with length set to: %d\n", info.Length());
 		if(filename.find_first_of("..") == std::string::npos) {
 			printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
 			return v8::Object::New(isolate);
 		}
 		
-		auto context = isolate->GetCurrentContext();
 		for(auto path : paths) {
 			try {
 				auto complete_filename = path + filename;
@@ -214,13 +223,9 @@ void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vec
 				}
 				in.close();
 				
-				// if there's no entry for cached results for this isolate, make one now
-				if(require_results.find(isolate) == require_results.end()) {
-					require_results.insert(make_pair(isolate, std::map<std::string, v8::Global<v8::Value>&>()));
-				}
 				
-				// get the map of cached results for this isolate
-				std::map<std::string, v8::Global<v8::Value>&> & isolate_require_results = require_results.find(isolate)->second;
+				// get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
+				auto & isolate_require_results = require_results[isolate];
 				
 				auto cached_require_results = isolate_require_results.find(complete_filename);
 				if(cached_require_results != isolate_require_results.end()) {
