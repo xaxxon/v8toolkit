@@ -7,26 +7,6 @@
 using namespace v8toolkit;
 
 
-// helper for testing code, not a part of the library
-// read the contents of the file and return it as a std::string
-std::string get_file_contents(const char *filename)
-{
-  std::ifstream in(filename, std::ios::in | std::ios::binary);
-  if (in)
-  {
-    std::string contents;
-    in.seekg(0, std::ios::end);
-    contents.resize(in.tellg());
-    in.seekg(0, std::ios::beg);
-    in.read(&contents[0], contents.size());
-    in.close();
-    return(contents);
-  }
-  throw(errno);
-}
-
-
-
 void print_maybe_value(v8::MaybeLocal<v8::Value> maybe_value) 
 {
 	if (maybe_value.IsEmpty()) {
@@ -81,6 +61,7 @@ int main(int argc, char* argv[])
 	scoped_run(isolate, [isolate](){
 		v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
 		add_print(isolate, global_templ);
+		std::vector<std::string> paths = {"./"};
 		add_function(isolate, global_templ, "foo", &foo);
 		add_function(isolate, global_templ, "bar", &bar);
 		Point p;
@@ -95,6 +76,7 @@ int main(int argc, char* argv[])
 		
 		
 		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
+		add_require(isolate, context, paths); // this must go after creating the context because I don't know how to get the global object otherwise
 		
 		
 		// runs the following code in an isolate, handle, and context scope

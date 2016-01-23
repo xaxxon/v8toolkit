@@ -196,8 +196,7 @@ private:
 		// Delete the heap-allocated std::pair from v8_constructor
 		delete parameter;
 	}
-	
-	
+
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
 	std::vector<v8::Local<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects; // TODO: This can't be a strong reference global or the object will never be GC'd
@@ -213,16 +212,16 @@ public:
 	*/
 	static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) 
 	{
-		// if (DEBUG) printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
+		if (DEBUG) printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
 		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
 			auto new_object = new V8ClassWrapper<T>(isolate);
 			isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));
-			// if (DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
+			if (DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
 		}
-		// if (DEBUG) printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+		if (DEBUG) printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
 		
 		auto object = isolate_to_wrapper_map[isolate];
-		// if (DEBUG) printf("Returning v8 wrapper: %p\n", object);
+		if (DEBUG) printf("Returning v8 wrapper: %p\n", object);
 		return *object;
 	}
 	
@@ -306,12 +305,8 @@ public:
 
 
 	typedef std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> StdFunctionCallbackType;
-	
-	
-	
-	
-	
-	
+
+
 	/**
 	* Adds a getter and setter method for the specified class member
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
@@ -338,36 +333,31 @@ public:
 		}
 		return *this;
 	}
-	
-	
-	
+
+
 	/**
 	* adds the ability to call the specified class instance method on an object of this type
 	* add_method(&ClassName::method_name, "javascript_attribute_name");
 	*/
 	template<class METHOD_TYPE>
-	V8ClassWrapper<T> & add_method( METHOD_TYPE method, std::string method_name) 
+	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name)
 	{
 		
 		// stop additional constructors from being added
 		member_or_method_added = true;
 		
-		
 		// this is leaked if this ever isn't used anymore
 		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) 
 		{
-
 			// get the behind-the-scenes c++ object
-			v8::Local<v8::Object> self = info.Holder();
-			v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+			auto self = info.Holder();
+			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 			void* ptr = wrap->Value();
 			auto backing_object_pointer = static_cast<T*>(ptr);
 			
+			// bind the object and method into a std::function then build the parameters for it and call it
 			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
-			v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);
-			
-			// CallerQualifierRemover<METHOD_TYPE>()(method, *backing_object_pointer, info);
-			
+			v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);			
 		});
 		
 		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
@@ -376,12 +366,12 @@ public:
 			constructor_template->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		}
 		return *this;
-	}
-	
-	
-
+	}	
 };
 
+/**
+* Stores the "singleton" per isolate
+*/
 template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
 
 template<typename T>
@@ -392,7 +382,9 @@ struct CastToJS {
 		return CastToJS<T*>()(isolate, &cpp_object);
 	}
 
-	// If an rvalue is passed in, a copy must be made.
+	/**
+	* If an rvalue is passed in, a copy must be made.
+	*/
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
 		if (DEBUG) printf("In base cast to js struct with rvalue ref");
 		if (DEBUG) printf("Asked to convert rvalue type, so copying it first\n");
@@ -405,8 +397,10 @@ struct CastToJS {
 	}
 };
 
-// Attempt to use V8ClassWrapper to wrap any remaining types
-// That type must have had its methods and members added beforehand in the same isolate
+/**
+* Attempt to use V8ClassWrapper to wrap any remaining types not handled by the specializations in casts.hpp
+* That type must have had its methods and members added beforehand in the same isolate
+*/
 template<typename T>
 struct CastToJS<T*> {
 	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){
@@ -423,9 +417,6 @@ struct CastToJS<T&> {
 		return CastToJS<T*>()(isolate, &cpp_object);		
 	}
 };
-
-
-
 
 template<typename T>
 struct CastToNative

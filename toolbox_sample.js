@@ -17,4 +17,11 @@ printfln("This should be 101: %d",lambda_function(100));
 printfln("This should print out '1 a 2 b 3 c': %d a %d b %d c", [1,2,3]);
 println("This should print out '1 2 3': ", [1,2,3]);
 
+
+function some_global_function(){
+	println("In some global function");
+}
+require("module.js");
+
+
 'yay';

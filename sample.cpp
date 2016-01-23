@@ -12,26 +12,6 @@ using namespace v8toolkit;
 
 
 
-// helper for testing code, not a part of the library
-// read the contents of the file and return it as a std::string
-std::string get_file_contents(const char *filename)
-{
-  std::ifstream in(filename, std::ios::in | std::ios::binary);
-  if (in)
-  {
-    std::string contents;
-    in.seekg(0, std::ios::end);
-    contents.resize(in.tellg());
-    in.seekg(0, std::ios::beg);
-    in.read(&contents[0], contents.size());
-    in.close();
-    return(contents);
-  }
-  throw(errno);
-}
-
-
-
 struct Foo {
 	Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
 	Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n");}

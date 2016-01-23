@@ -1,4 +1,4 @@
-#pragma once
+	#pragma once
 
 #include <iostream>
 
@@ -14,6 +14,73 @@
 
 
 namespace v8toolkit {
+
+/**
+* Helper function to run the callable inside contexts.
+* If the isolate is currently inside a context, it will use that context automatically
+*   otherwise no context::scope will be created
+*/
+template<class CALLABLE>
+void scoped_run(v8::Isolate * isolate, CALLABLE callable)
+{
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+
+	if (isolate->InContext()) {
+		auto context = isolate->GetCurrentContext();
+		v8::Context::Scope context_scope(context);
+		callable();
+	} else {
+		callable();
+	}
+}
+
+/**
+* Helper function to run the callable inside contexts.
+* This version is good when the isolate isn't currently within a context but a context
+*   has been created to be used
+*/
+template<class CALLABLE>
+void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE callable)
+{
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+	v8::Context::Scope context_scope(context);
+
+	callable();
+}
+
+
+
+template<class T>
+void for_each_value(v8::Local<v8::Context> context, v8::Local<v8::Value> value, T callable) {
+	
+	if (value->IsArray()) {
+		auto array = v8::Object::Cast(*value);
+		int i = 0;
+		while(array->Has(context, i).FromMaybe(false)) {
+			callable(array->Get(context, i).ToLocalChecked());
+			i++;
+		}
+	} else {
+		callable(value);
+	}
+}
+
+
+
+template<class T>
+void for_each_own_property(v8::Local<v8::Context> context, v8::Local<v8::Object> object, T callable)
+{
+	auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+	for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
+		auto property_value = object->Get(context, property_name);
+		
+		callable(property_name, property_value.ToLocalChecked());
+	});
+}
+
+
 
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
@@ -186,6 +253,32 @@ void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
+template<class T>
+void add_function(v8::Local<v8::Context> & context, v8::Local<v8::Object> & object, const char * name, T callable) 
+{
+	auto isolate = context->GetIsolate();
+	scoped_run(isolate, context, [&](){
+		auto function_template = make_function_template(isolate, callable);
+		auto function = function_template->GetFunction();
+		(void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
+	});
+}
+
+
+
+void add_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, v8::Local<v8::Value> value) 
+{
+	object_template->Set(isolate, name, value);
+}
+
+void add_variable(v8::Local<v8::Context> context, v8::Local<v8::Object> & object, const char * name, v8::Local<v8::Value> value) 
+{
+	auto isolate = context->GetIsolate();
+	(void)object->Set(context, v8::String::NewFromUtf8(isolate, name), value);
+}
+
+
+
 /**
 * add a function that directly handles the v8 callback data
 * explicit function typing needed to coerce non-capturing lambdas into c-style function pointers
@@ -258,14 +351,14 @@ void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_o
 
 #ifdef USE_BOOST
 
-} // end the namespace temporarily to import boost::format
-#include <boost/format.hpp>
+} // end the v8toolkit namespace temporarily to import boost::format
+#include <boost/format.hpp> // only include this if USE_BOOST is defined
 namespace v8toolkit { // re-start the namespace
 	
 	
 // Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
 //   contained values (but not subsequent arrays for no particular reason)
-std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<v8::Value>& args) {
+std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<v8::Value>& args, int depth = 1) {
 	std::vector<v8::Local<v8::Value>> values;
 	
 	auto isolate = args.GetIsolate();
@@ -341,16 +434,25 @@ void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_
 
 // prints out information about the guts of an object
 void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	auto isolate = args.GetIsolate();
+	auto context = isolate->GetCurrentContext();
 	for (int i = 0; i < args.Length(); i++) {
-		auto object = v8::Object::Cast(*args[i]);
+		auto object = args[i]->ToObject(context).ToLocalChecked();
 		if(object->InternalFieldCount() > 0) {
 			v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 			printf(">>> Object %p: %s\n", wrap->Value(), *v8::String::Utf8Value(args[i]));
 		} else {
 			printf(">>> Object does not appear to be a wrapped c++ class (no internal fields): %s\n", *v8::String::Utf8Value(args[i]));
 		}
+		
+		printf("Object has the following own properties\n");
+		for_each_own_property(context, object, [](v8::Local<v8::Value> name, v8::Local<v8::Value> value){
+			printf(">>> %s: %s\n", *v8::String::Utf8Value(name),*v8::String::Utf8Value(value));
+		});
+		printf("End of object's own properties\n");
 	}
 }
+
 
 
 // call this to add a function called "print" to whatever object template you pass in (probably the global one)
@@ -359,16 +461,16 @@ void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
 //   in it, all strings will simply be printed space-separated.   If there are not enough parameters to fulfill the format, the empty
 //   string will be used
 // Currently there is no way to print strings that look like formatting strings but aren't.
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> global_template )
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template )
 {
 #ifdef USE_BOOST
-	add_function(isolate, global_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, false);});
-	add_function(isolate, global_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, true);});
+	add_function(isolate, object_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, false);});
+	add_function(isolate, object_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, true);});
 #endif
-	add_function(isolate, global_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
-	add_function(isolate, global_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
+	add_function(isolate, object_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
+	add_function(isolate, object_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
 
-	add_function(isolate, global_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
+	add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
 }
 
 
@@ -406,40 +508,6 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
 }
 
 
-/**
-* Helper function to run the callable inside contexts.
-* If the isolate is currently inside a context, it will use that context automatically
-*   otherwise no context::scope will be created
-*/
-template<class CALLABLE>
-void scoped_run(v8::Isolate * isolate, CALLABLE callable)
-{
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	
-	if (isolate->InContext()) {
-		auto context = isolate->GetCurrentContext();
-		v8::Context::Scope context_scope(context);
-		callable();
-	} else {
-		callable();
-	}
-}
-
-/**
-* Helper function to run the callable inside contexts.
-* This version is good when the isolate isn't currently within a context but a context
-*   has been created to be used
-*/
-template<class CALLABLE>
-void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE callable)
-{
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	v8::Context::Scope context_scope(context);
-	
-	callable();
-}
 
 /**
 * Example allocator code from V8 Docs
@@ -454,4 +522,96 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
   virtual void Free(void* data, size_t) { free(data); }
 };
 
+
+
+// helper for testing code, not a part of the library
+// read the contents of the file and return it as a std::string
+std::string get_file_contents(const char *filename)
+{
+  std::ifstream in(filename, std::ios::in | std::ios::binary);
+  if (in)
+  {
+    std::string contents;
+    in.seekg(0, std::ios::end);
+    contents.resize(in.tellg());
+    in.seekg(0, std::ios::beg);
+    in.read(&contents[0], contents.size());
+    in.close();
+    return(contents);
+  }
+  throw(errno);
 }
+
+
+
+/**
+* adds 'require' method to javascript to emulate node require.
+* Adds an self-referential "global" alias to the global object
+* Must be run after the context is created so "global" can refer to the global object
+*   (if this could be changed, it should be, but I don't know how to do it beforehand)
+*/
+// Node modules must share the global object with the running script that requires them
+// node modules expect "global" to be an alias to the global object
+void add_require(v8::Isolate * isolate, v8::Local<v8::Context> context, std::vector<std::string> & paths)
+{
+	static bool require_added = false;
+	if(require_added) {
+		printf("Require already added, not doing anything\n");
+	}
+	require_added = true;
+	auto global_object = context->Global();
+	
+	
+	(void)add_function(context, global_object, "require", [isolate, paths](std::string filename){
+		if(filename.find_first_of("..") == std::string::npos) {
+			printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
+			return;
+		}
+		
+		auto context = isolate->GetCurrentContext();
+		for(auto path : paths) {
+			try {
+				auto contents = get_file_contents((path + filename).c_str());
+				v8::Local<v8::String> source =
+				    v8::String::NewFromUtf8(isolate, contents.c_str(),
+				                        	v8::NewStringType::kNormal).ToLocalChecked();
+											
+				// create a new context for it (this may be the wrong thing to do)
+				auto module_global_template = v8::ObjectTemplate::New(isolate);		
+				add_print(isolate, module_global_template);			
+				auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
+				auto module_global_object = module_context->Global();
+				
+				auto module_object = v8::Object::New(isolate);
+				add_variable(module_context, module_object, "exports", v8::Object::New(isolate));
+				add_variable(module_context, module_global_object, "module", module_object);
+				
+				
+				(void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
+				
+
+				// Compile the source code.
+				v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
+
+				printf("About to start running script\n");
+				auto result = script->Run(context);
+				// print_maybe_value(result);
+				printf("Not dealing with EXPORTS from required module yet\n");
+				break; // if the module was successfully loaded, require is done
+				
+			}catch(...) {
+
+			}
+			// if any failures, try the next path if it exists
+		}
+	});
+}
+
+
+
+
+
+
+} // end v8toolkit namespace
+
+
