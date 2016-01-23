@@ -21,7 +21,17 @@ println("This should print out '1 2 3': ", [1,2,3]);
 function some_global_function(){
 	println("In some global function");
 }
+
+println("This module doesn't exist:");
+require("this-module-does-not-exist.js");
+
 var require_result = require("module.js");
 require_result();
+
+println("Rerunning same require, shouldn't print anything from inside the module");
+var require_result = require("module.js");
+println("Running the cached return value from requiring the same module");
+require_result();
+
 
 'yay'
