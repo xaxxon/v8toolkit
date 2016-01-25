@@ -273,7 +273,7 @@ public:
 	* Used when wanting to return an object from a c++ function call back to javascript
 	*/
 	template<class BEHAVIOR>
-	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
+	v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
 	{
 		auto isolate = this->isolate;
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
@@ -298,7 +298,8 @@ public:
 			this->existing_wrapped_objects.insert(std::pair<T*, v8::Global<v8::Object>>(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object)));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new object into existing_wrapped_objects hash that is now of size: %d\n", (int)this->existing_wrapped_objects.size());			
 		}
-		return javascript_object;
+		return v8::Local<v8::Value>::Cast(javascript_object);
+		// return javascript_object;
 	}
 
 
@@ -375,7 +376,7 @@ template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T
 template<typename T>
 struct CastToJS {
 
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In base cast to js struct with lvalue ref\n");
 		return CastToJS<T*>()(isolate, &cpp_object);
 	}
@@ -383,7 +384,7 @@ struct CastToJS {
 	/**
 	* If an rvalue is passed in, a copy must be made.
 	*/
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T && cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In base cast to js struct with rvalue ref");
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Asked to convert rvalue type, so copying it first\n");
 
@@ -401,7 +402,7 @@ struct CastToJS {
 */
 template<typename T>
 struct CastToJS<T*> {
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T * cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS from T*\n");
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
@@ -411,7 +412,7 @@ struct CastToJS<T*> {
 
 template<typename T>
 struct CastToJS<T&> {
-	v8::Local<v8::Object> operator()(v8::Isolate * isolate, T & cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		return CastToJS<T*>()(isolate, &cpp_object);		
 	}
 };

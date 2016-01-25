@@ -21,40 +21,126 @@ namespace v8toolkit {
 * If the isolate is currently inside a context, it will use that context automatically
 *   otherwise no context::scope will be created
 */
-template<class CALLABLE>
-void scoped_run(v8::Isolate * isolate, CALLABLE callable)
+template<class T, 
+	class R = decltype(std::declval<T>()()),
+	decltype(std::declval<T>()(), 1) = 1>
+R scoped_run(v8::Isolate * isolate, T callable)
 {
+	printf("A\n");
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
 	if (isolate->InContext()) {
 		auto context = isolate->GetCurrentContext();
 		v8::Context::Scope context_scope(context);
-		callable();
+		return callable();
 	} else {
-		callable();
+		return callable();
 	}
 }
+
+
+// Example of how to SFINAE different functors by input parameters
+// template<class T, decltype(std::declval<T>()(static_cast<A*>(nullptr)), 1) = 1>
+// void go(T o){A a;o(&a);}
+//
+// template<class T, decltype(std::declval<T>()(B()), 1) = 1>
+// void go(T o){o(B());}
+
+
+template<class T, 
+		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
+		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+R scoped_run(v8::Isolate * isolate, T callable)
+{
+	printf("B\n");
+	
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+
+	if (isolate->InContext()) {
+		auto context = isolate->GetCurrentContext();
+		v8::Context::Scope context_scope(context);
+		return callable(isolate);
+	} else {
+		return callable(isolate);
+	}
+}
+
+
+template<class T, 
+		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
+		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
+R scoped_run(v8::Isolate * isolate, T callable)
+{
+	printf("C\n");
+	
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+
+	if (isolate->InContext()) {
+		auto context = isolate->GetCurrentContext();
+		v8::Context::Scope context_scope(context);
+		return callable(isolate, context);
+	} else {
+		// cannot call without a context and a callable expecting a context unless isolate
+		//   is in a context
+		assert(false); 
+	}
+}
+
+
 
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
 *   has been created to be used
 */
-template<class CALLABLE>
-void scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, CALLABLE callable)
+template<class T, 
+		 class R = decltype(std::declval<T>()()),
+		 decltype(std::declval<T>()(), 1) = 1>
+R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {
+	printf("D\n");
+	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);
 
-	callable();
+	return callable();
 }
 
+template<class T, 
+		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
+		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
+{
+	printf("E\n");
+	
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+	v8::Context::Scope context_scope(context);
 
+	return callable(isolate);
+}
+
+template<class T, 
+		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
+		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
+R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
+{
+	printf("F\n");
+	
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
+	v8::Context::Scope context_scope(context);
+
+	return callable(isolate, context);
+}
+	
 
 template<class T>
-void for_each_value(v8::Local<v8::Context> context, v8::Local<v8::Value> value, T callable) {
+void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, T callable) {
 	
 	if (value->IsArray()) {
 		auto array = v8::Object::Cast(*value);
@@ -71,7 +157,7 @@ void for_each_value(v8::Local<v8::Context> context, v8::Local<v8::Value> value, 
 
 
 template<class T>
-void for_each_own_property(v8::Local<v8::Context> context, v8::Local<v8::Object> object, T callable)
+void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T callable)
 {
 	auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
 	for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
@@ -82,7 +168,7 @@ void for_each_own_property(v8::Local<v8::Context> context, v8::Local<v8::Object>
 }
 
 
-void set_global_object_alias(v8::Isolate * isolate, v8::Local<v8::Context> context, std::string alias_name);
+void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
 
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
@@ -253,22 +339,22 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 * Helper to both create a function template and bind it with the specified name to the specified object template
 */
 template<class R, class... Args>
-void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
+void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 template<class T>
-void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
+void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
 	object_template->Set(isolate, name, make_function_template(isolate, callable));
 }
 
 template<class R, class... Args>
-void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
+void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
 	object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 template<class T>
-void add_function(v8::Local<v8::Context> & context, v8::Local<v8::Object> & object, const char * name, T callable) 
+void add_function(v8::Local<v8::Context> & context, const v8::Local<v8::Object> & object, const char * name, T callable) 
 {
 	auto isolate = context->GetIsolate();
 	scoped_run(isolate, context, [&](){
@@ -280,9 +366,9 @@ void add_function(v8::Local<v8::Context> & context, v8::Local<v8::Object> & obje
 
 
 
-void add_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, v8::Local<v8::Value> value);
+void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Value> value);
 
-void add_variable(v8::Local<v8::Context> context, v8::Local<v8::Object> & object, const char * name, v8::Local<v8::Value> value);
+void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, const v8::Local<v8::Value> value);
 
 
 
@@ -290,7 +376,7 @@ void add_variable(v8::Local<v8::Context> context, v8::Local<v8::Object> & object
 * add a function that directly handles the v8 callback data
 * explicit function typing needed to coerce non-capturing lambdas into c-style function pointers
 */
-void add_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&));
+void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&));
 
 
 // helper for getting exposed variables
@@ -314,7 +400,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 * Allows reads and writes to the variable
 */
 template<class VARIABLE_TYPE>
-void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
 	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
 /**
@@ -322,7 +408,7 @@ void expose_variable(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & obje
 * Allows reads to the variable.  Writes are ignored.
 */
 template<class VARIABLE_TYPE>
-void expose_variable_readonly(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
 	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
 }
 
@@ -331,10 +417,10 @@ void expose_variable_readonly(v8::Isolate * isolate, v8::Local<v8::ObjectTemplat
 * Takes a local and creates a weak global reference callback for it
 */
 template<class CALLBACK_FUNCTION>
-void global_set_weak(v8::Isolate * isolate, v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
+void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
 {
 	struct SetWeakCallbackData{
-		SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, v8::Local<v8::Object> & javascript_object) : 
+		SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object) : 
 			function(function) {
 				this->global.Reset(isolate, javascript_object);
 		}
@@ -471,7 +557,7 @@ std::string get_file_contents(const char *filename);
 */
 // Node modules must share the global object with the running script that requires them
 // node modules expect "global" to be an alias to the global object
-void add_require(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> context, std::vector<std::string> & paths);
+void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, std::vector<std::string> & paths);
 
 
 
