@@ -78,6 +78,12 @@ class V8ClassWrapper
 private:
 	
 	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
+	V8ClassWrapper<T>() = delete;
+	V8ClassWrapper<T>(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;	
+	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &&) = delete;
+	void foo() = delete;
 	
 	// Common tasks to do for any new js object regardless of how it is created
 	template<class BEHAVIOR>
@@ -95,14 +101,16 @@ private:
 	}
 	
 	// users of the library should call get_instance, not the constructor directly
-	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) 
+	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate)
 	{
 		// this is a bit weird and there's probably a better way, but create an unbound functiontemplate for use
 		//   when wrapping an object that is created outside javascript when there is no way to create that
 		//   class type directly from javascript (no js constructor)
-		auto constructor_template = v8::FunctionTemplate::New(isolate);
-		constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-		this->constructor_templates.push_back(constructor_template);
+		v8toolkit::scoped_run(isolate, [this](auto isolate) {
+			auto constructor_template = v8::FunctionTemplate::New(isolate);
+			constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+			this->constructor_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, constructor_template));
+		});
 	}
 	
 	template<class VALUE_T> // type being returned
@@ -196,7 +204,7 @@ private:
 	}
 
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
-	std::vector<v8::Local<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
+	std::vector<v8::Global<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects; // TODO: This can't be a strong reference global or the object will never be GC'd
 	v8::Isolate * isolate;
 	bool member_or_method_added = false;
@@ -256,14 +264,12 @@ public:
 		constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
 		
 		// store it so it doesn't go away
-		this->constructor_templates.push_back(constructor_template);
+		this->constructor_templates.push_back(v8::Global<v8::FunctionTemplate>(isolate, constructor_template));
 				
 				
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
-		
-		this->constructor_templates.push_back(constructor_template);
-		
+				
 		return *this;
 	}
 	
@@ -292,10 +298,10 @@ public:
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
-			javascript_object = this->constructor_templates[0]->InstanceTemplate()->NewInstance();
+			javascript_object = this->constructor_templates[0].Get(isolate)->InstanceTemplate()->NewInstance();
 			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
-			this->existing_wrapped_objects.insert(std::pair<T*, v8::Global<v8::Object>>(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object)));
+			// this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new object into existing_wrapped_objects hash that is now of size: %d\n", (int)this->existing_wrapped_objects.size());			
 		}
 		return v8::Local<v8::Value>::Cast(javascript_object);
@@ -323,8 +329,8 @@ public:
 		static auto get_member_reference = std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
 			return cpp_object->*member;
 		});
-		for(auto constructor_template : this->constructor_templates) {
-			constructor_template->InstanceTemplate()->SetAccessor(v8::String::NewFromUtf8(isolate, 
+		for(auto & constructor_template : this->constructor_templates) {
+			constructor_template.Get(isolate)->InstanceTemplate()->SetAccessor(v8::String::NewFromUtf8(isolate, 
 				member_name.c_str()), 
 				_getter_helper<MEMBER_TYPE>, 
 				_setter_helper<MEMBER_TYPE>, 
@@ -361,8 +367,8 @@ public:
 		
 		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
 		
-		for(auto constructor_template : this->constructor_templates) {
-			constructor_template->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+		for(auto & constructor_template : this->constructor_templates) {
+			constructor_template.Get(isolate)->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		}
 		return *this;
 	}	
