@@ -1,11 +1,11 @@
 # v8_toolbox.hpp
-Standalone tools for using V8.  Does not require using V8ClassWrapper.  Right now methods are not in a namespace and pollute global.  For usage, see toolbox_sample.cpp
+Standalone tools for using V8.  For usage, see toolbox_sample.cpp
 
 # v8-class-wrapper
 Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp
 
 #javascript.[h|cpp]
-Library for creation and management of the v8 platform, a single isolate, and a single context in that isolate.  Requires V8ClassWrapper.   Right now this is a very simple wrapper to make using v8 as simple as possible but does not have much flexibility in terms of multiple isolates or contexts.  
+Library for creation and management of the v8 platform, a single isolate, and a single context in that isolate.  Requires V8ClassWrapper.   Right now this is a very simple wrapper to make using v8 as simple as possible but does not have much flexibility in terms of multiple isolates or contexts.  See javascript_sample.cpp for usage.
 
 # These docs may be out of date but sample.cpp and toolbox_sample.cpp show current usage
 
