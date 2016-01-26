@@ -364,7 +364,11 @@ void add_function(v8::Local<v8::Context> & context, const v8::Local<v8::Object> 
 	});
 }
 
-
+template<class T>
+v8::Global<T> make_global(v8::Isolate * isolate, v8::Local<T> local) 
+{
+	return v8::Global<T>(isolate, local);
+}
 
 void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Value> value);
 

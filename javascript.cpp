@@ -7,109 +7,75 @@ namespace v8toolkit {
 
 
 
-v8toolkit::ArrayBufferAllocator JavascriptEngine::allocator;
-
-std::unique_ptr<v8::Platform> JavascriptEngine::platform;
-static bool initialized = false;
-
-void JavascriptEngine::init(int argc, char ** argv) 
-{
-	
-	process_v8_flags(argc, argv);
-	
-	// Initialize V8.
-	v8::V8::InitializeICU();
-	
-	// startup data is in the current directory
-	v8::V8::InitializeExternalStartupData(argv[0]);
-	
-	JavascriptEngine::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
-	v8::V8::InitializePlatform(platform.get());
-	v8::V8::Initialize();
-	
-	initialized = true;
-}
+ContextHelper::ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context) : 
+	isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8toolkit::make_global(isolate, context)) 
+{}
 
 
-JavascriptEngine::JavascriptEngine()
+
+IsolateHelper::IsolateHelper(v8::Isolate * isolate) : isolate(isolate)
 {	
-	assert(initialized);	
-	v8::Isolate::CreateParams create_params;
-	create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &JavascriptEngine::allocator;
-
-	this->isolate = v8::Isolate::New(create_params);
-	
 	v8toolkit::scoped_run(isolate, [this](auto isolate){
 		this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
 	});
 }
 
-v8::Local<v8::Context> JavascriptEngine::create_context()
+std::unique_ptr<ContextHelper> IsolateHelper::create_context()
 {
 	auto ot = this->get_object_template();
-	auto local_context = v8::Context::New(this->isolate, NULL, ot);
+	auto context = v8::Context::New(this->isolate, NULL, ot);
 	
-	ot->Set(this->get_isolate(), "coffeescript_source", v8::String::NewFromUtf8(this->get_isolate(), "a:4"));
+	return std::make_unique<ContextHelper>(shared_from_this(), context);
 	
-	
-    this->context = v8::Global<v8::Context>(this->get_isolate(), local_context);
-	context_created = true;	
-	return local_context;
 }
 
-v8::Local<v8::ObjectTemplate> JavascriptEngine::get_object_template()
+v8::Local<v8::ObjectTemplate> IsolateHelper::get_object_template()
 {
-	// if the context has been created, the object template isn't of any more use
-	assert(!context_created);
 	return global_object_template.Get(isolate);
-	
 }
 
-JavascriptEngine::~JavascriptEngine()
+IsolateHelper::~IsolateHelper()
 {
-	printf("Isolate %p\n", this->isolate);
+	printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 	this->global_object_template.Reset();
-	this->context.Reset();
 	this->isolate->Dispose();
 }
 
-v8::Global<v8::Script> JavascriptEngine::compile_from_file(const char * filename)
+
+v8::Global<v8::Script> ContextHelper::compile_from_file(const char * filename)
 {
 	return this->compile(get_file_contents(filename).c_str());
 }
 
-v8::Global<v8::Script> JavascriptEngine::compile(const char * javascript_source)
+v8::Global<v8::Script> ContextHelper::compile(const char * javascript_source)
 {
-	assert(context_created);
-	v8::HandleScope hs(this->get_isolate());
-	v8::Context::Scope context_scope(context.Get(isolate));
+	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
 	
-	// This catches any errors thrown during script compilation
-    v8::TryCatch try_catch(this->get_isolate());
+		// This catches any errors thrown during script compilation
+	    v8::TryCatch try_catch(isolate);
 	
-	assert(context_created);
-	v8::Local<v8::String> source =
-	    v8::String::NewFromUtf8(this->isolate, javascript_source,
-	                        v8::NewStringType::kNormal).ToLocalChecked();
+		v8::Local<v8::String> source =
+		    v8::String::NewFromUtf8(this->isolate, javascript_source,
+		                        v8::NewStringType::kNormal).ToLocalChecked();
 
-	// Compile the source code.
-	v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
-    if (compiled_script.IsEmpty()) {
-	    v8::String::Utf8Value exception(try_catch.Exception());
-		throw CompilationError(*exception);
-    }
+		// Compile the source code.
+		v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
+	    if (compiled_script.IsEmpty()) {
+		    v8::String::Utf8Value exception(try_catch.Exception());
+			throw CompilationError(*exception);
+	    }
 	
-	return v8::Global<v8::Script>(this->get_isolate(), compiled_script.ToLocalChecked());
+		return v8::Global<v8::Script>(isolate, compiled_script.ToLocalChecked());
+	});
 	
 }
 
-v8::Local<v8::Value> JavascriptEngine::run(const v8::Global<v8::Script> & script)
+v8::Local<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 {
-	auto isolate = this->get_isolate();
-	return v8toolkit::scoped_run(isolate, context.Get(isolate), [this, &script](v8::Isolate * isolate){
+	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
 	
 		// auto local_script = this->get_local(script);
-		auto local_script = v8::Local<v8::Script>::New(this->get_isolate(), script);
+		auto local_script = v8::Local<v8::Script>::New(isolate, script);
 	    auto maybe_result = local_script->Run(context.Get(isolate));
 		assert(maybe_result.IsEmpty() == false);
 
@@ -125,19 +91,40 @@ v8::Local<v8::Value> JavascriptEngine::run(const v8::Global<v8::Script> & script
 }
 
 
-v8::Local<v8::Value> JavascriptEngine::run(const char * code)
+v8::Local<v8::Value> ContextHelper::run(const char * code)
 {
-	v8::EscapableHandleScope ehs(this->get_isolate());
-	return ehs.Escape(run(compile(code)));
+	return run(compile(code));
 }
 
-v8::Local<v8::Value> JavascriptEngine::run(const v8::Local<v8::Value> value)
+v8::Local<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
 {
-	v8::EscapableHandleScope ehs(this->get_isolate());
-	return ehs.Escape(run(*v8::String::Utf8Value(value)));
+	return run(*v8::String::Utf8Value(value));
 }
 
-void JavascriptEngine::cleanup()
+
+
+
+
+
+void PlatformHelper::init(int argc, char ** argv) 
+{
+	assert(!initialized);
+	process_v8_flags(argc, argv);
+	
+	// Initialize V8.
+	v8::V8::InitializeICU();
+	
+	// startup data is in the current directory
+	v8::V8::InitializeExternalStartupData(argv[0]);
+	
+	PlatformHelper::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
+	v8::V8::InitializePlatform(platform.get());
+	v8::V8::Initialize();
+	
+	initialized = true;
+}
+
+void PlatformHelper::cleanup()
 {
 
 	// Dispose the isolate and tear down V8.
@@ -147,6 +134,20 @@ void JavascriptEngine::cleanup()
 	platform.release();
 }
 
+std::shared_ptr<IsolateHelper> PlatformHelper::create_isolate()
+{
+	assert(initialized);
+	v8::Isolate::CreateParams create_params;
+	create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &PlatformHelper::allocator;
+
+	return std::make_shared<IsolateHelper>(v8::Isolate::New(create_params));
+}
+
+
+bool PlatformHelper::initialized = false;
+std::unique_ptr<v8::Platform> PlatformHelper::platform;
+v8toolkit::ArrayBufferAllocator PlatformHelper::allocator;
+
 
 
 
@@ -154,7 +155,7 @@ void JavascriptEngine::cleanup()
 
 
 //
-// JavascriptEngine::init(argc, argv);
+// IsolateHelper::init(argc, argv);
 // auto javascript_engine = std::make_unique<JavascriptEngine>();
 //
 // v8::HandleScope hs(javascript_engine->get_isolate());
@@ -181,5 +182,4 @@ void JavascriptEngine::cleanup()
 // std::cout << *v8::String::Utf8Value(compiled_coffeescript) << std::endl;
 // javascript_engine->run(compiled_coffeescript);
 //
-
 
