@@ -323,8 +323,6 @@ public:
 		// stop additional constructors from being added
 		member_or_method_added = true;
 		
-		// typedef MEMBER_TYPE T::*MEMBER_POINTER_TYPE;
-
 		// this lambda is shared between the getter and the setter so it can only do work needed by both
 		static auto get_member_reference = std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
 			return cpp_object->*member;

@@ -80,6 +80,7 @@ v8::Global<v8::Script> JavascriptEngine::compile_from_file(const char * filename
 
 v8::Global<v8::Script> JavascriptEngine::compile(const char * javascript_source)
 {
+	assert(context_created);
 	v8::HandleScope hs(this->get_isolate());
 	v8::Context::Scope context_scope(context.Get(isolate));
 	

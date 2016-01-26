@@ -16,7 +16,6 @@ public:
 	
 private:
 	
-	
 	static std::unique_ptr<v8::Platform> platform;
 	v8::Isolate * isolate;
 	v8::Global<v8::Context> context;
@@ -96,6 +95,12 @@ public:
 		} else {
 			return v8toolkit::scoped_run(isolate, callable);
 		}
+	}
+	
+	template<class Function>
+	void add_function(std::string name, Function function) 
+	{
+		v8toolkit::add_function(isolate, this->get_object_template(), name.c_str(), function);
 	}
 	
 	
