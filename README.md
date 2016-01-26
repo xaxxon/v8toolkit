@@ -4,6 +4,9 @@ Standalone tools for using V8.  Does not require using V8ClassWrapper.  Right no
 # v8-class-wrapper
 Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp
 
+#javascript.[h|cpp]
+Library for creation and management of the v8 platform, a single isolate, and a single context in that isolate.  Requires V8ClassWrapper.   Right now this is a very simple wrapper to make using v8 as simple as possible but does not have much flexibility in terms of multiple isolates or contexts.  
+
 # These docs may be out of date but sample.cpp and toolbox_sample.cpp show current usage
 
 ```
