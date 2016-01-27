@@ -26,7 +26,6 @@ template<class T,
 	decltype(std::declval<T>()(), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
 {
-	printf("A\n");
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -52,9 +51,7 @@ template<class T,
 		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
-{
-	printf("B\n");
-	
+{	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -72,9 +69,7 @@ template<class T,
 		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
-{
-	printf("C\n");
-	
+{	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -101,7 +96,6 @@ template<class T,
 		 decltype(std::declval<T>()(), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {
-	printf("D\n");
 	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
@@ -114,9 +108,7 @@ template<class T,
 		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
-{
-	printf("E\n");
-	
+{	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);
@@ -128,9 +120,7 @@ template<class T,
 		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
-{
-	printf("F\n");
-	
+{	
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);
@@ -354,7 +344,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 }
 
 template<class T>
-void add_function(v8::Local<v8::Context> & context, const v8::Local<v8::Object> & object, const char * name, T callable) 
+void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Object> & object, const char * name, T callable) 
 {
 	auto isolate = context->GetIsolate();
 	scoped_run(isolate, context, [&](){
@@ -388,7 +378,8 @@ template<class VARIABLE_TYPE>
 void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
 	auto isolate = info.GetIsolate();
-	info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value()));
+	VARIABLE_TYPE * variable = (VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value();
+	info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *variable));
 }
 
 // helper for setting exposed variables
@@ -414,6 +405,12 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 template<class VARIABLE_TYPE>
 void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
 	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+}
+
+template<class VARIABLE_TYPE>
+void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, VARIABLE_TYPE & variable) {
+	auto isolate = context->GetIsolate();
+	object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
 
 

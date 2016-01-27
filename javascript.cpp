@@ -13,6 +13,21 @@ ContextHelper::ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::
 
 
 
+v8::Local<v8::Context> ContextHelper::get_context(){
+	return context.Get(isolate);
+}
+
+v8::Isolate * ContextHelper::get_isolate() 
+{
+	return this->isolate;
+}
+std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
+{
+	return this->isolate_helper;
+}
+
+
+
 IsolateHelper::IsolateHelper(v8::Isolate * isolate) : isolate(isolate)
 {	
 	v8toolkit::scoped_run(isolate, [this](auto isolate){
@@ -61,6 +76,7 @@ v8::Global<v8::Script> ContextHelper::compile(const char * javascript_source)
 		// Compile the source code.
 		v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
 	    if (compiled_script.IsEmpty()) {
+			printf("Compile failed, throwing exception\n");
 		    v8::String::Utf8Value exception(try_catch.Exception());
 			throw CompilationError(*exception);
 	    }
@@ -74,17 +90,24 @@ v8::Local<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 {
 	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
 	
+		// This catches any errors thrown during script compilation
+	    v8::TryCatch try_catch(isolate);
+	
 		// auto local_script = this->get_local(script);
 		auto local_script = v8::Local<v8::Script>::New(isolate, script);
 	    auto maybe_result = local_script->Run(context.Get(isolate));
-		assert(maybe_result.IsEmpty() == false);
+		if(maybe_result.IsEmpty()) {
+			// printf("Execution failed, throwing exception\n");
+		    v8::String::Utf8Value exception(try_catch.Exception());
+			throw ExecutionError(*exception);
+		}
 
 		v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-		printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
-		printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
+		// printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
+		// printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
 	    // Convert the result to an UTF8 string and print it.
 	    v8::String::Utf8Value utf8(result);
-	    printf("run script result: %s\n", *utf8);
+	    // printf("run script result: %s\n", *utf8);
 	
 		return result;
 	});
@@ -93,7 +116,8 @@ v8::Local<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 
 v8::Local<v8::Value> ContextHelper::run(const char * code)
 {
-	return run(compile(code));
+	auto compiled_code = compile(code);
+	return run(compiled_code);
 }
 
 v8::Local<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
