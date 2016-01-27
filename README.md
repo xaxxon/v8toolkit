@@ -9,7 +9,7 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 
 # Usage example:
 
-	\#include "javascript.h"
+	#include "javascript.h"
 	using v8toolkit;
 
 	class MyClass{
