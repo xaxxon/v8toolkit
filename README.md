@@ -24,6 +24,7 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 	int main(int argc, char ** argv) {
 
 		PlatformHelper::init(argc, argv);
+		
 		auto isolate_helper = PlatformHelper::create_isolate();
 		isolate_helper.expose_variable("y", y); // exposes the global variable y as "y" within javascript
 	
@@ -31,7 +32,8 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 		class_wrapper.add_constructor<int>("MyClass");
 		class_wrapper.add_member("x", &MyClass::x); // make MyClass::x directly accessible within javascript
 		class_wrapper.add_method("add_to_x", &MyClass::add_to_x);
-		auto context_helper = isolate_helper->create_context();
+		
+		auto context_helper = isolate_helper->create_context(); // all code must be run in a context
 		context_helper.run("var myclass = new MyClass(5); myclass.add_to_x(y); myclass.x = 3; myclass.add_to_x(5);");
 	}
 
