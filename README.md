@@ -1,54 +1,41 @@
-# v8_toolbox.hpp
-Standalone tools for using V8.  For usage, see toolbox_sample.cpp
+# v8toolkit
+Standalone tools for using V8.  These are helper functions for use when using the V8 API and will not, on their own, get you very far.
 
-# v8-class-wrapper
-Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp
+# v8_class_wrapper
+Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp.  This builds on top of the toolbox code to easily allow for complex C++ objects to be used in your javascript.
 
-#javascript.[h|cpp]
-Library for creation and management of the v8 platform, a single isolate, and a single context in that isolate.  Requires V8ClassWrapper.   Right now this is a very simple wrapper to make using v8 as simple as possible but does not have much flexibility in terms of multiple isolates or contexts.  See javascript_sample.cpp for usage.
+#javascript
+(poorly named) Objects for creation and management of the v8 platform, isolates, and contexts.  Requires V8ClassWrapper.  This is the simplest way to embed V8 in your application, as it requires virtually no understanding of the underlying V8 APIs, but is also the least flexible for advanced use.
 
-# These docs may be out of date but sample.cpp and toolbox_sample.cpp show current usage
+# Usage example:
 
-```
-class MyClass {
-public: 
-	MyClass(){}
-	MyClass(int, int){}
-	int some_method(int x){return 2*x;}
-	void overloaded(int){}
-	void overloaded(double){}
-	int value;
-};
+	\#include "javascript.h"
+	using v8toolkit;
 
-	// any object that will every be created or returned by your c++ code must have it's type wrapped for each v8::Isolate it will be used in
-	// even if you don't expose a constructor method to javascript
-	auto & wrapper = V8ClassWrapper<MyClass>::get_instance(isolate);
-	auto & different_wrapper = V8ClassWrapper<MyClass>::get_instance(a_different_isolate); // constructors/method/members must be added to this instance separately
+	class MyClass{
+	public:
+	    MyClass(int x) : x(x){}
+		int x;
+		int add_to_x(int y){return x + y;}
+	};
+
+	int y = 12;
+
+	int main(int argc, char ** argv) {
+
+		PlatformHelper::init(argc, argv);
+		auto isolate_helper = PlatformHelper::create_isolate();
+		isolate_helper.expose_variable("y", y); // exposes the global variable y as "y" within javascript
 	
-	wrapped_point.add_constructor("MyClass", global_templ); // makes the default constructor available
-	
-	// make the second constructor visible but must have a different name - var obj = new MyClassIntInt(5,5);  
-	wrapped_point.add_constructor<int,int>("MyClassIntInt", global_templ);
-	
-	wrapped_point.add_method(&Point::some_method, "some_method"); // some_method can now be called on a MyClass object from javascript
-	
-	// overloaded functions can be individually addressed, but they can't be the same name to javascript
-	wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
-	wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
-	
-	wrapped_point.add_member(&Point::value, "value"); // the value member of MyClass can now be read from and written to from javascript
-```
+		auto class_wrapper = isolate_helper.wrap_class<MyClass>();
+		class_wrapper.add_constructor<int>("MyClass");
+		class_wrapper.add_member("x", &MyClass::x); // make MyClass::x directly accessible within javascript
+		class_wrapper.add_method("add_to_x", &MyClass::add_to_x);
+		auto context_helper = isolate_helper->create_context();
+		context_helper.run("var myclass = new MyClass(5); myclass.add_to_x(y); myclass.x = 3; myclass.add_to_x(5);");
+	}
 
-allows you to say in javascript:
-
-```
-var o = new MyClass();
-var result = o.some_method(5);
-o.value = result;
-```
-If the types you want to use aren't supported, just add them to casts.hpp.  It's pretty straightforward.  Any wrapped class is automatically supported as long as V8ClassWrapper\<Type\>::get_instance(the_correct_isolate); was called for the isolate you're running your code in.   
-
-Obviously this is not a polished library and I'm not sure how much more work this will get, but it's at least something good to look at, if you're reasonably good with intermediate-level c++ templating syntax.
+For full example use that's guaranteed to be up to date, please see sample.cpp, toolbox_sample.cpp, and javascript_sample.cpp.
 
 
 # Behaviors:
