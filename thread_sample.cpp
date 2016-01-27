@@ -12,8 +12,11 @@ void print_future(ContextHelper & context, std::future<Global<Value>> & future)
 		printf("Waiting on future, the first time this should take about %d seconds (not 3*%d=%d seconds since each sleep runs in parallel)\n", SLEEP_TIME, SLEEP_TIME, SLEEP_TIME * 3);
 		first_time = false;
 	}
-	future.wait();
+	
+	// locker can't lock until after the future has completed (since it has the lock), so these two calls will both block
+	//   until about the same time
 	v8::Locker l(context);
+	future.wait();
 	
 	context([&](auto isolate){
 		Global<Value> global_value = future.get();

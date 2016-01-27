@@ -143,7 +143,6 @@ public:
 	
 	operator v8::Isolate*(){return this->isolate;}
 	
-	// TODO: IS it ok to return a local<> from here or must it be a global<>?
 	template <class T>
 	std::future<v8::Global<v8::Value>> run_async(ContextHelper & context, T callable)
 	{
