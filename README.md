@@ -39,7 +39,7 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 		context_helper.run("var myclass = new MyClass(5); myclass.add_to_x(y); myclass.x = 3; myclass.add_to_x(5);");
 	}
 
-For full example use that's guaranteed to be up to date, please see sample.cpp, toolbox_sample.cpp, and javascript_sample.cpp.
+For full example use that's guaranteed to be up to date, please see sample.cpp, toolbox_sample.cpp, and javascript_sample.cpp.  Also see threaded_smaple.cpp for examples of how to do multithreaded calls.
 
 
 # Behaviors:
