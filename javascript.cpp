@@ -104,17 +104,34 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
 
 std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script)
 {
-	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
+	return std::async([this, &script](){
+		return (*this)([this, &script](){
+			return this->run(script);
+		});
+	});
 }
 
 std::future<v8::Global<v8::Value>> ContextHelper::run_async(const char * code)
 {
-	return isolate_helper->run_async(*this, [this, code](){return this->run(code);});
+	// make a copy in case the data code points to goes away before
+	//   this async thread has a chance to use it
+	std::string code_copy(code);
+	// copy code_copy into the lambda so it isn't lost when this outer function completes
+	//   right after creating the async
+	return std::async([this, code_copy](){
+		return (*this)([this, &code_copy](){
+			return this->run(code_copy.c_str());
+		});
+	});
 }
 
 std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script)
 {
-	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
+	return std::async([this, &script](){
+		return (*this)([this, &script](){
+			return this->run(script);
+		});
+	});
 }
 
 

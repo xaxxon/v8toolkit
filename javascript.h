@@ -145,18 +145,7 @@ public:
 	virtual ~IsolateHelper();
 	
 	operator v8::Isolate*(){return this->isolate;}
-	
-	template <class T>
-	std::future<v8::Global<v8::Value>> run_async(ContextHelper & context, T callable)
-	{
-		return std::async(std::launch::async, [this, &context, callable](){
-			return context([this, callable](){
-				return callable();
-				
-			});
-		});
-	}
-	
+		
 	void add_print(){operator()([this](){v8toolkit::add_print(isolate, get_object_template());});}
 	
 	

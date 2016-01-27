@@ -10,8 +10,6 @@ using namespace v8toolkit;
 
 #define SAMPLE_DEBUG true
 
-
-
 struct Foo {
 	Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
 	Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n");}
@@ -172,12 +170,6 @@ int main(int argc, char* argv[])
 	delete platform;
 	return 0;
 }
-
-
-
-
-
-
 
 
 	// an Isolate is a V8 instance where multiple applications can run at the same time, but only 
