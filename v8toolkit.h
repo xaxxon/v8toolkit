@@ -85,7 +85,7 @@ R scoped_run(v8::Isolate * isolate, T callable)
 	} else {
 		// cannot call without a context and a callable expecting a context unless isolate
 		//   is in a context
-		assert(false); 
+		assert(false);
 	}
 }
 

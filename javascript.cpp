@@ -132,7 +132,7 @@ void PlatformHelper::cleanup()
 	v8::V8::ShutdownPlatform();
 	
 	platform.release();
-}
+};
 
 std::shared_ptr<IsolateHelper> PlatformHelper::create_isolate()
 {
@@ -147,8 +147,6 @@ std::shared_ptr<IsolateHelper> PlatformHelper::create_isolate()
 bool PlatformHelper::initialized = false;
 std::unique_ptr<v8::Platform> PlatformHelper::platform;
 v8toolkit::ArrayBufferAllocator PlatformHelper::allocator;
-
-
 
 
 } // end v8toolkit namespace

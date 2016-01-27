@@ -54,6 +54,32 @@ public:
 	v8::Local<v8::Value> run(const char *);
 	v8::Local<v8::Value> run(const v8::Local<v8::Value> script);
 	
+	template<class T, 
+			 class R = decltype(std::declval<T>()()),
+			 decltype(std::declval<T>()(), 1) = 1>
+	R operator()(T callable)
+	{
+		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+	}
+
+
+	template<class T, 
+			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
+			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+	R operator()(T callable)
+	{
+		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+	}
+
+	template<class T, 
+			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
+			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
+	R operator()(T callable)
+	{
+		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+	}
+	
+	
 	
 };
 
