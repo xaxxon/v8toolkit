@@ -45,10 +45,10 @@ private:
 public:
 	ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context);
 		
-	virtual ~ContextHelper() {
-		fprintf(stderr, "destroying context helper\n");
-		this->context.Reset();
-	}
+	virtual ~ContextHelper();
+	
+	operator v8::Isolate*(){return this->isolate;}	
+	
 	
 	v8::Local<v8::Context> get_context();
 	v8::Isolate * get_isolate();
@@ -59,16 +59,14 @@ public:
 	v8::Global<v8::Script> compile(const v8::Local<v8::String> script);
 	v8::Global<v8::Script> compile_from_file(const char *);
 	
-	v8::Local<v8::Value> run(const v8::Global<v8::Script> & script);
-	v8::Local<v8::Value> run(const char *);
-	v8::Local<v8::Value> run(const v8::Local<v8::Value> script);
+	v8::Global<v8::Value> run(const v8::Global<v8::Script> & script);
+	v8::Global<v8::Value> run(const char *);
+	v8::Global<v8::Value> run(const v8::Local<v8::Value> script);
 	
-	// DO NOT USE THESE, they are super dangerous and almost surely won't work
-	std::future<v8::Local<v8::Value>> run_async(const v8::Global<v8::Script> & script);
-	std::future<v8::Local<v8::Value>> run_async(const char *);
-	std::future<v8::Local<v8::Value>> run_async(const v8::Local<v8::Value> script);
-	
-	
+	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script);
+	std::future<v8::Global<v8::Value>> run_async(const char *);
+	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script);
+
 	
 	template<class T, 
 			 class R = decltype(std::declval<T>()()),
@@ -103,7 +101,9 @@ public:
 	template<class Function>
 	void add_function(std::string name, Function function)
 	{
-		v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
+		operator()([&](){
+			v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
+		});
 	}
 	
 	/**
@@ -141,14 +141,17 @@ public:
 	IsolateHelper(v8::Isolate * isolate);
 	virtual ~IsolateHelper();
 	
+	operator v8::Isolate*(){return this->isolate;}
+	
+	// TODO: IS it ok to return a local<> from here or must it be a global<>?
 	template <class T>
-	auto run_async(ContextHelper & context, T callable)
+	std::future<v8::Global<v8::Value>> run_async(ContextHelper & context, T callable)
 	{
 		return std::async(std::launch::async, [this, &context, callable](){
 			v8::Locker::Locker locker(isolate);
 			return context([this, callable](){
-				fprintf(stderr, "About to start running real code inside scoped_run\n");
 				return callable();
+				
 			});
 		});
 	}
@@ -200,8 +203,10 @@ public:
 	
 	template<class Function>
 	void add_function(std::string name, Function function) 
-	{
-		v8toolkit::add_function(isolate, this->get_object_template(), name.c_str(), function);
+	{		
+		operator()([&](){
+			v8toolkit::add_function(isolate, this->get_object_template(), name.c_str(), function);
+		});
 	}
 	
 	template<class Variable>

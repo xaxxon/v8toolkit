@@ -29,6 +29,97 @@ std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 
 
 
+ContextHelper::~ContextHelper() {
+	// fprintf(stderr, "destroying context helper\n");
+	this->context.Reset();
+}
+
+
+v8::Global<v8::Script> ContextHelper::compile_from_file(const char * filename)
+{
+	return this->compile(get_file_contents(filename).c_str());
+}
+
+v8::Global<v8::Script> ContextHelper::compile(const char * javascript_source)
+{
+	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
+	
+		// This catches any errors thrown during script compilation
+	    v8::TryCatch try_catch(isolate);
+	
+		v8::Local<v8::String> source =
+		    v8::String::NewFromUtf8(this->isolate, javascript_source);
+
+		// Compile the source code.
+		v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
+	    if (compiled_script.IsEmpty()) {
+		    v8::String::Utf8Value exception(try_catch.Exception());
+			printf("Compile failed '%s', throwing exception\n", *exception);
+			throw CompilationError(*exception);
+	    }
+
+		return v8::Global<v8::Script>(isolate, compiled_script.ToLocalChecked());
+	});
+
+}
+
+v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
+{
+	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
+	
+		// This catches any errors thrown during script compilation
+	    v8::TryCatch try_catch(isolate);
+	
+		// auto local_script = this->get_local(script);
+		auto local_script = v8::Local<v8::Script>::New(isolate, script);
+	    auto maybe_result = local_script->Run(context.Get(isolate));
+		if(maybe_result.IsEmpty()) {
+			// printf("Execution failed, throwing exception\n");
+		    v8::String::Utf8Value exception(try_catch.Exception());
+			throw ExecutionError(*exception);
+		}
+
+		v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
+		// printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
+		// printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
+	    // Convert the result to an UTF8 string and print it.
+	    v8::String::Utf8Value utf8(result);
+	    // printf("run script result: %s\n", *utf8);
+	
+		return v8::Global<v8::Value>(isolate, result);
+	});
+}
+
+
+v8::Global<v8::Value> ContextHelper::run(const char * code)
+{
+	auto compiled_code = compile(code);
+	return run(compiled_code);
+}
+
+v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
+{
+	return run(*v8::String::Utf8Value(value));
+}
+
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script)
+{
+	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
+}
+
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const char * code)
+{
+	return isolate_helper->run_async(*this, [this, code](){return this->run(code);});
+}
+
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script)
+{
+	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
+}
+
+
+
+
 IsolateHelper::IsolateHelper(v8::Isolate * isolate) : isolate(isolate)
 {	
 	v8toolkit::scoped_run(isolate, [this](auto isolate){
@@ -53,97 +144,10 @@ v8::Local<v8::ObjectTemplate> IsolateHelper::get_object_template()
 
 IsolateHelper::~IsolateHelper()
 {
-	fprintf(stderr, "Deleting isolate helper %p for isolate %p\n", this, this->isolate);
+	// fprintf(stderr, "Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 	this->global_object_template.Reset();
 	this->isolate->Dispose();
 }
-
-
-v8::Global<v8::Script> ContextHelper::compile_from_file(const char * filename)
-{
-	return this->compile(get_file_contents(filename).c_str());
-}
-
-v8::Global<v8::Script> ContextHelper::compile(const char * javascript_source)
-{
-	printf("Compiling source: '%s'\n", javascript_source);
-	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
-	
-		// This catches any errors thrown during script compilation
-	    v8::TryCatch try_catch(isolate);
-	
-		v8::Local<v8::String> source =
-		    v8::String::NewFromUtf8(this->isolate, javascript_source);
-
-		// Compile the source code.
-		v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
-	    if (compiled_script.IsEmpty()) {
-		    v8::String::Utf8Value exception(try_catch.Exception());
-			printf("Compile failed '%s', throwing exception\n", *exception);
-			throw CompilationError(*exception);
-	    }
-
-		return v8::Global<v8::Script>(isolate, compiled_script.ToLocalChecked());
-	});
-
-}
-
-v8::Local<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
-{
-	return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
-	
-		// This catches any errors thrown during script compilation
-	    v8::TryCatch try_catch(isolate);
-	
-		// auto local_script = this->get_local(script);
-		auto local_script = v8::Local<v8::Script>::New(isolate, script);
-	    auto maybe_result = local_script->Run(context.Get(isolate));
-		if(maybe_result.IsEmpty()) {
-			// printf("Execution failed, throwing exception\n");
-		    v8::String::Utf8Value exception(try_catch.Exception());
-			throw ExecutionError(*exception);
-		}
-
-		v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-		// printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
-		// printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
-	    // Convert the result to an UTF8 string and print it.
-	    v8::String::Utf8Value utf8(result);
-	    // printf("run script result: %s\n", *utf8);
-	
-		return result;
-	});
-}
-
-
-v8::Local<v8::Value> ContextHelper::run(const char * code)
-{
-	auto compiled_code = compile(code);
-	return run(compiled_code);
-}
-
-v8::Local<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
-{
-	return run(*v8::String::Utf8Value(value));
-}
-
-std::future<v8::Local<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script)
-{
-	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
-}
-
-std::future<v8::Local<v8::Value>> ContextHelper::run_async(const char * code)
-{
-	fprintf(stderr, "beginning of run_async: '%s' at %p\n", code, code);
-	printf("contexthelper at %p\n", this);
-	return isolate_helper->run_async(*this, [this, code](){printf("Running code: '%s' %p\n", code, code);	printf("contexthelper at %p\n", this);return this->run(code);});
-}
-
-std::future<v8::Local<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script)
-{
-	return isolate_helper->run_async(*this, [this, &script](){return this->run(script);});
-}
-
 
 
 void PlatformHelper::init(int argc, char ** argv) 
