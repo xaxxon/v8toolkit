@@ -1,3 +1,5 @@
+##This library is not polished.  While it should work, you will have to do some customization for your own environment
+
 # v8toolkit
 Standalone tools for using V8.  These are helper functions for use when using the V8 API and will not, on their own, get you very far.
 
