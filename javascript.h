@@ -1,5 +1,9 @@
 #pragma once
 
+#include <thread>
+#include <mutex>
+#include <future>
+
 #include "v8_class_wrapper.hpp"
 
 namespace v8toolkit {
@@ -42,6 +46,7 @@ public:
 	ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context);
 		
 	virtual ~ContextHelper() {
+		fprintf(stderr, "destroying context helper\n");
 		this->context.Reset();
 	}
 	
@@ -58,11 +63,19 @@ public:
 	v8::Local<v8::Value> run(const char *);
 	v8::Local<v8::Value> run(const v8::Local<v8::Value> script);
 	
+	// DO NOT USE THESE, they are super dangerous and almost surely won't work
+	std::future<v8::Local<v8::Value>> run_async(const v8::Global<v8::Script> & script);
+	std::future<v8::Local<v8::Value>> run_async(const char *);
+	std::future<v8::Local<v8::Value>> run_async(const v8::Local<v8::Value> script);
+	
+	
+	
 	template<class T, 
 			 class R = decltype(std::declval<T>()()),
 			 decltype(std::declval<T>()(), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
 
@@ -71,6 +84,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
 
@@ -79,6 +93,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
 	
@@ -119,13 +134,26 @@ private:
 	
 	v8::Isolate * isolate;
 	v8::Global<v8::ObjectTemplate> global_object_template;
+	// std::mutex thread_mutex;
 	
 public:
 
 	IsolateHelper(v8::Isolate * isolate);
 	virtual ~IsolateHelper();
 	
-	void add_print(){v8toolkit::add_print(isolate, get_object_template());}
+	template <class T>
+	auto run_async(ContextHelper & context, T callable)
+	{
+		return std::async(std::launch::async, [this, &context, callable](){
+			v8::Locker::Locker locker(isolate);
+			return context([this, callable](){
+				fprintf(stderr, "About to start running real code inside scoped_run\n");
+				return callable();
+			});
+		});
+	}
+	
+	void add_print(){operator()([this](){v8toolkit::add_print(isolate, get_object_template());});}
 	
 	
 	// can no longer use the global_object_template after the context has been created, which means no 
@@ -186,6 +214,8 @@ public:
 	auto & wrap_class() {
 		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 	}	
+	
+	
 	
 };
 
