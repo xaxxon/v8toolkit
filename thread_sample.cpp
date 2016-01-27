@@ -18,8 +18,10 @@ void print_future(ContextHelper & context, std::future<Global<Value>> & future)
 	//   until about the same time
 	future.wait();
 	
+	// this can block if the isolate is currently locked in another async
+	//    context::operator() must acquire the isolate lock that the second
+	//    async on isoalte3 may still be using
 	context([&](auto isolate){
-		
 		Global<Value> global_value = future.get();
 		Local<Value> local_value = global_value.Get(context.get_isolate());
 		v8::String::Utf8Value utf8value(local_value);
@@ -54,10 +56,18 @@ int main(int argc, char ** argv)
 		
 	auto f1 = c1->run_async(code);
 	auto f2 = c2->run_async(code);
+	
+	// these two will run sequentially
 	auto f3 = c3->run_async(code);
+	auto f4 = c3->run_async(code);
+	
 	
 	
 	print_future(*c1, f1);
 	print_future(*c2, f2);
+	// expect a delay here as print_future and the second async on c3
+	//   both want the isolate3 lock.
 	print_future(*c3, f3);
+	print_future(*c3, f4);
+	
 }
