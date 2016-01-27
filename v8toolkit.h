@@ -26,6 +26,7 @@ template<class T,
 	decltype(std::declval<T>()(), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
 {
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -52,6 +53,7 @@ template<class T,
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
 {	
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -70,6 +72,7 @@ template<class T,
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
 {	
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 
@@ -97,6 +100,7 @@ template<class T,
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {
 	
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);
@@ -109,6 +113,7 @@ template<class T,
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {	
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);
@@ -121,6 +126,7 @@ template<class T,
 		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {	
+	v8::Locker locker(isolate);
 	v8::Isolate::Scope isolate_scope(isolate);
 	v8::HandleScope handle_scope(isolate);
 	v8::Context::Scope context_scope(context);

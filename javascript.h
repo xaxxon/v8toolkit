@@ -73,6 +73,7 @@ public:
 			 decltype(std::declval<T>()(), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
@@ -82,6 +83,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
@@ -91,6 +93,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 	R operator()(T callable)
 	{
+		v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
@@ -147,7 +150,6 @@ public:
 	std::future<v8::Global<v8::Value>> run_async(ContextHelper & context, T callable)
 	{
 		return std::async(std::launch::async, [this, &context, callable](){
-			v8::Locker::Locker locker(isolate);
 			return context([this, callable](){
 				return callable();
 				

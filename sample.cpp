@@ -95,77 +95,73 @@ int main(int argc, char* argv[])
 	create_params.array_buffer_allocator = &allocator;
 	v8::Isolate* isolate = v8::Isolate::New(create_params);
 	{
-		v8::Isolate::Scope isolate_scope(isolate);
+		scoped_run(isolate, [&](){
+			// how to expose global variables as javascript variables "x" and "y"
+			// global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
+			// global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
 
-		// Create a stack-allocated handle scope.
-		v8::HandleScope handle_scope(isolate);
-
-		// how to expose global variables as javascript variables "x" and "y"
-		// global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
-		// global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
-
-		// wrap the constructor and add it to the global template
-		// Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
-		v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
+			// wrap the constructor and add it to the global template
+			// Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
+			v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
 		
-		add_print(isolate, global_templ);
+			add_print(isolate, global_templ);
 
-		// // add the function "four()" to javascript
-		// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
+			// // add the function "four()" to javascript
+			// global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 
-		// make the Point constructor function available to JS
-		auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
-		wrapped_point.add_constructor("Point", global_templ);
-		wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
-		wrapped_point.add_constructor<int,int>("Pii", global_templ);
-		wrapped_point.add_method(&Point::thing, "thing");
-		add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
+			// make the Point constructor function available to JS
+			auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
+			wrapped_point.add_constructor("Point", global_templ);
+			wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
+			wrapped_point.add_constructor<int,int>("Pii", global_templ);
+			wrapped_point.add_method(&Point::thing, "thing");
+			add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
 		
 
-		// overloaded functions can be individually addressed, but they can't be the same name to javascript
-		//   at least not without some serious finagling of storing a mapping between a singlne name and
-		//   multiple function templates as well as some sort of "closeness" function for determining
-		//   which primitive type parameters most closely match the javascript values provided
-		wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
-		wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
-		wrapped_point.add_method(&Point::make_point, "make_point");
+			// overloaded functions can be individually addressed, but they can't be the same name to javascript
+			//   at least not without some serious finagling of storing a mapping between a singlne name and
+			//   multiple function templates as well as some sort of "closeness" function for determining
+			//   which primitive type parameters most closely match the javascript values provided
+			wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
+			wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
+			wrapped_point.add_method(&Point::make_point, "make_point");
 
-		wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
-		wrapped_point.add_member(&Point::x_, "x");
-		wrapped_point.add_member(&Point::y_, "y");
+			wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
+			wrapped_point.add_member(&Point::x_, "x");
+			wrapped_point.add_member(&Point::y_, "y");
 		
-		// if you register a function that returns an r-value, a copy will be made using the copy constsructor
-		wrapped_point.add_method(&Point::get_foo, "get_foo");
+			// if you register a function that returns an r-value, a copy will be made using the copy constsructor
+			wrapped_point.add_method(&Point::get_foo, "get_foo");
 		
-		auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
-		wrapped_line.add_constructor("Line", global_templ);
-		wrapped_line.add_method(&Line::get_point, "get_point");
-		wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
-		wrapped_line.add_member(&Line::p, "p");
+			auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
+			wrapped_line.add_constructor("Line", global_templ);
+			wrapped_line.add_method(&Line::get_point, "get_point");
+			wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
+			wrapped_line.add_member(&Line::p, "p");
 		
-		auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
-		wrapped_foo.add_member(&Foo::i, "i");
+			auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
+			wrapped_foo.add_member(&Foo::i, "i");
 		
-		v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
-		v8::Context::Scope context_scope_x(context);
+			v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
+			v8::Context::Scope context_scope_x(context);
 
 
 		
 
-		// Create a string containing the JavaScript source code.
-		auto js_code = get_file_contents("code.js");
-		v8::Local<v8::String> source =
-		    v8::String::NewFromUtf8(isolate, js_code.c_str(),
-		                        v8::NewStringType::kNormal).ToLocalChecked();
+			// Create a string containing the JavaScript source code.
+			auto js_code = get_file_contents("code.js");
+			v8::Local<v8::String> source =
+			    v8::String::NewFromUtf8(isolate, js_code.c_str(),
+			                        v8::NewStringType::kNormal).ToLocalChecked();
 
-		// Compile the source code.
-		v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
+			// Compile the source code.
+			v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
 
-		printf("About to start running script\n");
-		auto result = script->Run(context);
-		print_maybe_value(result);
+			printf("About to start running script\n");
+			auto result = script->Run(context);
+			print_maybe_value(result);
 		
-
+		});
 
 	}
 
