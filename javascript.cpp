@@ -127,9 +127,6 @@ v8::Local<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
 
 
 
-
-
-
 void PlatformHelper::init(int argc, char ** argv) 
 {
 	assert(!initialized);
