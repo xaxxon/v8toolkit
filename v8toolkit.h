@@ -22,21 +22,21 @@ namespace v8toolkit {
 *   otherwise no context::scope will be created
 */
 template<class T, 
-	class R = decltype(std::declval<T>()()),
-	decltype(std::declval<T>()(), 1) = 1>
+    class R = decltype(std::declval<T>()()),
+    decltype(std::declval<T>()(), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
 {
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
 
-	if (isolate->InContext()) {
-		auto context = isolate->GetCurrentContext();
-		v8::Context::Scope context_scope(context);
-		return callable();
-	} else {
-		return callable();
-	}
+    if (isolate->InContext()) {
+        auto context = isolate->GetCurrentContext();
+        v8::Context::Scope context_scope(context);
+        return callable();
+    } else {
+        return callable();
+    }
 }
 
 
@@ -49,42 +49,42 @@ R scoped_run(v8::Isolate * isolate, T callable)
 
 
 template<class T, 
-		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
+         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
-{	
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
+{   
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
 
-	if (isolate->InContext()) {
-		auto context = isolate->GetCurrentContext();
-		v8::Context::Scope context_scope(context);
-		return callable(isolate);
-	} else {
-		return callable(isolate);
-	}
+    if (isolate->InContext()) {
+        auto context = isolate->GetCurrentContext();
+        v8::Context::Scope context_scope(context);
+        return callable(isolate);
+    } else {
+        return callable(isolate);
+    }
 }
 
 
 template<class T, 
-		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
+         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
+         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, T callable)
-{	
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
+{   
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
 
-	if (isolate->InContext()) {
-		auto context = isolate->GetCurrentContext();
-		v8::Context::Scope context_scope(context);
-		return callable(isolate, context);
-	} else {
-		// cannot call without a context and a callable expecting a context unless isolate
-		//   is in a context
-		assert(false);
-	}
+    if (isolate->InContext()) {
+        auto context = isolate->GetCurrentContext();
+        v8::Context::Scope context_scope(context);
+        return callable(isolate, context);
+    } else {
+        // cannot call without a context and a callable expecting a context unless isolate
+        //   is in a context
+        assert(false);
+    }
 }
 
 
@@ -95,59 +95,59 @@ R scoped_run(v8::Isolate * isolate, T callable)
 *   has been created to be used
 */
 template<class T, 
-		 class R = decltype(std::declval<T>()()),
-		 decltype(std::declval<T>()(), 1) = 1>
+         class R = decltype(std::declval<T>()()),
+         decltype(std::declval<T>()(), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 {
-	
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	v8::Context::Scope context_scope(context);
+    
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
 
-	return callable();
+    return callable();
 }
 
 template<class T, 
-		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
+         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
-{	
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	v8::Context::Scope context_scope(context);
+{   
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
 
-	return callable(isolate);
+    return callable(isolate);
 }
 
 template<class T, 
-		 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-		 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
+         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
+         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
-{	
-	v8::Locker locker(isolate);
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	v8::Context::Scope context_scope(context);
+{   
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
 
-	return callable(isolate, context);
+    return callable(isolate, context);
 }
-	
+    
 
 template<class T>
 void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, T callable) {
-	
-	if (value->IsArray()) {
-		auto array = v8::Object::Cast(*value);
-		int i = 0;
-		while(array->Has(context, i).FromMaybe(false)) {
-			callable(array->Get(context, i).ToLocalChecked());
-			i++;
-		}
-	} else {
-		callable(value);
-	}
+    
+    if (value->IsArray()) {
+        auto array = v8::Object::Cast(*value);
+        int i = 0;
+        while(array->Has(context, i).FromMaybe(false)) {
+            callable(array->Get(context, i).ToLocalChecked());
+            i++;
+        }
+    } else {
+        callable(value);
+    }
 }
 
 
@@ -155,12 +155,12 @@ void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Va
 template<class T>
 void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T callable)
 {
-	auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
-	for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
-		auto property_value = object->Get(context, property_name);
-		
-		callable(property_name, property_value.ToLocalChecked());
-	});
+    auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+    for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
+        auto property_value = object->Get(context, property_name);
+        
+        callable(property_name, property_value.ToLocalChecked());
+    });
 }
 
 
@@ -177,7 +177,7 @@ void process_v8_flags(int & argc, char ** argv);
 * same as passing --expose-gc as a command-line flag
 * To encourage javascript garbage collection run from c++, use: 
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
-*/	
+*/  
 void expose_gc();
 
 /**
@@ -191,9 +191,9 @@ struct CallCallable{};
 */
 template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
-	void operator()(std::function<R(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-		info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
-	}
+    void operator()(std::function<R(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
+    }
 };
 
 /**
@@ -201,9 +201,9 @@ struct CallCallable<std::function<R(Args...)>> {
 */
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
-	void operator()(std::function<void(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-		callable(args...);
-	}
+    void operator()(std::function<void(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+        callable(args...);
+    }
 };
 
 
@@ -218,19 +218,19 @@ struct ParameterBuilder {};
 /**
 * Specialization for when there are no parameters left to process, so it is time to actually
 * call the function
-*/	
+*/  
 template<int depth, typename FUNCTION_TYPE, typename RET>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
-	// the final class in the call chain stores the actual method to be called
+    // the final class in the call chain stores the actual method to be called
 
-	enum {DEPTH=depth, ARITY=0};
-	
-	// This call method actually calls the function with the specified object and the
-	//   parameter pack that was built up via the chain of calls between templated types
-	template<typename ... Ts>
-	void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		CallCallable<FUNCTION_TYPE>()(function, info, ts...);
-	}
+    enum {DEPTH=depth, ARITY=0};
+    
+    // This call method actually calls the function with the specified object and the
+    //   parameter pack that was built up via the chain of calls between templated types
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        CallCallable<FUNCTION_TYPE>()(function, info, ts...);
+    }
 };
 
 
@@ -247,13 +247,13 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> : public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
-	typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
-	enum {DEPTH = depth, ARITY=super::ARITY + 1};
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
-	template<typename ... Ts>
-	void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
-	}
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
+    }
 };
 
 /**
@@ -263,13 +263,13 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
-	typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
-	enum {DEPTH = depth, ARITY=super::ARITY};
+    typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY};
 
-	template<typename ... Ts>
-	void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-		this->super::operator()(function, info, ts..., info); 
-	}
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info); 
+    }
 };
 
 
@@ -283,9 +283,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
 template<int depth, class T>
 struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
 {
-	void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> function, const v8::FunctionCallbackInfo<v8::Value> & info) {
-		function(info);
-	}
+    void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> function, const v8::FunctionCallbackInfo<v8::Value> & info) {
+        function(info);
+    }
 };
 
 
@@ -296,11 +296,11 @@ struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackI
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
 {
-	auto copy = new std::function<R(Args...)>(f);
-	return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(args.Data()))->Value();
-		ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>()(callable, args);
-	}, v8::External::New(isolate, (void*)copy));
+    auto copy = new std::function<R(Args...)>(f);
+    return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+        auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(args.Data()))->Value();
+        ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>()(callable, args);
+    }, v8::External::New(isolate, (void*)copy));
 }
 
 
@@ -308,7 +308,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 template<class R, class CLASS, class... Args>
 std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable ) 
 {
-	return std::function<R(Args...)>(callable);
+    return std::function<R(Args...)>(callable);
 }
 
 
@@ -316,7 +316,7 @@ std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) 
 template<class T>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable) 
 {
-	return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
+    return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
 }
 
 
@@ -327,7 +327,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T 
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(*f)(Args...))
 {
-	return make_function_template(isolate, std::function<R(Args...)>(f));
+    return make_function_template(isolate, std::function<R(Args...)>(f));
 }
 
 
@@ -336,34 +336,34 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 */
 template<class R, class... Args>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
-	object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 template<class T>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
-	object_template->Set(isolate, name, make_function_template(isolate, callable));
+    object_template->Set(isolate, name, make_function_template(isolate, callable));
 }
 
 template<class R, class... Args>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
-	object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function));
 }
 
 template<class T>
 void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Object> & object, const char * name, T callable) 
 {
-	auto isolate = context->GetIsolate();
-	scoped_run(isolate, context, [&](){
-		auto function_template = make_function_template(isolate, callable);
-		auto function = function_template->GetFunction();
-		(void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
-	});
+    auto isolate = context->GetIsolate();
+    scoped_run(isolate, context, [&](){
+        auto function_template = make_function_template(isolate, callable);
+        auto function = function_template->GetFunction();
+        (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
+    });
 }
 
 template<class T>
 v8::Global<T> make_global(v8::Isolate * isolate, v8::Local<T> local) 
 {
-	return v8::Global<T>(isolate, local);
+    return v8::Global<T>(isolate, local);
 }
 
 void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Value> value);
@@ -383,16 +383,16 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 template<class VARIABLE_TYPE>
 void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
-	auto isolate = info.GetIsolate();
-	VARIABLE_TYPE * variable = (VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value();
-	info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *variable));
+    auto isolate = info.GetIsolate();
+    VARIABLE_TYPE * variable = (VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value();
+    info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *variable));
 }
 
 // helper for setting exposed variables
 template<class VARIABLE_TYPE>
 void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
-	*(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
+    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
 }
 
 
@@ -402,7 +402,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 */
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
@@ -410,13 +410,13 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 */
 template<class VARIABLE_TYPE>
 void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-	object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
 }
 
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, VARIABLE_TYPE & variable) {
-	auto isolate = context->GetIsolate();
-	object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+    auto isolate = context->GetIsolate();
+    object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
 }
 
 
@@ -426,23 +426,23 @@ void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object>
 template<class CALLBACK_FUNCTION>
 void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
 {
-	struct SetWeakCallbackData{
-		SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object) : 
-			function(function) {
-				this->global.Reset(isolate, javascript_object);
-		}
-		CALLBACK_FUNCTION function;
-		v8::Global<v8::Object> global;
-	};
-	
-	auto callback_data = new SetWeakCallbackData(function, isolate, javascript_object);
-	callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
-		[](const v8::WeakCallbackData<v8::Object, SetWeakCallbackData> & data){
-			SetWeakCallbackData * callback_data = data.GetParameter();			
-			callback_data->function();
-			callback_data->global.Reset();
-			delete callback_data;
-		});
+    struct SetWeakCallbackData{
+        SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object) : 
+            function(function) {
+                this->global.Reset(isolate, javascript_object);
+        }
+        CALLBACK_FUNCTION function;
+        v8::Global<v8::Object> global;
+    };
+    
+    auto callback_data = new SetWeakCallbackData(function, isolate, javascript_object);
+    callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
+        [](const v8::WeakCallbackData<v8::Object, SetWeakCallbackData> & data){
+            SetWeakCallbackData * callback_data = data.GetParameter();          
+            callback_data->function();
+            callback_data->global.Reset();
+            delete callback_data;
+        });
 }
 
 
@@ -451,8 +451,8 @@ void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javasc
 } // end the v8toolkit namespace temporarily to import boost::format
 #include <boost/format.hpp> // only include this if USE_BOOST is defined
 namespace v8toolkit { // re-start the namespace
-	
-	
+    
+    
 
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
@@ -488,31 +488,31 @@ void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_templ
 template<class T, class U>
 struct Bind{};
 
-template<class CLASS_TYPE, class R, class... Args>	
+template<class CLASS_TYPE, class R, class... Args>  
 struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
-	
-	Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) ) :
-	  object(object), method(method){}
-	
-	CLASS_TYPE & object;
-	R(CLASS_TYPE::*method)(Args...);
-	
-	R operator()(Args... params){
-	    return (object.*method)(params...);	
-	}
+    
+    Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) ) :
+      object(object), method(method){}
+    
+    CLASS_TYPE & object;
+    R(CLASS_TYPE::*method)(Args...);
+    
+    R operator()(Args... params){
+        return (object.*method)(params...); 
+    }
 };
-template<class CLASS_TYPE, class R, class... Args>	
+template<class CLASS_TYPE, class R, class... Args>  
 struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const> {
-	
-	Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) const) :
-	  object(object), method(method){}
-	
-	CLASS_TYPE & object;
-	R(CLASS_TYPE::*method)(Args...) const;
-	
-	R operator()(Args... params){
-	    return (object.*method)(params...);	
-	}
+    
+    Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) const) :
+      object(object), method(method){}
+    
+    CLASS_TYPE & object;
+    R(CLASS_TYPE::*method)(Args...) const;
+    
+    R operator()(Args... params){
+        return (object.*method)(params...); 
+    }
 };
 
 
@@ -524,13 +524,13 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const> {
 template <class CLASS, class R, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
 {
-	return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
+    return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
 }
 
 template <class CLASS, class R, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
 {
-	return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...) const>(object, method));
+    return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...) const>(object, method));
 }
 
 
@@ -564,7 +564,7 @@ std::string get_file_contents(const char *filename);
 */
 // Node modules must share the global object with the running script that requires them
 // node modules expect "global" to be an alias to the global object
-void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, std::vector<std::string> & paths);
+void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
 
 
 

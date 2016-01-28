@@ -1,5 +1,7 @@
 ##This library is not polished.  While it should work, you will have to do some customization for your own environment
 
+## Note, the current version is not compatible with the production version of V8 because of a poorly designed v8::Local constructor.  It can easily be modified by changing some std::string parameters back to const char * but the v8 api should be changed instead..
+
 # v8toolkit
 Standalone tools for using V8.  These are helper functions for use when using the V8 API and will not, on their own, get you very far.
 
