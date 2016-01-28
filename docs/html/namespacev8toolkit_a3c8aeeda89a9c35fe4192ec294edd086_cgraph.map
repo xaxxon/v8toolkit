@@ -1,0 +1,13 @@
+<map id="v8toolkit::add_require" name="v8toolkit::add_require">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="379,11,520,35"/>
+<area shape="rect" id="node4" href="$namespacev8toolkit.html#ac3b6638c2b56fde3864854d5c5bb3e70" title="v8toolkit::add_print" alt="" coords="199,61,321,85"/>
+<area shape="rect" id="node11" href="$namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228" title="v8toolkit::add_variable" alt="" coords="189,109,330,133"/>
+<area shape="rect" id="node12" href="$namespacev8toolkit.html#a798082283e50c5025dfc6da7b5d61c7c" title="v8toolkit::get_file\l_contents" alt="" coords="204,157,315,193"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="568,5,718,41"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#a5212431cf43a6986955cde4289952947" title="v8toolkit::_print_helper" alt="" coords="378,59,520,83"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#ae5dc09550fef3e9c21c7745f3acfb71a" title="v8toolkit::_printf\l_helper" alt="" coords="396,108,502,144"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a67c3928d29407a018bde488bbd3ed855" title="v8toolkit::printobj" alt="" coords="393,169,505,193"/>
+<area shape="rect" id="node6" href="$namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="590,84,697,120"/>
+<area shape="rect" id="node9" href="$namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90" title="v8toolkit::for_each\l_own_property" alt="" coords="584,163,703,199"/>
+<area shape="rect" id="node10" href="$namespacev8toolkit.html#aa0676b882716072bb5da15374cc04924" title="v8toolkit::for_each\l_value" alt="" coords="766,163,885,199"/>
+</map>

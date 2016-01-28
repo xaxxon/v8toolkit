@@ -1,0 +1,6 @@
+<map id="v8toolkit::IsolateHelper::get_object_template" name="v8toolkit::IsolateHelper::get_object_template">
+<area shape="rect" id="node2" href="$classv8toolkit_1_1IsolateHelper.html#a19ca3f4c7fa5ffc87c440c49472b023b" title="v8toolkit::IsolateHelper\l::add_function" alt="" coords="196,5,339,41"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="196,65,339,101"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1IsolateHelper.html#aee8f5427d3f743919e0e9052bd02edf3" title="v8toolkit::IsolateHelper\l::create_context" alt="" coords="196,125,339,161"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a95d9e67161781996159366dfccccd7ae" title="v8toolkit::IsolateHelper\l::expose_variable" alt="" coords="196,185,339,221"/>
+</map>

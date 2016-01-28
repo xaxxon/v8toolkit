@@ -1,0 +1,9 @@
+<map id="v8toolkit::make_function_template" name="v8toolkit::make_function_template">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="208,99,349,123"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a2eb3bf1035b4f91902c1b4d2e9564e64" title="v8toolkit::make_function\l_template" alt="" coords="203,148,353,184"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1ContextHelper.html#aca18b2b39ccb379491c57c1b194b37af" title="v8toolkit::ContextHelper\l::add_function" alt="" coords="401,5,550,41"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1IsolateHelper.html#a19ca3f4c7fa5ffc87c440c49472b023b" title="v8toolkit::IsolateHelper\l::add_function" alt="" coords="404,65,547,101"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#ac3b6638c2b56fde3864854d5c5bb3e70" title="v8toolkit::add_print" alt="" coords="415,126,537,150"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="602,175,738,199"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="598,115,741,151"/>
+</map>
