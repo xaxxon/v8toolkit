@@ -141,9 +141,9 @@ Public Member Functions</h2></td></tr>
 <div class="textblock"><h3>template&lt;int depth, typename FUNCTION_TYPE, typename RET, typename... TAIL&gt;<br />
 struct v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;</h3>
 
-<p>specialization for functions that want to take a v8::FunctionCallbackInfo object in addition to javascript-provided parameters. depth parameter isn't incremented because this doesn't eat one of the javascript parameter values </p>
+<p>specialization for functions that want to take a v8::FunctionCallbackInfo object in addition to javascript-provided parameters. depth parameter isn't incremented because this doesn't eat one of the javascript parameter values Unlike the void(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp;) specialization, when this specialization is used, normal parameter passing and return value processing is still done, but this parameter is injected directly, not taken from the parameter list from javascript </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00265">265</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00294">294</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a class="anchor" id="a1cda674f0006963efe93ec9d9eb7b008"></a>
 <div class="memitem">
@@ -157,7 +157,7 @@ template&lt;int depth, typename FUNCTION_TYPE , typename RET , typename... TAIL&
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00266">266</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00295">295</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
 </div>
 </div>
@@ -180,10 +180,10 @@ template&lt;int depth, typename FUNCTION_TYPE , typename RET , typename... TAIL&
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00267">267</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;{<a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6">DEPTH</a> = depth, <a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138">ARITY</a>=super::ARITY};</div>
-<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53_html_a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;::ARITY</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00267">v8toolkit.h:267</a></div></div>
-<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53_html_a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;::DEPTH</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00267">v8toolkit.h:267</a></div></div>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00296">296</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<div class="fragment"><div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;{<a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6">DEPTH</a> = depth, <a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138">ARITY</a>=super::ARITY};</div>
+<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53_html_a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eac07b8fda7e727aec7ed901be63730138">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;::ARITY</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00296">v8toolkit.h:296</a></div></div>
+<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53_html_a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a9f3fcd153731a1a1a149aa70f888408eafa0b8043cdcf1f49fa39861e45d64dc6">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;::DEPTH</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00296">v8toolkit.h:296</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -230,10 +230,10 @@ template&lt;typename... Ts&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00270">270</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;                                                                                                    {</div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;        this-&gt;super::operator()(<span class="keyword">function</span>, info, ts..., info); </div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;    }</div>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00299">299</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<div class="fragment"><div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;                                                                                                    {</div>
+<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;        this-&gt;super::operator()(<span class="keyword">function</span>, info, ts..., info); </div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;    }</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -243,7 +243,7 @@ template&lt;typename... Ts&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

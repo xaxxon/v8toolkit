@@ -101,7 +101,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="textblock"><code>#include &lt;iostream&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;fstream&gt;</code><br />
-<code>#include &lt;assert.h&gt;</code><br />
 <code>#include &quot;include/libplatform/libplatform.h&quot;</code><br />
 <code>#include &quot;include/v8.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="casts_8hpp_source.html">casts.hpp</a>&quot;</code><br />
@@ -111,7 +110,7 @@ Include dependency graph for v8toolkit.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="v8toolkit_8h__incl.png" border="0" usemap="#v8toolkit_8h" alt=""/></div>
 <map name="v8toolkit_8h" id="v8toolkit_8h">
-<area shape="rect" id="node8" href="casts_8hpp.html" title="casts.hpp" alt="" coords="399,77,471,101"/>
+<area shape="rect" id="node7" href="casts_8hpp.html" title="casts.hpp" alt="" coords="311,77,383,101"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -119,12 +118,10 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="v8toolkit_8h__dep__incl.png" border="0" usemap="#v8toolkit_8hdep" alt=""/></div>
 <map name="v8toolkit_8hdep" id="v8toolkit_8hdep">
-<area shape="rect" id="node2" href="v8__class__wrapper_8hpp.html" title="v8_class_wrapper.hpp" alt="" coords="124,77,264,101"/>
-<area shape="rect" id="node7" href="v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="289,77,377,101"/>
-<area shape="rect" id="node3" href="javascript_8h.html" title="javascript.h" alt="" coords="153,149,235,173"/>
-<area shape="rect" id="node4" href="javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,221,100,245"/>
-<area shape="rect" id="node5" href="javascript__sample_8cpp.html" title="javascript_sample.cpp" alt="" coords="124,221,264,245"/>
-<area shape="rect" id="node6" href="thread__sample_8cpp.html" title="thread_sample.cpp" alt="" coords="288,221,412,245"/>
+<area shape="rect" id="node2" href="v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="5,77,133,101"/>
+<area shape="rect" id="node5" href="v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="157,77,245,101"/>
+<area shape="rect" id="node3" href="javascript_8h.html" title="javascript.h" alt="" coords="28,149,110,173"/>
+<area shape="rect" id="node4" href="javascript_8cpp.html" title="javascript.cpp" alt="" coords="22,221,116,245"/>
 </map>
 </div>
 </div>
@@ -132,6 +129,8 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1InvalidCallException.html">v8toolkit::InvalidCallException</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:structv8toolkit_1_1CallCallable"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#structv8toolkit_1_1CallCallable">v8toolkit::CallCallable&lt; T &gt;</a></td></tr>
 <tr class="separator:structv8toolkit_1_1CallCallable"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html">v8toolkit::CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;</a></td></tr>
@@ -209,9 +208,6 @@ Functions</h2></td></tr>
 <tr class="memitem:a241a9ec36f478d9373719ac5a636e836"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:a241a9ec36f478d9373719ac5a636e836"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a241a9ec36f478d9373719ac5a636e836">v8toolkit::add_function</a> (const v8::Local&lt; v8::Context &gt; &amp;context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, T callable)</td></tr>
 <tr class="separator:a241a9ec36f478d9373719ac5a636e836"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2bf51d4cf65f2893224accf5a6cfc854"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
-<tr class="memitem:a2bf51d4cf65f2893224accf5a6cfc854"><td class="memTemplItemLeft" align="right" valign="top">v8::Global&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2bf51d4cf65f2893224accf5a6cfc854">v8toolkit::make_global</a> (v8::Isolate *isolate, v8::Local&lt; T &gt; local)</td></tr>
-<tr class="separator:a2bf51d4cf65f2893224accf5a6cfc854"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa48d55bbed31ad98f5492be6fc6c6228"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">v8toolkit::add_variable</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Value &gt; value)</td></tr>
 <tr class="separator:aa48d55bbed31ad98f5492be6fc6c6228"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae28dc0bd9866afb77f14455c63976683"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ae28dc0bd9866afb77f14455c63976683">v8toolkit::add_variable</a> (const v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, const v8::Local&lt; v8::Value &gt; value)</td></tr>
@@ -233,6 +229,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a03df786cc0b87a2542bba314a9dc24ce"><td class="memTemplParams" colspan="2">template&lt;class VARIABLE_TYPE &gt; </td></tr>
 <tr class="memitem:a03df786cc0b87a2542bba314a9dc24ce"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a03df786cc0b87a2542bba314a9dc24ce">v8toolkit::expose_variable</a> (v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, VARIABLE_TYPE &amp;variable)</td></tr>
 <tr class="separator:a03df786cc0b87a2542bba314a9dc24ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0537ebd026c1c279c8d8682e4db54695"><td class="memTemplParams" colspan="2">template&lt;class VARIABLE_TYPE &gt; </td></tr>
+<tr class="memitem:a0537ebd026c1c279c8d8682e4db54695"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a0537ebd026c1c279c8d8682e4db54695">v8toolkit::expose_variable_readonly</a> (v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, VARIABLE_TYPE &amp;variable)</td></tr>
+<tr class="separator:a0537ebd026c1c279c8d8682e4db54695"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ababa4b24207ba91bf1b898aa524ea7bb"><td class="memTemplParams" colspan="2">template&lt;class CALLBACK_FUNCTION &gt; </td></tr>
 <tr class="memitem:ababa4b24207ba91bf1b898aa524ea7bb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ababa4b24207ba91bf1b898aa524ea7bb">v8toolkit::global_set_weak</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Object &gt; &amp;javascript_object, CALLBACK_FUNCTION function)</td></tr>
 <tr class="separator:ababa4b24207ba91bf1b898aa524ea7bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -267,9 +266,9 @@ Functions</h2></td></tr>
 <div class="textblock"><h3>template&lt;class T&gt;<br />
 struct v8toolkit::CallCallable&lt; T &gt;</h3>
 
-<p>Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript </p>
+<p>Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript Mostly for <a class="el" href="namespacev8toolkit.html">v8toolkit</a> internal use </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00187">187</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00215">215</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div>
 </div>
 </div>
@@ -285,9 +284,9 @@ struct v8toolkit::CallCallable&lt; T &gt;</h3>
 <div class="textblock"><h3>template&lt;int depth, typename T, typename U&gt;<br />
 struct v8toolkit::ParameterBuilder&lt; depth, T, U &gt;</h3>
 
-<p>Class for turning a function parameter list into a parameter pack useful for actually calling the function </p>
+<p>Class for turning a function parameter list into a parameter pack useful for calling the function </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00215">215</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00243">243</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div>
 </div>
 </div>
@@ -305,7 +304,7 @@ struct v8toolkit::Bind&lt; T, U &gt;</h3>
 
 <p>Accepts an object and a method on that object to be called later via its operator() Does not require knowledge of how many parameters the method takes or any placeholder arguments Can be wrapped with a std::function </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00489">489</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00565">565</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div>
 </div>
 </div>
@@ -321,14 +320,14 @@ struct v8toolkit::Bind&lt; T, U &gt;</h3>
 </div><div class="memdoc">
 <p>Library of standalone helper functions for using V8. Can be used independently of V8ClassWrapper </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00015">15</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00014">14</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

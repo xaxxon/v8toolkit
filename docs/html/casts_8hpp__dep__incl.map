@@ -1,9 +1,7 @@
 <map id="casts.hpp" name="casts.hpp">
-<area shape="rect" id="node2" href="$v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="226,77,301,101"/>
-<area shape="rect" id="node3" href="$v8__class__wrapper_8hpp.html" title="v8_class_wrapper.hpp" alt="" coords="124,149,264,173"/>
-<area shape="rect" id="node8" href="$v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="289,149,377,173"/>
-<area shape="rect" id="node4" href="$javascript_8h.html" title="javascript.h" alt="" coords="153,221,235,245"/>
-<area shape="rect" id="node5" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,293,100,317"/>
-<area shape="rect" id="node6" href="$javascript__sample_8cpp.html" title="javascript_sample.cpp" alt="" coords="124,293,264,317"/>
-<area shape="rect" id="node7" href="$thread__sample_8cpp.html" title="thread_sample.cpp" alt="" coords="288,293,412,317"/>
+<area shape="rect" id="node2" href="$v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="97,77,172,101"/>
+<area shape="rect" id="node3" href="$v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="5,149,133,173"/>
+<area shape="rect" id="node6" href="$v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="157,149,245,173"/>
+<area shape="rect" id="node4" href="$javascript_8h.html" title="javascript.h" alt="" coords="28,221,110,245"/>
+<area shape="rect" id="node5" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="22,293,116,317"/>
 </map>

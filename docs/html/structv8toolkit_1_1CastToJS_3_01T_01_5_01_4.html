@@ -103,7 +103,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!--header-->
 <div class="contents">
 
-<p><code>#include &lt;<a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -116,7 +116,7 @@ struct v8toolkit::CastToJS&lt; T * &gt;</h3>
 
 <p>Attempt to use <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a> to wrap any remaining types not handled by the specializations in <a class="el" href="casts_8hpp.html">casts.hpp</a> That type must have had its methods and members added beforehand in the same isolate </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8hpp_source.html#l00408">408</a> of file <a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00408">408</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="a2b81207ac0de02a89f209db9d13a6bf1"></a>
 <div class="memitem">
@@ -152,17 +152,17 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8hpp_source.html#l00409">409</a> of file <a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00409">409</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
-<p>References <a class="el" href="v8__class__wrapper_8hpp_source.html#l00219">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>, and <a class="el" href="v8__class__wrapper_8hpp_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
+<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00219">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>, and <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
 <div class="fragment"><div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;                                                                    {</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8hpp.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;CastToJS from T*\n&quot;</span>);</div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;CastToJS from T*\n&quot;</span>);</div>
 <div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;        <span class="keyword">auto</span> context = isolate-&gt;GetCurrentContext();</div>
 <div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;        V8ClassWrapper&lt;T&gt; &amp; class_wrapper = <a class="code" href="classv8toolkit_1_1V8ClassWrapper.html#acb9cb4e742794729078f4adb2696bd8b">V8ClassWrapper&lt;T&gt;::get_instance</a>(isolate);</div>
 <div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;        <span class="keywordflow">return</span> class_wrapper.template wrap_existing_cpp_object&lt;DestructorBehaviorLeaveAlone&lt;T&gt;&gt;(context, cpp_object);</div>
 <div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    }</div>
-<div class="ttc" id="classv8toolkit_1_1V8ClassWrapper_html_acb9cb4e742794729078f4adb2696bd8b"><div class="ttname"><a href="classv8toolkit_1_1V8ClassWrapper.html#acb9cb4e742794729078f4adb2696bd8b">v8toolkit::V8ClassWrapper::get_instance</a></div><div class="ttdeci">static V8ClassWrapper&lt; T &gt; &amp; get_instance(v8::Isolate *isolate)</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8hpp_source.html#l00219">v8_class_wrapper.hpp:219</a></div></div>
-<div class="ttc" id="v8__class__wrapper_8hpp_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8hpp.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8hpp_source.html#l00018">v8_class_wrapper.hpp:18</a></div></div>
+<div class="ttc" id="v8__class__wrapper_8h_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00018">v8_class_wrapper.h:18</a></div></div>
+<div class="ttc" id="classv8toolkit_1_1V8ClassWrapper_html_acb9cb4e742794729078f4adb2696bd8b"><div class="ttname"><a href="classv8toolkit_1_1V8ClassWrapper.html#acb9cb4e742794729078f4adb2696bd8b">v8toolkit::V8ClassWrapper::get_instance</a></div><div class="ttdeci">static V8ClassWrapper&lt; T &gt; &amp; get_instance(v8::Isolate *isolate)</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00219">v8_class_wrapper.h:219</a></div></div>
 </div><!-- fragment -->
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -177,12 +177,12 @@ Here is the call graph for this function:</div>
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
-<li><a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a></li>
+<li><a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

@@ -114,9 +114,9 @@ Public Member Functions</h2></td></tr>
 <div class="textblock"><h3>template&lt;class R, typename... Args&gt;<br />
 struct v8toolkit::CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;</h3>
 
-<p>specialization for functions with a non-void return type so the value is sent back to javascript </p>
+<p>specialization for functions with non-void return types so the value is sent back to javascript </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00193">193</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00221">221</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="a72f4993280232d320edc900bf74a432a"></a>
 <div class="memitem">
@@ -158,10 +158,10 @@ template&lt;class R , typename... Args&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00194">194</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;                                                                                                                  {</div>
-<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;        info.GetReturnValue().Set(<a class="code" href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS&lt;R&gt;</a>()(info.GetIsolate(), callable(args...)));</div>
-<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;    }</div>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00222">222</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<div class="fragment"><div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;                                                                                                                  {</div>
+<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;        info.GetReturnValue().Set(<a class="code" href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS&lt;R&gt;</a>()(info.GetIsolate(), callable(args...)));</div>
+<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;    }</div>
 <div class="ttc" id="structv8toolkit_1_1CastToJS_html"><div class="ttname"><a href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS</a></div><div class="ttdef"><b>Definition:</b> <a href="casts_8hpp_source.html#l00113">casts.hpp:113</a></div></div>
 </div><!-- fragment -->
 </div>
@@ -172,7 +172,7 @@ template&lt;class R , typename... Args&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

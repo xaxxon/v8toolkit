@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['v8_5fclass_5fwrapper_2ehpp',['v8_class_wrapper.hpp',['../v8__class__wrapper_8hpp.html',1,'']]],
-  ['v8_5fclass_5fwrapper_5fdebug',['V8_CLASS_WRAPPER_DEBUG',['../v8__class__wrapper_8hpp.html#a6f95ec9c55c8679a2e7d38c98ada8d0b',1,'v8_class_wrapper.hpp']]],
-  ['v8classwrapper',['V8ClassWrapper',['../classv8toolkit_1_1V8ClassWrapper.html',1,'v8toolkit']]],
-  ['v8toolkit',['v8toolkit',['../namespacev8toolkit.html',1,'']]],
-  ['v8toolkit_2ecpp',['v8toolkit.cpp',['../v8toolkit_8cpp.html',1,'']]],
-  ['v8toolkit_2eh',['v8toolkit.h',['../v8toolkit_8h.html',1,'']]]
+  ['what',['what',['../classv8toolkit_1_1ContextHelper_1_1CompilationError.html#addf9a132c42fadc6cd905851d5ae516b',1,'v8toolkit::ContextHelper::CompilationError::what()'],['../classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#a99b3d863881c877b58eeac84e4df5509',1,'v8toolkit::ContextHelper::ExecutionError::what()'],['../classv8toolkit_1_1InvalidCallException.html#af81b76b41fc1be39262eeec45cf66103',1,'v8toolkit::InvalidCallException::what()']]],
+  ['wrap_5fclass',['wrap_class',['../classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6',1,'v8toolkit::IsolateHelper']]],
+  ['wrap_5fexisting_5fcpp_5fobject',['wrap_existing_cpp_object',['../classv8toolkit_1_1V8ClassWrapper.html#ae860b0c21f7201910b1f73e168b50342',1,'v8toolkit::V8ClassWrapper']]],
+  ['wrap_5fobject',['wrap_object',['../classv8toolkit_1_1ContextHelper.html#aa8391daed04a94517fefc5cf2dd686ee',1,'v8toolkit::ContextHelper']]]
 ];

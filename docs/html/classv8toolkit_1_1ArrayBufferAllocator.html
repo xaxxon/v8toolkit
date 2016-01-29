@@ -127,7 +127,7 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Example allocator code from V8 Docs </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00542">542</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00631">631</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="ae1b18bdbf2142c342372b31155fa9073"></a>
 <div class="memitem">
@@ -151,14 +151,14 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00544">544</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00633">633</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00548">AllocateUninitialized()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00544"></a><span class="lineno">  544</span>&#160;                                        {</div>
-<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;    <span class="keywordtype">void</span>* data = <a class="code" href="classv8toolkit_1_1ArrayBufferAllocator.html#a95c82b37e614cdee95a9bdefef9e8e8d">AllocateUninitialized</a>(length);</div>
-<div class="line"><a name="l00546"></a><span class="lineno">  546</span>&#160;    <span class="keywordflow">return</span> data == NULL ? data : memset(data, 0, length);</div>
-<div class="line"><a name="l00547"></a><span class="lineno">  547</span>&#160;  }</div>
-<div class="ttc" id="classv8toolkit_1_1ArrayBufferAllocator_html_a95c82b37e614cdee95a9bdefef9e8e8d"><div class="ttname"><a href="classv8toolkit_1_1ArrayBufferAllocator.html#a95c82b37e614cdee95a9bdefef9e8e8d">v8toolkit::ArrayBufferAllocator::AllocateUninitialized</a></div><div class="ttdeci">virtual void * AllocateUninitialized(size_t length)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00548">v8toolkit.h:548</a></div></div>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00637">AllocateUninitialized()</a>.</p>
+<div class="fragment"><div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160;                                               {</div>
+<div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;    <span class="keywordtype">void</span>* data = <a class="code" href="classv8toolkit_1_1ArrayBufferAllocator.html#a95c82b37e614cdee95a9bdefef9e8e8d">AllocateUninitialized</a>(length);</div>
+<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;    <span class="keywordflow">return</span> data == NULL ? data : memset(data, 0, length);</div>
+<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;  }</div>
+<div class="ttc" id="classv8toolkit_1_1ArrayBufferAllocator_html_a95c82b37e614cdee95a9bdefef9e8e8d"><div class="ttname"><a href="classv8toolkit_1_1ArrayBufferAllocator.html#a95c82b37e614cdee95a9bdefef9e8e8d">v8toolkit::ArrayBufferAllocator::AllocateUninitialized</a></div><div class="ttdeci">virtual void * AllocateUninitialized(size_t length)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00637">v8toolkit.h:637</a></div></div>
 </div><!-- fragment -->
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -194,10 +194,10 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00548">548</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00637">637</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00544">Allocate()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00548"></a><span class="lineno">  548</span>&#160;{ <span class="keywordflow">return</span> malloc(length); }</div>
+<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00633">Allocate()</a>.</p>
+<div class="fragment"><div class="line"><a name="l00637"></a><span class="lineno">  637</span>&#160;{ <span class="keywordflow">return</span> malloc(length); }</div>
 </div><!-- fragment -->
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -243,8 +243,8 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00549">549</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00549"></a><span class="lineno">  549</span>&#160;{ free(data); }</div>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00638">638</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<div class="fragment"><div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160;{ free(data); }</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -254,7 +254,7 @@ Here is the caller graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

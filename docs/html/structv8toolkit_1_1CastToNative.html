@@ -141,29 +141,29 @@ template&lt;typename T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8hpp_source.html#l00428">428</a> of file <a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00428">428</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
-<p>References <a class="el" href="v8__class__wrapper_8hpp_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
+<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
 <div class="fragment"><div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;                                            {</div>
-<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8hpp.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;cast to native\n&quot;</span>);</div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;cast to native\n&quot;</span>);</div>
 <div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;        <span class="keyword">auto</span> <span class="keywordtype">object</span> = v8::Object::Cast(*value);</div>
 <div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;        assert(object-&gt;InternalFieldCount() &gt; 0);</div>
 <div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;        v8::Local&lt;v8::External&gt; wrap = v8::Local&lt;v8::External&gt;::Cast(object-&gt;GetInternalField(0));</div>
 <div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;        T * cpp_object = <span class="keyword">static_cast&lt;</span>T *<span class="keyword">&gt;</span>(wrap-&gt;Value());</div>
 <div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;        <span class="keywordflow">return</span> *cpp_object;</div>
 <div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;    }</div>
-<div class="ttc" id="v8__class__wrapper_8hpp_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8hpp.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8hpp_source.html#l00018">v8_class_wrapper.hpp:18</a></div></div>
+<div class="ttc" id="v8__class__wrapper_8h_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00018">v8_class_wrapper.h:18</a></div></div>
 </div><!-- fragment -->
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following files:<ul>
 <li><a class="el" href="casts_8hpp_source.html">casts.hpp</a></li>
-<li><a class="el" href="v8__class__wrapper_8hpp_source.html">v8_class_wrapper.hpp</a></li>
+<li><a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>
