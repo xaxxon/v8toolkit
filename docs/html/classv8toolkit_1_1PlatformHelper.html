@@ -107,6 +107,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a6ef35cacbad78bd2076bba5b07a9b6ef"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef">init</a> (char *path_to_bin_files)</td></tr>
+<tr class="separator:a6ef35cacbad78bd2076bba5b07a9b6ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b1a1afa013e30baedc7c440f9a44c14"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1PlatformHelper.html#a4b1a1afa013e30baedc7c440f9a44c14">init</a> (int argc, char **argv)</td></tr>
 <tr class="separator:a4b1a1afa013e30baedc7c440f9a44c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63ac69cf85a93e998f537178572c7f16"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1PlatformHelper.html#a63ac69cf85a93e998f537178572c7f16">cleanup</a> ()</td></tr>
@@ -117,8 +119,33 @@ Static Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A singleton responsible for initializing the v8 platform and creating isolate helpers. </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00272">272</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00447">447</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a class="anchor" id="a6ef35cacbad78bd2076bba5b07a9b6ef"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void v8toolkit::PlatformHelper::init </td>
+          <td>(</td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>path_to_bin_files</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Initializes the v8 platform with default values and tells v8 to look for its .bin files in the given directory (often argv[0]) </p>
+
+</div>
+</div>
 <a class="anchor" id="a4b1a1afa013e30baedc7c440f9a44c14"></a>
 <div class="memitem">
 <div class="memproto">
@@ -150,26 +177,27 @@ Static Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+<p>Parses argv for v8-specific options, applies them, and removes them from argv and adjusts argc accordingly. Looks in argv[0] for the v8 .bin files </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00247">247</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00250">250</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="v8toolkit_8cpp_source.html#l00024">v8toolkit::process_v8_flags()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;{</div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;    assert(!initialized);</div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;    <a class="code" href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c">process_v8_flags</a>(argc, argv);</div>
-<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;    </div>
-<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;    <span class="comment">// Initialize V8.</span></div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;    v8::V8::InitializeICU();</div>
+<div class="fragment"><div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;{</div>
+<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;    assert(!initialized);</div>
+<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;    <a class="code" href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c">process_v8_flags</a>(argc, argv);</div>
 <div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;    </div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;    <span class="comment">// startup data is in the current directory</span></div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;    v8::V8::InitializeExternalStartupData(argv[0]);</div>
+<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;    <span class="comment">// Initialize V8.</span></div>
+<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;    v8::V8::InitializeICU();</div>
 <div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;    </div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;    PlatformHelper::platform = std::unique_ptr&lt;v8::Platform&gt;(v8::platform::CreateDefaultPlatform());</div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;    v8::V8::InitializePlatform(platform.get());</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;    v8::V8::Initialize();</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;    </div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;    initialized = <span class="keyword">true</span>;</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;}</div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;    <span class="comment">// startup data is in the current directory</span></div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;    v8::V8::InitializeExternalStartupData(argv[0]);</div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;    </div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;    PlatformHelper::platform = std::unique_ptr&lt;v8::Platform&gt;(v8::platform::CreateDefaultPlatform());</div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;    v8::V8::InitializePlatform(platform.get());</div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;    v8::V8::Initialize();</div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;    </div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;    initialized = <span class="keyword">true</span>;</div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;}</div>
 <div class="ttc" id="namespacev8toolkit_html_af61c605180d6163dcf8c93f24929316c"><div class="ttname"><a href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c">v8toolkit::process_v8_flags</a></div><div class="ttdeci">void process_v8_flags(int &amp;argc, char **argv)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00024">v8toolkit.cpp:24</a></div></div>
 </div><!-- fragment -->
 <p><div class="dynheader">
@@ -204,16 +232,17 @@ Here is the call graph for this function:</div>
   </tr>
 </table>
 </div><div class="memdoc">
+<p>Shuts down V8. Any subsequent V8 usage is probably undefined, so make sure everything is done before you call this. </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00265">265</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;{</div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;</div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;    <span class="comment">// Dispose the isolate and tear down V8.</span></div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;    v8::V8::Dispose();</div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;    v8::V8::ShutdownPlatform();</div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;    </div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;    platform.release();</div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;};</div>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00268">268</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<div class="fragment"><div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;{</div>
+<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;</div>
+<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;    <span class="comment">// Dispose the isolate and tear down V8.</span></div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;    v8::V8::Dispose();</div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;    v8::V8::ShutdownPlatform();</div>
+<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;    </div>
+<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;    platform.release();</div>
+<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;};</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -237,16 +266,18 @@ Here is the call graph for this function:</div>
   </tr>
 </table>
 </div><div class="memdoc">
+<p>Creates a new <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> wrapping a new v8::Isolate instance. Each isolate is completely separate from all the others and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time) An <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will remain as long as the caller has a shared_ptr to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> or any ContextHelpers created from the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> still exist. Once neither of those things is the case, the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will be automatically destroyed. If any threads are still running when this happens, the results are undefined. TODO: Can active threads maintain links to their ContextHelpers to stop this from happening? </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00275">275</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;{</div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;    assert(initialized);</div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;    v8::Isolate::CreateParams create_params;</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;    create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &amp;PlatformHelper::allocator;</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;</div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;    <span class="keyword">auto</span> isolate_helper = <span class="keyword">new</span> IsolateHelper(v8::Isolate::New(create_params));</div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;    <span class="keywordflow">return</span> std::shared_ptr&lt;IsolateHelper&gt;(isolate_helper);</div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;}</div>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00278">278</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<div class="fragment"><div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;{</div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;    assert(initialized);</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;    v8::Isolate::CreateParams create_params;</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;    create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &amp;PlatformHelper::allocator;</div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;</div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;    <span class="comment">// can&#39;t use make_shared since the constructor is private</span></div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;    <span class="keyword">auto</span> isolate_helper = <span class="keyword">new</span> IsolateHelper(v8::Isolate::New(create_params));</div>
+<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;    <span class="keywordflow">return</span> std::shared_ptr&lt;IsolateHelper&gt;(isolate_helper);</div>
+<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;}</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -257,7 +288,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

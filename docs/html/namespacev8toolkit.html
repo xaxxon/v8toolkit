@@ -442,7 +442,7 @@ struct v8toolkit::ParameterBuilder&lt; depth, T, U &gt;</h3>
 
 <p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00024">24</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00247">v8toolkit::PlatformHelper::init()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00250">v8toolkit::PlatformHelper::init()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;{</div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;    v8::V8::SetFlagsFromCommandLine(&amp;argc, argv, <span class="keyword">true</span>);</div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;}</div>
@@ -623,7 +623,7 @@ Here is the caller graph for this function:</div>
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00324">make_function_template()</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8h_source.html#l00120">v8toolkit::ContextHelper::add_function()</a>, <a class="el" href="javascript_8h_source.html#l00243">v8toolkit::IsolateHelper::add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00150">add_print()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8h_source.html#l00286">v8toolkit::ContextHelper::add_function()</a>, <a class="el" href="javascript_8h_source.html#l00418">v8toolkit::IsolateHelper::add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00150">add_print()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;                                                                                                                                                                      {</div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    object_template-&gt;Set(isolate, name, <a class="code" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3">make_function_template</a>(isolate, <span class="keyword">function</span>));</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;}</div>
@@ -966,7 +966,7 @@ Here is the caller graph for this function:</div>
 
 <p>References <a class="el" href="v8toolkit_8cpp_source.html#l00112">_print_helper()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00058">_printf_helper()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00048">add_function()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00130">printobj()</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00211">v8toolkit::IsolateHelper::add_print()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00212">v8toolkit::IsolateHelper::add_print()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;                                                                                      {</div>
 <div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;<span class="preprocessor">#ifdef USE_BOOST</span></div>
 <div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;    <a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">add_function</a>(isolate, object_template, <span class="stringliteral">&quot;printf&quot;</span>,    [](<span class="keyword">const</span> v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args){<a class="code" href="namespacev8toolkit.html#ae5dc09550fef3e9c21c7745f3acfb71a">_printf_helper</a>(args, <span class="keyword">false</span>);});</div>
@@ -1028,7 +1028,7 @@ Here is the caller graph for this function:</div>
 
 <p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00166">166</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>, and <a class="el" href="javascript_8cpp_source.html#l00038">v8toolkit::ContextHelper::compile_from_file()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00183">add_require()</a>, and <a class="el" href="javascript_8cpp_source.html#l00039">v8toolkit::ContextHelper::compile_from_file()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;{</div>
 <div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;  std::ifstream in(filename, std::ios::in | std::ios::binary);</div>
 <div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;  <span class="keywordflow">if</span> (in) {</div>
@@ -1247,7 +1247,7 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()()), decltype(s
 
 <p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00036">36</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00398">add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00043">v8toolkit::ContextHelper::compile()</a>, <a class="el" href="javascript_8h_source.html#l00089">v8toolkit::ContextHelper::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00206">v8toolkit::IsolateHelper::operator()()</a>, and <a class="el" href="javascript_8cpp_source.html#l00066">v8toolkit::ContextHelper::run()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00398">add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00044">v8toolkit::ContextHelper::compile()</a>, <a class="el" href="javascript_8h_source.html#l00246">v8toolkit::ContextHelper::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00382">v8toolkit::IsolateHelper::operator()()</a>, and <a class="el" href="javascript_8cpp_source.html#l00067">v8toolkit::ContextHelper::run()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;{</div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    v8::Locker locker(isolate);</div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    v8::Isolate::Scope isolate_scope(isolate);</div>
@@ -2028,7 +2028,7 @@ template&lt;class VARIABLE_TYPE &gt; </div>
 
 <p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00453">453</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8h_source.html#l00131">v8toolkit::ContextHelper::expose_variable()</a>, and <a class="el" href="javascript_8h_source.html#l00254">v8toolkit::IsolateHelper::expose_variable()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8h_source.html#l00298">v8toolkit::ContextHelper::expose_variable()</a>, and <a class="el" href="javascript_8h_source.html#l00429">v8toolkit::IsolateHelper::expose_variable()</a>.</p>
 <div class="fragment"><div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;                                                                                                                                          {</div>
 <div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;    object_template-&gt;SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter&lt;VARIABLE_TYPE&gt;, _variable_setter&lt;VARIABLE_TYPE&gt;, v8::External::New(isolate, &amp;variable));</div>
 <div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;}</div>
@@ -2292,7 +2292,7 @@ Here is the caller graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:32:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>
