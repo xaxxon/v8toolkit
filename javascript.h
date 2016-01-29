@@ -4,7 +4,7 @@
 #include <mutex>
 #include <future>
 
-#include "v8_class_wrapper.hpp"
+#include "v8_class_wrapper.h"
 
 namespace v8toolkit {
 	

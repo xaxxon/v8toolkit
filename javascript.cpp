@@ -9,7 +9,7 @@ namespace v8toolkit {
 
 
 ContextHelper::ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context) : 
-    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8toolkit::make_global(isolate, context)) 
+    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
 {}
 
 
