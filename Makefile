@@ -24,6 +24,7 @@ clean_docs:
 	rm -rf doc	
 
 docs: clean_docs
+	mkdir -p docs/html
 	doxygen doxygen.cfg
 	
 

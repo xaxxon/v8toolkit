@@ -22,6 +22,7 @@ v8::Isolate * ContextHelper::get_isolate()
 {
     return this->isolate;
 }
+
 std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 {
     return this->isolate_helper;
@@ -227,7 +228,9 @@ std::unique_ptr<ContextHelper> IsolateHelper::create_context()
         auto ot = this->get_object_template();
         auto context = v8::Context::New(this->isolate, NULL, ot);
     
-        return std::make_unique<ContextHelper>(shared_from_this(), context);
+        // can't use make_unique since the constructor is private
+        auto context_helper = new ContextHelper(shared_from_this(), context);
+        return std::unique_ptr<ContextHelper>(context_helper);
     });
 }
 
@@ -278,6 +281,7 @@ std::shared_ptr<IsolateHelper> PlatformHelper::create_isolate()
     v8::Isolate::CreateParams create_params;
     create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &PlatformHelper::allocator;
 
+    // can't use make_shared since the constructor is private
     auto isolate_helper = new IsolateHelper(v8::Isolate::New(create_params));
     return std::shared_ptr<IsolateHelper>(isolate_helper);
 }
