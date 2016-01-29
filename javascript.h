@@ -9,15 +9,35 @@
 namespace v8toolkit {
 	
 class IsolateHelper;
-	
+
+/**
+* Wrapper around a v8::Cnotext object with a link back to its associated isolate
+* This object can be used wherever a v8::Isolate * or a Local or Global v8::Context
+*   is wanted.
+* Can only be created via IsolateHelper::create_context()
+*/
 class ContextHelper {
+    friend class IsolateHelper;
 public:
+    
+    /**
+    * Exception class returned to caller when a compilation error is encountered
+    * The what() method can be used to get the error string associated with the
+    *   error
+    */
 	class CompilationError : std::exception {
 		std::string what_string;
 	public:
 		CompilationError(std::string what_string) : what_string(what_string) {}
 		const char* what() const noexcept {return what_string.c_str();}
 	};
+    
+    /**
+    * Exception class returned to caller when a javascript execution error is 
+    *   encountered
+    * The what() method can be used to get the error string associated with the
+    *   error
+    */
 	class ExecutionError : std::exception {
 		std::string what_string;
 	public:
@@ -41,48 +61,185 @@ private:
 	
 	/// The actual v8::Context object backing this ContextHelper
 	v8::Global<v8::Context> context;
+    
+    /// constructor should only be called by an IsolateHelper
+	ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context);
+    
 	
 public:
-	ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context);
-		
+    
+	
 	virtual ~ContextHelper();
 	
-	operator v8::Isolate*(){return this->isolate;}	
+    /**
+    * Implicit cast to v8::Isolate *
+    */
+	inline operator v8::Isolate*(){return this->isolate;}
+    
+    /**
+    * Implicit cast to v8::Local<v8::Context>
+    */
+	inline operator v8::Local<v8::Context>(){return this->context.Get(isolate);}
+    
+    /**
+    * Implicit cast to v8::Global<v8::Context>
+    */
+	inline operator v8::Global<v8::Context>(){return v8::Global<v8::Context>(isolate, this->context.Get(isolate));}
 	
-	
+	/**
+    * Returns a Local copy of the associated v8::Context
+    */ 
 	v8::Local<v8::Context> get_context();
+    
+    /**
+    * Returns the v8::Isolate * this context is associated with
+    */ 
 	v8::Isolate * get_isolate();
+    
+    /**
+    * Returns the IsolateHelper wrapping the isolate this context is associated with
+    */
 	std::shared_ptr<IsolateHelper> get_isolate_helper();
 	
-	
+	/**
+    * Compiles the contents of the passed in string as javascripts
+    * Throws v8toolkit::CompilationError on compilation error
+    */
 	v8::Global<v8::Script> compile(const std::string);
+    
+	/**
+    * Compiles the contents of the passed in v8::String as javascript
+    * Throws v8toolkit::CompilationError on compilation error
+    */
 	v8::Global<v8::Script> compile(const v8::Local<v8::String> script);
+    
+    /**
+    * Loads the contents of the given file as javascript
+    * Throws v8toolkit::CompilationError on compilation error
+    * TODO: what if the file can't be opened?
+    */
 	v8::Global<v8::Script> compile_from_file(const std::string);
 	
+    /**
+    * Runs the previously compiled v8::Script.
+    * Throws v8toolkit::ExecutionError on execution error
+    */
 	v8::Global<v8::Value> run(const v8::Global<v8::Script> & script);
+    
+    /**
+    * Compiles and runs the contents ot the passed in string
+    * Throws v8toolkit::CompilationError on compilation error
+    * Throws v8toolkit::ExecutionError on execution error
+    */
 	v8::Global<v8::Value> run(const std::string);
 	v8::Global<v8::Value> run(const v8::Local<v8::Value> script);
 	
-	
-	// runs the specified code in a thread and returns a future that can be used to retrieve
-	//	 the return value of the code
+	/**
+    * Executes the previously compiled v8::script in a std::async and returns
+    *   the std::future associated with it.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script);
+    
+	/**
+    * Compiles and runs the contents of the passed in string in a std::async and returns
+    *   the std::future associated with it.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in compilation?
+    * TODO: what happens if there are errors in execution?
+    */
 	std::future<v8::Global<v8::Value>> run_async(const std::string);
+    
+	/**
+    * Executes the previously compiled v8::script in a std::async and returns
+    *   the std::future associated with it.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script);
 	
-	// runs the specified code in a thread, returning the thread object to be joined on
-	//	 no return value available
+	/**
+    * Executes the previously compiled v8::script in a std::thread and returns
+    *   the std::thread associated with it.  It must either be joined or detached
+    *   before the std::thread object is destroyed
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	std::thread run_thread(const v8::Global<v8::Script> & script);
+
+	/**
+    * Compiles and runs the contents of the passed in string in a in a std::thread and returns
+    *   the std::thread associated with it.  It must either be joined or detached
+    *   before the std::thread object is destroyed
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in compilation?
+    * TODO: what happens if there are errors in execution?
+    */
 	std::thread run_thread(const std::string);
+    
+	/**
+    * Executes the previously compiled v8::script in a std::thread and returns
+    *   the std::thread associated with it.  It must either be joined or detached
+    *   before the std::thread object is destroyed
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	std::thread run_thread(const v8::Local<v8::Value> script);
 	
-	// runs the specified code in a detached thread - no way to know when it's done
-	//	 no return value available
+	/**
+    * Executes the previously compiled v8::script in a detached std::thread.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	void run_detached(const v8::Global<v8::Script> & script);
+    
+	/**
+    * Compiles and runs the contents of the passed in string in a detached std::thread.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in compilation?
+    * TODO: what happens if there are errors in execution?
+    */
 	void run_detached(const std::string);
+    
+	/**
+    * Executes the previously compiled v8::script in a detached std::thread.
+    * While any number of threaded calls can be made, only one context per
+    *   isolate can be actively running at a time.   Additional calls will be
+    *   queued but will block until they can acquire the v8::Locker object for
+    *   their isolate
+    * TODO: what happens if there are errors in execution?
+    */
 	void run_detached(const v8::Local<v8::Value> script);
 
 	
+    /**
+    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    */
 	template<class T, 
 			 class R = decltype(std::declval<T>()()),
 			 decltype(std::declval<T>()(), 1) = 1>
@@ -93,6 +250,10 @@ public:
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
 
+    /**
+    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Passes the v8::Isolate * into the callback
+    */
 	template<class T, 
 			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
@@ -103,6 +264,10 @@ public:
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
 
+    /**
+    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Passes the v8::Isolate * and context into the callback
+    */
 	template<class T, 
 			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
@@ -115,6 +280,7 @@ public:
 	
 	/**
 	* Adds a function to this context only
+    * See: v8toolkit::add_function
 	*/
 	template<class Function>
 	void add_function(std::string name, Function function)
@@ -125,7 +291,8 @@ public:
 	}
 	
 	/**
-	* Adds a variable to this context only
+	* Exposes a C++ variable to this context only
+    * see: v8toolkit::expose_variable
 	*/ 
 	template<class Variable>
 	void expose_variable(std::string name, Variable & variable)
@@ -135,6 +302,7 @@ public:
 	
 	/**
 	* Returns a javascript object representation of the given c++ object
+    * see: votoolkit::V8ClassWrapper
 	*/
 	template<class T>
 	auto wrap_object(T* object);
@@ -143,9 +311,10 @@ public:
 
 /**
 * Represents a v8::Isolate object.	Any changes made here will be reflected in any
-* contexts created after the change was made.	
+*   contexts created after the change was made.	
 * An IsolateHleper will remain as long as the user has a shared_ptr to the IsolateHelper
-* itself or a shared_ptr to any ContextHelper created from the IsolateHelper. 
+*   itself or a unique_ptr to any ContextHelper created from the IsolateHelper.
+* Can only be created by calling PlatformHelper::create_isolate()
 */
 class IsolateHelper : public std::enable_shared_from_this<IsolateHelper> {
     friend class PlatformHelper; // calls the IsolateHelper's private constructor
@@ -185,10 +354,17 @@ public:
 	void add_print();
 	
 	
-	// can no longer use the global_object_template after the context has been created, which means no 
-	//	 more 
+    /**
+    * Creates a ContextHelper populated by all customizations already
+    *   applied to this IsolateHelper, but subsequent customizations to
+    *   the IsolateHelper will not be applied to ContextHelpers already
+    *   created.
+    */
 	std::unique_ptr<ContextHelper> create_context();
 
+    /**
+    * Returns the isolate associated with this IsolateHelper
+    */
 	v8::Isolate * get_isolate();
 
 	/**
@@ -222,9 +398,8 @@ public:
 
 	/**
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
-    * Passes the v8::Isolate * and v8::Local<v8::Context> to the callable function if 
-    *   the isolate is currently in a context.   If it's not, this call will throw an exception
-    * TODO: Make it throw an exception if no context is available
+    * Passes the v8::Isolate * and v8::Local<v8::Context> to the callable function.
+    * Throws v8toolkit::InvalidCallException if the isolate is not currently in a context
     */
 	template<class T, 
 			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
@@ -277,12 +452,34 @@ class PlatformHelper {
 	
 	
 public:
+    /** 
+    * Initializes the v8 platform with default values and tells v8 to look
+    *   for its .bin files in the given directory (often argv[0])
+    */ 
+    static void init(char * path_to_bin_files);
+        
+    /**
+    * Parses argv for v8-specific options, applies them, and removes them
+    *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
+    *    v8 .bin files
+    */
 	static void init(int argc, char ** argv);
+    
+    /**
+    * Shuts down V8.  Any subsequent V8 usage is probably undefined, so 
+    *   make sure everything is done before you call this.
+    */ 
 	static void cleanup();
 	
 	
-	// as long as the user has a shared_ptr to the IsolateHelper or a context created by the IsolateHelper,
-	//	 the IsolateHelper will be kept around
+	/**
+    * Creates a new IsolateHelper wrapping a new v8::Isolate instance.  Each isolate is completely separate from all the others
+    *   and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time)
+    * An IsolateHelper will remain as long as the caller has a shared_ptr to the IsolateHelper or any ContextHelpers created from
+    *   the IsolateHelper still exist.   Once neither of those things is the case, the IsolateHelper will be automatically destroyed.
+    * If any threads are still running when this happens, the results are undefined.
+    * TODO: Can active threads maintain links to their ContextHelpers to stop this from happening?
+    */
 	static std::shared_ptr<IsolateHelper> create_isolate();
 };
 

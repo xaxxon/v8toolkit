@@ -1,0 +1,4 @@
+# This list is from another project so it has things that aren't needed
+exclude = "{$exclude,*.o,*.d,doc,imgui/examples,a.out,*.o-*,*~,docs,game}"
+tabSize = 4
+softTabs = true
