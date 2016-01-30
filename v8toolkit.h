@@ -676,7 +676,7 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & co
 } // end v8toolkit namespace
 
 
-/** \mainpage My Personal Index Page
+/** \mainpage v8toolkit API documentation
 * v8toolkit is a multi-layer library to simplify working with the V8 Javascript engine.
 *
 * It contains a set of primitive functions in v8toolkit.h, a library that extends
