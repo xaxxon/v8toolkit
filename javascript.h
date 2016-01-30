@@ -143,7 +143,9 @@ public:
     *   their isolate
     * TODO: what happens if there are errors in execution?
     */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script);
+	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script, 
+                                                 std::launch launch_policy = 
+                                                     std::launch::async | std::launch::deferred);
     
 	/**
     * Compiles and runs the contents of the passed in string in a std::async and returns
@@ -155,7 +157,10 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::future<v8::Global<v8::Value>> run_async(const std::string);
+	std::future<v8::Global<v8::Value>> run_async(const std::string,
+                                                 std::launch launch_policy = 
+                                                     std::launch::async | std::launch::deferred);
+        
     
 	/**
     * Executes the previously compiled v8::script in a std::async and returns
@@ -166,7 +171,10 @@ public:
     *   their isolate
     * TODO: what happens if there are errors in execution?
     */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script);
+	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script,
+                                                 std::launch launch_policy = 
+                                                     std::launch::async | std::launch::deferred);
+        
 	
 	/**
     * Executes the previously compiled v8::script in a std::thread and returns

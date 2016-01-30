@@ -38,3 +38,17 @@ and then wait a long time
 
 
 
+This is what I put in my .bash_profile for building on OS X.  The libc++ part is
+very important or you'll get a ton of link failures for all of std::
+
+export PATH=/Users/xaxxon/depot_tools:"$PATH"
+
+export CXX="`which clang++` -std=c++11 -stdlib=libc++"
+export CC="`which clang`"
+export CPP="`which clang` -E"
+export LINK="`which clang++` -std=c++11 -stdlib=libc++"
+export CXX_host="`which clang++`"
+export CC_host="`which clang`"
+export CPP_host="`which clang` -E"
+export LINK_host="`which clang++`"
+export GYP_DEFINES="clang=1 mac_deployment_target=10.7"

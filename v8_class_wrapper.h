@@ -35,6 +35,12 @@ namespace v8toolkit {
 */
 
 
+/*
+    How to add static methods to every object as it is created?  You can add them by hand afterwards
+    with v8toolkit::add_function, but there should be a way in v8classwrapper to say every object
+    of the type gets the method, too
+*/
+
 /***
 * set of classes for determining what to do do the underlying c++
 *   object when the javascript object is garbage collected
@@ -46,6 +52,9 @@ struct DestructorBehavior
 };
 
 
+/**
+* Helper to delete a C++ object when the corresponding javascript object is garbage collected
+*/
 template<class T>
 struct DestructorBehaviorDelete : DestructorBehavior<T> 
 {
@@ -57,7 +66,10 @@ struct DestructorBehaviorDelete : DestructorBehavior<T>
 	}
 };
 
-
+/**
+* Helper to not do anything to the underlying C++ object when the corresponding javascript object
+*   is garbage collected
+*/
 template<class T>
 struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> 
 {
@@ -113,6 +125,8 @@ private:
 		});
 	}
 	
+    // function used to return the value of a C++ variable backing a javascript variable visible
+    //   via the V8 SetAccessor method
 	template<class VALUE_T> // type being returned
 	static void _getter_helper(v8::Local<v8::String> property,
 	                  const v8::PropertyCallbackInfo<v8::Value>& info) 
@@ -129,6 +143,8 @@ private:
 		info.GetReturnValue().Set(CastToJS<VALUE_T>()(info.GetIsolate(), member_ref));
 	}
 
+    // function used to set the value of a C++ variable backing a javascript variable visible
+    //   via the V8 SetAccessor method
 	template<typename VALUE_T>
 	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
 	               const v8::PropertyCallbackInfo<void>& info) 
@@ -142,6 +158,12 @@ private:
 	  	member_ref = CastToNative<VALUE_T>()(value);
 		auto & m2 = (*member_reference_getter)(cpp_object);
 	}
+    
+	template <typename ...Fs, size_t...ns> 
+	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
+		return new T(CastToNative<Fs>()(args[ns])...);
+	}
+    
 	
 	// Helper for creating objects when "new MyClass" is called from java
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
@@ -157,12 +179,6 @@ private:
 		
 		// return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
-	}
-
-
-	template <typename ...Fs, size_t...ns> 
-	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
-		return new T(CastToNative<Fs>()(args[ns])...);
 	}
 	
 	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
@@ -204,9 +220,12 @@ private:
 	}
 
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
-	std::vector<v8::Global<v8::FunctionTemplate>> constructor_templates; // TODO: THIS CANNOT BE A LOCAL (most likely)
-	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects; // TODO: This can't be a strong reference global or the object will never be GC'd
+	std::vector<v8::Global<v8::FunctionTemplate>> constructor_templates;
+	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects;
 	v8::Isolate * isolate;
+    
+    // this is to signal undesirable usage patterns where methods or members won't be visible to 
+    //   objects created in certain ways
 	bool member_or_method_added = false;
 	
 public:
@@ -244,8 +263,8 @@ public:
 	}
 	
 	/**
-	* Creates a javascript method of the specified name which, when called with the "new" keyword, will return
-	*   a new object of this type
+	* Creates a javascript method with the specified name which, when called with the "new" keyword, will return
+	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> & parent_template) 
@@ -276,7 +295,11 @@ public:
 	// Not sure if this properly sets the prototype of the new object like when the constructor functiontemplate is called as
 	//   a constructor from javascript
 	/**
-	* Used when wanting to return an object from a c++ function call back to javascript
+	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
+    *   add_variable to give a javascript name to an existing c++ object 
+    * \code{cpp}
+    * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
+    * \endcode
 	*/
 	template<class BEHAVIOR>
 	v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
@@ -339,8 +362,7 @@ public:
 
 
 	/**
-	* adds the ability to call the specified class instance method on an object of this type
-	* add_method(&ClassName::method_name, "javascript_attribute_name");
+	* Adds the ability to call the specified class instance method on an object of this type
 	*/
 	template<class METHOD_TYPE>
 	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name)

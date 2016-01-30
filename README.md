@@ -1,5 +1,7 @@
 ##This library is not polished.  While it should work, you will have to do some customization for your own environment
 
+## This library requires a version of V8 gotten from source after 1/30/16 or version 4.11.0.0 or later
+
 ## Note, the current version is not compatible with the production version of V8 because of a poorly designed v8::Local constructor.  It can easily be modified by changing some std::string parameters back to const char * but the v8 api should be changed instead..
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8-class-wrapper/docs/html/index.html

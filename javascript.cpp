@@ -105,20 +105,20 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
     return run(*v8::String::Utf8Value(value));
 }
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script)
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script, std::launch launch_policy)
 {
-    return std::async([this, &script](){
+    return std::async(launch_policy, [this, &script](){
         return (*this)([this, &script](){
             return this->run(script);
         });
     });
 }
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const std::string code)
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const std::string code, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
     //   right after creating the async
-    return std::async([this, code](){
+    return std::async(launch_policy, [this, code](){
         return (*this)([this, &code](){
             return this->run(code);
         });
@@ -128,9 +128,9 @@ std::future<v8::Global<v8::Value>> ContextHelper::run_async(const std::string co
 
 
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script)
+std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script, std::launch launch_policy)
 {
-    return std::async([this, &script](){
+    return std::async(launch_policy, [this, &script](){
         return (*this)([this, &script](){
             return this->run(script);
         });

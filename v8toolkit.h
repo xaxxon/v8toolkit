@@ -3,9 +3,6 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-/**
-* Library of standalone helper functions for using V8.   Can be used independently of V8ClassWrapper
-*/
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -15,6 +12,9 @@
 
 namespace v8toolkit {
     
+/**
+* General purpose exception for invalid uses of the v8toolkit API
+*/
 class InvalidCallException : public std::exception {
 private:
     std::string message;
@@ -219,8 +219,10 @@ struct CallCallable{};
 */
 template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
-    void operator()(std::function<R(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
+    void operator()(std::function<R(Args...)> callable, 
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
+                        
+        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
     }
 };
 
@@ -229,8 +231,10 @@ struct CallCallable<std::function<R(Args...)>> {
 */
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
-    void operator()(std::function<void(Args...)> callable, const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-        callable(args...);
+    void operator()(std::function<void(Args...)> callable, 
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
+                        
+        callable(std::forward<Args>(args)...);
     }
 };
 
@@ -255,9 +259,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
         // use CallCallable to differentiate between void and non-void return types
-        CallCallable<FUNCTION_TYPE>()(function, info, ts...);
+        CallCallable<FUNCTION_TYPE>()(function, info, std::forward<Ts>(ts)...);
     }
 };
 
@@ -271,13 +275,15 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 *   the inheritance chain ends
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> : public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> : 
+        public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+
     typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
     enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., CastToNative<HEAD>()(info[depth])); 
     }
 };
 
@@ -291,13 +297,15 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 *   javascript
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+            
     typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., info); 
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., info); 
     }
 };
 
@@ -451,7 +459,10 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 */
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
+                                 _variable_getter<VARIABLE_TYPE>, 
+                                 _variable_setter<VARIABLE_TYPE>, 
+                                 v8::External::New(isolate, &variable));
 }
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
@@ -460,7 +471,10 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 */
 template<class VARIABLE_TYPE>
 void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
+                                 _variable_getter<VARIABLE_TYPE>, 
+                                 0, 
+                                 v8::External::New(isolate, &variable));
 }
 
 /**
@@ -470,7 +484,10 @@ void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectT
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, VARIABLE_TYPE & variable) {
     auto isolate = context->GetIsolate();
-    object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, _variable_setter<VARIABLE_TYPE>, v8::External::New(isolate, &variable));
+    object->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
+                        _variable_getter<VARIABLE_TYPE>, 
+                        _variable_setter<VARIABLE_TYPE>, 
+                        v8::External::New(isolate, &variable));
 }
 
 /**
