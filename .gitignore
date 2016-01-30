@@ -26,3 +26,9 @@
 *.exe
 *.out
 *.app
+
+# Emacs backup files
+*~
+
+# Doxygen docs
+docs/*
