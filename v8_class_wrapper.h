@@ -295,7 +295,11 @@ public:
 	// Not sure if this properly sets the prototype of the new object like when the constructor functiontemplate is called as
 	//   a constructor from javascript
 	/**
-	* Used when wanting to return an object from a c++ function call back to javascript
+	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
+    *   add_variable to give a javascript name to an existing c++ object 
+    * \code{cpp}
+    * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
+    * \endcode
 	*/
 	template<class BEHAVIOR>
 	v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
