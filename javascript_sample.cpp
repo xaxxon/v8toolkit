@@ -31,7 +31,7 @@ auto run_tests()
         auto c = ih1->create_context();
         auto c2 = ih1->create_context();
         
-        
+        c->run("5");
         c->run("println(\"x is: \", x);");
         c->run("println('return_hi():',return_hi());");
         
