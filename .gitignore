@@ -32,3 +32,14 @@
 
 # Doxygen docs
 docs/*
+
+*.dSYM/
+
+javascript
+natives_blob.bin
+sample
+snapshot_blob.bin
+thread_sample
+toolbox
+
+	
