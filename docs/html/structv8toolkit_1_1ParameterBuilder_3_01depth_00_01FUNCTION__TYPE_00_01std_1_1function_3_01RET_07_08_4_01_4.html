@@ -115,9 +115,9 @@ Public Types</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a6e7ecc6f85b631e6f42b2d9a2e952af3"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a6e7ecc6f85b631e6f42b2d9a2e952af3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#a6e7ecc6f85b631e6f42b2d9a2e952af3">operator()</a> (FUNCTION_TYPE function, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Ts...ts)</td></tr>
-<tr class="separator:a6e7ecc6f85b631e6f42b2d9a2e952af3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d7141c4e496f9f37f2638607d84402d"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a5d7141c4e496f9f37f2638607d84402d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#a5d7141c4e496f9f37f2638607d84402d">operator()</a> (FUNCTION_TYPE function, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Ts &amp;&amp;...ts)</td></tr>
+<tr class="separator:a5d7141c4e496f9f37f2638607d84402d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;int depth, typename FUNCTION_TYPE, typename RET&gt;<br />
@@ -125,7 +125,7 @@ struct v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; R
 
 <p>Specialization for when there are no parameters left to process, so call the function now </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00250">250</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00254">254</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
 <a class="anchor" id="ae02559c847e6dad17e947c32396ece33"></a>
 <div class="memitem">
@@ -145,15 +145,12 @@ template&lt;int depth, typename FUNCTION_TYPE , typename RET &gt; </div>
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00253">253</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;{<a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#ae02559c847e6dad17e947c32396ece33a9a263f565e8104f6583f9decd0ab806c">DEPTH</a>=depth, <a class="code" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#ae02559c847e6dad17e947c32396ece33a2c85ca83e77b915be9aa574ac26a01b6">ARITY</a>=0};</div>
-<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4_html_ae02559c847e6dad17e947c32396ece33a9a263f565e8104f6583f9decd0ab806c"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#ae02559c847e6dad17e947c32396ece33a9a263f565e8104f6583f9decd0ab806c">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET()&gt; &gt;::DEPTH</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00253">v8toolkit.h:253</a></div></div>
-<div class="ttc" id="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4_html_ae02559c847e6dad17e947c32396ece33a2c85ca83e77b915be9aa574ac26a01b6"><div class="ttname"><a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07_08_4_01_4.html#ae02559c847e6dad17e947c32396ece33a2c85ca83e77b915be9aa574ac26a01b6">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET()&gt; &gt;::ARITY</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00253">v8toolkit.h:253</a></div></div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00257">257</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="a6e7ecc6f85b631e6f42b2d9a2e952af3"></a>
+<a class="anchor" id="a5d7141c4e496f9f37f2638607d84402d"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
@@ -179,7 +176,7 @@ template&lt;typename... Ts&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Ts...&#160;</td>
+          <td class="paramtype">Ts &amp;&amp;...&#160;</td>
           <td class="paramname"><em>ts</em>&#160;</td>
         </tr>
         <tr>
@@ -195,12 +192,8 @@ template&lt;typename... Ts&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00258">258</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;                                                                                                    {</div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        <span class="comment">// use CallCallable to differentiate between void and non-void return types</span></div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        CallCallable&lt;FUNCTION_TYPE&gt;()(<span class="keyword">function</span>, info, ts...);</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;    }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00262">262</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
@@ -209,7 +202,7 @@ template&lt;typename... Ts&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Jan 29 2016 23:03:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

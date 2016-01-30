@@ -107,8 +107,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a72f4993280232d320edc900bf74a432a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html#a72f4993280232d320edc900bf74a432a">operator()</a> (std::function&lt; R(Args...)&gt; callable, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Args...args)</td></tr>
-<tr class="separator:a72f4993280232d320edc900bf74a432a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b55f9c063471f84b75a1d8712437083"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html#a0b55f9c063471f84b75a1d8712437083">operator()</a> (std::function&lt; R(Args...)&gt; callable, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Args &amp;&amp;...args)</td></tr>
+<tr class="separator:a0b55f9c063471f84b75a1d8712437083"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;class R, typename... Args&gt;<br />
@@ -118,7 +118,7 @@ struct v8toolkit::CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;</h3>
 
 <p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00221">221</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="a72f4993280232d320edc900bf74a432a"></a>
+<a class="anchor" id="a0b55f9c063471f84b75a1d8712437083"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
@@ -142,7 +142,7 @@ template&lt;class R , typename... Args&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Args...&#160;</td>
+          <td class="paramtype">Args &amp;&amp;...&#160;</td>
           <td class="paramname"><em>args</em>&#160;</td>
         </tr>
         <tr>
@@ -159,11 +159,7 @@ template&lt;class R , typename... Args&gt; </div>
 </div><div class="memdoc">
 
 <p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00222">222</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;                                                                                                                  {</div>
-<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;        info.GetReturnValue().Set(<a class="code" href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS&lt;R&gt;</a>()(info.GetIsolate(), callable(args...)));</div>
-<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;    }</div>
-<div class="ttc" id="structv8toolkit_1_1CastToJS_html"><div class="ttname"><a href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS</a></div><div class="ttdef"><b>Definition:</b> <a href="casts_8hpp_source.html#l00113">casts.hpp:113</a></div></div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
@@ -172,7 +168,7 @@ template&lt;class R , typename... Args&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Jan 29 2016 23:03:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

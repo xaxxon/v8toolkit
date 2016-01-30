@@ -29,6 +29,3 @@
 
 # Emacs backup files
 *~
-
-# Doxygen docs
-docs/*

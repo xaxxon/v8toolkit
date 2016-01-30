@@ -107,8 +107,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a0b689a5deae95771ef95788c31a4c06f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html#a0b689a5deae95771ef95788c31a4c06f">operator()</a> (std::function&lt; void(Args...)&gt; callable, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Args...args)</td></tr>
-<tr class="separator:a0b689a5deae95771ef95788c31a4c06f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20358ab3c4637332da0b705db2d80a27"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html#a20358ab3c4637332da0b705db2d80a27">operator()</a> (std::function&lt; void(Args...)&gt; callable, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, Args &amp;&amp;...args)</td></tr>
+<tr class="separator:a20358ab3c4637332da0b705db2d80a27"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;typename... Args&gt;<br />
@@ -116,9 +116,9 @@ struct v8toolkit::CallCallable&lt; std::function&lt; void(Args...)&gt; &gt;</h3>
 
 <p>specialization for functions with a void return type and there is nothing to be sent back to javascript </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00231">231</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00233">233</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="a0b689a5deae95771ef95788c31a4c06f"></a>
+<a class="anchor" id="a20358ab3c4637332da0b705db2d80a27"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
@@ -142,7 +142,7 @@ template&lt;typename... Args&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Args...&#160;</td>
+          <td class="paramtype">Args &amp;&amp;...&#160;</td>
           <td class="paramname"><em>args</em>&#160;</td>
         </tr>
         <tr>
@@ -158,11 +158,8 @@ template&lt;typename... Args&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00232">232</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;                                                                                                                     {</div>
-<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160;        callable(args...);</div>
-<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160;    }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00234">234</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+
 </div>
 </div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
@@ -171,7 +168,7 @@ template&lt;typename... Args&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Jan 29 2016 23:03:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

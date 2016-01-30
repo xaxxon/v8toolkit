@@ -142,12 +142,12 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a5af1fa6f3a4cc76040dd682683bfe247"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2dcb84785f9978e9d9a89b7d49390d82"><td class="memItemLeft" align="right" valign="top">v8::Global&lt; v8::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a2dcb84785f9978e9d9a89b7d49390d82">run</a> (const v8::Local&lt; v8::Value &gt; script)</td></tr>
 <tr class="separator:a2dcb84785f9978e9d9a89b7d49390d82"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8dc97fb192d0b24972c5eaacdec4d892"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a8dc97fb192d0b24972c5eaacdec4d892">run_async</a> (const v8::Global&lt; v8::Script &gt; &amp;script)</td></tr>
-<tr class="separator:a8dc97fb192d0b24972c5eaacdec4d892"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f82daf318fc5e8b1afedfb658f6c73d"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a7f82daf318fc5e8b1afedfb658f6c73d">run_async</a> (const std::string)</td></tr>
-<tr class="separator:a7f82daf318fc5e8b1afedfb658f6c73d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60f9eb801087c3b266b5b4bb04cefbac"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a60f9eb801087c3b266b5b4bb04cefbac">run_async</a> (const v8::Local&lt; v8::Value &gt; script)</td></tr>
-<tr class="separator:a60f9eb801087c3b266b5b4bb04cefbac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78a9aeb4a7f8aacc4dd84925734d5f6b"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a78a9aeb4a7f8aacc4dd84925734d5f6b">run_async</a> (const v8::Global&lt; v8::Script &gt; &amp;script, std::launch launch_policy=std::launch::async|std::launch::deferred)</td></tr>
+<tr class="separator:a78a9aeb4a7f8aacc4dd84925734d5f6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f160206e28284559800f9a6d00c647a"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a2f160206e28284559800f9a6d00c647a">run_async</a> (const std::string, std::launch launch_policy=std::launch::async|std::launch::deferred)</td></tr>
+<tr class="separator:a2f160206e28284559800f9a6d00c647a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf943d46f66e5a8f17d72a7b595975fa"><td class="memItemLeft" align="right" valign="top">std::future&lt; v8::Global&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#aaf943d46f66e5a8f17d72a7b595975fa">run_async</a> (const v8::Local&lt; v8::Value &gt; script, std::launch launch_policy=std::launch::async|std::launch::deferred)</td></tr>
+<tr class="separator:aaf943d46f66e5a8f17d72a7b595975fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af7a768f88c82d9b37917e2ffb7d1c836"><td class="memItemLeft" align="right" valign="top">std::thread&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#af7a768f88c82d9b37917e2ffb7d1c836">run_thread</a> (const v8::Global&lt; v8::Script &gt; &amp;script)</td></tr>
 <tr class="separator:af7a768f88c82d9b37917e2ffb7d1c836"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a882ed04a0f9d330f6a2ec8d2987dc0b2"><td class="memItemLeft" align="right" valign="top">std::thread&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper.html#a882ed04a0f9d330f6a2ec8d2987dc0b2">run_thread</a> (const std::string)</td></tr>
@@ -211,11 +211,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00033">33</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;                              {</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    <span class="comment">// fprintf(stderr, &quot;destroying context helper\n&quot;);</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    this-&gt;context.Reset();</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
@@ -242,8 +238,7 @@ Friends</h2></td></tr>
 <p>Implicit cast to v8::Isolate * </p>
 
 <p>Definition at line <a class="el" href="javascript_8h_source.html#l00077">77</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;{<span class="keywordflow">return</span> this-&gt;isolate;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="a2008f26fd2511b8e08b92e0143e1c3dc"></a>
@@ -269,8 +264,7 @@ Friends</h2></td></tr>
 <p>Implicit cast to v8::Local&lt;v8::Context&gt; </p>
 
 <p>Definition at line <a class="el" href="javascript_8h_source.html#l00082">82</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;{<span class="keywordflow">return</span> this-&gt;context.Get(isolate);}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="a5e0225bf3d0c3aaecac322f10336b542"></a>
@@ -296,8 +290,7 @@ Friends</h2></td></tr>
 <p>Implicit cast to v8::Global&lt;v8::Context&gt; </p>
 
 <p>Definition at line <a class="el" href="javascript_8h_source.html#l00087">87</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;{<span class="keywordflow">return</span> v8::Global&lt;v8::Context&gt;(isolate, this-&gt;context.Get(isolate));}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="a21cf0d20bf3e1a78c407f7e56fe9ecca"></a>
@@ -316,11 +309,8 @@ Friends</h2></td></tr>
 
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00017">17</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8h_source.html#l00286">add_function()</a>, and <a class="el" href="javascript_8h_source.html#l00298">expose_variable()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;                                             {</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    <span class="keywordflow">return</span> context.Get(isolate);</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;}</div>
-</div><!-- fragment -->
+<p>Referenced by <a class="el" href="javascript_8h_source.html#l00294">add_function()</a>, and <a class="el" href="javascript_8h_source.html#l00306">expose_variable()</a>.</p>
+
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
@@ -349,10 +339,7 @@ Here is the caller graph for this function:</div>
 <p>Returns the v8::Isolate * this context is associated with </p>
 
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00021">21</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;{</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    <span class="keywordflow">return</span> this-&gt;isolate;</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="a67fe954638cefcca49ae82edc4530b4d"></a>
@@ -370,10 +357,7 @@ Here is the caller graph for this function:</div>
 <p>Returns the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> wrapping the isolate this context is associated with </p>
 
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00026">26</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;{</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    <span class="keywordflow">return</span> this-&gt;isolate_helper;</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;}</div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="a946a05bfeec1dcaa6516f07809e763c2"></a>
@@ -396,29 +380,7 @@ Here is the caller graph for this function:</div>
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00036">v8toolkit::scoped_run()</a>.</p>
 
 <p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00039">compile_from_file()</a>, and <a class="el" href="javascript_8cpp_source.html#l00095">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;{</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a>(isolate, context.Get(isolate), [&amp;](){</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    </div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;        <span class="comment">// This catches any errors thrown during script compilation</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;        v8::TryCatch try_catch(isolate);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;        v8::Local&lt;v8::String&gt; source =</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;            v8::String::NewFromUtf8(this-&gt;isolate, javascript_source.c_str());</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;        <span class="comment">// Compile the source code.</span></div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;        v8::MaybeLocal&lt;v8::Script&gt; compiled_script = v8::Script::Compile(context.Get(isolate), source);</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        <span class="keywordflow">if</span> (compiled_script.IsEmpty()) {</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;            v8::String::Utf8Value exception(try_catch.Exception());</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;            printf(<span class="stringliteral">&quot;Compile failed &#39;%s&#39;, throwing exception\n&quot;</span>, *exception);</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;            <span class="keywordflow">throw</span> CompilationError(*exception);</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        }</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <span class="keywordflow">return</span> v8::Global&lt;v8::Script&gt;(isolate, compiled_script.ToLocalChecked());</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    });</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;}</div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00036">v8toolkit.h:36</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -477,12 +439,7 @@ Here is the caller graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00039">39</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00044">compile()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00166">v8toolkit::get_file_contents()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;{</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a946a05bfeec1dcaa6516f07809e763c2">compile</a>(<a class="code" href="namespacev8toolkit.html#a798082283e50c5025dfc6da7b5d61c7c">get_file_contents</a>(filename.c_str()));</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a946a05bfeec1dcaa6516f07809e763c2"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a946a05bfeec1dcaa6516f07809e763c2">v8toolkit::ContextHelper::compile</a></div><div class="ttdeci">v8::Global&lt; v8::Script &gt; compile(const std::string)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00044">javascript.cpp:44</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a798082283e50c5025dfc6da7b5d61c7c"><div class="ttname"><a href="namespacev8toolkit.html#a798082283e50c5025dfc6da7b5d61c7c">v8toolkit::get_file_contents</a></div><div class="ttdeci">std::string get_file_contents(const char *filename)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00166">v8toolkit.cpp:166</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -517,33 +474,7 @@ Here is the call graph for this function:</div>
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00036">v8toolkit::scoped_run()</a>.</p>
 
 <p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00095">run()</a>, <a class="el" href="javascript_8cpp_source.html#l00108">run_async()</a>, <a class="el" href="javascript_8cpp_source.html#l00141">run_detached()</a>, and <a class="el" href="javascript_8cpp_source.html#l00169">run_thread()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;{</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a>(isolate, context.Get(isolate), [&amp;](){</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    </div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        <span class="comment">// This catches any errors thrown during script compilation</span></div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;        v8::TryCatch try_catch(isolate);</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        <span class="comment">// auto local_script = this-&gt;get_local(script);</span></div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        <span class="keyword">auto</span> local_script = v8::Local&lt;v8::Script&gt;::New(isolate, script);</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <span class="keyword">auto</span> maybe_result = local_script-&gt;Run(context.Get(isolate));</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;        <span class="keywordflow">if</span>(maybe_result.IsEmpty()) {</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;            <span class="comment">// printf(&quot;Execution failed, throwing exception\n&quot;);</span></div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;            v8::String::Utf8Value exception(try_catch.Exception());</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            <span class="keywordflow">throw</span> ExecutionError(*exception);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        }</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        v8::Local&lt;v8::Value&gt; result = maybe_result.ToLocalChecked();</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;        <span class="comment">// printf(&quot;Run result is object? %s\n&quot;, result-&gt;IsObject() ? &quot;Yes&quot; : &quot;No&quot;);</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        <span class="comment">// printf(&quot;Run result is string? %s\n&quot;, result-&gt;IsString() ? &quot;Yes&quot; : &quot;No&quot;);</span></div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;        <span class="comment">// Convert the result to an UTF8 string and print it.</span></div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;        v8::String::Utf8Value utf8(result);</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        <span class="comment">// printf(&quot;run script result: %s\n&quot;, *utf8);</span></div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;    </div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;        <span class="keywordflow">return</span> v8::Global&lt;v8::Value&gt;(isolate, result);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;    });</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;}</div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00036">v8toolkit.h:36</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -560,7 +491,7 @@ Here is the caller graph for this function:</div>
 <div class="center"><img src="classv8toolkit_1_1ContextHelper_a958fd98d015eb126d257af9a37142851_icgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a958fd98d015eb126d257af9a37142851_icgraph" alt=""/></div>
 <map name="classv8toolkit_1_1ContextHelper_a958fd98d015eb126d257af9a37142851_icgraph" id="classv8toolkit_1_1ContextHelper_a958fd98d015eb126d257af9a37142851_icgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1ContextHelper.html#a5af1fa6f3a4cc76040dd682683bfe247" title="v8toolkit::ContextHelper::run" alt="" coords="226,5,399,29"/>
-<area shape="rect" id="node3" href="classv8toolkit_1_1ContextHelper.html#a8dc97fb192d0b24972c5eaacdec4d892" title="v8toolkit::ContextHelper\l::run_async" alt="" coords="238,54,387,90"/>
+<area shape="rect" id="node3" href="classv8toolkit_1_1ContextHelper.html#a78a9aeb4a7f8aacc4dd84925734d5f6b" title="v8toolkit::ContextHelper\l::run_async" alt="" coords="238,54,387,90"/>
 <area shape="rect" id="node4" href="classv8toolkit_1_1ContextHelper.html#ad6cba270e750c0b8c667ae6b8601932a" title="v8toolkit::ContextHelper\l::run_detached" alt="" coords="238,114,387,150"/>
 <area shape="rect" id="node5" href="classv8toolkit_1_1ContextHelper.html#af7a768f88c82d9b37917e2ffb7d1c836" title="v8toolkit::ContextHelper\l::run_thread" alt="" coords="238,174,387,210"/>
 </map>
@@ -587,13 +518,7 @@ Here is the caller graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00095">95</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00044">compile()</a>, and <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;{</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <span class="keyword">auto</span> compiled_code = <a class="code" href="classv8toolkit_1_1ContextHelper.html#a946a05bfeec1dcaa6516f07809e763c2">compile</a>(code);</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(compiled_code);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a946a05bfeec1dcaa6516f07809e763c2"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a946a05bfeec1dcaa6516f07809e763c2">v8toolkit::ContextHelper::compile</a></div><div class="ttdeci">v8::Global&lt; v8::Script &gt; compile(const std::string)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00044">javascript.cpp:44</a></div></div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -625,11 +550,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00103">103</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;{</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(*v8::String::Utf8Value(value));</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -643,7 +564,7 @@ Here is the call graph for this function:</div>
 
 </div>
 </div>
-<a class="anchor" id="a8dc97fb192d0b24972c5eaacdec4d892"></a>
+<a class="anchor" id="a78a9aeb4a7f8aacc4dd84925734d5f6b"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -651,8 +572,18 @@ Here is the call graph for this function:</div>
           <td class="memname">std::future&lt; v8::Global&lt; v8::Value &gt; &gt; v8toolkit::ContextHelper::run_async </td>
           <td>(</td>
           <td class="paramtype">const v8::Global&lt; v8::Script &gt; &amp;&#160;</td>
-          <td class="paramname"><em>script</em></td><td>)</td>
+          <td class="paramname"><em>script</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::launch&#160;</td>
+          <td class="paramname"><em>launch_policy</em> = <code>std::launch::async&#160;|&#160;std::launch::deferred</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -661,20 +592,12 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00108">108</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;{</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;    <span class="keywordflow">return</span> std::async([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        });</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;    });</div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="classv8toolkit_1_1ContextHelper_a8dc97fb192d0b24972c5eaacdec4d892_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a8dc97fb192d0b24972c5eaacdec4d892_cgraph" alt=""/></div>
-<map name="classv8toolkit_1_1ContextHelper_a8dc97fb192d0b24972c5eaacdec4d892_cgraph" id="classv8toolkit_1_1ContextHelper_a8dc97fb192d0b24972c5eaacdec4d892_cgraph">
+<div class="center"><img src="classv8toolkit_1_1ContextHelper_a78a9aeb4a7f8aacc4dd84925734d5f6b_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a78a9aeb4a7f8aacc4dd84925734d5f6b_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1ContextHelper_a78a9aeb4a7f8aacc4dd84925734d5f6b_cgraph" id="classv8toolkit_1_1ContextHelper_a78a9aeb4a7f8aacc4dd84925734d5f6b_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851" title="v8toolkit::ContextHelper::run" alt="" coords="202,11,375,35"/>
 <area shape="rect" id="node3" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="423,11,558,35"/>
 </map>
@@ -683,7 +606,7 @@ Here is the call graph for this function:</div>
 
 </div>
 </div>
-<a class="anchor" id="a7f82daf318fc5e8b1afedfb658f6c73d"></a>
+<a class="anchor" id="a2f160206e28284559800f9a6d00c647a"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -691,8 +614,18 @@ Here is the call graph for this function:</div>
           <td class="memname">std::future&lt; v8::Global&lt; v8::Value &gt; &gt; v8toolkit::ContextHelper::run_async </td>
           <td>(</td>
           <td class="paramtype">const std::string&#160;</td>
-          <td class="paramname"><em>code</em></td><td>)</td>
+          <td class="paramname"><em>code</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::launch&#160;</td>
+          <td class="paramname"><em>launch_policy</em> = <code>std::launch::async&#160;|&#160;std::launch::deferred</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -701,22 +634,12 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00117">117</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;{</div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;    <span class="comment">// copy code into the lambda so it isn&#39;t lost when this outer function completes</span></div>
-<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;    <span class="comment">//   right after creating the async</span></div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;    <span class="keywordflow">return</span> std::async([<span class="keyword">this</span>, code](){</div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;code](){</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(code);</div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        });</div>
-<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;    });</div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="classv8toolkit_1_1ContextHelper_a7f82daf318fc5e8b1afedfb658f6c73d_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a7f82daf318fc5e8b1afedfb658f6c73d_cgraph" alt=""/></div>
-<map name="classv8toolkit_1_1ContextHelper_a7f82daf318fc5e8b1afedfb658f6c73d_cgraph" id="classv8toolkit_1_1ContextHelper_a7f82daf318fc5e8b1afedfb658f6c73d_cgraph">
+<div class="center"><img src="classv8toolkit_1_1ContextHelper_a2f160206e28284559800f9a6d00c647a_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a2f160206e28284559800f9a6d00c647a_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1ContextHelper_a2f160206e28284559800f9a6d00c647a_cgraph" id="classv8toolkit_1_1ContextHelper_a2f160206e28284559800f9a6d00c647a_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851" title="v8toolkit::ContextHelper::run" alt="" coords="202,11,375,35"/>
 <area shape="rect" id="node3" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="423,11,558,35"/>
 </map>
@@ -725,7 +648,7 @@ Here is the call graph for this function:</div>
 
 </div>
 </div>
-<a class="anchor" id="a60f9eb801087c3b266b5b4bb04cefbac"></a>
+<a class="anchor" id="aaf943d46f66e5a8f17d72a7b595975fa"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -733,8 +656,18 @@ Here is the call graph for this function:</div>
           <td class="memname">std::future&lt; v8::Global&lt; v8::Value &gt; &gt; v8toolkit::ContextHelper::run_async </td>
           <td>(</td>
           <td class="paramtype">const v8::Local&lt; v8::Value &gt;&#160;</td>
-          <td class="paramname"><em>script</em></td><td>)</td>
+          <td class="paramname"><em>script</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::launch&#160;</td>
+          <td class="paramname"><em>launch_policy</em> = <code>std::launch::async&#160;|&#160;std::launch::deferred</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -743,20 +676,12 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00131">131</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;{</div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;    <span class="keywordflow">return</span> std::async([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;        });</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;    });</div>
-<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="classv8toolkit_1_1ContextHelper_a60f9eb801087c3b266b5b4bb04cefbac_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_a60f9eb801087c3b266b5b4bb04cefbac_cgraph" alt=""/></div>
-<map name="classv8toolkit_1_1ContextHelper_a60f9eb801087c3b266b5b4bb04cefbac_cgraph" id="classv8toolkit_1_1ContextHelper_a60f9eb801087c3b266b5b4bb04cefbac_cgraph">
+<div class="center"><img src="classv8toolkit_1_1ContextHelper_aaf943d46f66e5a8f17d72a7b595975fa_cgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_aaf943d46f66e5a8f17d72a7b595975fa_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1ContextHelper_aaf943d46f66e5a8f17d72a7b595975fa_cgraph" id="classv8toolkit_1_1ContextHelper_aaf943d46f66e5a8f17d72a7b595975fa_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851" title="v8toolkit::ContextHelper::run" alt="" coords="202,11,375,35"/>
 <area shape="rect" id="node3" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="423,11,558,35"/>
 </map>
@@ -783,15 +708,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00169">169</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;{</div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;        });</div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;    });</div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -823,16 +740,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00178">178</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;{</div>
-<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;    </div>
-<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, code](){</div>
-<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;code](){</div>
-<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(code);</div>
-<div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160;        });</div>
-<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;    });</div>
-<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -864,15 +772,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00188">188</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;{</div>
-<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        });</div>
-<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;    });</div>
-<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -904,15 +804,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00141">141</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;{</div>
-<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;        });</div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;    }).detach();</div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -944,16 +836,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00150">150</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;{</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;    </div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, code](){</div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;code](){</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(code);</div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        });</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;    }).detach();</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -985,15 +868,7 @@ Here is the call graph for this function:</div>
 <p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00160">160</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="javascript_8cpp_source.html#l00067">run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;{</div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;    <span class="keywordflow">return</span> std::thread([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        <span class="keywordflow">return</span> (*<span class="keyword">this</span>)([<span class="keyword">this</span>, &amp;script](){</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;            <span class="keywordflow">return</span> this-&gt;<a class="code" href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">run</a>(script);</div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;        });</div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;    }).detach();</div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;}</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a958fd98d015eb126d257af9a37142851"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851">v8toolkit::ContextHelper::run</a></div><div class="ttdeci">v8::Global&lt; v8::Value &gt; run(const v8::Global&lt; v8::Script &gt; &amp;script)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00067">javascript.cpp:67</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1032,18 +907,12 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()()), decltype(s
 </div><div class="memdoc">
 <p>Calls <a class="el" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a> with the assciated isolate and context data </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00246">246</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00254">254</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00036">v8toolkit::scoped_run()</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8h_source.html#l00286">add_function()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;    {</div>
-<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;        v8::Locker l(isolate);</div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        v8::HandleScope hs(isolate);</div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a>(isolate, context.Get(isolate), callable);</div>
-<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160;    }</div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00036">v8toolkit.h:36</a></div></div>
-</div><!-- fragment -->
+<p>Referenced by <a class="el" href="javascript_8h_source.html#l00294">add_function()</a>.</p>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1091,16 +960,10 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()(static_cast&lt
 </div><div class="memdoc">
 <p>Calls <a class="el" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a> with the assciated isolate and context data Passes the v8::Isolate * into the callback </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00260">260</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00268">268</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00036">v8toolkit::scoped_run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;    {</div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        v8::Locker l(isolate);</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        v8::HandleScope hs(isolate);</div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a>(isolate, context.Get(isolate), callable);</div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;    }</div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00036">v8toolkit.h:36</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1138,16 +1001,10 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()(static_cast&lt
 </div><div class="memdoc">
 <p>Calls <a class="el" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a> with the assciated isolate and context data Passes the v8::Isolate * and context into the callback </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00274">274</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00282">282</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00036">v8toolkit::scoped_run()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;    {</div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;        v8::Locker l(isolate);</div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;        v8::HandleScope hs(isolate);</div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a>(isolate, context.Get(isolate), callable);</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;    }</div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00036">v8toolkit.h:36</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1195,18 +1052,10 @@ template&lt;class Function &gt; </div>
 </div><div class="memdoc">
 <p>Adds a function to this context only See: <a class="el" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00286">286</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00294">294</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00048">v8toolkit::add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00017">get_context()</a>, and <a class="el" href="javascript_8h_source.html#l00246">operator()()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;    {</div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        <a class="code" href="classv8toolkit_1_1ContextHelper.html#a5a9d8ca816048754edd55b6335f2de23">operator()</a>([&amp;](){</div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;            <a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a>(<a class="code" href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">get_context</a>(), <a class="code" href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">get_context</a>()-&gt;Global(), name.c_str(), <span class="keyword">function</span>);</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;        });</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;    }</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a21cf0d20bf3e1a78c407f7e56fe9ecca"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">v8toolkit::ContextHelper::get_context</a></div><div class="ttdeci">v8::Local&lt; v8::Context &gt; get_context()</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00017">javascript.cpp:17</a></div></div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a5a9d8ca816048754edd55b6335f2de23"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a5a9d8ca816048754edd55b6335f2de23">v8toolkit::ContextHelper::operator()</a></div><div class="ttdeci">R operator()(T callable)</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8h_source.html#l00246">javascript.h:246</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a3b2ed619814469ff03ef483d4b891bb8"><div class="ttname"><a href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a></div><div class="ttdeci">void add_function(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, void(*function)(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;))</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00048">v8toolkit.cpp:48</a></div></div>
-</div><!-- fragment -->
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00048">v8toolkit::add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00017">get_context()</a>, and <a class="el" href="javascript_8h_source.html#l00254">operator()()</a>.</p>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1258,15 +1107,10 @@ template&lt;class Variable &gt; </div>
 </div><div class="memdoc">
 <p>Exposes a C++ variable to this context only see: <a class="el" href="namespacev8toolkit.html#a0cdb01f87da69f86775abfa2d2e05c5a">v8toolkit::expose_variable</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00298">298</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00306">306</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00453">v8toolkit::expose_variable()</a>, and <a class="el" href="javascript_8cpp_source.html#l00017">get_context()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;    {</div>
-<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;        <a class="code" href="namespacev8toolkit.html#a0cdb01f87da69f86775abfa2d2e05c5a">v8toolkit::expose_variable</a>(<a class="code" href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">get_context</a>(), <a class="code" href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">get_context</a>()-&gt;Global(), name.c_str(), variable);</div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;    }</div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a21cf0d20bf3e1a78c407f7e56fe9ecca"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a21cf0d20bf3e1a78c407f7e56fe9ecca">v8toolkit::ContextHelper::get_context</a></div><div class="ttdeci">v8::Local&lt; v8::Context &gt; get_context()</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00017">javascript.cpp:17</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a0cdb01f87da69f86775abfa2d2e05c5a"><div class="ttname"><a href="namespacev8toolkit.html#a0cdb01f87da69f86775abfa2d2e05c5a">v8toolkit::expose_variable</a></div><div class="ttdeci">void expose_variable(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, VARIABLE_TYPE &amp;variable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00453">v8toolkit.h:453</a></div></div>
-</div><!-- fragment -->
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00461">v8toolkit::expose_variable()</a>, and <a class="el" href="javascript_8cpp_source.html#l00017">get_context()</a>.</p>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -1329,7 +1173,7 @@ template&lt;class T &gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Jan 29 2016 23:03:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

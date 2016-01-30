@@ -141,7 +141,7 @@ class v8toolkit::V8ClassWrapper&lt; T &gt;</h3>
 
 <p>Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class Can provide a JS constructor method or wrap objects created in another c++ function </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00076">76</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00088">88</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a class="anchor" id="afa534560f9881125560026476bd7b3bd"></a>
 <div class="memitem">
@@ -155,7 +155,7 @@ template&lt;class T&gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00312">312</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00335">335</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 </div>
 </div>
@@ -184,13 +184,8 @@ template&lt;class T&gt; </div>
 </div><div class="memdoc">
 <p><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a> objects shouldn't be deleted during the normal flow of your program unless the associated isolate is going away forever. Things will break otherwise as no additional objects will be able to be created even though V8 will still present the ability to your javascript (I think) </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00239">239</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;    {</div>
-<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;        <span class="comment">// this was happening when it wasn&#39;t supposed to, like when making temp copies.   need to disable copying or something</span></div>
-<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;        <span class="comment">//   if this line is to be added back</span></div>
-<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;        <span class="comment">// isolate_to_wrapper_map.erase(this-&gt;isolate);</span></div>
-<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;    }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00258">258</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
@@ -219,26 +214,12 @@ template&lt;class T&gt; </div>
 </div><div class="memdoc">
 <p>Returns a "singleton-per-isolate" instance of the <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a> for the wrapped class type. For each isolate you need to add constructors/methods/members separately. </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00219">219</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00238">238</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 <p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
 
-<p>Referenced by <a class="el" href="v8__class__wrapper_8h_source.html#l00391">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00409">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, and <a class="el" href="javascript_8h_source.html#l00439">v8toolkit::IsolateHelper::wrap_class()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;    {</div>
-<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;isolate to wrapper map %p size: %d\n&quot;</span>, &amp;isolate_to_wrapper_map, (<span class="keywordtype">int</span>)isolate_to_wrapper_map.size());</div>
-<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        <span class="keywordflow">if</span> (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {</div>
-<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;            <span class="keyword">auto</span> new_object = <span class="keyword">new</span> V8ClassWrapper&lt;T&gt;(isolate);</div>
-<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;            isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));</div>
-<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;            <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Creating instance %p for isolate: %p\n&quot;</span>, new_object, isolate);</div>
-<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;        }</div>
-<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;(after) isoate to wrapper map size: %d\n&quot;</span>, (<span class="keywordtype">int</span>)isolate_to_wrapper_map.size());</div>
-<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        </div>
-<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;        <span class="keyword">auto</span> <span class="keywordtype">object</span> = isolate_to_wrapper_map[isolate];</div>
-<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Returning v8 wrapper: %p\n&quot;</span>, <span class="keywordtype">object</span>);</div>
-<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;        <span class="keywordflow">return</span> *object;</div>
-<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;    }</div>
-<div class="ttc" id="v8__class__wrapper_8h_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00018">v8_class_wrapper.h:18</a></div></div>
-</div><!-- fragment -->
+<p>Referenced by <a class="el" href="v8__class__wrapper_8h_source.html#l00413">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00431">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, and <a class="el" href="javascript_8h_source.html#l00447">v8toolkit::IsolateHelper::wrap_class()</a>.</p>
+
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
@@ -288,33 +269,10 @@ template&lt;typename... CONSTRUCTOR_PARAMETER_TYPES&gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Creates a javascript method of the specified name which, when called with the "new" keyword, will return a new object of this type </p>
+<p>Creates a javascript method with the specified name which, when called with the "new" keyword, will return a new object of this type. </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00251">251</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;    {</div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;                </div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;        <span class="comment">// if you add a constructor after adding a member or method, it will be missing on objects created with</span></div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;        <span class="comment">//   this constructor</span></div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;        assert(member_or_method_added == <span class="keyword">false</span>);        </div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;                </div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        <span class="comment">// create a function template even if no javascript constructor will be used so </span></div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;        <span class="comment">//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added</span></div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;        <span class="comment">//   later the FunctionTemplate will be ready to go</span></div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        <span class="keyword">auto</span> constructor_template = v8::FunctionTemplate::New(isolate, V8ClassWrapper&lt;T&gt;::v8_constructor&lt;CONSTRUCTOR_PARAMETER_TYPES...&gt;);</div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        </div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        <span class="comment">// When creating a new object, make sure they have room for a c++ object to shadow it</span></div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;        constructor_template-&gt;InstanceTemplate()-&gt;SetInternalFieldCount(1);</div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;        </div>
-<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        <span class="comment">// store it so it doesn&#39;t go away</span></div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;        this-&gt;constructor_templates.push_back(v8::Global&lt;v8::FunctionTemplate&gt;(isolate, constructor_template));</div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;                </div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;                </div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;        <span class="comment">// Add the constructor function to the parent object template (often the global template)</span></div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;        parent_template-&gt;Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);</div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;                </div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;        <span class="keywordflow">return</span> *<span class="keyword">this</span>;</div>
-<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;    }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00270">270</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+
 </div>
 </div>
 <a class="anchor" id="ae860b0c21f7201910b1f73e168b50342"></a>
@@ -352,40 +310,12 @@ template&lt;class BEHAVIOR &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Used when wanting to return an object from a c++ function call back to javascript </p>
-
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00282">282</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with add_variable to give a javascript name to an existing c++ object </p><div class="fragment"><div class="line"><a class="code" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">add_variable</a>(context, context-&gt;GetGlobal(), <span class="stringliteral">&quot;js_name&quot;</span>, class_wrapper.wrap_existing_cpp_object(context, some_c++_object));</div>
+</div><!-- fragment --> 
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00305">305</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 <p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
-<div class="fragment"><div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;    {</div>
-<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;        <span class="keyword">auto</span> isolate = this-&gt;isolate;</div>
-<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;        <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n&quot;</span>, existing_cpp_object, <span class="keyword">this</span>, isolate);</div>
-<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;        </div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;        </div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;        <span class="comment">// if there&#39;s currently a javascript object wrapping this pointer, return that instead of making a new one</span></div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;        v8::Local&lt;v8::Object&gt; javascript_object;</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;        <span class="keywordflow">if</span>(this-&gt;existing_wrapped_objects.find(existing_cpp_object) != this-&gt;existing_wrapped_objects.end()) {</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;            <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Found existing javascript object for c++ object %p\n&quot;</span>, existing_cpp_object);</div>
-<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;            javascript_object = v8::Local&lt;v8::Object&gt;::New(isolate, this-&gt;existing_wrapped_objects[existing_cpp_object]);</div>
-<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;            </div>
-<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;        </div>
-<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;            <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Creating new javascript object for c++ object %p\n&quot;</span>, existing_cpp_object);</div>
-<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;        </div>
-<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;            v8::Isolate::Scope is(isolate);</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;            v8::Context::Scope cs(context);</div>
-<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;        </div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;            javascript_object = this-&gt;constructor_templates[0].Get(isolate)-&gt;InstanceTemplate()-&gt;NewInstance();</div>
-<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;            _initialize_new_js_object&lt;BEHAVIOR&gt;(isolate, javascript_object, existing_cpp_object);</div>
-<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;            </div>
-<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;            <span class="comment">// this-&gt;existing_wrapped_objects.emplace(existing_cpp_object, v8::Global&lt;v8::Object&gt;(isolate, javascript_object));</span></div>
-<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;            <span class="keywordflow">if</span> (<a class="code" href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a>) printf(<span class="stringliteral">&quot;Inserting new object into existing_wrapped_objects hash that is now of size: %d\n&quot;</span>, (<span class="keywordtype">int</span>)this-&gt;existing_wrapped_objects.size());            </div>
-<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;        }</div>
-<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;        <span class="keywordflow">return</span> v8::Local&lt;v8::Value&gt;::Cast(javascript_object);</div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;        <span class="comment">// return javascript_object;</span></div>
-<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;    }</div>
-<div class="ttc" id="v8__class__wrapper_8h_html_a6f95ec9c55c8679a2e7d38c98ada8d0b"><div class="ttname"><a href="v8__class__wrapper_8h.html#a6f95ec9c55c8679a2e7d38c98ada8d0b">V8_CLASS_WRAPPER_DEBUG</a></div><div class="ttdeci">#define V8_CLASS_WRAPPER_DEBUG</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00018">v8_class_wrapper.h:18</a></div></div>
-</div><!-- fragment -->
+
 </div>
 </div>
 <a class="anchor" id="abd805562bff7a1a703071fbe8465daf3"></a>
@@ -425,26 +355,8 @@ template&lt;typename MEMBER_TYPE &gt; </div>
 </div><div class="memdoc">
 <p>Adds a getter and setter method for the specified class member add_member(&amp;ClassName::member_name, "javascript_attribute_name"); </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00320">320</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
-<div class="fragment"><div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;    {</div>
-<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;</div>
-<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;        <span class="comment">// stop additional constructors from being added</span></div>
-<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;        member_or_method_added = <span class="keyword">true</span>;</div>
-<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;        </div>
-<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;        <span class="comment">// this lambda is shared between the getter and the setter so it can only do work needed by both</span></div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;        <span class="keyword">static</span> <span class="keyword">auto</span> get_member_reference = std::function&lt;MEMBER_TYPE&amp;(T*)&gt;([member](T * cpp_object)-&gt;MEMBER_TYPE&amp;{</div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;            <span class="keywordflow">return</span> cpp_object-&gt;*member;</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;        });</div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;        <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp; constructor_template : this-&gt;constructor_templates) {</div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;            constructor_template.Get(isolate)-&gt;InstanceTemplate()-&gt;SetAccessor(v8::String::NewFromUtf8(isolate, </div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;                member_name.c_str()), </div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;                _getter_helper&lt;MEMBER_TYPE&gt;, </div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;                _setter_helper&lt;MEMBER_TYPE&gt;, </div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;                v8::External::New(isolate, &amp;get_member_reference));</div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;        }</div>
-<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;        <span class="keywordflow">return</span> *<span class="keyword">this</span>;</div>
-<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;    }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00343">343</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+
 </div>
 </div>
 <a class="anchor" id="a38447cdc105b23f6ab4cbecbd950d694"></a>
@@ -482,41 +394,12 @@ template&lt;class METHOD_TYPE &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>adds the ability to call the specified class instance method on an object of this type add_method(&amp;ClassName::method_name, "javascript_attribute_name"); </p>
+<p>Adds the ability to call the specified class instance method on an object of this type </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00346">346</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00368">368</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00609">v8toolkit::bind()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    {</div>
-<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;        </div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        <span class="comment">// stop additional constructors from being added</span></div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;        member_or_method_added = <span class="keyword">true</span>;</div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;        </div>
-<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;        <span class="comment">// this is leaked if this ever isn&#39;t used anymore</span></div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;        <a class="code" href="classv8toolkit_1_1V8ClassWrapper.html#afa534560f9881125560026476bd7b3bd">StdFunctionCallbackType</a> * f = <span class="keyword">new</span> <a class="code" href="classv8toolkit_1_1V8ClassWrapper.html#afa534560f9881125560026476bd7b3bd">StdFunctionCallbackType</a>([method](<span class="keyword">const</span> v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; info) </div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;        {</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;            <span class="comment">// get the behind-the-scenes c++ object</span></div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;            <span class="keyword">auto</span> <span class="keyword">self</span> = info.Holder();</div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;            <span class="keyword">auto</span> wrap = v8::Local&lt;v8::External&gt;::Cast(self-&gt;GetInternalField(0));</div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;            <span class="keywordtype">void</span>* ptr = wrap-&gt;Value();</div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;            <span class="keyword">auto</span> backing_object_pointer = <span class="keyword">static_cast&lt;</span>T*<span class="keyword">&gt;</span>(ptr);</div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;            </div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;            <span class="comment">// bind the object and method into a std::function then build the parameters for it and call it</span></div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;            <span class="keyword">auto</span> bound_method = <a class="code" href="namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c">v8toolkit::bind</a>(*backing_object_pointer, method);</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;            <a class="code" href="namespacev8toolkit.html#structv8toolkit_1_1ParameterBuilder">v8toolkit::ParameterBuilder&lt;0, decltype(bound_method), decltype(bound_method)&gt;</a>()(bound_method, info);           </div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;        });</div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;        </div>
-<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;        <span class="keyword">auto</span> function_template = v8::FunctionTemplate::New(this-&gt;isolate, callback_helper, v8::External::New(this-&gt;isolate, f));</div>
-<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;        </div>
-<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;        <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp; constructor_template : this-&gt;constructor_templates) {</div>
-<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;            constructor_template.Get(isolate)-&gt;InstanceTemplate()-&gt;Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);</div>
-<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;        }</div>
-<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160;        <span class="keywordflow">return</span> *<span class="keyword">this</span>;</div>
-<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    }   </div>
-<div class="ttc" id="classv8toolkit_1_1V8ClassWrapper_html_afa534560f9881125560026476bd7b3bd"><div class="ttname"><a href="classv8toolkit_1_1V8ClassWrapper.html#afa534560f9881125560026476bd7b3bd">v8toolkit::V8ClassWrapper::StdFunctionCallbackType</a></div><div class="ttdeci">std::function&lt; void(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info)&gt; StdFunctionCallbackType</div><div class="ttdef"><b>Definition:</b> <a href="v8__class__wrapper_8h_source.html#l00312">v8_class_wrapper.h:312</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a5fdcf0b54dd96a42e5e3c73a5762719c"><div class="ttname"><a href="namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c">v8toolkit::bind</a></div><div class="ttdeci">std::function&lt; R(Args...)&gt; bind(CLASS &amp;object, R(CLASS::*method)(Args...))</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00609">v8toolkit.h:609</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_structv8toolkit_1_1ParameterBuilder"><div class="ttname"><a href="namespacev8toolkit.html#structv8toolkit_1_1ParameterBuilder">v8toolkit::ParameterBuilder</a></div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00243">v8toolkit.h:243</a></div></div>
-</div><!-- fragment -->
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00626">v8toolkit::bind()</a>.</p>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
@@ -535,7 +418,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 17:18:27 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Jan 29 2016 23:03:21 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

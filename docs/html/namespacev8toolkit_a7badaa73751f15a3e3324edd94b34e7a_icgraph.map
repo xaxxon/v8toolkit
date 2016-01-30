@@ -8,7 +8,7 @@
 <area shape="rect" id="node5" href="$classv8toolkit_1_1ContextHelper.html#a5af1fa6f3a4cc76040dd682683bfe247" title="v8toolkit::ContextHelper::run" alt="" coords="409,235,582,259"/>
 <area shape="rect" id="node7" href="$classv8toolkit_1_1ContextHelper.html#aca18b2b39ccb379491c57c1b194b37af" title="v8toolkit::ContextHelper\l::add_function" alt="" coords="421,54,570,90"/>
 <area shape="rect" id="node9" href="$classv8toolkit_1_1IsolateHelper.html#aee8f5427d3f743919e0e9052bd02edf3" title="v8toolkit::IsolateHelper\l::create_context" alt="" coords="424,114,567,150"/>
-<area shape="rect" id="node11" href="$classv8toolkit_1_1ContextHelper.html#a8dc97fb192d0b24972c5eaacdec4d892" title="v8toolkit::ContextHelper\l::run_async" alt="" coords="421,343,570,379"/>
+<area shape="rect" id="node11" href="$classv8toolkit_1_1ContextHelper.html#a78a9aeb4a7f8aacc4dd84925734d5f6b" title="v8toolkit::ContextHelper\l::run_async" alt="" coords="421,343,570,379"/>
 <area shape="rect" id="node12" href="$classv8toolkit_1_1ContextHelper.html#ad6cba270e750c0b8c667ae6b8601932a" title="v8toolkit::ContextHelper\l::run_detached" alt="" coords="421,403,570,439"/>
 <area shape="rect" id="node13" href="$classv8toolkit_1_1ContextHelper.html#af7a768f88c82d9b37917e2ffb7d1c836" title="v8toolkit::ContextHelper\l::run_thread" alt="" coords="421,283,570,319"/>
 </map>
