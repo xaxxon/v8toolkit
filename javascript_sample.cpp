@@ -83,7 +83,7 @@ auto run_tests()
 }
 
 
-void test_lifetimes()
+auto test_lifetimes()
 {
     std::shared_ptr<ScriptHelper> s;
     {
@@ -95,24 +95,37 @@ void test_lifetimes()
         // c is keeping i alive
         printf("Nothing should have been destroyed yet\n");
         
-
         (*c)([&](){
             s = c->compile("5");
         });
     }    
-    
     // s is keeping c alive which is keeping i alive
-    printf("Nothing should have been destroyed yet\n");
-} // everything should be destroyed when the function exits since s will be destroyed
+    printf("Nothing should have been destroyed yet right before leaving test_lifetimes\n");
+    
+    return s->run_async();
+    // The std::future returned from the async contains a shared_ptr to the context
+}
+
 
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
     
-    test_lifetimes();
+    auto future = test_lifetimes();
+    printf("Nothing should have been destroyed yet\n");
+    {
+        auto results = future.get();
+        results.first.Reset();
+        printf("Nothing should have been destroyed yet after getting future results\n");
+    }
     printf("The script, context, and isolate helpers should have all been destroyed\n");
 
+
     auto context = run_tests();
+    printf("The script, context, and isolate helpers should have all been destroyed\n");
+    
+    
+    
     printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
     
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");

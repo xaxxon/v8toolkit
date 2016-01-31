@@ -136,22 +136,12 @@ public:
 	v8::Global<v8::Value> run(const std::string);
 	v8::Global<v8::Value> run(const v8::Local<v8::Value> script);
 	
-	/**
-    * Executes the previously compiled v8::script in a std::async and returns
-    *   the std::future associated with it.
-    * While any number of threaded calls can be made, only one context per
-    *   isolate can be actively running at a time.   Additional calls will be
-    *   queued but will block until they can acquire the v8::Locker object for
-    *   their isolate
-    * TODO: what happens if there are errors in execution?
-    */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script, 
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
     
 	/**
     * Compiles and runs the contents of the passed in string in a std::async and returns
-    *   the std::future associated with it.
+    *   the std::future associated with it.  The future has the result of the javascript
+    *   as well as a shared_ptr to the ScriptHelper to make sure the value can still be used
+    * 
     * While any number of threaded calls can be made, only one context per
     *   isolate can be actively running at a time.   Additional calls will be
     *   queued but will block until they can acquire the v8::Locker object for
@@ -159,25 +149,12 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::future<v8::Global<v8::Value>> run_async(const std::string,
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
+	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>> 
+        run_async(const std::string,
+                  std::launch launch_policy = 
+                     std::launch::async | std::launch::deferred);
         
-    
-	/**
-    * Executes the previously compiled v8::script in a std::async and returns
-    *   the std::future associated with it.
-    * While any number of threaded calls can be made, only one context per
-    *   isolate can be actively running at a time.   Additional calls will be
-    *   queued but will block until they can acquire the v8::Locker object for
-    *   their isolate
-    * TODO: what happens if there are errors in execution?
-    */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script,
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
-        
-	
+    	
 	/**
     * Executes the previously compiled v8::script in a std::thread and returns
     *   the std::thread associated with it.  It must either be joined or detached
@@ -323,7 +300,7 @@ public:
 * Helper class for a v8::Script object.  As long as a ScriptHelper shared_ptr is around,
 *   the associated ContextHelper will be maintined (which keeps the IsolateHelper around, too)
 */
-class ScriptHelper
+class ScriptHelper : public std::enable_shared_from_this<ScriptHelper> 
 {
     friend class ContextHelper;
     
@@ -332,11 +309,6 @@ private:
         isolate(*context_helper),
         context_helper(context_helper),
         script(v8::Global<v8::Script>(isolate, script)) {}
-	ScriptHelper() = delete;
-	ScriptHelper(const ScriptHelper &) = delete;
-	ScriptHelper(ScriptHelper &&) = default;
-	ScriptHelper & operator=(const ScriptHelper &) = delete;
-	ScriptHelper & operator=(ScriptHelper &&) = default;
     
     
     v8::Isolate * isolate;
@@ -345,9 +317,17 @@ private:
     
 public:
     
+	ScriptHelper() = delete;
+	ScriptHelper(const ScriptHelper &) = delete;
+	ScriptHelper(ScriptHelper &&) = default;
+	ScriptHelper & operator=(const ScriptHelper &) = delete;
+	ScriptHelper & operator=(ScriptHelper &&) = default;
     virtual ~ScriptHelper(){
+        (*context_helper)([this]{
+            script.Reset();
+        });
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
-        printf("Deleting ScriptHelper\n");  
+        printf("Done deleting ScriptHelper\n");  
 #endif
     }
     
@@ -357,8 +337,12 @@ public:
 	v8::Global<v8::Value> run(){return context_helper->run(*this);}
     
     // TODO: Run async code should be moved out of contexthelper and into this class
-	std::future<v8::Global<v8::Value>> run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
-        return context_helper->run_async(*this, launch_policy);
+	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
+        return std::async(launch_policy, [this](auto script_helper){
+            return (*this->context_helper)([this, script_helper](){
+                return std::make_pair(this->run(), script_helper);
+            });
+        }, shared_from_this());
     }
 
     // TODO: Run thread code should be moved out of contexthelper and into this class

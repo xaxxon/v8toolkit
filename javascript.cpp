@@ -30,11 +30,13 @@ std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 
 
 
-ContextHelper::~ContextHelper() {
+ContextHelper::~ContextHelper() {    
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
-        printf("Deleting ContextHelper\n");  
+    printf("Deleting ContextHelper\n");  
 #endif
-    this->context.Reset();
+    (*isolate_helper)([this]{
+        this->context.Reset();
+    });
 }
 
 
@@ -108,36 +110,13 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
     return run(*v8::String::Utf8Value(value));
 }
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script, std::launch launch_policy)
-{
-    return std::async(launch_policy, [this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    });
-}
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const std::string code, std::launch launch_policy)
+std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>> 
+ ContextHelper::run_async(const std::string code, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
     //   right after creating the async
-    return std::async(launch_policy, [this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
-    });
-}
-
-
-
-
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script, std::launch launch_policy)
-{
-    return std::async(launch_policy, [this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    });
+    return this->compile(code)->run_async(launch_policy);
 }
 
 
@@ -248,7 +227,12 @@ IsolateHelper::~IsolateHelper()
     printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 #endif
     
-    this->global_object_template.Reset();
+    {
+        // TODO: Is this necessary?
+        v8::Locker l(*this);
+        this->global_object_template.Reset();
+    }
+    
     this->isolate->Dispose();
 }
 
