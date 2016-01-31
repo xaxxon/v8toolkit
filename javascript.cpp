@@ -31,17 +31,19 @@ std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 
 
 ContextHelper::~ContextHelper() {
-    // fprintf(stderr, "destroying context helper\n");
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+        printf("Deleting ContextHelper\n");  
+#endif
     this->context.Reset();
 }
 
 
-v8::Global<v8::Script> ContextHelper::compile_from_file(const std::string filename)
+std::shared_ptr<ScriptHelper> ContextHelper::compile_from_file(const std::string filename)
 {
     return this->compile(get_file_contents(filename.c_str()));
 }
 
-v8::Global<v8::Script> ContextHelper::compile(const std::string javascript_source)
+std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascript_source)
 {
     return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
     
@@ -59,7 +61,8 @@ v8::Global<v8::Script> ContextHelper::compile(const std::string javascript_sourc
             throw CompilationError(*exception);
         }
 
-        return v8::Global<v8::Script>(isolate, compiled_script.ToLocalChecked());
+
+        return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
 
 }
@@ -95,7 +98,7 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 v8::Global<v8::Value> ContextHelper::run(const std::string code)
 {
     auto compiled_code = compile(code);
-    return run(compiled_code);
+    return compiled_code->run();
 }
 
 
@@ -222,7 +225,7 @@ v8::Isolate * IsolateHelper::get_isolate()
 }
 
 
-std::unique_ptr<ContextHelper> IsolateHelper::create_context()
+std::shared_ptr<ContextHelper> IsolateHelper::create_context()
 {
     return operator()([this](){
         auto ot = this->get_object_template();
@@ -241,7 +244,10 @@ v8::Local<v8::ObjectTemplate> IsolateHelper::get_object_template()
 
 IsolateHelper::~IsolateHelper()
 {
-    // fprintf(stderr, "Deleting isolate helper %p for isolate %p\n", this, this->isolate);
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+    printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
+#endif
+    
     this->global_object_template.Reset();
     this->isolate->Dispose();
 }

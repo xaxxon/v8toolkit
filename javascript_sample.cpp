@@ -83,9 +83,34 @@ auto run_tests()
 }
 
 
+void test_lifetimes()
+{
+    std::shared_ptr<ScriptHelper> s;
+    {
+        std::shared_ptr<ContextHelper> c;
+        {
+            auto i = PlatformHelper::create_isolate();
+            c = i->create_context();
+        }
+        // c is keeping i alive
+        printf("Nothing should have been destroyed yet\n");
+        
+
+        (*c)([&](){
+            s = c->compile("5");
+        });
+    }    
+    
+    // s is keeping c alive which is keeping i alive
+    printf("Nothing should have been destroyed yet\n");
+} // everything should be destroyed when the function exits since s will be destroyed
+
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
+    
+    test_lifetimes();
+    printf("The script, context, and isolate helpers should have all been destroyed\n");
 
     auto context = run_tests();
     printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");

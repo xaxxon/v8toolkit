@@ -3,7 +3,7 @@ V8DIR = /users/xaxxon/v8
 V8LIBDIR = ${V8DIR}/out/native
 #V8LIBDIR = ${V8DIR}/out/x64.release
 #V8LIBDIR = ${V8DIR}/out/x64.debug
-CPPFLAGS = -I${V8DIR} -std=c++14 -I/usr/local/include ${DEBUG}
+CPPFLAGS = -I${V8DIR} -std=c++14 -I/usr/local/include ${DEBUG} -DV8TOOLKIT_JAVASCRIPT_DEBUG
 
 all: warning thread_sample javascript sample toolbox_sample
 

@@ -9,6 +9,8 @@
 namespace v8toolkit {
 	
 class IsolateHelper;
+class ScriptHelper;
+
 
 /**
 * Wrapper around a v8::Cnotext object with a link back to its associated isolate
@@ -16,7 +18,8 @@ class IsolateHelper;
 *   is wanted.
 * Can only be created via IsolateHelper::create_context()
 */
-class ContextHelper {
+class ContextHelper : public std::enable_shared_from_this<ContextHelper> 
+{
     friend class IsolateHelper;
 public:
     
@@ -44,8 +47,8 @@ public:
 		ExecutionError(std::string what_string) : what_string(what_string) {}
 		const char* what() const noexcept override {return what_string.c_str();}
 	};
-	
-	
+
+
 private:
 	ContextHelper() = delete;
 	ContextHelper(const ContextHelper &) = delete;
@@ -67,8 +70,7 @@ private:
     
 	
 public:
-    
-	
+
 	virtual ~ContextHelper();
 	
     /**
@@ -105,20 +107,20 @@ public:
     * Compiles the contents of the passed in string as javascripts
     * Throws v8toolkit::CompilationError on compilation error
     */
-	v8::Global<v8::Script> compile(const std::string);
+	std::shared_ptr<ScriptHelper> compile(const std::string);
     
 	/**
     * Compiles the contents of the passed in v8::String as javascript
     * Throws v8toolkit::CompilationError on compilation error
     */
-	v8::Global<v8::Script> compile(const v8::Local<v8::String> script);
+	std::shared_ptr<ScriptHelper> compile(const v8::Local<v8::String> script);
     
     /**
     * Loads the contents of the given file as javascript
     * Throws v8toolkit::CompilationError on compilation error
     * TODO: what if the file can't be opened?
     */
-	v8::Global<v8::Script> compile_from_file(const std::string);
+	std::shared_ptr<ScriptHelper> compile_from_file(const std::string);
 	
     /**
     * Runs the previously compiled v8::Script.
@@ -318,6 +320,58 @@ public:
 };
 
 /**
+* Helper class for a v8::Script object.  As long as a ScriptHelper shared_ptr is around,
+*   the associated ContextHelper will be maintined (which keeps the IsolateHelper around, too)
+*/
+class ScriptHelper
+{
+    friend class ContextHelper;
+    
+private:
+    ScriptHelper(std::shared_ptr<ContextHelper> context_helper, v8::Local<v8::Script> script) :
+        isolate(*context_helper),
+        context_helper(context_helper),
+        script(v8::Global<v8::Script>(isolate, script)) {}
+	ScriptHelper() = delete;
+	ScriptHelper(const ScriptHelper &) = delete;
+	ScriptHelper(ScriptHelper &&) = default;
+	ScriptHelper & operator=(const ScriptHelper &) = delete;
+	ScriptHelper & operator=(ScriptHelper &&) = default;
+    
+    
+    v8::Isolate * isolate;
+    std::shared_ptr<ContextHelper> context_helper;
+    v8::Global<v8::Script> script;
+    
+public:
+    
+    virtual ~ScriptHelper(){
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+        printf("Deleting ScriptHelper\n");  
+#endif
+    }
+    
+    inline operator v8::Global<v8::Script>&(){return script;}
+    
+    // TODO: Run code should be moved out of contexthelper and into this class
+	v8::Global<v8::Value> run(){return context_helper->run(*this);}
+    
+    // TODO: Run async code should be moved out of contexthelper and into this class
+	std::future<v8::Global<v8::Value>> run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
+        return context_helper->run_async(*this, launch_policy);
+    }
+
+    // TODO: Run thread code should be moved out of contexthelper and into this class
+	std::thread run_thread(){return context_helper->run_thread(*this);}
+    
+    // TODO: Run detached code should be moved out of contexthelper and into this class
+	void run_detached(){return context_helper->run_detached(*this);}
+    
+};
+
+
+
+/**
 * Represents a v8::Isolate object.	Any changes made here will be reflected in any
 *   contexts created after the change was made.	
 * An IsolateHleper will remain as long as the user has a shared_ptr to the IsolateHelper
@@ -368,7 +422,7 @@ public:
     *   the IsolateHelper will not be applied to ContextHelpers already
     *   created.
     */
-	std::unique_ptr<ContextHelper> create_context();
+	std::shared_ptr<ContextHelper> create_context();
 
     /**
     * Returns the isolate associated with this IsolateHelper
