@@ -29,7 +29,7 @@ public:
 		std::string what_string;
 	public:
 		CompilationError(std::string what_string) : what_string(what_string) {}
-		const char* what() const noexcept {return what_string.c_str();}
+		const char* what() const noexcept override {return what_string.c_str();}
 	};
     
     /**
@@ -42,7 +42,7 @@ public:
 		std::string what_string;
 	public:
 		ExecutionError(std::string what_string) : what_string(what_string) {}
-		const char* what() const noexcept {return what_string.c_str();}
+		const char* what() const noexcept override {return what_string.c_str();}
 	};
 	
 	

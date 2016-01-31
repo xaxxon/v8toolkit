@@ -21,7 +21,7 @@ private:
     
 public:
   InvalidCallException(std::string message) : message(message) {}
-  inline const char * what(){return message.c_str();}
+  virtual const char * what() const noexcept override {return message.c_str();}
   
 };
 
@@ -647,12 +647,12 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
 */
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
-  inline virtual void* Allocate(size_t length) {
+  inline virtual void* Allocate(size_t length) override {
     void* data = AllocateUninitialized(length);
     return data == NULL ? data : memset(data, 0, length);
   }
-  inline virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-  inline virtual void Free(void* data, size_t) { free(data); }
+  inline virtual void* AllocateUninitialized(size_t length) override { return malloc(length); }
+  inline virtual void Free(void* data, size_t) override { free(data); }
 };
 
 
