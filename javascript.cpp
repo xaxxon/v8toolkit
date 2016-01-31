@@ -1,33 +1,31 @@
 #include <fstream>
 #include <memory>
     
-
 #include "javascript.h"
 
+
 namespace v8toolkit {
-
-
 
 ContextHelper::ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context) : 
     isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
 {}
 
 
-
 v8::Local<v8::Context> ContextHelper::get_context(){
     return context.Get(isolate);
 }
+
 
 v8::Isolate * ContextHelper::get_isolate() 
 {
     return this->isolate;
 }
 
+
 std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 {
     return this->isolate_helper;
 }
-
 
 
 ContextHelper::~ContextHelper() {    
@@ -44,6 +42,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile_from_file(const std::string
 {
     return this->compile(get_file_contents(filename.c_str()));
 }
+
 
 std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascript_source)
 {
@@ -65,6 +64,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
 }
+
 
 v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 {
@@ -119,63 +119,20 @@ std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>>
 }
 
 
-void ContextHelper::run_detached(const v8::Global<v8::Script> & script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    }).detach();
-}
-
 void ContextHelper::run_detached(const std::string code)
 {
-    
-    return std::thread([this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
-    }).detach();
-}
-
-void ContextHelper::run_detached(const v8::Local<v8::Value> script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    }).detach();
-}
-
-std::thread ContextHelper::run_thread(const v8::Global<v8::Script> & script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
+    (*this)([this, code]{
+        this->compile(code)->run_detached();
     });
 }
+
 
 std::thread ContextHelper::run_thread(const std::string code)
 {
-    
-    return std::thread([this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
+    return (*this)([this, code]{
+        return this->compile(code)->run_thread();
     });
 }
-
-std::thread ContextHelper::run_thread(const v8::Local<v8::Value> script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    });
-}
-
-
 
 
 IsolateHelper::IsolateHelper(v8::Isolate * isolate) : isolate(isolate)

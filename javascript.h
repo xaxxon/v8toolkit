@@ -331,7 +331,21 @@ public:
 #endif
     }
     
+    /**
+    * Allows implicit conversion to a v8::Global<v8::Script>
+    */
     inline operator v8::Global<v8::Script>&(){return script;}
+    
+    /**
+    * Calls scoped_run with the associated isolate and context
+    */
+    template<class... Args>
+    void operator()(Args&&... args){(*context_helper)(std::forward<Args>(args)...);}
+    
+    /**
+    * Returns the ContextHelper associated with this ScriptHelper
+    */
+    inline auto get_context_helper(){return context_helper;}
     
     // TODO: Run code should be moved out of contexthelper and into this class
 	v8::Global<v8::Value> run(){return context_helper->run(*this);}
@@ -346,11 +360,19 @@ public:
     }
 
     // TODO: Run thread code should be moved out of contexthelper and into this class
-	std::thread run_thread(){return context_helper->run_thread(*this);}
+	std::thread run_thread(){
+        // Holds on to a shared_ptr to the ScriptHelper object to make sure
+        //   it isn't destroyed until the thread completes
+        return std::thread([this](auto script_helper){
+            (*this)([this]{
+                this->run();
+            });
+        }, shared_from_this());
+    }
     
-    // TODO: Run detached code should be moved out of contexthelper and into this class
-	void run_detached(){return context_helper->run_detached(*this);}
-    
+    void run_detached(){
+        run_thread().detach();
+    }    
 };
 
 

@@ -1,4 +1,4 @@
-DEBUG = -g
+# DEBUG = -g
 V8DIR = /users/xaxxon/v8
 V8LIBDIR = ${V8DIR}/out/native
 #V8LIBDIR = ${V8DIR}/out/x64.release
