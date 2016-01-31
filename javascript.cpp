@@ -62,11 +62,8 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
             printf("Compile failed '%s', throwing exception\n", *exception);
             throw CompilationError(*exception);
         }
-
-
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
-
 }
 
 v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
@@ -116,7 +113,9 @@ std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>>
 {
     // copy code into the lambda so it isn't lost when this outer function completes
     //   right after creating the async
-    return this->compile(code)->run_async(launch_policy);
+    return (*this)([this, code, launch_policy]{
+        return this->compile(code)->run_async(launch_policy);
+    });
 }
 
 

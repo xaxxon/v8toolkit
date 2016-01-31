@@ -3,7 +3,7 @@ V8DIR = /users/xaxxon/v8
 V8LIBDIR = ${V8DIR}/out/native
 #V8LIBDIR = ${V8DIR}/out/x64.release
 #V8LIBDIR = ${V8DIR}/out/x64.debug
-CPPFLAGS = -I${V8DIR} -std=c++14 -I/usr/local/include ${DEBUG} -DV8TOOLKIT_JAVASCRIPT_DEBUG
+CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEBUG} -DV8TOOLKIT_JAVASCRIPT_DEBUG
 
 all: warning thread_sample javascript sample toolbox_sample
 
@@ -18,16 +18,16 @@ warning:
 
 
 thread_sample: lib
-	clang++ -std=c++14 -I/usr/local/include -I/users/xaxxon/v8  thread_sample.cpp -o thread_sample ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} javascript.o v8toolkit.o
+	clang++ -std=c++14 ${DEBUG} -I/usr/local/include -I/users/xaxxon/v8  thread_sample.cpp -o thread_sample ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} javascript.o v8toolkit.o
 
 javascript: lib
-	clang++ -std=c++14 -I/usr/local/include -I/users/xaxxon/v8  javascript_sample.cpp -o javascript ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} javascript.o v8toolkit.o
+	clang++ -std=c++14 ${DEBUG} -I/usr/local/include -I/users/xaxxon/v8  javascript_sample.cpp -o javascript ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} javascript.o v8toolkit.o
 
 sample: lib
-	clang++ -std=c++14 -I/usr/local/include -I/users/xaxxon/v8  sample.cpp -o sample ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} v8toolkit.o
+	clang++ -std=c++14 ${DEBUG} -I/usr/local/include -I/users/xaxxon/v8  sample.cpp -o sample ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} v8toolkit.o
 
 toolbox_sample: lib
-	clang++ -std=c++14 -I/usr/local/include -I/users/xaxxon/v8  toolbox_sample.cpp -o toolbox ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} v8toolkit.o
+	clang++ -std=c++14 ${DEBUG} -I/usr/local/include -I/users/xaxxon/v8  toolbox_sample.cpp -o toolbox ${V8LIBDIR}/{libv8_base.a,libv8_libbase.a,libicudata.a,libicuuc.a,libicui18n.a,libv8_base.a,libv8_external_snapshot.a,libv8_libplatform.a} v8toolkit.o
 
 lib: v8toolkit.o javascript.o
 	ar cr libv8toolkit.a v8toolkit.o javascript.o
