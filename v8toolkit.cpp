@@ -180,11 +180,94 @@ std::string get_file_contents(const char *filename)
 
 
 
+// once a module has been successfully required (in an isolate), its return value will be cached here
+//   and subsequent requires of the same module won't re-run the module, just return the
+//   cached value
+static std::map<v8::Isolate *, std::map<std::string, v8::Global<v8::Value>&>> require_results;
+
+
+
+v8::Local<v8::Value> _require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
+{
+    
+    
+    if (filename.find_first_of("..") == std::string::npos) {
+        printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
+        return v8::Object::New(isolate);
+    }
+
+    for (auto path : paths) {
+        try {
+            auto complete_filename = path + filename;
+        
+            // if the file doesn't exist, move on to the next path
+            std::ifstream in(complete_filename);
+            if (!in) {
+                printf("Module not found at %s\n", complete_filename.c_str());
+                continue;
+            }
+            in.close();
+        
+        
+            // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
+            auto & isolate_require_results = require_results[isolate];
+        
+            auto cached_require_results = isolate_require_results.find(complete_filename);
+            if (cached_require_results != isolate_require_results.end()) {
+                printf("Found cached results, using cache instead of re-running module\n");
+                return cached_require_results->second.Get(isolate);
+            } else {
+                printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+            }
+
+            auto contents = get_file_contents(complete_filename.c_str());
+        
+            
+            // create a new context for it (this may be the wrong thing to do)
+            auto module_global_template = v8::ObjectTemplate::New(isolate);     
+            add_print(isolate, module_global_template);
+
+            // Create module context
+            auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
+
+            // Get module global object
+            auto module_global_object = module_context->Global();
+
+            // set up the module and exports stuff
+            auto module_object = v8::Object::New(isolate);
+            auto exports_object = v8::Object::New(isolate);
+            add_variable(module_context, module_object, "exports", exports_object);
+            add_variable(module_context, module_global_object, "module", module_object);
+            add_variable(module_context, module_global_object, "exports", exports_object);
+            (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
+
+            v8::Local<v8::String> source =
+                v8::String::NewFromUtf8(isolate, contents.c_str(),
+                                        v8::NewStringType::kNormal).ToLocalChecked();
+
+
+            // Compile the source code.
+            v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
+
+            printf("About to start running script\n");
+            (void)script->Run(context);
+        
+            auto result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports")).ToLocalChecked();
+
+            // cache the result for subsequent requires of the same module in the same isolate
+            auto new_global = new v8::Global<v8::Value>(isolate, result);
+            isolate_require_results.insert(std::pair<std::string,
+                                           v8::Global<v8::Value>&>(complete_filename, *new_global));
+
+            return result;
+        }catch(...) {}
+        // if any failures, try the next path if it exists
+    }
+    return v8::Object::New(isolate);
+}
+
+
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {
-    // once a module has been successfully required (in an isolate), its return value will be cached here
-    //   and subsequent requires of the same module won't re-run the module, just return the
-    //   cached value
-    static std::map<v8::Isolate *, std::map<std::string, v8::Global<v8::Value>&>> require_results;
     
     static bool require_added = false;
     if (require_added) {
@@ -197,89 +280,50 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
     if (require_results.find(isolate) == require_results.end()) {
         require_results.insert(make_pair(isolate, std::map<std::string, v8::Global<v8::Value>&>()));
     }
-    
-    
+
+
     (void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{        
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
         
-        printf("require got callback info object with length set to: %d\n", info.Length());
-        if (filename.find_first_of("..") == std::string::npos) {
-            printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
-            return v8::Object::New(isolate);
-        }
-        
-        for (auto path : paths) {
-            try {
-                auto complete_filename = path + filename;
-                
-                // if the file doesn't exist, move on to the next path
-                std::ifstream in(complete_filename);
-                if (!in) {
-                    printf("Module not found at %s\n", complete_filename.c_str());
-                    continue;
-                }
-                in.close();
-                
-                
-                // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
-                auto & isolate_require_results = require_results[isolate];
-                
-                auto cached_require_results = isolate_require_results.find(complete_filename);
-                if (cached_require_results != isolate_require_results.end()) {
-                    printf("Found cached results, using cache instead of re-running module\n");
-                    return cached_require_results->second.Get(isolate);
-                } else {
-                    printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
-                }
+        return _require(isolate, context, filename, paths);
 
-                auto contents = get_file_contents(complete_filename.c_str());
-                
-                    
-                // create a new context for it (this may be the wrong thing to do)
-                auto module_global_template = v8::ObjectTemplate::New(isolate);     
-                add_print(isolate, module_global_template);
-
-                // Create module context
-                auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
-
-                // Get module global object
-                auto module_global_object = module_context->Global();
-
-                // set up the module and exports stuff
-                auto module_object = v8::Object::New(isolate);
-                auto exports_object = v8::Object::New(isolate);
-                add_variable(module_context, module_object, "exports", exports_object);
-                add_variable(module_context, module_global_object, "module", module_object);
-                add_variable(module_context, module_global_object, "exports", exports_object);
-                (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
-
-                v8::Local<v8::String> source =
-                    v8::String::NewFromUtf8(isolate, contents.c_str(),
-                                            v8::NewStringType::kNormal).ToLocalChecked();
-
-
-                // Compile the source code.
-                v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
-
-                printf("About to start running script\n");
-                (void)script->Run(context);
-                
-                auto result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports")).ToLocalChecked();
-
-                // cache the result for subsequent requires of the same module in the same isolate
-                auto new_global = new v8::Global<v8::Value>(isolate, result);
-                isolate_require_results.insert(std::pair<std::string,
-                                               v8::Global<v8::Value>&>(complete_filename, *new_global));
-
-                return result;
-            }catch(...) {}
-            // if any failures, try the next path if it exists
-        }
-        return v8::Object::New(isolate);
     });
 }
 
+void require_directory(v8::Isolate * isolate, v8::Local<v8::Context> context, std::string directory_name)
+{
+    
+// #include <boost/filesystem.hpp>
+    //
+    // boost::filesystem::path p = boost::filesystem::current_path();
+    // boost::filesystem::directory_iterator it{p};
+    // while (it != boost::filesystem::directory_iterator{})
+    //   std::cout << *it++ << '\n';
+    //
+
+    // This probably works on more than just APPLE
+#ifdef __APPLE__
+    DIR * dir = opendir(".");
+    if (dir == NULL)
+            return;
+    struct dirent * dp;
+    
+    auto require_path = std::vector<std::string>{directory_name};
+    while ((dp = readdir(dir)) != NULL) {
+        
+        _require(isolate, context, dp->d_name, require_path);
+            // if (dp->d_namlen == len && strcmp(dp->d_name, name) == 0) {
+            //         (void)closedir(dir);
+            //         return (FOUND);
+            // }
+    }
+    (void)closedir(dir);
+    return;
+    
+#endif // __APPLE__
+    
+}
 
 
 

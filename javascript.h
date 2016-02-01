@@ -368,12 +368,12 @@ public:
                 this->run();
             });
         }, shared_from_this());
-    }
+    } 
     
     void run_detached(){
         run_thread().detach();
     }    
-};
+}; 
 
 
 

@@ -82,7 +82,9 @@ int main(int argc, char* argv[])
         
     // Initialize V8.
     v8::V8::InitializeICU();
+#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
+#endif
     v8::Platform* platform = v8::platform::CreateDefaultPlatform();
     v8::V8::InitializePlatform(platform);
     v8::V8::Initialize();
@@ -142,11 +144,8 @@ int main(int argc, char* argv[])
         
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
+            
 
-
-        
-
-            // Create a string containing the JavaScript source code.
             auto js_code = get_file_contents("code.js");
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),

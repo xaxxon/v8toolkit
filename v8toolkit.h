@@ -8,6 +8,9 @@
 #include "include/v8.h"
 #include "casts.hpp"
 
+
+#include <dirent.h>
+
 #define USE_BOOST
 
 namespace v8toolkit {
@@ -670,7 +673,7 @@ std::string get_file_contents(const char *filename);
 */
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
 
-
+void require_directory(std::string directory_name);
 
 
 } // end v8toolkit namespace

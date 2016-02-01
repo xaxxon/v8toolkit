@@ -41,12 +41,14 @@ int main(int argc, char* argv[])
 {
 
     // parse out any v8-specific command line flags
-    process_v8_flags(argc, argv);
-    expose_gc(); // force garbage collection to be exposed even if no command line parameter for it
+    // process_v8_flags(argc, argv);
+    // expose_gc(); // force garbage collection to be exposed even if no command line parameter for it
         
     // Initialize V8.  q
     v8::V8::InitializeICU();
+#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
+#endif
     v8::Platform* platform = v8::platform::CreateDefaultPlatform();
     v8::V8::InitializePlatform(platform);
     v8::V8::Initialize();
@@ -62,6 +64,8 @@ int main(int argc, char* argv[])
         v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
         add_print(isolate, global_templ);
         std::vector<std::string> paths = {"./"};
+        add_require(isolate, global_templ, paths);
+        
         add_function(isolate, global_templ, "foo", &foo);
         add_function(isolate, global_templ, "bar", &bar);
         Point p;
@@ -73,7 +77,6 @@ int main(int argc, char* argv[])
         
         int lambda_function_int = 1;
         add_function(isolate, global_templ, "lambda_function", [lambda_function_int](int j)->int{return lambda_function_int + j;});
-        add_require(isolate, global_templ, paths);
         
         v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
 

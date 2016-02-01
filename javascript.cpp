@@ -202,7 +202,12 @@ void PlatformHelper::init(int argc, char ** argv)
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
+    // TODO: testing how this interacts with lib_nosnapshot.o
+    
+    // if being built for snapshot use, must call this, otherwise must not call this
+#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
+#endif
     
     PlatformHelper::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());
