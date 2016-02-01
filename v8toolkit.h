@@ -673,7 +673,35 @@ std::string get_file_contents(const char *filename);
 */
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
 
-void require_directory(std::string directory_name);
+// void require_directory(std::string directory_name)
+// {
+//
+// // #include <boost/filesystem.hpp>
+//     //
+//     // boost::filesystem::path p = boost::filesystem::current_path();
+//     // boost::filesystem::directory_iterator it{p};
+//     // while (it != boost::filesystem::directory_iterator{})
+//     //   std::cout << *it++ << '\n';
+//     //
+//
+//     // This probably works on more than just APPLE
+// #ifdef __APPLE__
+//     DIR * dir = opendir(".");
+//     if (dir == NULL)
+//             return;
+//     struct dirent * dp;
+//     while ((dp = readdir(dir)) != NULL) {
+//             // if (dp->d_namlen == len && strcmp(dp->d_name, name) == 0) {
+//             //         (void)closedir(dir);
+//             //         return (FOUND);
+//             // }
+//     }
+//     (void)closedir(dir);
+//     return;
+//
+// #endif // __APPLE__
+//
+// }
 
 
 } // end v8toolkit namespace

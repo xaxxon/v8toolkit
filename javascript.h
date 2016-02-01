@@ -18,7 +18,7 @@ class ScriptHelper;
 *   is wanted.
 * Can only be created via IsolateHelper::create_context()
 */
-class ContextHelper : public std::enable_shared_from_this<ContextHelper> 
+class ContextHelper : public std::enable_shared_from_this<ContextHelper>
 {
     friend class IsolateHelper;
 public:
@@ -56,6 +56,7 @@ private:
 	ContextHelper & operator=(const ContextHelper &) = delete;
 	ContextHelper & operator=(ContextHelper &&) = default;
 	
+    // isolate_helper MUST be first so it's the last element cleaned up
 	/// The IsolateHelper that created this ContextHelper will be kept around as long as a ContextHelper it created is still around
 	std::shared_ptr<IsolateHelper> isolate_helper;
 	
@@ -310,9 +311,9 @@ private:
         context_helper(context_helper),
         script(v8::Global<v8::Script>(isolate, script)) {}
     
-    
-    v8::Isolate * isolate;
+    // shared_ptr to ContextHelper should be first so it's the last cleaned up
     std::shared_ptr<ContextHelper> context_helper;
+    v8::Isolate * isolate;
     v8::Global<v8::Script> script;
     
 public:
@@ -323,9 +324,6 @@ public:
 	ScriptHelper & operator=(const ScriptHelper &) = delete;
 	ScriptHelper & operator=(ScriptHelper &&) = default;
     virtual ~ScriptHelper(){
-        (*context_helper)([this]{
-            script.Reset();
-        });
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
         printf("Done deleting ScriptHelper\n");  
 #endif
@@ -350,7 +348,11 @@ public:
     // TODO: Run code should be moved out of contexthelper and into this class
 	v8::Global<v8::Value> run(){return context_helper->run(*this);}
     
-    // TODO: Run async code should be moved out of contexthelper and into this class
+    /**
+    * Run this script in a std:;async and return the associated future.  The future contains a 
+    *   shared_ptr to this ScriptHelper so it cannot be destroyed until after the async
+    *   has finished and the caller has had a chance to look at the result
+    */ 
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
         return std::async(launch_policy, [this](auto script_helper){
             return (*this->context_helper)([this, script_helper](){
@@ -359,9 +361,14 @@ public:
         }, shared_from_this());
     }
 
-    // TODO: Run thread code should be moved out of contexthelper and into this class
+    /**
+    * Run this script in a std::thread, returning the std::thread object for joining/detaching.
+    * The thread maintains a shared_ptr to this ScriptHelper so it cannot be destroyed
+    *   until after the thread completes.
+    * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
+    */
 	std::thread run_thread(){
-        // Holds on to a shared_ptr to the ScriptHelper object to make sure
+        // Holds on to a shared_ptr to the ScriptHelper inside the thread object to make sure
         //   it isn't destroyed until the thread completes
         return std::thread([this](auto script_helper){
             (*this)([this]{
@@ -370,6 +377,10 @@ public:
         }, shared_from_this());
     } 
     
+    /**
+    * Same as run_thread, but the thread is automatically detached.   The ScriptHelper
+    *   object is still protected for the lifetime of the 
+    */
     void run_detached(){
         run_thread().detach();
     }    

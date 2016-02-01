@@ -32,9 +32,6 @@ ContextHelper::~ContextHelper() {
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
     printf("Deleting ContextHelper\n");  
 #endif
-    (*isolate_helper)([this]{
-        this->context.Reset();
-    });
 }
 
 
@@ -182,14 +179,13 @@ IsolateHelper::~IsolateHelper()
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
     printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 #endif
-    
-    {
-        // TODO: Is this necessary?
-        v8::Locker l(*this);
-        this->global_object_template.Reset();
-    }
+
+    // must explicitly Reset this because the isolate will be
+    //   explicitly disposed of before the Global is destroyed
+    this->global_object_template.Reset();
     
     this->isolate->Dispose();
+    printf("End of isolate helper destructor\n");
 }
 
 

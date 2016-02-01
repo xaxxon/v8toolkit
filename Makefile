@@ -15,8 +15,8 @@ endif
 
 CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include -DV8TOOLKIT_JAVASCRIPT_DEBUG ${DEFINES}
 
-LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
-# LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}
+# LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
+LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}
 
 
 
