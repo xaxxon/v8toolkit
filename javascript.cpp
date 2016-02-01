@@ -77,6 +77,9 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
             auto e = try_catch.Exception();
             printf("Details on value thrown from javascript execution:\n");
             print_v8_value_details(e);
+            if(e->IsObject()){
+                printobj(*this, e->ToObject());
+            }
             printf("\n");
             v8::String::Utf8Value exception(e);
                                 std::cout<<std::endl<<*exception<<std::endl;;

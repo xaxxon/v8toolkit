@@ -123,27 +123,34 @@ void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_
     if (append_newline) {
         std::cout << std::endl;
     }
-
 }
 
 
-void printobj(const v8::FunctionCallbackInfo<v8::Value>& args) {
+
+void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object)
+{
+    if(object->InternalFieldCount() > 0) {
+        v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+        printf(">>> Object %p: %s\n", wrap->Value(), *v8::String::Utf8Value(object));
+    } else {
+        printf(">>> Object does not appear to be a wrapped c++ class (no internal fields): %s\n", *v8::String::Utf8Value(object));
+    }
+    
+    printf("Object has the following own properties\n");
+    for_each_own_property(context, object, [](v8::Local<v8::Value> name, v8::Local<v8::Value> value){
+        printf(">>> %s: %s\n", *v8::String::Utf8Value(name), *v8::String::Utf8Value(value));
+    });
+    printf("End of object's own properties\n");
+    
+}
+
+
+void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
     for (int i = 0; i < args.Length(); i++) {
         auto object = args[i]->ToObject(context).ToLocalChecked();
-        if(object->InternalFieldCount() > 0) {
-            v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-            printf(">>> Object %p: %s\n", wrap->Value(), *v8::String::Utf8Value(args[i]));
-        } else {
-            printf(">>> Object does not appear to be a wrapped c++ class (no internal fields): %s\n", *v8::String::Utf8Value(args[i]));
-        }
-        
-        printf("Object has the following own properties\n");
-        for_each_own_property(context, object, [](v8::Local<v8::Value> name, v8::Local<v8::Value> value){
-            printf(">>> %s: %s\n", *v8::String::Utf8Value(name), *v8::String::Utf8Value(value));
-        });
-        printf("End of object's own properties\n");
+        printobj(context, object);
     }
 }
 
@@ -155,7 +162,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
     add_function(isolate, object_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
     add_function(isolate, object_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
 
-    add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj(args);});
+    add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj_callback(args);});
 }
 
 

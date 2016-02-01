@@ -561,8 +561,8 @@ void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_
 /**
 * prints out information about the guts of an object
 */
-void printobj(const v8::FunctionCallbackInfo<v8::Value>& args);
-
+void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args);
+void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 /**
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
