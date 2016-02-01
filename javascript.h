@@ -42,9 +42,14 @@ public:
     *   error
     */
 	class ExecutionError : std::exception {
+        
+        /// the actual object thrown from javascript
+        v8::Global<v8::Value> exception;
+        
 		std::string what_string;
+        
 	public:
-		ExecutionError(std::string what_string) : what_string(what_string) {}
+		ExecutionError(v8::Global<v8::Value> && exception, std::string what_string) : exception(std::move(exception)), what_string(what_string) {}
 		const char* what() const noexcept override {return what_string.c_str();}
 	};
 

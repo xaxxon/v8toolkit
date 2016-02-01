@@ -69,16 +69,20 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
     
         // This catches any errors thrown during script compilation
         v8::TryCatch try_catch(isolate);
-    
         // auto local_script = this->get_local(script);
         auto local_script = v8::Local<v8::Script>::New(isolate, script);
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
             // printf("Execution failed, throwing exception\n");
-            v8::String::Utf8Value exception(try_catch.Exception());
-            throw ExecutionError(*exception);
+            auto e = try_catch.Exception();
+            printf("Details on value thrown from javascript execution:\n");
+            print_v8_value_details(e);
+            printf("\n");
+            v8::String::Utf8Value exception(e);
+                                std::cout<<std::endl<<*exception<<std::endl;;
+            throw ExecutionError(v8::Global<v8::Value>(isolate, e), *exception);
+                                std::cout<<"#";
         }
-
         v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
         // printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
         // printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
@@ -93,15 +97,19 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 
 v8::Global<v8::Value> ContextHelper::run(const std::string code)
 {
-    auto compiled_code = compile(code);
-    return compiled_code->run();
+    return (*this)([this, code]{
+        auto compiled_code = compile(code);
+        return compiled_code->run();
+    });
 }
 
 
 
 v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
 {
-    return run(*v8::String::Utf8Value(value));
+    return (*this)([this, value]{
+        return run(*v8::String::Utf8Value(value));
+    });
 }
 
 

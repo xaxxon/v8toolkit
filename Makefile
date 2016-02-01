@@ -20,7 +20,7 @@ LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}
 
 
 
-all: warning thread_sample javascript sample toolbox_sample
+all: warning thread_sample javascript sample toolbox_sample exception_sample
 
 SRCS=v8toolkit.cpp javascript.cpp
 
@@ -47,6 +47,9 @@ sample: lib
 
 toolbox_sample: lib
 	clang++ -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
+
+exception_sample: lib
+	clang++ -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
 
 
 lib: ${OBJS}

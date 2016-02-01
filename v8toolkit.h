@@ -673,6 +673,12 @@ std::string get_file_contents(const char *filename);
 */
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
 
+
+/**
+* prints out a ton of info about a v8::Value
+*/
+void print_v8_value_details(v8::Local<v8::Value> local_value);
+
 // void require_directory(std::string directory_name)
 // {
 //
