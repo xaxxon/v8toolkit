@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>v8helper: thread_sample.cpp File Reference</title>
+<title>v8toolkit: samples/thread_sample.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">v8helper
+   <div id="projectname">v8toolkit
    &#160;<span id="projectnumber">0.0.1</span>
    </div>
    <div id="projectbrief">Utility library for embedding V8 Javascript engine in a c++ program</div>
@@ -87,6 +87,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_6f9635d4fbfa321d4c00f29df5cd540c.html">samples</a></li>  </ul>
+</div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
@@ -100,12 +104,12 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for thread_sample.cpp:</div>
 <div class="dyncontent">
-<div class="center"><img src="thread__sample_8cpp__incl.png" border="0" usemap="#thread__sample_8cpp" alt=""/></div>
-<map name="thread__sample_8cpp" id="thread__sample_8cpp">
-<area shape="rect" id="node2" href="javascript_8h.html" title="javascript.h" alt="" coords="190,77,272,101"/>
-<area shape="rect" id="node6" href="v8__class__wrapper_8hpp.html" title="v8_class_wrapper.hpp" alt="" coords="319,149,460,173"/>
-<area shape="rect" id="node16" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="503,221,578,245"/>
-<area shape="rect" id="node20" href="casts_8hpp.html" title="casts.hpp" alt="" coords="793,293,866,317"/>
+<div class="center"><img src="thread__sample_8cpp__incl.png" border="0" usemap="#samples_2thread__sample_8cpp" alt=""/></div>
+<map name="samples_2thread__sample_8cpp" id="samples_2thread__sample_8cpp">
+<area shape="rect" id="node2" href="javascript_8h.html" title="javascript.h" alt="" coords="197,77,279,101"/>
+<area shape="rect" id="node6" href="v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="326,149,453,173"/>
+<area shape="rect" id="node16" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="740,221,815,245"/>
+<area shape="rect" id="node20" href="casts_8hpp.html" title="casts.hpp" alt="" coords="900,293,973,317"/>
 </map>
 </div>
 </div>
@@ -120,8 +124,8 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a8ce8c5097f907afa81f62dd99a3c2918"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a> (<a class="el" href="classv8toolkit_1_1ContextHelper.html">ContextHelper</a> &amp;context, std::future&lt; Global&lt; Value &gt;&gt; &amp;future)</td></tr>
-<tr class="separator:a8ce8c5097f907afa81f62dd99a3c2918"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace753f40bc19b51e34b68d143d204788"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="thread__sample_8cpp.html#ace753f40bc19b51e34b68d143d204788">print_future</a> (<a class="el" href="classv8toolkit_1_1ContextHelper.html">ContextHelper</a> &amp;context, std::future&lt; std::pair&lt; v8::Global&lt; v8::Value &gt;, std::shared_ptr&lt; <a class="el" href="classv8toolkit_1_1ScriptHelper.html">ScriptHelper</a> &gt;&gt;&gt; &amp;future)</td></tr>
+<tr class="separator:ace753f40bc19b51e34b68d143d204788"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3c04138a5bfe5d72780bb7e82a18e627"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="thread__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a> (int argc, char **argv)</td></tr>
 <tr class="separator:a3c04138a5bfe5d72780bb7e82a18e627"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -159,7 +163,7 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a8ce8c5097f907afa81f62dd99a3c2918"></a>
+<a class="anchor" id="ace753f40bc19b51e34b68d143d204788"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -172,7 +176,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::future&lt; Global&lt; Value &gt;&gt; &amp;&#160;</td>
+          <td class="paramtype">std::future&lt; std::pair&lt; v8::Global&lt; v8::Value &gt;, std::shared_ptr&lt; <a class="el" href="classv8toolkit_1_1ScriptHelper.html">ScriptHelper</a> &gt;&gt;&gt; &amp;&#160;</td>
           <td class="paramname"><em>future</em>&#160;</td>
         </tr>
         <tr>
@@ -185,40 +189,15 @@ Functions</h2></td></tr>
 
 <p>Definition at line <a class="el" href="thread__sample_8cpp_source.html#l00009">9</a> of file <a class="el" href="thread__sample_8cpp_source.html">thread_sample.cpp</a>.</p>
 
-<p>References <a class="el" href="javascript_8cpp_source.html#l00021">v8toolkit::ContextHelper::get_isolate()</a>, <a class="el" href="thread__sample_8cpp_source.html#l00006">SLEEP_TIME</a>, and <a class="el" href="thread__sample_8cpp_source.html#l00005">THREAD_COUNT</a>.</p>
+<p>References <a class="el" href="javascript_8cpp_source.html#l00019">v8toolkit::ContextHelper::get_isolate()</a>, <a class="el" href="thread__sample_8cpp_source.html#l00006">SLEEP_TIME</a>, and <a class="el" href="thread__sample_8cpp_source.html#l00005">THREAD_COUNT</a>.</p>
 
 <p>Referenced by <a class="el" href="thread__sample_8cpp_source.html#l00034">main()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;{</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;    <span class="keyword">static</span> <span class="keywordtype">bool</span> first_time = <span class="keyword">true</span>;</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    <span class="keywordflow">if</span>(first_time) {</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;        printf(<span class="stringliteral">&quot;Waiting on future, the first time this should take about %d seconds (not %d*%d=%d seconds since each sleep runs in parallel)\n&quot;</span>, <a class="code" href="thread__sample_8cpp.html#abe0b7b2a0ec4b64b92585808a051e1fa">SLEEP_TIME</a>, <a class="code" href="thread__sample_8cpp.html#ae4f10e3506669382a3a5b19ce7a5eb7c">THREAD_COUNT</a>, <a class="code" href="thread__sample_8cpp.html#abe0b7b2a0ec4b64b92585808a051e1fa">SLEEP_TIME</a>, <a class="code" href="thread__sample_8cpp.html#abe0b7b2a0ec4b64b92585808a051e1fa">SLEEP_TIME</a> * <a class="code" href="thread__sample_8cpp.html#ae4f10e3506669382a3a5b19ce7a5eb7c">THREAD_COUNT</a>);</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;        first_time = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;    }</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    <span class="comment">// locker can&#39;t lock until after the future has completed (since it has the lock), so these two calls will both block</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;    <span class="comment">//   until about the same time</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;    future.wait();</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;    </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;    <span class="comment">// this can block if the isolate is currently locked in another async</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    <span class="comment">//    context::operator() must acquire the isolate lock that the second</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;    <span class="comment">//    async on isoalte3 may still be using</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;    context([&amp;](<span class="keyword">auto</span> isolate){</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;        Global&lt;Value&gt; global_value = future.get();</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;        Local&lt;Value&gt; local_value = global_value.Get(context.<a class="code" href="classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a">get_isolate</a>());</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;        v8::String::Utf8Value utf8value(local_value);</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;        printf(<span class="stringliteral">&quot;run async result: &#39;%s&#39;\n&quot;</span>, *utf8value); </div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    });</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    </div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;}</div>
-<div class="ttc" id="thread__sample_8cpp_html_ae4f10e3506669382a3a5b19ce7a5eb7c"><div class="ttname"><a href="thread__sample_8cpp.html#ae4f10e3506669382a3a5b19ce7a5eb7c">THREAD_COUNT</a></div><div class="ttdeci">#define THREAD_COUNT</div><div class="ttdef"><b>Definition:</b> <a href="thread__sample_8cpp_source.html#l00005">thread_sample.cpp:5</a></div></div>
-<div class="ttc" id="thread__sample_8cpp_html_abe0b7b2a0ec4b64b92585808a051e1fa"><div class="ttname"><a href="thread__sample_8cpp.html#abe0b7b2a0ec4b64b92585808a051e1fa">SLEEP_TIME</a></div><div class="ttdeci">#define SLEEP_TIME</div><div class="ttdef"><b>Definition:</b> <a href="thread__sample_8cpp_source.html#l00006">thread_sample.cpp:6</a></div></div>
-<div class="ttc" id="classv8toolkit_1_1ContextHelper_html_a35c6828b05af1bae2bce54cf63bf2e4a"><div class="ttname"><a href="classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a">v8toolkit::ContextHelper::get_isolate</a></div><div class="ttdeci">v8::Isolate * get_isolate()</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00021">javascript.cpp:21</a></div></div>
-</div><!-- fragment -->
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_cgraph.png" border="0" usemap="#thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_cgraph" alt=""/></div>
-<map name="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_cgraph" id="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_cgraph">
+<div class="center"><img src="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_cgraph.png" border="0" usemap="#thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_cgraph" alt=""/></div>
+<map name="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_cgraph" id="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a" title="v8toolkit::ContextHelper\l::get_isolate" alt="" coords="135,5,284,41"/>
 </map>
 </div>
@@ -227,8 +206,8 @@ Here is the call graph for this function:</div>
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_icgraph.png" border="0" usemap="#thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_icgraph" alt=""/></div>
-<map name="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_icgraph" id="thread__sample_8cpp_a8ce8c5097f907afa81f62dd99a3c2918_icgraph">
+<div class="center"><img src="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_icgraph.png" border="0" usemap="#thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_icgraph" alt=""/></div>
+<map name="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_icgraph" id="thread__sample_8cpp_ace753f40bc19b51e34b68d143d204788_icgraph">
 <area shape="rect" id="node2" href="thread__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="135,5,183,29"/>
 </map>
 </div>
@@ -262,75 +241,17 @@ Here is the caller graph for this function:</div>
 
 <p>Definition at line <a class="el" href="thread__sample_8cpp_source.html#l00034">34</a> of file <a class="el" href="thread__sample_8cpp_source.html">thread_sample.cpp</a>.</p>
 
-<p>References <a class="el" href="javascript_8cpp_source.html#l00275">v8toolkit::PlatformHelper::create_isolate()</a>, <a class="el" href="javascript_8cpp_source.html#l00247">v8toolkit::PlatformHelper::init()</a>, and <a class="el" href="thread__sample_8cpp_source.html#l00009">print_future()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;{</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;        </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    PlatformHelper::init(argc, argv);</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    <span class="keyword">auto</span> isolate = PlatformHelper::create_isolate();</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    isolate-&gt;add_function(<span class="stringliteral">&quot;sleep&quot;</span>, [](<span class="keywordtype">int</span> i){sleep(i);});</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    isolate-&gt;add_print();</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    <span class="keyword">auto</span> c1 = isolate-&gt;create_context();</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">auto</span> isolate2 = PlatformHelper::create_isolate();</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    isolate2-&gt;add_function(<span class="stringliteral">&quot;sleep&quot;</span>, [](<span class="keywordtype">int</span> i){sleep(i);});</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    </div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    isolate2-&gt;add_print();</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    <span class="keyword">auto</span> c2 = isolate2-&gt;create_context();</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <span class="comment">//</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <span class="keyword">auto</span> isolate3 = PlatformHelper::create_isolate();</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    isolate3-&gt;add_function(<span class="stringliteral">&quot;sleep&quot;</span>, [](<span class="keywordtype">int</span> i){sleep(i);});</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    isolate3-&gt;add_print();</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    <span class="keyword">auto</span> c3 = isolate3-&gt;create_context();</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    </div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <span class="comment">// some code that takes a while to run</span></div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">char</span> * code = <span class="stringliteral">&quot;sleep(1); 3;&quot;</span>;</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;        </div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keyword">auto</span> f1 = c1-&gt;run_async(code);</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    <span class="keyword">auto</span> f2 = c2-&gt;run_async(code);</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    </div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="comment">// these two will run sequentially</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    <span class="keyword">auto</span> f3 = c3-&gt;run_async(code);</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keyword">auto</span> f4 = c3-&gt;run_async(code);</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    </div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    <a class="code" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a>(*c1, f1);</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <a class="code" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a>(*c2, f2);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="comment">// expect a delay here as print_future and the second async on c3</span></div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="comment">//   both want the isolate3 lock.</span></div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    <a class="code" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a>(*c3, f3);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <a class="code" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a>(*c3, f4);</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    printf(<span class="stringliteral">&quot;Done with futures, starting off detached thread now with 1 second sleep\n&quot;</span>);</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;    printf(<span class="stringliteral">&quot;C++ thinks I can run %d threads concurrently\n&quot;</span>, std::thread::hardware_concurrency());</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;    <span class="keyword">auto</span> thread = c3-&gt;run_thread(<span class="stringliteral">&quot;sleep(1);println(&#39;This is running in the background and needs to be joined&#39;);&quot;</span>);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    <span class="comment">// wait for the thread to complete</span></div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    thread.join();</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;    printf(<span class="stringliteral">&quot;Spawning detached thread - need to make sure to wait for it to finish before exint main\n&quot;</span>);</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    c3-&gt;run_detached(<span class="stringliteral">&quot;println(&#39;This is running in the background in a detached thread&#39;);&quot;</span>);</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    <span class="comment">// no way to know when the thread finishes, so just make sure to wait long enough</span></div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <span class="comment">// if main exits before the thread, the isolate and context used by the thread will be lost and the thread will crash</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    sleep(1);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;    printf(<span class="stringliteral">&quot;Done waiting for detached thread to complete\n&quot;</span>);</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;    </div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    printf(<span class="stringliteral">&quot;Exiting main\n&quot;</span>);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;}<div class="ttc" id="thread__sample_8cpp_html_a8ce8c5097f907afa81f62dd99a3c2918"><div class="ttname"><a href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918">print_future</a></div><div class="ttdeci">void print_future(ContextHelper &amp;context, std::future&lt; Global&lt; Value &gt;&gt; &amp;future)</div><div class="ttdef"><b>Definition:</b> <a href="thread__sample_8cpp_source.html#l00009">thread_sample.cpp:9</a></div></div>
-</div><!-- fragment -->
+<p>References <a class="el" href="javascript_8cpp_source.html#l00243">v8toolkit::PlatformHelper::create_isolate()</a>, <a class="el" href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef">v8toolkit::PlatformHelper::init()</a>, and <a class="el" href="thread__sample_8cpp_source.html#l00009">print_future()</a>.</p>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
 <div class="center"><img src="thread__sample_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph.png" border="0" usemap="#thread__sample_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph" alt=""/></div>
 <map name="thread__sample_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph" id="thread__sample_8cpp_a3c04138a5bfe5d72780bb7e82a18e627_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b" title="v8toolkit::PlatformHelper\l::create_isolate" alt="" coords="101,5,253,41"/>
-<area shape="rect" id="node3" href="classv8toolkit_1_1PlatformHelper.html#a4b1a1afa013e30baedc7c440f9a44c14" title="v8toolkit::PlatformHelper\l::init" alt="" coords="101,65,253,101"/>
-<area shape="rect" id="node5" href="thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918" title="print_future" alt="" coords="136,127,218,151"/>
-<area shape="rect" id="node4" href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c" title="v8toolkit::process\l_v8_flags" alt="" coords="318,64,432,100"/>
-<area shape="rect" id="node6" href="classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a" title="v8toolkit::ContextHelper\l::get_isolate" alt="" coords="301,124,449,160"/>
+<area shape="rect" id="node3" href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef" title="v8toolkit::PlatformHelper\l::init" alt="" coords="101,65,253,101"/>
+<area shape="rect" id="node4" href="thread__sample_8cpp.html#ace753f40bc19b51e34b68d143d204788" title="print_future" alt="" coords="136,126,218,150"/>
+<area shape="rect" id="node5" href="classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a" title="v8toolkit::ContextHelper\l::get_isolate" alt="" coords="301,120,449,156"/>
 </map>
 </div>
 </p>
@@ -340,7 +261,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 28 2016 16:29:00 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Feb 2 2016 01:56:17 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

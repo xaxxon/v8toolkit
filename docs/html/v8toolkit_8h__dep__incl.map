@@ -1,6 +1,11 @@
 <map id="v8toolkit.h" name="v8toolkit.h">
-<area shape="rect" id="node2" href="$v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="5,77,133,101"/>
-<area shape="rect" id="node5" href="$v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="157,77,245,101"/>
-<area shape="rect" id="node3" href="$javascript_8h.html" title="javascript.h" alt="" coords="28,149,110,173"/>
-<area shape="rect" id="node4" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="22,221,116,245"/>
+<area shape="rect" id="node2" href="$v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="309,77,436,101"/>
+<area shape="rect" id="node9" href="$toolbox__sample_8cpp.html" title="samples/toolbox_sample.cpp" alt="" coords="461,77,637,101"/>
+<area shape="rect" id="node10" href="$v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="661,77,749,101"/>
+<area shape="rect" id="node3" href="$javascript_8h.html" title="javascript.h" alt="" coords="266,149,348,173"/>
+<area shape="rect" id="node8" href="$sample_8cpp.html" title="samples/sample.cpp" alt="" coords="373,149,503,173"/>
+<area shape="rect" id="node4" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,227,100,251"/>
+<area shape="rect" id="node5" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,227,312,251"/>
+<area shape="rect" id="node6" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,221,457,257"/>
+<area shape="rect" id="node7" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,227,652,251"/>
 </map>

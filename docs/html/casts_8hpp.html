@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>v8helper: casts.hpp File Reference</title>
+<title>v8toolkit: casts.hpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">v8helper
+   <div id="projectname">v8toolkit
    &#160;<span id="projectnumber">0.0.1</span>
    </div>
    <div id="projectbrief">Utility library for embedding V8 Javascript engine in a c++ program</div>
@@ -97,23 +97,36 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;string&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;map&gt;</code><br />
+<code>#include &lt;unordered_map&gt;</code><br />
+<code>#include &lt;list&gt;</code><br />
+<code>#include &lt;deque&gt;</code><br />
 <code>#include &quot;include/libplatform/libplatform.h&quot;</code><br />
 <code>#include &quot;include/v8.h&quot;</code><br />
+<code>#include &lt;assert.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for casts.hpp:</div>
 <div class="dyncontent">
 <div class="center"><img src="casts_8hpp__incl.png" border="0" usemap="#casts_8hpp" alt=""/></div>
+<map name="casts_8hpp" id="casts_8hpp">
+</map>
 </div>
 </div><div class="textblock"><div class="dynheader">
 This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="casts_8hpp__dep__incl.png" border="0" usemap="#casts_8hppdep" alt=""/></div>
 <map name="casts_8hppdep" id="casts_8hppdep">
-<area shape="rect" id="node2" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="97,77,172,101"/>
-<area shape="rect" id="node3" href="v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="5,149,133,173"/>
-<area shape="rect" id="node6" href="v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="157,149,245,173"/>
-<area shape="rect" id="node4" href="javascript_8h.html" title="javascript.h" alt="" coords="28,221,110,245"/>
-<area shape="rect" id="node5" href="javascript_8cpp.html" title="javascript.cpp" alt="" coords="22,293,116,317"/>
+<area shape="rect" id="node2" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="511,77,586,101"/>
+<area shape="rect" id="node3" href="v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="309,149,436,173"/>
+<area shape="rect" id="node10" href="toolbox__sample_8cpp.html" title="samples/toolbox_sample.cpp" alt="" coords="461,149,637,173"/>
+<area shape="rect" id="node11" href="v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="661,149,749,173"/>
+<area shape="rect" id="node4" href="javascript_8h.html" title="javascript.h" alt="" coords="266,221,348,245"/>
+<area shape="rect" id="node9" href="sample_8cpp.html" title="samples/sample.cpp" alt="" coords="373,221,503,245"/>
+<area shape="rect" id="node5" href="javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,299,100,323"/>
+<area shape="rect" id="node6" href="exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,299,312,323"/>
+<area shape="rect" id="node7" href="javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,293,457,329"/>
+<area shape="rect" id="node8" href="thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,299,652,323"/>
 </map>
 </div>
 </div>
@@ -151,6 +164,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01char32__t_01_4.html">v8toolkit::CastToNative&lt; char32_t &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01std_1_1vector_3_01U_01_4_01_4.html">v8toolkit::CastToNative&lt; std::vector&lt; U &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01float_01_4.html">v8toolkit::CastToNative&lt; float &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01double_01_4.html">v8toolkit::CastToNative&lt; double &gt;</a></td></tr>
@@ -162,6 +177,8 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01const_01char_01_5_01_4.html">v8toolkit::CastToNative&lt; const char * &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01std_1_1string_01_4.html">v8toolkit::CastToNative&lt; std::string &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToNative_3_01const_01std_1_1string_01_4.html">v8toolkit::CastToNative&lt; const std::string &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS&lt; T &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -205,9 +222,21 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1string_01_4.html">v8toolkit::CastToJS&lt; std::string &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01const_01std_1_1string_01_4.html">v8toolkit::CastToJS&lt; const std::string &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01v8_1_1Local_3_01v8_1_1Object_01_4_01_4.html">v8toolkit::CastToJS&lt; v8::Local&lt; v8::Object &gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01v8_1_1Local_3_01v8_1_1Value_01_4_01_4.html">v8toolkit::CastToJS&lt; v8::Local&lt; v8::Value &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1vector_3_01U_01_4_01_4.html">v8toolkit::CastToJS&lt; std::vector&lt; U &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1list_3_01U_01_4_01_4.html">v8toolkit::CastToJS&lt; std::list&lt; U &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1map_3_01A_00_01B_01_4_01_4.html">v8toolkit::CastToJS&lt; std::map&lt; A, B &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1unordered__map_3_01A_00_01B_01_4_01_4.html">v8toolkit::CastToJS&lt; std::unordered_map&lt; A, B &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1deque_3_01T_01_4_01_4.html">v8toolkit::CastToJS&lt; std::deque&lt; T &gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="namespaces"></a>
@@ -218,7 +247,7 @@ Namespaces</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 30 2016 01:01:28 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Feb 2 2016 01:56:17 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

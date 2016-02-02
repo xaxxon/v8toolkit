@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['isolatehelper',['IsolateHelper',['../classv8toolkit_1_1ContextHelper.html#ad8f2fd5d83760fb94c11eb98dee0cf49',1,'v8toolkit::ContextHelper']]]
+  ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ScriptHelper.html#abaab236fa7108752ee8e8c8c4f64ed79',1,'v8toolkit::ScriptHelper']]]
 ];

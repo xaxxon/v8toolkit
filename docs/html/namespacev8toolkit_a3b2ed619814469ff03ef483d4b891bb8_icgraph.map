@@ -2,6 +2,11 @@
 <area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#aca18b2b39ccb379491c57c1b194b37af" title="v8toolkit::ContextHelper\l::add_function" alt="" coords="194,5,343,41"/>
 <area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html#a19ca3f4c7fa5ffc87c440c49472b023b" title="v8toolkit::IsolateHelper\l::add_function" alt="" coords="197,65,340,101"/>
 <area shape="rect" id="node4" href="$namespacev8toolkit.html#ac3b6638c2b56fde3864854d5c5bb3e70" title="v8toolkit::add_print" alt="" coords="207,126,329,150"/>
-<area shape="rect" id="node6" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="394,175,530,199"/>
-<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="391,115,534,151"/>
+<area shape="rect" id="node6" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="439,175,486,199"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="582,203,718,227"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="391,67,534,103"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685" title="v8toolkit::require" alt="" coords="407,127,517,151"/>
+<area shape="rect" id="node11" href="$namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328" title="v8toolkit::require\l_directory" alt="" coords="595,121,704,157"/>
+<area shape="rect" id="node9" href="$classv8toolkit_1_1IsolateHelper.html#a9662dbd81a651b90cf35dde1ff30506e" title="v8toolkit::IsolateHelper\l::add_require" alt="" coords="766,169,908,205"/>
+<area shape="rect" id="node10" href="$toolbox__sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="813,230,861,254"/>
 </map>

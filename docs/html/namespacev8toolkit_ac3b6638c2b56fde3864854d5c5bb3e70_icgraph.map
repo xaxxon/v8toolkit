@@ -1,4 +1,9 @@
 <map id="v8toolkit::add_print" name="v8toolkit::add_print">
 <area shape="rect" id="node2" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="175,5,318,41"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="179,66,315,90"/>
+<area shape="rect" id="node3" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="223,66,270,90"/>
+<area shape="rect" id="node4" href="$namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685" title="v8toolkit::require" alt="" coords="192,114,301,138"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="366,86,502,110"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328" title="v8toolkit::require\l_directory" alt="" coords="379,135,489,171"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1IsolateHelper.html#a9662dbd81a651b90cf35dde1ff30506e" title="v8toolkit::IsolateHelper\l::add_require" alt="" coords="550,52,693,88"/>
+<area shape="rect" id="node7" href="$toolbox__sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="598,113,645,137"/>
 </map>

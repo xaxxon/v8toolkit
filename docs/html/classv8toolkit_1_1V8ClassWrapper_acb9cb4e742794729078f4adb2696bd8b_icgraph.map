@@ -1,5 +1,6 @@
 <map id="v8toolkit::V8ClassWrapper::get_instance" name="v8toolkit::V8ClassWrapper::get_instance">
-<area shape="rect" id="node2" href="$structv8toolkit_1_1CastToJS.html#a6ceb7a7c257559eeb0048e5136835be0" title="v8toolkit::CastToJS\l::operator()" alt="" coords="226,5,349,41"/>
-<area shape="rect" id="node3" href="$structv8toolkit_1_1CastToJS_3_01T_01_5_01_4.html#a2b81207ac0de02a89f209db9d13a6bf1" title="v8toolkit::CastToJS\l\&lt; T * \&gt;::operator()" alt="" coords="226,65,349,101"/>
-<area shape="rect" id="node4" href="$classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6" title="v8toolkit::IsolateHelper\l::wrap_class" alt="" coords="216,125,359,161"/>
+<area shape="rect" id="node2" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="264,5,311,29"/>
+<area shape="rect" id="node3" href="$structv8toolkit_1_1CastToJS.html#a6ceb7a7c257559eeb0048e5136835be0" title="v8toolkit::CastToJS\l::operator()" alt="" coords="226,54,349,90"/>
+<area shape="rect" id="node4" href="$structv8toolkit_1_1CastToJS_3_01T_01_5_01_4.html#a2b81207ac0de02a89f209db9d13a6bf1" title="v8toolkit::CastToJS\l\&lt; T * \&gt;::operator()" alt="" coords="226,114,349,150"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6" title="v8toolkit::IsolateHelper\l::wrap_class" alt="" coords="216,174,359,210"/>
 </map>

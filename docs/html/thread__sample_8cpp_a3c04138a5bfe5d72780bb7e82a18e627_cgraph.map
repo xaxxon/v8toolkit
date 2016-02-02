@@ -1,7 +1,6 @@
 <map id="main" name="main">
 <area shape="rect" id="node2" href="$classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b" title="v8toolkit::PlatformHelper\l::create_isolate" alt="" coords="101,5,253,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1PlatformHelper.html#a4b1a1afa013e30baedc7c440f9a44c14" title="v8toolkit::PlatformHelper\l::init" alt="" coords="101,65,253,101"/>
-<area shape="rect" id="node5" href="$thread__sample_8cpp.html#a8ce8c5097f907afa81f62dd99a3c2918" title="print_future" alt="" coords="136,127,218,151"/>
-<area shape="rect" id="node4" href="$namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c" title="v8toolkit::process\l_v8_flags" alt="" coords="318,64,432,100"/>
-<area shape="rect" id="node6" href="$classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a" title="v8toolkit::ContextHelper\l::get_isolate" alt="" coords="301,124,449,160"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef" title="v8toolkit::PlatformHelper\l::init" alt="" coords="101,65,253,101"/>
+<area shape="rect" id="node4" href="$thread__sample_8cpp.html#ace753f40bc19b51e34b68d143d204788" title="print_future" alt="" coords="136,126,218,150"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1ContextHelper.html#a35c6828b05af1bae2bce54cf63bf2e4a" title="v8toolkit::ContextHelper\l::get_isolate" alt="" coords="301,120,449,156"/>
 </map>

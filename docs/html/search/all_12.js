@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['_7econtexthelper',['~ContextHelper',['../classv8toolkit_1_1ContextHelper.html#a04c67a9102640dde74373df844518257',1,'v8toolkit::ContextHelper']]],
-  ['_7eisolatehelper',['~IsolateHelper',['../classv8toolkit_1_1IsolateHelper.html#a6516b0ec415229cbe32258225d0f0b62',1,'v8toolkit::IsolateHelper']]],
-  ['_7ev8classwrapper',['~V8ClassWrapper',['../classv8toolkit_1_1V8ClassWrapper.html#a97a4d5059931bb433163382c3482816e',1,'v8toolkit::V8ClassWrapper']]]
+  ['use_5fboost',['USE_BOOST',['../sample_8cpp.html#a83cb063c9768e282523963f231eb1ab4',1,'USE_BOOST():&#160;sample.cpp'],['../toolbox__sample_8cpp.html#a83cb063c9768e282523963f231eb1ab4',1,'USE_BOOST():&#160;toolbox_sample.cpp'],['../v8toolkit_8h.html#a83cb063c9768e282523963f231eb1ab4',1,'USE_BOOST():&#160;v8toolkit.h']]]
 ];

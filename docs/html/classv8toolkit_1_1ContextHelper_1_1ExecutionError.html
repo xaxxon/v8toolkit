@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>v8helper: v8toolkit::ContextHelper::ExecutionError Class Reference</title>
+<title>v8toolkit: v8toolkit::ContextHelper::ExecutionError Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">v8helper
+   <div id="projectname">v8toolkit
    &#160;<span id="projectnumber">0.0.1</span>
    </div>
    <div id="projectbrief">Utility library for embedding V8 Javascript engine in a c++ program</div>
@@ -123,17 +123,17 @@ Collaboration diagram for v8toolkit::ContextHelper::ExecutionError:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a6c38c14732a4d8ddcf665df822d8b9b5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#a6c38c14732a4d8ddcf665df822d8b9b5">ExecutionError</a> (std::string what_string)</td></tr>
-<tr class="separator:a6c38c14732a4d8ddcf665df822d8b9b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a99b3d863881c877b58eeac84e4df5509"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#a99b3d863881c877b58eeac84e4df5509">what</a> () const  noexcept</td></tr>
-<tr class="separator:a99b3d863881c877b58eeac84e4df5509"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38f4dc2d7a6ee7b22a52926a1bd63095"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#a38f4dc2d7a6ee7b22a52926a1bd63095">ExecutionError</a> (v8::Global&lt; v8::Value &gt; &amp;&amp;exception, std::string what_string)</td></tr>
+<tr class="separator:a38f4dc2d7a6ee7b22a52926a1bd63095"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5334f833b8b90a981b2cc52d0191e11"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#ae5334f833b8b90a981b2cc52d0191e11">what</a> () const  noexcept override</td></tr>
+<tr class="separator:ae5334f833b8b90a981b2cc52d0191e11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Exception class returned to caller when a javascript execution error is encountered The <a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#a99b3d863881c877b58eeac84e4df5509">what()</a> method can be used to get the error string associated with the error </p>
+<div class="textblock"><p>Exception class returned to caller when a javascript execution error is encountered The <a class="el" href="classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#ae5334f833b8b90a981b2cc52d0191e11">what()</a> method can be used to get the error string associated with the error </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00041">41</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00052">52</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" id="a6c38c14732a4d8ddcf665df822d8b9b5"></a>
+<a class="anchor" id="a38f4dc2d7a6ee7b22a52926a1bd63095"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -143,9 +143,19 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">v8toolkit::ContextHelper::ExecutionError::ExecutionError </td>
           <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>what_string</em></td><td>)</td>
+          <td class="paramtype">v8::Global&lt; v8::Value &gt; &amp;&amp;&#160;</td>
+          <td class="paramname"><em>exception</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>what_string</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -155,12 +165,12 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00044">44</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00060">60</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="a99b3d863881c877b58eeac84e4df5509"></a>
+<a class="anchor" id="ae5334f833b8b90a981b2cc52d0191e11"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -176,12 +186,25 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00045">45</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00061">61</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+
+<p>Referenced by <a class="el" href="javascript__sample_8cpp_source.html#l00018">run_tests()</a>.</p>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1ContextHelper_1_1ExecutionError_ae5334f833b8b90a981b2cc52d0191e11_icgraph.png" border="0" usemap="#classv8toolkit_1_1ContextHelper_1_1ExecutionError_ae5334f833b8b90a981b2cc52d0191e11_icgraph" alt=""/></div>
+<map name="classv8toolkit_1_1ContextHelper_1_1ExecutionError_ae5334f833b8b90a981b2cc52d0191e11_icgraph" id="classv8toolkit_1_1ContextHelper_1_1ExecutionError_ae5334f833b8b90a981b2cc52d0191e11_icgraph">
+<area shape="rect" id="node2" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="202,11,273,35"/>
+<area shape="rect" id="node3" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="321,11,368,35"/>
+</map>
+</div>
+</p>
 
 </div>
 </div>
@@ -191,7 +214,7 @@ Public Member Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 30 2016 01:01:28 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Feb 2 2016 01:56:18 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

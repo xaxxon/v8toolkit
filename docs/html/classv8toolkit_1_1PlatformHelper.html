@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>v8helper: v8toolkit::PlatformHelper Class Reference</title>
+<title>v8toolkit: v8toolkit::PlatformHelper Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">v8helper
+   <div id="projectname">v8toolkit
    &#160;<span id="projectnumber">0.0.1</span>
    </div>
    <div id="projectbrief">Utility library for embedding V8 Javascript engine in a c++ program</div>
@@ -119,7 +119,7 @@ Static Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A singleton responsible for initializing the v8 platform and creating isolate helpers. </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00455">455</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00545">545</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="a6ef35cacbad78bd2076bba5b07a9b6ef"></a>
 <div class="memitem">
@@ -143,6 +143,18 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <p>Initializes the v8 platform with default values and tells v8 to look for its .bin files in the given directory (often argv[0]) </p>
+
+<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00008">main()</a>.</p>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1PlatformHelper_a6ef35cacbad78bd2076bba5b07a9b6ef_icgraph.png" border="0" usemap="#classv8toolkit_1_1PlatformHelper_a6ef35cacbad78bd2076bba5b07a9b6ef_icgraph" alt=""/></div>
+<map name="classv8toolkit_1_1PlatformHelper_a6ef35cacbad78bd2076bba5b07a9b6ef_icgraph" id="classv8toolkit_1_1PlatformHelper_a6ef35cacbad78bd2076bba5b07a9b6ef_icgraph">
+<area shape="rect" id="node2" href="exception__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="205,11,253,35"/>
+</map>
+</div>
+</p>
 
 </div>
 </div>
@@ -179,7 +191,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Parses argv for v8-specific options, applies them, and removes them from argv and adjusts argc accordingly. Looks in argv[0] for the v8 .bin files </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00250">250</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00210">210</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 <p>References <a class="el" href="v8toolkit_8cpp_source.html#l00024">v8toolkit::process_v8_flags()</a>.</p>
 
@@ -217,7 +229,7 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Shuts down V8. Any subsequent V8 usage is probably undefined, so make sure everything is done before you call this. </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00268">268</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00233">233</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -243,7 +255,22 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Creates a new <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> wrapping a new v8::Isolate instance. Each isolate is completely separate from all the others and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time) An <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will remain as long as the caller has a shared_ptr to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> or any ContextHelpers created from the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> still exist. Once neither of those things is the case, the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will be automatically destroyed. If any threads are still running when this happens, the results are undefined. TODO: Can active threads maintain links to their ContextHelpers to stop this from happening? </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00278">278</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00243">243</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+
+<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00008">main()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00018">run_tests()</a>, and <a class="el" href="javascript__sample_8cpp_source.html#l00086">test_lifetimes()</a>.</p>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph.png" border="0" usemap="#classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph" alt=""/></div>
+<map name="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph" id="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph">
+<area shape="rect" id="node2" href="exception__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="227,5,275,29"/>
+<area shape="rect" id="node3" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="216,53,286,77"/>
+<area shape="rect" id="node5" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="205,101,297,125"/>
+<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="345,77,392,101"/>
+</map>
+</div>
+</p>
 
 </div>
 </div>
@@ -254,7 +281,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jan 30 2016 01:01:28 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Feb 2 2016 01:56:18 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

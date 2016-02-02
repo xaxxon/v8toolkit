@@ -1,6 +1,6 @@
-<map id="javascript_sample.cpp" name="javascript_sample.cpp">
-<area shape="rect" id="node3" href="$javascript_8h.html" title="javascript.h" alt="" coords="241,77,323,101"/>
-<area shape="rect" id="node7" href="$v8__class__wrapper_8hpp.html" title="v8_class_wrapper.hpp" alt="" coords="211,149,352,173"/>
-<area shape="rect" id="node16" href="$v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="244,221,319,245"/>
-<area shape="rect" id="node20" href="$casts_8hpp.html" title="casts.hpp" alt="" coords="535,293,607,317"/>
+<map id="samples/javascript_sample.cpp" name="samples/javascript_sample.cpp">
+<area shape="rect" id="node3" href="$javascript_8h.html" title="javascript.h" alt="" coords="465,89,547,113"/>
+<area shape="rect" id="node7" href="$v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="326,161,453,185"/>
+<area shape="rect" id="node16" href="$v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="475,233,550,257"/>
+<area shape="rect" id="node20" href="$casts_8hpp.html" title="casts.hpp" alt="" coords="635,305,707,329"/>
 </map>

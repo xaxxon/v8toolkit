@@ -1,3 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classv8toolkit_1_1V8ClassWrapper.html" title="v8toolkit::V8ClassWrapper\&lt; T \&gt;" alt="" coords="5,5,195,29"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html" title="v8toolkit::ContextHelper" alt="" coords="210,5,359,29"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html" title="v8toolkit::IsolateHelper" alt="" coords="213,53,356,77"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1ScriptHelper.html" title="v8toolkit::ScriptHelper" alt="" coords="215,101,353,125"/>
 </map>

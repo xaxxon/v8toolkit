@@ -1,4 +1,8 @@
 <map id="v8toolkit::ContextHelper::run" name="v8toolkit::ContextHelper::run">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851" title="v8toolkit::ContextHelper::run" alt="" coords="226,5,399,29"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="447,5,582,29"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851" title="v8toolkit::ContextHelper::run" alt="" coords="226,66,399,90"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d" title="v8toolkit::print_v8\l_value_details" alt="" coords="457,5,572,41"/>
+<area shape="rect" id="node4" href="$namespacev8toolkit.html#a47464d8e4fef77f56fedfac883b5b720" title="v8toolkit::printobj" alt="" coords="458,66,570,90"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="447,114,582,138"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90" title="v8toolkit::for_each\l_own_property" alt="" coords="630,60,748,96"/>
+<area shape="rect" id="node6" href="$namespacev8toolkit.html#aa0676b882716072bb5da15374cc04924" title="v8toolkit::for_each\l_value" alt="" coords="796,60,915,96"/>
 </map>

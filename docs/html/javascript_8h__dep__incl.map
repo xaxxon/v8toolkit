@@ -1,3 +1,6 @@
 <map id="javascript.h" name="javascript.h">
-<area shape="rect" id="node2" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,77,100,101"/>
+<area shape="rect" id="node2" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,83,100,107"/>
+<area shape="rect" id="node3" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,83,312,107"/>
+<area shape="rect" id="node4" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,77,457,113"/>
+<area shape="rect" id="node5" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,83,652,107"/>
 </map>

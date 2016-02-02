@@ -1,6 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" title="STL class. " alt="" coords="5,71,101,95"/>
-<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper_1_1CompilationError.html" title="v8toolkit::ContextHelper\l::CompilationError" alt="" coords="164,5,313,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1ContextHelper_1_1ExecutionError.html" title="v8toolkit::ContextHelper\l::ExecutionError" alt="" coords="164,65,313,101"/>
-<area shape="rect" id="node4" href="$classv8toolkit_1_1InvalidCallException.html" title="v8toolkit::InvalidCallException" alt="" coords="149,126,329,150"/>
+<area shape="rect" id="node1" href="$structv8toolkit_1_1CastToNative_3_01short_01_4.html" title="v8toolkit::CastToNative\l\&lt; short \&gt;" alt="" coords="5,5,149,41"/>
 </map>
