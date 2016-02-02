@@ -133,7 +133,7 @@ struct CastToJS;
 
 // integers
 template<>
-struct CastToJS<char> {
+struct CastToJS<char> { 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Integer::New(isolate, value);}
 };
 template<>
@@ -235,13 +235,19 @@ struct CastToJS<const std::string> {
 
 
 
-
+/**
+* Special passthrough type for objects that want to take javascript object objects directly
+*/
 template<>
 struct CastToJS<v8::Local<v8::Object>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Object> object){
 		return v8::Local<v8::Value>::New(isolate, object);
 	}
 };
+
+/**
+* Special passthrough type for objects that want to take javascript value objects directly
+*/
 template<>
 struct CastToJS<v8::Local<v8::Value>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
@@ -267,6 +273,9 @@ struct CastToJS<std::vector<U>> {
     }
 };
 
+/**
+* supports lists containing any type also supported by CastToJS to javascript arrays
+*/
 template<class U>
 struct CastToJS<std::list<U>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U> list){
@@ -283,7 +292,9 @@ struct CastToJS<std::list<U>> {
 };
 
 
-
+/**
+* supports maps containing any type also supported by CastToJS to javascript arrays
+*/
 template<class A, class B>
 struct CastToJS<std::map<A, B>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<A, B> map){
@@ -298,6 +309,9 @@ struct CastToJS<std::map<A, B>> {
     }
 };
 
+/**
+* supports unordered_maps containing any type also supported by CastToJS to javascript arrays
+*/
 template<class A, class B>
 struct CastToJS<std::unordered_map<A, B>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B> map){
@@ -312,6 +326,10 @@ struct CastToJS<std::unordered_map<A, B>> {
     }
 };
 
+
+/**
+* supports deques containing any type also supported by CastToJS to javascript arrays
+*/
 template<class T>
 struct CastToJS<std::deque<T>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T> deque){
