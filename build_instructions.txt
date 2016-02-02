@@ -52,3 +52,9 @@ export CC_host="`which clang`"
 export CPP_host="`which clang` -E"
 export LINK_host="`which clang++`"
 export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
+
+
+Installing boost on os x, make sure to build for libc++ as well:
+
+brew install boost --c++11
+

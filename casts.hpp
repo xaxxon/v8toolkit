@@ -1,6 +1,11 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <list>
+#include <deque>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -71,7 +76,14 @@ struct CastToNative<char16_t> {
 };
 template<>
 struct CastToNative<char32_t> {
-	char16_t operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char32_t operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+};
+
+#include <assert.h>
+
+template<class U>
+struct CastToNative<std::vector<U>> {
+    std::vector<U> operator()(v8::Local<v8::Value> value){assert(false);}
 };
 
 
@@ -104,6 +116,12 @@ struct CastToNative<std::string> {
 	std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<char *>()(value));}
 };
 
+template<>
+struct CastToNative<const std::string> {
+	const std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<char *>()(value));}
+};
+
+
 
 /**
 * Casts from a native type to a boxed Javascript type
@@ -124,7 +142,7 @@ struct CastToJS<unsigned char> {
 };
 template<>
 struct CastToJS<wchar_t> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<char16_t> {
@@ -147,29 +165,29 @@ struct CastToJS<unsigned short> {
 
 template<>
 struct CastToJS<int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned int value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned int value){return v8::Number::New(isolate, value);}
 };
 
 template<>
 struct CastToJS<long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Number::New(isolate, value);}
 };
 
 template<>
 struct CastToJS<long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
 };
 
 
@@ -202,10 +220,20 @@ template<>
 struct CastToJS<const char *> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const char * value){return v8::String::NewFromUtf8(isolate, value);}
 };
+// template<>
+// struct CastToJS<const std::basic_string<char>> {
+//     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::basic_string<char> & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
+// };
 template<>
 struct CastToJS<std::string> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
 };
+template<>
+struct CastToJS<const std::string> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
+};
+
+
 
 
 template<>
@@ -222,6 +250,83 @@ struct CastToJS<v8::Local<v8::Value>> {
 };
 
 
+/**
+* supports vectors containing any type also supported by CastToJS to javascript arrays
+*/
+template<class U>
+struct CastToJS<std::vector<U>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U> vector){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        auto size = vector.size();
+        for(int i = 0; i < size; i++) {
+            (void)array->Set(context, i, CastToJS<U>()(isolate, vector.at(i)));
+        }
+        return array;
+    }
+};
+
+template<class U>
+struct CastToJS<std::list<U>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U> list){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        int i = 0;
+        for (auto element : list) {
+            (void)array->Set(context, i, CastToJS<U>()(isolate, element));
+            i++;
+        }
+        return array;
+    }
+};
 
 
-}
+
+template<class A, class B>
+struct CastToJS<std::map<A, B>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<A, B> map){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext(); 
+        auto object = v8::Object::New(isolate);
+        for(auto pair : map){
+            printf("Adding element from std::map to v8::Object\n");
+            (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
+        }
+        return object;
+    }
+};
+
+template<class A, class B>
+struct CastToJS<std::unordered_map<A, B>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B> map){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext(); 
+        auto object = v8::Object::New(isolate);
+        for(auto pair : map){
+            printf("Adding element from std::map to v8::Object\n");
+            (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
+        }
+        return object;
+    }
+};
+
+template<class T>
+struct CastToJS<std::deque<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T> deque){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        auto size = deque.size();
+        for(int i = 0; i < size; i++) {
+            (void)array->Set(context, i, CastToJS<T>()(isolate, deque.at(i)));
+        }
+        return array;
+    }    
+};
+
+
+
+
+} // end namespace v8toolkit

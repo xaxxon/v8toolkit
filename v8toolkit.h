@@ -8,6 +8,9 @@
 #include "include/v8.h"
 #include "casts.hpp"
 
+
+#include <dirent.h>
+
 #define USE_BOOST
 
 namespace v8toolkit {
@@ -21,7 +24,7 @@ private:
     
 public:
   InvalidCallException(std::string message) : message(message) {}
-  inline const char * what(){return message.c_str();}
+  virtual const char * what() const noexcept override {return message.c_str();}
   
 };
 
@@ -558,8 +561,8 @@ void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_
 /**
 * prints out information about the guts of an object
 */
-void printobj(const v8::FunctionCallbackInfo<v8::Value>& args);
-
+void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args);
+void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 /**
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
@@ -647,12 +650,12 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
 */
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
-  inline virtual void* Allocate(size_t length) {
+  inline virtual void* Allocate(size_t length) override {
     void* data = AllocateUninitialized(length);
     return data == NULL ? data : memset(data, 0, length);
   }
-  inline virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-  inline virtual void Free(void* data, size_t) { free(data); }
+  inline virtual void* AllocateUninitialized(size_t length) override { return malloc(length); }
+  inline virtual void Free(void* data, size_t) override { free(data); }
 };
 
 
@@ -671,6 +674,49 @@ std::string get_file_contents(const char *filename);
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
 
 
+/**
+* Attempts to load the specified module name from the given paths (in order).
+*   Returns the exported object from the module.
+* Same as calling require() from javascript - this is the code that is actually run for that
+*/ 
+v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, 
+                             std::string filename, 
+                             const std::vector<std::string> & paths);
+
+/**
+* prints out a ton of info about a v8::Value
+*/
+void print_v8_value_details(v8::Local<v8::Value> local_value);
+
+// void require_directory(std::string directory_name)
+// {
+//
+// // #include <boost/filesystem.hpp>
+//     //
+//     // boost::filesystem::path p = boost::filesystem::current_path();
+//     // boost::filesystem::directory_iterator it{p};
+//     // while (it != boost::filesystem::directory_iterator{})
+//     //   std::cout << *it++ << '\n';
+//     //
+//
+//     // This probably works on more than just APPLE
+// #ifdef __APPLE__
+//     DIR * dir = opendir(".");
+//     if (dir == NULL)
+//             return;
+//     struct dirent * dp;
+//     while ((dp = readdir(dir)) != NULL) {
+//             // if (dp->d_namlen == len && strcmp(dp->d_name, name) == 0) {
+//             //         (void)closedir(dir);
+//             //         return (FOUND);
+//             // }
+//     }
+//     (void)closedir(dir);
+//     return;
+//
+// #endif // __APPLE__
+//
+// }
 
 
 } // end v8toolkit namespace

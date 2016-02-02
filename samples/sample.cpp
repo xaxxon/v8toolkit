@@ -44,7 +44,6 @@ public:
         return instance_count;
     }
     static int instance_count;
-    
 };
 
 int Point::instance_count = 0;
@@ -82,7 +81,9 @@ int main(int argc, char* argv[])
         
     // Initialize V8.
     v8::V8::InitializeICU();
+#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
+#endif
     v8::Platform* platform = v8::platform::CreateDefaultPlatform();
     v8::V8::InitializePlatform(platform);
     v8::V8::Initialize();
@@ -142,11 +143,8 @@ int main(int argc, char* argv[])
         
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
+            
 
-
-        
-
-            // Create a string containing the JavaScript source code.
             auto js_code = get_file_contents("code.js");
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),
@@ -158,7 +156,31 @@ int main(int argc, char* argv[])
             printf("About to start running script\n");
             auto result = script->Run(context);
             print_maybe_value(result);
-        
+
+            std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
+            add_variable(context, context->Global(), "v", CastToJS<decltype(v)>()(isolate, v));
+            std::list<float> l{1.5, 2.5, 3.5, 4.5};
+            add_variable(context, context->Global(), "l", CastToJS<decltype(l)>()(isolate, l));
+            std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
+            add_variable(context, context->Global(), "m", CastToJS<decltype(m)>()(isolate, m));
+            std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
+            add_variable(context, context->Global(), "m2", CastToJS<decltype(m2)>()(isolate, m2));
+            std::deque<long> d{6000000000, 7000000000, 8000000000};
+            add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
+            
+            
+            v8::Local<v8::String> source2 =
+                v8::String::NewFromUtf8(isolate, "v.map(function(e){println(e);});\
+                                                  l.map(function(e){println(e);}); \
+                                                  println('These may not be in order');\
+                                                  Object.keys(m).map(function(k){println(k,m[k]);});\
+                                                  Object.keys(m2).map(function(k){println(k,m[k]);});\
+                                                  d.map(function(e){println(e);}); \
+            ",
+                                    v8::NewStringType::kNormal).ToLocalChecked();
+
+            v8::Local<v8::Script> script2 = v8::Script::Compile(context, source2).ToLocalChecked();
+            (void)script2->Run(context);
         });
 
     }

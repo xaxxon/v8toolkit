@@ -6,7 +6,7 @@ using namespace v8;
 #define SLEEP_TIME 1
 
 
-void print_future(ContextHelper & context, std::future<Global<Value>> & future)
+void print_future(ContextHelper & context, 	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>>  & future)
 {
     static bool first_time = true;
     if(first_time) {
@@ -22,7 +22,7 @@ void print_future(ContextHelper & context, std::future<Global<Value>> & future)
     //    context::operator() must acquire the isolate lock that the second
     //    async on isoalte3 may still be using
     context([&](auto isolate){
-        Global<Value> global_value = future.get();
+        Global<Value> global_value = future.get().first;
         Local<Value> local_value = global_value.Get(context.get_isolate());
         v8::String::Utf8Value utf8value(local_value);
         printf("run async result: '%s'\n", *utf8value); 
@@ -59,9 +59,9 @@ int main(int argc, char ** argv)
     auto f2 = c2->run_async(code);
     
     // these two will run sequentially
-    auto f3 = c3->run_async(code);
+    auto f3 = c3->run_async(code); 
     auto f4 = c3->run_async(code);
-    
+     
     
     
     print_future(*c1, f1);

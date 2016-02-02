@@ -1,27 +1,26 @@
 #include <fstream>
 #include <memory>
     
-
 #include "javascript.h"
 
+
 namespace v8toolkit {
-
-
 
 ContextHelper::ContextHelper(std::shared_ptr<IsolateHelper> isolate_helper, v8::Local<v8::Context> context) : 
     isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
 {}
 
 
-
 v8::Local<v8::Context> ContextHelper::get_context(){
     return context.Get(isolate);
 }
+
 
 v8::Isolate * ContextHelper::get_isolate() 
 {
     return this->isolate;
 }
+
 
 std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 {
@@ -29,19 +28,20 @@ std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
 }
 
 
-
-ContextHelper::~ContextHelper() {
-    // fprintf(stderr, "destroying context helper\n");
-    this->context.Reset();
+ContextHelper::~ContextHelper() {    
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+    printf("Deleting ContextHelper\n");  
+#endif
 }
 
 
-v8::Global<v8::Script> ContextHelper::compile_from_file(const std::string filename)
+std::shared_ptr<ScriptHelper> ContextHelper::compile_from_file(const std::string filename)
 {
     return this->compile(get_file_contents(filename.c_str()));
 }
 
-v8::Global<v8::Script> ContextHelper::compile(const std::string javascript_source)
+
+std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascript_source)
 {
     return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
     
@@ -58,11 +58,10 @@ v8::Global<v8::Script> ContextHelper::compile(const std::string javascript_sourc
             printf("Compile failed '%s', throwing exception\n", *exception);
             throw CompilationError(*exception);
         }
-
-        return v8::Global<v8::Script>(isolate, compiled_script.ToLocalChecked());
+        return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
-
 }
+
 
 v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 {
@@ -70,16 +69,23 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
     
         // This catches any errors thrown during script compilation
         v8::TryCatch try_catch(isolate);
-    
         // auto local_script = this->get_local(script);
         auto local_script = v8::Local<v8::Script>::New(isolate, script);
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
             // printf("Execution failed, throwing exception\n");
-            v8::String::Utf8Value exception(try_catch.Exception());
-            throw ExecutionError(*exception);
+            auto e = try_catch.Exception();
+            printf("Details on value thrown from javascript execution:\n");
+            print_v8_value_details(e);
+            if(e->IsObject()){
+                printobj(*this, e->ToObject());
+            }
+            printf("\n");
+            v8::String::Utf8Value exception(e);
+                                std::cout<<std::endl<<*exception<<std::endl;;
+            throw ExecutionError(v8::Global<v8::Value>(isolate, e), *exception);
+                                std::cout<<"#";
         }
-
         v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
         // printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
         // printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
@@ -94,107 +100,47 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
 
 v8::Global<v8::Value> ContextHelper::run(const std::string code)
 {
-    auto compiled_code = compile(code);
-    return run(compiled_code);
+    return (*this)([this, code]{
+        auto compiled_code = compile(code);
+        return compiled_code->run();
+    });
 }
 
 
 
 v8::Global<v8::Value> ContextHelper::run(const v8::Local<v8::Value> value)
 {
-    return run(*v8::String::Utf8Value(value));
-}
-
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Global<v8::Script> & script, std::launch launch_policy)
-{
-    return std::async(launch_policy, [this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
+    return (*this)([this, value]{
+        return run(*v8::String::Utf8Value(value));
     });
 }
 
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const std::string code, std::launch launch_policy)
+
+std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>> 
+ ContextHelper::run_async(const std::string code, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
     //   right after creating the async
-    return std::async(launch_policy, [this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
+    return (*this)([this, code, launch_policy]{
+        return this->compile(code)->run_async(launch_policy);
     });
 }
 
-
-
-
-std::future<v8::Global<v8::Value>> ContextHelper::run_async(const v8::Local<v8::Value> script, std::launch launch_policy)
-{
-    return std::async(launch_policy, [this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    });
-}
-
-
-void ContextHelper::run_detached(const v8::Global<v8::Script> & script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    }).detach();
-}
 
 void ContextHelper::run_detached(const std::string code)
 {
-    
-    return std::thread([this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
-    }).detach();
-}
-
-void ContextHelper::run_detached(const v8::Local<v8::Value> script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    }).detach();
-}
-
-std::thread ContextHelper::run_thread(const v8::Global<v8::Script> & script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
+    (*this)([this, code]{
+        this->compile(code)->run_detached();
     });
 }
+
 
 std::thread ContextHelper::run_thread(const std::string code)
 {
-    
-    return std::thread([this, code](){
-        return (*this)([this, &code](){
-            return this->run(code);
-        });
+    return (*this)([this, code]{
+        return this->compile(code)->run_thread();
     });
 }
-
-std::thread ContextHelper::run_thread(const v8::Local<v8::Value> script)
-{
-    return std::thread([this, &script](){
-        return (*this)([this, &script](){
-            return this->run(script);
-        });
-    });
-}
-
-
 
 
 IsolateHelper::IsolateHelper(v8::Isolate * isolate) : isolate(isolate)
@@ -216,13 +162,20 @@ void IsolateHelper::add_print()
     });
 }
 
+void IsolateHelper::add_require()
+{
+    (*this)([this]{
+       v8toolkit::add_require(isolate, get_object_template(), std::vector<std::string>{"./"});
+    });
+}
+
 v8::Isolate * IsolateHelper::get_isolate() 
 {
     return this->isolate;
 }
 
 
-std::unique_ptr<ContextHelper> IsolateHelper::create_context()
+std::shared_ptr<ContextHelper> IsolateHelper::create_context()
 {
     return operator()([this](){
         auto ot = this->get_object_template();
@@ -241,9 +194,16 @@ v8::Local<v8::ObjectTemplate> IsolateHelper::get_object_template()
 
 IsolateHelper::~IsolateHelper()
 {
-    // fprintf(stderr, "Deleting isolate helper %p for isolate %p\n", this, this->isolate);
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+    printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
+#endif
+
+    // must explicitly Reset this because the isolate will be
+    //   explicitly disposed of before the Global is destroyed
     this->global_object_template.Reset();
+    
     this->isolate->Dispose();
+    printf("End of isolate helper destructor\n");
 }
 
 
@@ -256,7 +216,12 @@ void PlatformHelper::init(int argc, char ** argv)
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
+    // TODO: testing how this interacts with lib_nosnapshot.o
+    
+    // if being built for snapshot use, must call this, otherwise must not call this
+#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
+#endif
     
     PlatformHelper::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());

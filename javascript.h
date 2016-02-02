@@ -9,6 +9,16 @@
 namespace v8toolkit {
 	
 class IsolateHelper;
+class ScriptHelper;
+
+
+/*
+* TODO: Make add_require to context (in addition to isolate) so a particular context
+*         ban be disallowed to load external modules but a privileged context on the
+*         samea isolate can load them.
+*
+*
+*/
 
 /**
 * Wrapper around a v8::Cnotext object with a link back to its associated isolate
@@ -16,7 +26,8 @@ class IsolateHelper;
 *   is wanted.
 * Can only be created via IsolateHelper::create_context()
 */
-class ContextHelper {
+class ContextHelper : public std::enable_shared_from_this<ContextHelper>
+{
     friend class IsolateHelper;
 public:
     
@@ -29,7 +40,7 @@ public:
 		std::string what_string;
 	public:
 		CompilationError(std::string what_string) : what_string(what_string) {}
-		const char* what() const noexcept {return what_string.c_str();}
+		const char* what() const noexcept override {return what_string.c_str();}
 	};
     
     /**
@@ -39,13 +50,18 @@ public:
     *   error
     */
 	class ExecutionError : std::exception {
+        
+        /// the actual object thrown from javascript
+        v8::Global<v8::Value> exception;
+        
 		std::string what_string;
+        
 	public:
-		ExecutionError(std::string what_string) : what_string(what_string) {}
-		const char* what() const noexcept {return what_string.c_str();}
+		ExecutionError(v8::Global<v8::Value> && exception, std::string what_string) : exception(std::move(exception)), what_string(what_string) {}
+		const char* what() const noexcept override {return what_string.c_str();}
 	};
-	
-	
+
+
 private:
 	ContextHelper() = delete;
 	ContextHelper(const ContextHelper &) = delete;
@@ -53,6 +69,7 @@ private:
 	ContextHelper & operator=(const ContextHelper &) = delete;
 	ContextHelper & operator=(ContextHelper &&) = default;
 	
+    // isolate_helper MUST be first so it's the last element cleaned up
 	/// The IsolateHelper that created this ContextHelper will be kept around as long as a ContextHelper it created is still around
 	std::shared_ptr<IsolateHelper> isolate_helper;
 	
@@ -67,8 +84,7 @@ private:
     
 	
 public:
-    
-	
+
 	virtual ~ContextHelper();
 	
     /**
@@ -105,20 +121,20 @@ public:
     * Compiles the contents of the passed in string as javascripts
     * Throws v8toolkit::CompilationError on compilation error
     */
-	v8::Global<v8::Script> compile(const std::string);
+	std::shared_ptr<ScriptHelper> compile(const std::string);
     
 	/**
     * Compiles the contents of the passed in v8::String as javascript
     * Throws v8toolkit::CompilationError on compilation error
     */
-	v8::Global<v8::Script> compile(const v8::Local<v8::String> script);
+	std::shared_ptr<ScriptHelper> compile(const v8::Local<v8::String> script);
     
     /**
     * Loads the contents of the given file as javascript
     * Throws v8toolkit::CompilationError on compilation error
     * TODO: what if the file can't be opened?
     */
-	v8::Global<v8::Script> compile_from_file(const std::string);
+	std::shared_ptr<ScriptHelper> compile_from_file(const std::string);
 	
     /**
     * Runs the previously compiled v8::Script.
@@ -134,22 +150,12 @@ public:
 	v8::Global<v8::Value> run(const std::string);
 	v8::Global<v8::Value> run(const v8::Local<v8::Value> script);
 	
-	/**
-    * Executes the previously compiled v8::script in a std::async and returns
-    *   the std::future associated with it.
-    * While any number of threaded calls can be made, only one context per
-    *   isolate can be actively running at a time.   Additional calls will be
-    *   queued but will block until they can acquire the v8::Locker object for
-    *   their isolate
-    * TODO: what happens if there are errors in execution?
-    */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Global<v8::Script> & script, 
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
     
 	/**
     * Compiles and runs the contents of the passed in string in a std::async and returns
-    *   the std::future associated with it.
+    *   the std::future associated with it.  The future has the result of the javascript
+    *   as well as a shared_ptr to the ScriptHelper to make sure the value can still be used
+    * 
     * While any number of threaded calls can be made, only one context per
     *   isolate can be actively running at a time.   Additional calls will be
     *   queued but will block until they can acquire the v8::Locker object for
@@ -157,25 +163,12 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::future<v8::Global<v8::Value>> run_async(const std::string,
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
+	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>> 
+        run_async(const std::string,
+                  std::launch launch_policy = 
+                     std::launch::async | std::launch::deferred);
         
-    
-	/**
-    * Executes the previously compiled v8::script in a std::async and returns
-    *   the std::future associated with it.
-    * While any number of threaded calls can be made, only one context per
-    *   isolate can be actively running at a time.   Additional calls will be
-    *   queued but will block until they can acquire the v8::Locker object for
-    *   their isolate
-    * TODO: what happens if there are errors in execution?
-    */
-	std::future<v8::Global<v8::Value>> run_async(const v8::Local<v8::Value> script,
-                                                 std::launch launch_policy = 
-                                                     std::launch::async | std::launch::deferred);
-        
-	
+    	
 	/**
     * Executes the previously compiled v8::script in a std::thread and returns
     *   the std::thread associated with it.  It must either be joined or detached
@@ -318,6 +311,97 @@ public:
 };
 
 /**
+* Helper class for a v8::Script object.  As long as a ScriptHelper shared_ptr is around,
+*   the associated ContextHelper will be maintined (which keeps the IsolateHelper around, too)
+*/
+class ScriptHelper : public std::enable_shared_from_this<ScriptHelper> 
+{
+    friend class ContextHelper;
+    
+private:
+    ScriptHelper(std::shared_ptr<ContextHelper> context_helper, v8::Local<v8::Script> script) :
+        context_helper(context_helper),
+        isolate(*context_helper),
+        script(v8::Global<v8::Script>(isolate, script)) {}
+    
+    // shared_ptr to ContextHelper should be first so it's the last cleaned up
+    std::shared_ptr<ContextHelper> context_helper;
+    v8::Isolate * isolate;
+    v8::Global<v8::Script> script;
+    
+public:
+    
+	ScriptHelper() = delete;
+	ScriptHelper(const ScriptHelper &) = delete;
+	ScriptHelper(ScriptHelper &&) = default;
+	ScriptHelper & operator=(const ScriptHelper &) = delete;
+	ScriptHelper & operator=(ScriptHelper &&) = default;
+    virtual ~ScriptHelper(){
+#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
+        printf("Done deleting ScriptHelper\n");
+#endif
+    }
+    
+    /**
+    * Allows implicit conversion to a v8::Global<v8::Script>
+    */
+    inline operator v8::Global<v8::Script>&(){return script;}
+    
+    /**
+    * Calls scoped_run with the associated isolate and context
+    */
+    template<class... Args>
+    void operator()(Args&&... args){(*context_helper)(std::forward<Args>(args)...);}
+    
+    /**
+    * Returns the ContextHelper associated with this ScriptHelper
+    */
+    inline auto get_context_helper(){return context_helper;}
+    
+    // TODO: Run code should be moved out of contexthelper and into this class
+	v8::Global<v8::Value> run(){return context_helper->run(*this);}
+    
+    /**
+    * Run this script in a std:;async and return the associated future.  The future contains a 
+    *   shared_ptr to this ScriptHelper so it cannot be destroyed until after the async
+    *   has finished and the caller has had a chance to look at the result
+    */ 
+	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
+        return std::async(launch_policy, [this](auto script_helper){
+            return (*this->context_helper)([this, script_helper](){
+                return std::make_pair(this->run(), script_helper);
+            });
+        }, shared_from_this());
+    }
+
+    /**
+    * Run this script in a std::thread, returning the std::thread object for joining/detaching.
+    * The thread maintains a shared_ptr to this ScriptHelper so it cannot be destroyed
+    *   until after the thread completes.
+    * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
+    */
+	std::thread run_thread(){
+        // Holds on to a shared_ptr to the ScriptHelper inside the thread object to make sure
+        //   it isn't destroyed until the thread completes
+        return std::thread([this](auto script_helper){
+            (*this)([this]{
+                this->run();
+            });
+        }, shared_from_this());
+    } 
+    
+    /**
+    * Same as run_thread, but the thread is automatically detached.   The ScriptHelper
+    *   object is still protected for the lifetime of the 
+    */
+    void run_detached(){
+        run_thread().detach();
+    }    
+}; 
+
+
+
+/**
 * Represents a v8::Isolate object.	Any changes made here will be reflected in any
 *   contexts created after the change was made.	
 * An IsolateHleper will remain as long as the user has a shared_ptr to the IsolateHelper
@@ -360,6 +444,12 @@ public:
     *   v8toolkit::add_print()
     */
 	void add_print();
+    
+    /**
+    * Adds require() function to javascript as defined in
+    * v8toolkit::add_require()
+    */
+    void add_require();
 	
 	
     /**
@@ -368,7 +458,7 @@ public:
     *   the IsolateHelper will not be applied to ContextHelpers already
     *   created.
     */
-	std::unique_ptr<ContextHelper> create_context();
+	std::shared_ptr<ContextHelper> create_context();
 
     /**
     * Returns the isolate associated with this IsolateHelper

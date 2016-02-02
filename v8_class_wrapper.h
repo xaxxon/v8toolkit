@@ -156,7 +156,7 @@ private:
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 		auto & member_ref = (*member_reference_getter)(cpp_object);
 	  	member_ref = CastToNative<VALUE_T>()(value);
-		auto & m2 = (*member_reference_getter)(cpp_object);
+		(*member_reference_getter)(cpp_object);
 	}
     
 	template <typename ...Fs, size_t...ns> 
