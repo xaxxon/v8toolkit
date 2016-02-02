@@ -25,7 +25,6 @@ private:
 public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
-  
 };
 
 /**
@@ -224,7 +223,6 @@ template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-                        
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
     }
 };
@@ -236,7 +234,6 @@ template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
     void operator()(std::function<void(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-                        
         callable(std::forward<Args>(args)...);
     }
 };

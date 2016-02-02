@@ -2,6 +2,8 @@
 #include <iostream>
 #include <utility>
 #include <string>
+#include <sstream>
+
 //
 //
 // #include "include/libplatform/libplatform.h"
@@ -54,10 +56,9 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 
 #ifdef USE_BOOST
 
-
-// takes a format string and some javascript objects and does a printf-style print using boost::format
-// fills missing parameters with empty strings and prints any extra parameters with spaces between them
-void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline)
+{
+    std::stringstream sstream;
     auto values = get_all_values(args);
     
     if (args.Length() > 0) {
@@ -72,15 +73,24 @@ void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append
                 format % "";
             }
         }
-        std::cout << format;
+        sstream << format;
         while (i < values.size()) {
-            std::cout << " " << *v8::String::Utf8Value(values[i]);
+            sstream << " " << *v8::String::Utf8Value(values[i]);
             i++;
         }
     }
     if (append_newline) {
-        std::cout << std::endl;
+        sstream << std::endl;
     }
+    return sstream.str();
+}
+
+
+
+// takes a format string and some javascript objects and does a printf-style print using boost::format
+// fills missing parameters with empty strings and prints any extra parameters with spaces between them
+void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+    std::cout << _format_helper(args, append_newline);
 }
 
 #endif // USE_BOOST
@@ -160,11 +170,14 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 #ifdef USE_BOOST
     add_function(isolate, object_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, false);});
     add_function(isolate, object_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, true);});
+    add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& args){return _format_helper(args, false);});
+    
 #endif
     add_function(isolate, object_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
     add_function(isolate, object_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
 
     add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj_callback(args);});
+    
 }
 
 

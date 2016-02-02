@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <list>
 #include <deque>
+#include <array>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -383,6 +384,20 @@ struct CastToJS<std::deque<T>> {
     }    
 };
 
+
+template<class T, std::size_t N>
+struct CastToJS<std::array<T, N>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::array<T, N> arr){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        // auto size = arr.size();
+        for(int i = 0; i < N; i++) {
+            (void)array->Set(context, i, CastToJS<T>()(isolate, arr.at(i)));
+        }
+        return array;
+    }    
+};
 
 
 

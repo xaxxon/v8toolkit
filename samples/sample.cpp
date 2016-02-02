@@ -7,6 +7,7 @@
 #include "v8_class_wrapper.h"
 
 using namespace v8toolkit;
+using namespace std;
 
 #define SAMPLE_DEBUG true
 
@@ -169,20 +170,14 @@ int main(int argc, char* argv[])
             add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
             std::multimap<int, int> mm{{1,1},{1,2},{1,3},{2,4},{3,5},{3,6}};
             add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
+            std::array<int, 3> a{{1,2,3}};
+            add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));
+            
+            std::map<string, vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
+            add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
             
             v8::Local<v8::String> source2 =
-                v8::String::NewFromUtf8(isolate, "v.map(function(e){println(e);});\
-                                                  l.map(function(e){println(e);}); \
-                                                  println('These may not be in order');\
-                                                  Object.keys(m).map(function(k){println(k,m[k]);});\
-                                                  Object.keys(m2).map(function(k){println(k,m[k]);});\
-                                                  d.map(function(e){println(e);}); \
-                                                  Object.keys(mm).map(function(k){println('For key: ', k);\
-                                                      mm[k].map(function(e){println(e);});\
-                                                  })\
-            ",
-                                    v8::NewStringType::kNormal).ToLocalChecked();
-
+                v8::String::NewFromUtf8(isolate, get_file_contents("sample2.js").c_str());
             v8::Local<v8::Script> script2 = v8::Script::Compile(context, source2).ToLocalChecked();
             (void)script2->Run(context);
         });
