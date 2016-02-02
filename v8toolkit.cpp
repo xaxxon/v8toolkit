@@ -174,6 +174,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 // read the contents of the file and return it as a std::string
 std::string get_file_contents(const char *filename)
 {
+    printf("loading contents of file '%s'\n", filename);
   std::ifstream in(filename, std::ios::in | std::ios::binary);
   if (in) {
     std::string contents;
@@ -184,6 +185,7 @@ std::string get_file_contents(const char *filename)
     in.close();
     return(contents);
   }
+  fprintf(stderr, "Failed to load file '%s'\n", filename);
   throw(errno);
 }
 

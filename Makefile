@@ -1,6 +1,7 @@
 # DEBUG = -g
 V8DIR = /users/xaxxon/v8
-V8_LIB_DIR = ${V8DIR}/out/native
+#V8_LIB_DIR = ${V8DIR}/out/native
+V8_LIB_DIR = ${V8DIR}/out/x64.debug
 #V8_LIB_DIR = ${V8DIR}/out/x64.release
 #V8_LIB_DIR = ${V8DIR}/out/x64.debug
 
