@@ -13,7 +13,7 @@ else
 V8_LIBS = -lv8_base -lv8_libbase -licudata -licuuc -licui18n -lv8_base -lv8_libplatform -lv8_nosnapshot
 endif
 
-CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES}
+CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
 
 # LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
 LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}

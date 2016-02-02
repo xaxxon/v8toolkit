@@ -124,8 +124,6 @@ int main(int argc, char ** argv) {
     auto context = run_tests();
     printf("The script, context, and isolate helpers should have all been destroyed\n");
     
-    
-    
     printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
     
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");

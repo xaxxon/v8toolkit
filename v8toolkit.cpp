@@ -192,14 +192,22 @@ std::string get_file_contents(const char *filename)
 // once a module has been successfully required (in an isolate), its return value will be cached here
 //   and subsequent requires of the same module won't re-run the module, just return the
 //   cached value
+std::mutex require_results_mutex;
 static std::map<v8::Isolate *, std::map<std::string, v8::Global<v8::Value>&>> require_results;
+
+
+std::map<std::string, v8::Global<v8::Value>&> get_loaded_modules(v8::Isolate * isolate)
+{
+    std::lock_guard<std::mutex> l(require_results_mutex);
+    return require_results[isolate];
+}
+
 
 
 
 v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
 {
-    
-    
+    v8::Locker l(isolate);
     if (filename.find_first_of("..") == std::string::npos) {
         printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
         return v8::Object::New(isolate);
@@ -216,17 +224,20 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
                 continue;
             }
             in.close();
-        
-        
+
             // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
-            auto & isolate_require_results = require_results[isolate];
+            // This is read-only and per-isolate and the only way to add is to be in the isolate
+            {
+                std::lock_guard<std::mutex> l(require_results_mutex);
+                auto & isolate_require_results = require_results[isolate];
         
-            auto cached_require_results = isolate_require_results.find(complete_filename);
-            if (cached_require_results != isolate_require_results.end()) {
-                printf("Found cached results, using cache instead of re-running module\n");
-                return cached_require_results->second.Get(isolate);
-            } else {
-                printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+                auto cached_require_results = isolate_require_results.find(complete_filename);
+                if (cached_require_results != isolate_require_results.end()) {
+                    printf("Found cached results, using cache instead of re-running module\n");
+                    return cached_require_results->second.Get(isolate);
+                } else {
+                    printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+                }
             }
 
             auto contents = get_file_contents(complete_filename.c_str());
@@ -265,8 +276,12 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
 
             // cache the result for subsequent requires of the same module in the same isolate
             auto new_global = new v8::Global<v8::Value>(isolate, result);
-            isolate_require_results.insert(std::pair<std::string,
-                                           v8::Global<v8::Value>&>(complete_filename, *new_global));
+            {
+                std::lock_guard<std::mutex> l(require_results_mutex);
+                auto & isolate_require_results = require_results[isolate];
+                isolate_require_results.insert(std::pair<std::string,
+                                               v8::Global<v8::Value>&>(complete_filename, *new_global));
+            }
 
             return result;
         }catch(...) {}
@@ -275,6 +290,12 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
     return v8::Object::New(isolate);
 }
 
+
+
+void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
+{
+    
+}
 
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {
     
@@ -286,10 +307,12 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
     
     
     // if there's no entry for cached results for this isolate, make one now
-    if (require_results.find(isolate) == require_results.end()) {
-        require_results.insert(make_pair(isolate, std::map<std::string, v8::Global<v8::Value>&>()));
+    {
+        v8::Locker l(isolate);
+        if (require_results.find(isolate) == require_results.end()) {
+            require_results.insert(make_pair(isolate, std::map<std::string, v8::Global<v8::Value>&>()));
+        }
     }
-
 
     (void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{        
         auto isolate = info.GetIsolate();
@@ -299,6 +322,7 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
 
     });
 }
+
 
 void require_directory(v8::Isolate * isolate, v8::Local<v8::Context> context, std::string directory_name)
 {
