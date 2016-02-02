@@ -165,13 +165,17 @@ int main(int argc, char* argv[])
             add_variable(context, context->Global(), "m", CastToJS<decltype(m)>()(isolate, m));
             std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
             add_variable(context, context->Global(), "m2", CastToJS<decltype(m2)>()(isolate, m2));
+            std::deque<long> d{6000000000, 7000000000, 8000000000};
+            add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
+            
             
             v8::Local<v8::String> source2 =
                 v8::String::NewFromUtf8(isolate, "v.map(function(e){println(e);});\
                                                   l.map(function(e){println(e);}); \
                                                   println('These may not be in order');\
                                                   Object.keys(m).map(function(k){println(k,m[k]);});\
-                                                  Object.keys(m2).map(function(k){println(k,m[k]);})\
+                                                  Object.keys(m2).map(function(k){println(k,m[k]);});\
+                                                  d.map(function(e){println(e);}); \
             ",
                                     v8::NewStringType::kNormal).ToLocalChecked();
 

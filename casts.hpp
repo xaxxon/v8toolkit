@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <list>
+#include <deque>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -141,7 +142,7 @@ struct CastToJS<unsigned char> {
 };
 template<>
 struct CastToJS<wchar_t> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<char16_t> {
@@ -164,29 +165,29 @@ struct CastToJS<unsigned short> {
 
 template<>
 struct CastToJS<int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned int value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned int value){return v8::Number::New(isolate, value);}
 };
 
 template<>
 struct CastToJS<long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Number::New(isolate, value);}
 };
 
 template<>
 struct CastToJS<long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
 };
 template<>
 struct CastToJS<unsigned long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Integer::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
 };
 
 
@@ -311,7 +312,19 @@ struct CastToJS<std::unordered_map<A, B>> {
     }
 };
 
-
+template<class T>
+struct CastToJS<std::deque<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T> deque){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        auto size = deque.size();
+        for(int i = 0; i < size; i++) {
+            (void)array->Set(context, i, CastToJS<T>()(isolate, deque.at(i)));
+        }
+        return array;
+    }    
+};
 
 
 
