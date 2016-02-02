@@ -44,7 +44,6 @@ public:
         return instance_count;
     }
     static int instance_count;
-    
 };
 
 int Point::instance_count = 0;
@@ -160,12 +159,20 @@ int main(int argc, char* argv[])
 
             std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
             add_variable(context, context->Global(), "v", CastToJS<decltype(v)>()(isolate, v));
-            std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
-            add_variable(context, context->Global(), "m", CastToJS<decltype(m)>()(isolate, m));
             std::list<float> l{1.5, 2.5, 3.5, 4.5};
             add_variable(context, context->Global(), "l", CastToJS<decltype(l)>()(isolate, l));
+            std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
+            add_variable(context, context->Global(), "m", CastToJS<decltype(m)>()(isolate, m));
+            std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
+            add_variable(context, context->Global(), "m2", CastToJS<decltype(m2)>()(isolate, m2));
+            
             v8::Local<v8::String> source2 =
-                v8::String::NewFromUtf8(isolate, "v.map(function(e){println(e);});l.map(function(e){println(e);}); Object.keys(m).map(function(k){println(k,m[k]);});",
+                v8::String::NewFromUtf8(isolate, "v.map(function(e){println(e);});\
+                                                  l.map(function(e){println(e);}); \
+                                                  println('These may not be in order');\
+                                                  Object.keys(m).map(function(k){println(k,m[k]);});\
+                                                  Object.keys(m2).map(function(k){println(k,m[k]);})\
+            ",
                                     v8::NewStringType::kNormal).ToLocalChecked();
 
             v8::Local<v8::Script> script2 = v8::Script::Compile(context, source2).ToLocalChecked();

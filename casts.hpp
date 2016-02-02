@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <list>
 
 #include "include/libplatform/libplatform.h"
@@ -295,5 +296,24 @@ struct CastToJS<std::map<A, B>> {
         return object;
     }
 };
+
+template<class A, class B>
+struct CastToJS<std::unordered_map<A, B>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B> map){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext(); 
+        auto object = v8::Object::New(isolate);
+        for(auto pair : map){
+            printf("Adding element from std::map to v8::Object\n");
+            (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
+        }
+        return object;
+    }
+};
+
+
+
+
+
 
 } // end namespace v8toolkit
