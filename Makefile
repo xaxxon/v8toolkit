@@ -6,14 +6,14 @@ V8_LIB_DIR = ${V8DIR}/out/native
 
 # Whether you want to use snapshot files, but easier not to use them.  I see a .05s decrease in startup speed by not using them
 ifdef USE_SNAPSHOTS
-DEFINES = -DUSE_SNAPSHOTS
+DEFINES = -DUSE_SNAPSHOTS -DV8TOOLKIT_JAVASCRIPT_DEBUG 
 V8_LIBS = -lv8_base -lv8_libbase -licudata -licuuc -licui18n -lv8_base -lv8_libplatform -lv8_external_snapshot
 else
-DEFINES = 
+#DEFINES = -DV8TOOLKIT_JAVASCRIPT_DEBUG 
 V8_LIBS = -lv8_base -lv8_libbase -licudata -licuuc -licui18n -lv8_base -lv8_libplatform -lv8_nosnapshot
 endif
 
-CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include -DV8TOOLKIT_JAVASCRIPT_DEBUG ${DEFINES}
+CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES}
 
 # LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
 LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}

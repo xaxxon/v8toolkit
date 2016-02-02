@@ -12,6 +12,14 @@ class IsolateHelper;
 class ScriptHelper;
 
 
+/*
+* TODO: Make add_require to context (in addition to isolate) so a particular context
+*         ban be disallowed to load external modules but a privileged context on the
+*         samea isolate can load them.
+*
+*
+*/
+
 /**
 * Wrapper around a v8::Cnotext object with a link back to its associated isolate
 * This object can be used wherever a v8::Isolate * or a Local or Global v8::Context
@@ -312,8 +320,8 @@ class ScriptHelper : public std::enable_shared_from_this<ScriptHelper>
     
 private:
     ScriptHelper(std::shared_ptr<ContextHelper> context_helper, v8::Local<v8::Script> script) :
-        isolate(*context_helper),
         context_helper(context_helper),
+        isolate(*context_helper),
         script(v8::Global<v8::Script>(isolate, script)) {}
     
     // shared_ptr to ContextHelper should be first so it's the last cleaned up
@@ -330,7 +338,7 @@ public:
 	ScriptHelper & operator=(ScriptHelper &&) = default;
     virtual ~ScriptHelper(){
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
-        printf("Done deleting ScriptHelper\n");  
+        printf("Done deleting ScriptHelper\n");
 #endif
     }
     
@@ -436,6 +444,12 @@ public:
     *   v8toolkit::add_print()
     */
 	void add_print();
+    
+    /**
+    * Adds require() function to javascript as defined in
+    * v8toolkit::add_require()
+    */
+    void add_require();
 	
 	
     /**

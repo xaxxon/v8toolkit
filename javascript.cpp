@@ -162,6 +162,13 @@ void IsolateHelper::add_print()
     });
 }
 
+void IsolateHelper::add_require()
+{
+    (*this)([this]{
+       v8toolkit::add_require(isolate, get_object_template(), std::vector<std::string>{"./"});
+    });
+}
+
 v8::Isolate * IsolateHelper::get_isolate() 
 {
     return this->isolate;

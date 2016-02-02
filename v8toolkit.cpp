@@ -39,11 +39,13 @@ void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
     object_template->Set(isolate, name, value);
 }
 
+
 void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, const v8::Local<v8::Value> value) 
 {
     auto isolate = context->GetIsolate();
     (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), value);
 }
+
 
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
     object_template->Set(isolate, name, make_function_template(isolate, function));
@@ -194,7 +196,7 @@ static std::map<v8::Isolate *, std::map<std::string, v8::Global<v8::Value>&>> re
 
 
 
-v8::Local<v8::Value> _require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
+v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
 {
     
     
@@ -293,7 +295,7 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
         
-        return _require(isolate, context, filename, paths);
+        return require(isolate, context, filename, paths);
 
     });
 }
@@ -319,7 +321,7 @@ void require_directory(v8::Isolate * isolate, v8::Local<v8::Context> context, st
     auto require_path = std::vector<std::string>{directory_name};
     while ((dp = readdir(dir)) != NULL) {
         
-        _require(isolate, context, dp->d_name, require_path);
+        require(isolate, context, dp->d_name, require_path);
             // if (dp->d_namlen == len && strcmp(dp->d_name, name) == 0) {
             //         (void)closedir(dir);
             //         return (FOUND);

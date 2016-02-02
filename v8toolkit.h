@@ -675,6 +675,15 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & co
 
 
 /**
+* Attempts to load the specified module name from the given paths (in order).
+*   Returns the exported object from the module.
+* Same as calling require() from javascript - this is the code that is actually run for that
+*/ 
+v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, 
+                             std::string filename, 
+                             const std::vector<std::string> & paths);
+
+/**
 * prints out a ton of info about a v8::Value
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
