@@ -25,7 +25,6 @@ private:
 public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
-  
 };
 
 /**
@@ -224,7 +223,6 @@ template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-                        
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
     }
 };
@@ -236,7 +234,6 @@ template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
     void operator()(std::function<void(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-                        
         callable(std::forward<Args>(args)...);
     }
 };
@@ -672,6 +669,13 @@ std::string get_file_contents(const char *filename);
 *   (if this could be changed, it should be, but I don't know how to do it beforehand)
 */
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & context, const std::vector<std::string> & paths);
+
+
+/**
+* adds "module_list()" to javascript to require a dictionary of module path+names to exported objects
+*   currently required into the specified isolate
+*/
+void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template);
 
 
 /**

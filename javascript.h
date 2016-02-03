@@ -362,9 +362,11 @@ public:
 	v8::Global<v8::Value> run(){return context_helper->run(*this);}
     
     /**
-    * Run this script in a std:;async and return the associated future.  The future contains a 
-    *   shared_ptr to this ScriptHelper so it cannot be destroyed until after the async
-    *   has finished and the caller has had a chance to look at the result
+    * Run this script in a std::async and return the associated future.  The future value is a 
+    *   std::pair<javascript_result, shared_ptr<ScriptHelper>>.  It contains a 
+    *   shared_ptr to the ScriptHelper so the ScriptHelper (and it's associated dependencies) 
+    *   cannot be destroyed until after the async has finished and the caller has had a chance 
+    *   to use the results contained in the future
     */ 
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
         return std::async(launch_policy, [this](auto script_helper){
@@ -388,7 +390,7 @@ public:
                 this->run();
             });
         }, shared_from_this());
-    } 
+    }
     
     /**
     * Same as run_thread, but the thread is automatically detached.   The ScriptHelper
@@ -449,8 +451,9 @@ public:
     * Adds require() function to javascript as defined in
     * v8toolkit::add_require()
     */
-    void add_require();
+    void add_require(std::vector<std::string> paths=std::vector<std::string>{"./"});
 	
+    void add_module_list(){(*this)([this]{v8toolkit::add_module_list(isolate, global_object_template.Get(isolate));});}
 	
     /**
     * Creates a ContextHelper populated by all customizations already

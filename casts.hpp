@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <list>
 #include <deque>
+#include <array>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -133,7 +134,7 @@ struct CastToJS;
 
 // integers
 template<>
-struct CastToJS<char> {
+struct CastToJS<char> { 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Integer::New(isolate, value);}
 };
 template<>
@@ -235,18 +236,31 @@ struct CastToJS<const std::string> {
 
 
 
-
+/**
+* Special passthrough type for objects that want to take javascript object objects directly
+*/
 template<>
 struct CastToJS<v8::Local<v8::Object>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Object> object){
 		return v8::Local<v8::Value>::New(isolate, object);
 	}
 };
+
+/**
+* Special passthrough type for objects that want to take javascript value objects directly
+*/
 template<>
 struct CastToJS<v8::Local<v8::Value>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
 		return value;
 	}
+};
+
+template<>
+struct CastToJS<v8::Global<v8::Value> &> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Global<v8::Value> & value){
+        return value.Get(isolate);
+    }
 };
 
 
@@ -267,6 +281,9 @@ struct CastToJS<std::vector<U>> {
     }
 };
 
+/**
+* supports lists containing any type also supported by CastToJS to javascript arrays
+*/
 template<class U>
 struct CastToJS<std::list<U>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U> list){
@@ -283,7 +300,9 @@ struct CastToJS<std::list<U>> {
 };
 
 
-
+/**
+* supports maps containing any type also supported by CastToJS to javascript arrays
+*/
 template<class A, class B>
 struct CastToJS<std::map<A, B>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<A, B> map){
@@ -291,13 +310,56 @@ struct CastToJS<std::map<A, B>> {
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto pair : map){
-            printf("Adding element from std::map to v8::Object\n");
             (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
         }
         return object;
     }
 };
 
+/**
+* supports maps containing any type also supported by CastToJS to javascript arrays
+* It creates an object of key => [values...]
+* All values are arrays, even if there is only one value in the array.
+*/
+template<class A, class B>
+struct CastToJS<std::multimap<A, B>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::multimap<A, B> map){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext(); 
+        auto object = v8::Object::New(isolate);
+        for(auto pair : map){
+            auto key = CastToJS<A>()(isolate, pair.first);
+            // v8::Local<v8::String> key = v8::String::NewFromUtf8(isolate, "TEST");
+            auto value = CastToJS<B>()(isolate, pair.second);
+            
+            // check to see if a value with this key has already been added
+            bool default_value = true;
+            bool object_has_key = object->Has(context, key).FromMaybe(default_value);
+            if(!object_has_key) {
+                // get the existing array, add this value to the end
+                auto array = v8::Array::New(isolate);
+                (void)array->Set(context, 0, value);
+                (void)object->Set(context, key, array);
+            } else {
+                // create an array, add the current value to it, then add it to the object
+                auto existing_array_value = object->Get(context, key).ToLocalChecked();
+                v8::Handle<v8::Array> existing_array = v8::Handle<v8::Array>::Cast(existing_array_value);
+                
+                //find next array position to insert into (is there no better way to push onto the end of an array?)
+                int i = 0;
+                while(existing_array->Has(context, i).FromMaybe(default_value)){i++;}
+                (void)existing_array->Set(context, i, value);          
+            }
+        }
+        return object;
+    }
+};
+
+
+
+/**
+* supports unordered_maps containing any type also supported by CastToJS to javascript arrays
+*/
 template<class A, class B>
 struct CastToJS<std::unordered_map<A, B>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B> map){
@@ -305,13 +367,16 @@ struct CastToJS<std::unordered_map<A, B>> {
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto pair : map){
-            printf("Adding element from std::map to v8::Object\n");
             (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
         }
         return object;
     }
 };
 
+
+/**
+* supports deques containing any type also supported by CastToJS to javascript arrays
+*/
 template<class T>
 struct CastToJS<std::deque<T>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T> deque){
@@ -325,6 +390,35 @@ struct CastToJS<std::deque<T>> {
         return array;
     }    
 };
+
+
+template<class T, std::size_t N>
+struct CastToJS<std::array<T, N>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::array<T, N> arr){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        // auto size = arr.size();
+        for(int i = 0; i < N; i++) {
+            (void)array->Set(context, i, CastToJS<T>()(isolate, arr.at(i)));
+        }
+        return array;
+    }    
+};
+
+
+
+//TODO: array
+
+//TODO: forward_list
+
+//TODO: stack
+
+//TODO: queue
+
+//TODO: set
+
+//TODO: unordered_set
 
 
 

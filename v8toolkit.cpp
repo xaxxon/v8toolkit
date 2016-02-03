@@ -2,6 +2,9 @@
 #include <iostream>
 #include <utility>
 #include <string>
+#include <sstream>
+#include <regex>
+
 //
 //
 // #include "include/libplatform/libplatform.h"
@@ -54,10 +57,9 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 
 #ifdef USE_BOOST
 
-
-// takes a format string and some javascript objects and does a printf-style print using boost::format
-// fills missing parameters with empty strings and prints any extra parameters with spaces between them
-void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline)
+{
+    std::stringstream sstream;
     auto values = get_all_values(args);
     
     if (args.Length() > 0) {
@@ -72,15 +74,24 @@ void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append
                 format % "";
             }
         }
-        std::cout << format;
+        sstream << format;
         while (i < values.size()) {
-            std::cout << " " << *v8::String::Utf8Value(values[i]);
+            sstream << " " << *v8::String::Utf8Value(values[i]);
             i++;
         }
     }
     if (append_newline) {
-        std::cout << std::endl;
+        sstream << std::endl;
     }
+    return sstream.str();
+}
+
+
+
+// takes a format string and some javascript objects and does a printf-style print using boost::format
+// fills missing parameters with empty strings and prints any extra parameters with spaces between them
+void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+    std::cout << _format_helper(args, append_newline);
 }
 
 #endif // USE_BOOST
@@ -160,11 +171,14 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 #ifdef USE_BOOST
     add_function(isolate, object_template, "printf",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, false);});
     add_function(isolate, object_template, "printfln",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_printf_helper(args, true);});
+    add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& args){return _format_helper(args, false);});
+    
 #endif
     add_function(isolate, object_template, "print",    [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, false);});
     add_function(isolate, object_template, "println",  [](const v8::FunctionCallbackInfo<v8::Value>& args){_print_helper(args, true);});
 
     add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& args){printobj_callback(args);});
+    
 }
 
 
@@ -174,6 +188,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 // read the contents of the file and return it as a std::string
 std::string get_file_contents(const char *filename)
 {
+    printf("loading contents of file '%s'\n", filename);
   std::ifstream in(filename, std::ios::in | std::ios::binary);
   if (in) {
     std::string contents;
@@ -184,6 +199,7 @@ std::string get_file_contents(const char *filename)
     in.close();
     return(contents);
   }
+  fprintf(stderr, "Failed to load file '%s'\n", filename);
   throw(errno);
 }
 
@@ -204,88 +220,108 @@ std::map<std::string, v8::Global<v8::Value>&> get_loaded_modules(v8::Isolate * i
 
 
 
-
+/** Attempts to load the specified external resource.  
+* Attempts to load exact match filename in each path, then <filename>.js in each path, then <filename>.json in each path
+*
+* Paths are attempted in vector order[0, 1, 2...].  If the matching filename ends in .js (either because it was specified as such or because
+*   it matched after the suffix was added) it will be executed as a traditional module with the exports object being returned.  If the matching
+*   filename ends in .json, the last value in the file will be returned.
+* The results of require'd files is cached and if the same module (based on the full matching value including path and any added suffix) is
+*   required again, the cached value will be returned.  The module will not be re-run.
+*
+* The goal of this function is to be as close to node.js require as possible, so patches or descriptions of how it differs are appreciated.
+*   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
+*/
 v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
 {
     v8::Locker l(isolate);
-    if (filename.find_first_of("..") == std::string::npos) {
-        printf("require() attempted to use a path with more than one . in a row (disallowed as simple algorithm to stop tricky paths)");
+    if (filename.find("..") != std::string::npos) {
+        printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
         return v8::Object::New(isolate);
     }
 
-    for (auto path : paths) {
-        try {
-            auto complete_filename = path + filename;
+    for (auto suffix : std::vector<std::string>{"", ".js", ".json", }) {
+        for (auto path : paths) {
+            try {
+                auto complete_filename = path + "/" + filename + suffix;
         
-            // if the file doesn't exist, move on to the next path
-            std::ifstream in(complete_filename);
-            if (!in) {
-                printf("Module not found at %s\n", complete_filename.c_str());
-                continue;
-            }
-            in.close();
-
-            // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
-            // This is read-only and per-isolate and the only way to add is to be in the isolate
-            {
-                std::lock_guard<std::mutex> l(require_results_mutex);
-                auto & isolate_require_results = require_results[isolate];
-        
-                auto cached_require_results = isolate_require_results.find(complete_filename);
-                if (cached_require_results != isolate_require_results.end()) {
-                    printf("Found cached results, using cache instead of re-running module\n");
-                    return cached_require_results->second.Get(isolate);
-                } else {
-                    printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+                // if the file doesn't exist, move on to the next path
+                std::ifstream in(complete_filename);
+                if (!in) {
+                    printf("Module not found at %s\n", complete_filename.c_str());
+                    continue;
                 }
-            }
+                in.close();
 
-            auto contents = get_file_contents(complete_filename.c_str());
+                // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
+                // This is read-only and per-isolate and the only way to add is to be in the isolate
+                {
+                    std::lock_guard<std::mutex> l(require_results_mutex);
+                    auto & isolate_require_results = require_results[isolate];
         
-            
-            // create a new context for it (this may be the wrong thing to do)
-            auto module_global_template = v8::ObjectTemplate::New(isolate);     
-            add_print(isolate, module_global_template);
+                    auto cached_require_results = isolate_require_results.find(complete_filename);
+                    if (cached_require_results != isolate_require_results.end()) {
+                        printf("Found cached results, using cache instead of re-running module\n");
+                        return cached_require_results->second.Get(isolate);
+                    } else {
+                        printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+                    }
+                }
 
-            // Create module context
-            auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
+                auto contents = get_file_contents(complete_filename.c_str());
+    
+                // create a new context for it (this may be the wrong thing to do)
+                auto module_global_template = v8::ObjectTemplate::New(isolate);     
+                add_print(isolate, module_global_template);
 
-            // Get module global object
-            auto module_global_object = module_context->Global();
+                // Create module context
+                auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
 
-            // set up the module and exports stuff
-            auto module_object = v8::Object::New(isolate);
-            auto exports_object = v8::Object::New(isolate);
-            add_variable(module_context, module_object, "exports", exports_object);
-            add_variable(module_context, module_global_object, "module", module_object);
-            add_variable(module_context, module_global_object, "exports", exports_object);
-            (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
+                // Get module global object
+                auto module_global_object = module_context->Global();
 
-            v8::Local<v8::String> source =
-                v8::String::NewFromUtf8(isolate, contents.c_str(),
-                                        v8::NewStringType::kNormal).ToLocalChecked();
+                // set up the module and exports stuff
+                auto module_object = v8::Object::New(isolate);
+                auto exports_object = v8::Object::New(isolate);
+                add_variable(module_context, module_object, "exports", exports_object);
+                add_variable(module_context, module_global_object, "module", module_object);
+                add_variable(module_context, module_global_object, "exports", exports_object);
+                (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
+
+                v8::Local<v8::String> source =
+                    v8::String::NewFromUtf8(isolate, contents.c_str(),
+                                            v8::NewStringType::kNormal).ToLocalChecked();
 
 
-            // Compile the source code.
-            v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
+                // Compile the source code.
+                v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
+                v8::MaybeLocal<v8::Value> maybe_result;
+                if (std::regex_match(filename, std::regex(".json$"))) {
+                    printf("About to start evaluate .json file\n");
+                    maybe_result = script->Run(context);
+                
+                } else {
 
-            printf("About to start running script\n");
-            (void)script->Run(context);
-        
-            auto result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports")).ToLocalChecked();
+                    printf("About to start running script\n");
+                    (void)script->Run(context);
+    
+                    maybe_result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports"));
+                }
+                
+                // cache the result for subsequent requires of the same module in the same isolate
+                auto result = maybe_result.ToLocalChecked();
+                auto new_global = new v8::Global<v8::Value>(isolate, result);
+                {
+                    std::lock_guard<std::mutex> l(require_results_mutex);
+                    auto & isolate_require_results = require_results[isolate];
+                    isolate_require_results.insert(std::pair<std::string,
+                                                   v8::Global<v8::Value>&>(complete_filename, *new_global));
+                }
 
-            // cache the result for subsequent requires of the same module in the same isolate
-            auto new_global = new v8::Global<v8::Value>(isolate, result);
-            {
-                std::lock_guard<std::mutex> l(require_results_mutex);
-                auto & isolate_require_results = require_results[isolate];
-                isolate_require_results.insert(std::pair<std::string,
-                                               v8::Global<v8::Value>&>(complete_filename, *new_global));
-            }
-
-            return result;
-        }catch(...) {}
-        // if any failures, try the next path if it exists
+                return result;
+            }catch(...) {}
+            // if any failures, try the next path if it exists
+        }
     }
     return v8::Object::New(isolate);
 }
@@ -295,6 +331,8 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
     
+    std::lock_guard<std::mutex> l(require_results_mutex);
+    add_function(isolate, object_template, "module_list", [isolate]{return scoped_run(isolate,[isolate]{return require_results[isolate];});});
 }
 
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {
