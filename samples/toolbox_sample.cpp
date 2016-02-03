@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
         add_print(isolate, global_templ);
         std::vector<std::string> paths = {"./"};
         add_require(isolate, global_templ, paths);
+        add_module_list(isolate, global_templ);
         
         add_function(isolate, global_templ, "foo", &foo);
         add_function(isolate, global_templ, "bar", &bar);

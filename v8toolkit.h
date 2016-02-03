@@ -672,6 +672,13 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & co
 
 
 /**
+* adds "module_list()" to javascript to require a dictionary of module path+names to exported objects
+*   currently required into the specified isolate
+*/
+void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template);
+
+
+/**
 * Attempts to load the specified module name from the given paths (in order).
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that

@@ -1,3 +1,19 @@
+dumpdata=function(data){
+	if(Array.isArray(data)) {
+        return sprintf("[ %s ]", data.map(function(e){return dumpdata(e);}).join(", "));
+
+    } else if (typeof(data)=="object") {
+        return sprintf("{ %s }", Object.keys(data).map(function(k){
+                return sprintf("%s: %s", k, dumpdata(data[k]));
+        	}).join(", "));
+
+    } else {
+        return data;
+    }
+}
+
+
+
 bar();
 foo(5);
 foo(2);
@@ -26,12 +42,14 @@ println("This module doesn't exist:");
 require("this-module-does-not-exist.js");
 
 var require_result = require("module.js");
-require_result();
+require_result.function();
 
 println("Rerunning same require, shouldn't print anything from inside the module");
 var require_result = require("module.js");
 println("Running the cached return value from requiring the same module");
-require_result();
+require_result.function();
+
+println(dumpdata(module_list()));
 
 
 'yay'
