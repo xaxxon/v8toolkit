@@ -290,6 +290,15 @@ public:
 			v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
 		});
 	}
+    
+    template<class T>
+    void add_variable(std::string name, v8::Local<T> variable)
+    {
+		operator()([&](){
+			v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
+		});
+        
+    }
 	
 	/**
 	* Exposes a C++ variable to this context only

@@ -159,7 +159,7 @@ private:
 		(*member_reference_getter)(cpp_object);
 	}
     
-	template <typename ...Fs, size_t...ns> 
+	template <typename... Fs, size_t... ns> 
 	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
 		return new T(CastToNative<Fs>()(args[ns])...);
 	}
@@ -267,12 +267,11 @@ public:
 	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> & parent_template) 
+	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template) 
 	{
-				
 		// if you add a constructor after adding a member or method, it will be missing on objects created with
 		//   this constructor
-		assert(member_or_method_added == false);		
+		assert(member_or_method_added == false);
 				
 		// create a function template even if no javascript constructor will be used so 
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
@@ -347,15 +346,17 @@ public:
 		member_or_method_added = true;
 		
 		// this lambda is shared between the getter and the setter so it can only do work needed by both
-		static auto get_member_reference = std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
+        // TODO: this is leaked if the classwrapper ever goes away (which it shouldn't), but it's still not right to do
+		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
 			return cpp_object->*member;
 		});
+        
 		for(auto & constructor_template : this->constructor_templates) {
 			constructor_template.Get(isolate)->InstanceTemplate()->SetAccessor(v8::String::NewFromUtf8(isolate, 
 				member_name.c_str()), 
 				_getter_helper<MEMBER_TYPE>, 
 				_setter_helper<MEMBER_TYPE>, 
-				v8::External::New(isolate, &get_member_reference));
+				v8::External::New(isolate, get_member_reference));
 		}
 		return *this;
 	}

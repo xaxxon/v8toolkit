@@ -60,10 +60,7 @@ clean:
 	rm -f *.o *.a samples/*sample
 
 run:
-	(cd samples && ./thread_sample)
-	(cd samples && ./javascript_sample)
-	(cd samples && ./sample)
-	(cd samples && ./toolbox_sample)
+	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample)
 
 clean_docs:
 	rm -rf doc	
