@@ -451,8 +451,9 @@ public:
     * Adds require() function to javascript as defined in
     * v8toolkit::add_require()
     */
-    void add_require();
+    void add_require(std::vector<std::string> paths=std::vector<std::string>{"./"});
 	
+    void add_module_list(){(*this)([this]{v8toolkit::add_module_list(isolate, global_object_template.Get(isolate));});}
 	
     /**
     * Creates a ContextHelper populated by all customizations already

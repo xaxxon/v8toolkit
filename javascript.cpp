@@ -162,10 +162,10 @@ void IsolateHelper::add_print()
     });
 }
 
-void IsolateHelper::add_require()
+void IsolateHelper::add_require(std::vector<std::string> paths)
 {
-    (*this)([this]{
-       v8toolkit::add_require(isolate, get_object_template(), std::vector<std::string>{"./"});
+    (*this)([this, paths]{
+       v8toolkit::add_require(isolate, get_object_template(), paths);
     });
 }
 
