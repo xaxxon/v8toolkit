@@ -96,6 +96,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01T_00_01std_1_1function_3_01void_07const_01v8_d45c7ef8615c260a16a629f251078a27.html">List of all members</a>  </div>
   <div class="headertitle">
@@ -105,6 +106,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 <p><code>#include &lt;<a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:ae710fe57b4e81ac559ead1d8b6fa40e0"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">{ <a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01T_00_01std_1_1function_3_01void_07const_01v8_7648440f3140b6ae38e1474ae0eb3691.html#ae710fe57b4e81ac559ead1d8b6fa40e0a61c665e6be250c953fd2d54f1fa4a03e">DEPTH</a> = 0, 
+<a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01T_00_01std_1_1function_3_01void_07const_01v8_7648440f3140b6ae38e1474ae0eb3691.html#ae710fe57b4e81ac559ead1d8b6fa40e0a1026916d25825d97c67c860e942262a3">ARITY</a> =0
+ }<tr class="separator:ae710fe57b4e81ac559ead1d8b6fa40e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a736124bf96870f1b4bb1da8fe20326d0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01T_00_01std_1_1function_3_01void_07const_01v8_7648440f3140b6ae38e1474ae0eb3691.html#a736124bf96870f1b4bb1da8fe20326d0">operator()</a> (std::function&lt; void(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;)&gt; function, const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info)</td></tr>
@@ -116,8 +124,31 @@ struct v8toolkit::ParameterBuilder&lt; depth, T, std::function&lt; void(const v8
 
 <p>Specialization to handle functions that want the javascript callback info directly Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library) Any return value must be handled directly by the function itself by populating info parameter </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00319">319</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00320">320</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<a class="anchor" id="ae710fe57b4e81ac559ead1d8b6fa40e0"></a>
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;int depth, class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">anonymous enum</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a class="anchor" id="ae710fe57b4e81ac559ead1d8b6fa40e0a61c665e6be250c953fd2d54f1fa4a03e"></a>DEPTH&#160;</td><td class="fielddoc">
+</td></tr>
+<tr><td class="fieldname"><a class="anchor" id="ae710fe57b4e81ac559ead1d8b6fa40e0a1026916d25825d97c67c860e942262a3"></a>ARITY&#160;</td><td class="fielddoc">
+</td></tr>
+</table>
+
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00322">322</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="a736124bf96870f1b4bb1da8fe20326d0"></a>
 <div class="memitem">
 <div class="memproto">
@@ -152,7 +183,7 @@ template&lt;int depth, class T &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00321">321</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00323">323</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
 </div>
 </div>
@@ -162,7 +193,7 @@ template&lt;int depth, class T &gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Feb 2 2016 20:38:12 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Feb 4 2016 01:58:24 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

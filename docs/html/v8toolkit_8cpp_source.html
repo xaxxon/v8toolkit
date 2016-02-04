@@ -425,145 +425,144 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;</div>
 <div class="line"><a name="l00331"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">  331</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">add_module_list</a>(v8::Isolate * isolate, <span class="keyword">const</span> v8::Local&lt;v8::ObjectTemplate&gt; &amp; object_template)</div>
 <div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;{</div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;    </div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;    std::lock_guard&lt;std::mutex&gt; l(require_results_mutex);</div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;    <a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">add_function</a>(isolate, object_template, <span class="stringliteral">&quot;module_list&quot;</span>, [isolate]{<span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">scoped_run</a>(isolate,[isolate]{<span class="keywordflow">return</span> require_results[isolate];});});</div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;}</div>
-<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;</div>
-<div class="line"><a name="l00338"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">  338</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">add_require</a>(v8::Isolate * isolate, <span class="keyword">const</span> v8::Local&lt;v8::ObjectTemplate&gt; &amp; object_template, <span class="keyword">const</span> std::vector&lt;std::string&gt; &amp; paths) {</div>
-<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;    </div>
-<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;    <span class="keyword">static</span> <span class="keywordtype">bool</span> require_added = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;    <span class="keywordflow">if</span> (require_added) {</div>
-<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;        printf(<span class="stringliteral">&quot;Require already added, not doing anything\n&quot;</span>);</div>
-<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160;    }</div>
-<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;    require_added = <span class="keyword">true</span>;</div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;    std::lock_guard&lt;std::mutex&gt; l(require_results_mutex);</div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;    <a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">add_function</a>(isolate, object_template, <span class="stringliteral">&quot;module_list&quot;</span>, [isolate]{<span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">scoped_run</a>(isolate,[isolate]{<span class="keywordflow">return</span> require_results[isolate];});});</div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;}</div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;</div>
+<div class="line"><a name="l00337"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">  337</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">add_require</a>(v8::Isolate * isolate, <span class="keyword">const</span> v8::Local&lt;v8::ObjectTemplate&gt; &amp; object_template, <span class="keyword">const</span> std::vector&lt;std::string&gt; &amp; paths) {</div>
+<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;    </div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;    <span class="keyword">static</span> <span class="keywordtype">bool</span> require_added = <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;    <span class="keywordflow">if</span> (require_added) {</div>
+<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;        printf(<span class="stringliteral">&quot;Require already added, not doing anything\n&quot;</span>);</div>
+<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;    }</div>
+<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160;    require_added = <span class="keyword">true</span>;</div>
+<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;    </div>
 <div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;    </div>
-<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;    </div>
-<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="comment">// if there&#39;s no entry for cached results for this isolate, make one now</span></div>
-<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;    {</div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        v8::Locker l(isolate);</div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;        <span class="keywordflow">if</span> (require_results.find(isolate) == require_results.end()) {</div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;            require_results.insert(make_pair(isolate, std::map&lt;std::string, v8::Global&lt;v8::Value&gt;&amp;&gt;()));</div>
-<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;        }</div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    }</div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;    (void)<a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">add_function</a>(isolate, object_template, <span class="stringliteral">&quot;require&quot;</span>, [paths](<span class="keyword">const</span> v8::FunctionCallbackInfo&lt;v8::Value&gt; &amp; info, std::string filename)-&gt;v8::Local&lt;v8::Value&gt;{        </div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;        <span class="keyword">auto</span> isolate = info.GetIsolate();</div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;        <span class="keyword">auto</span> context = isolate-&gt;GetCurrentContext();</div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;        </div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685">require</a>(isolate, context, filename, paths);</div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;</div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;    });</div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;}</div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;    <span class="comment">// if there&#39;s no entry for cached results for this isolate, make one now</span></div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    {</div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;        v8::Locker l(isolate);</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        <span class="keywordflow">if</span> (require_results.find(isolate) == require_results.end()) {</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;            require_results.insert(make_pair(isolate, std::map&lt;std::string, v8::Global&lt;v8::Value&gt;&amp;&gt;()));</div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;        }</div>
+<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;    }</div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;</div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;    (void)<a class="code" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">add_function</a>(isolate, object_template, <span class="stringliteral">&quot;require&quot;</span>, [paths](<span class="keyword">const</span> v8::FunctionCallbackInfo&lt;v8::Value&gt; &amp; info, std::string filename)-&gt;v8::Local&lt;v8::Value&gt;{        </div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;        <span class="keyword">auto</span> isolate = info.GetIsolate();</div>
+<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;        <span class="keyword">auto</span> context = isolate-&gt;GetCurrentContext();</div>
+<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;        </div>
+<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685">require</a>(isolate, context, filename, paths);</div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;</div>
+<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;    });</div>
+<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;}</div>
+<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;</div>
 <div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;</div>
-<div class="line"><a name="l00365"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">  365</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">require_directory</a>(v8::Isolate * isolate, v8::Local&lt;v8::Context&gt; context, std::string directory_name)</div>
-<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;{</div>
-<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;    </div>
-<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;<span class="comment">// #include &lt;boost/filesystem.hpp&gt;</span></div>
-<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;    <span class="comment">//</span></div>
-<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;    <span class="comment">// boost::filesystem::path p = boost::filesystem::current_path();</span></div>
-<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160;    <span class="comment">// boost::filesystem::directory_iterator it{p};</span></div>
-<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    <span class="comment">// while (it != boost::filesystem::directory_iterator{})</span></div>
-<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;    <span class="comment">//   std::cout &lt;&lt; *it++ &lt;&lt; &#39;\n&#39;;</span></div>
-<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;    <span class="comment">//</span></div>
-<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;</div>
-<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;    <span class="comment">// This probably works on more than just APPLE</span></div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;<span class="preprocessor">#ifdef __APPLE__</span></div>
-<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;    DIR * dir = opendir(<span class="stringliteral">&quot;.&quot;</span>);</div>
-<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160;    <span class="keywordflow">if</span> (dir == NULL)</div>
-<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;            <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;    <span class="keyword">struct </span>dirent * dp;</div>
-<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    </div>
-<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    <span class="keyword">auto</span> require_path = std::vector&lt;std::string&gt;{directory_name};</div>
-<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;    <span class="keywordflow">while</span> ((dp = readdir(dir)) != NULL) {</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;        </div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;        <a class="code" href="namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685">require</a>(isolate, context, dp-&gt;d_name, require_path);</div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;            <span class="comment">// if (dp-&gt;d_namlen == len &amp;&amp; strcmp(dp-&gt;d_name, name) == 0) {</span></div>
-<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;            <span class="comment">//         (void)closedir(dir);</span></div>
-<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;            <span class="comment">//         return (FOUND);</span></div>
-<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;            <span class="comment">// }</span></div>
-<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;    }</div>
-<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;    (void)closedir(dir);</div>
-<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;    <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;    </div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;<span class="preprocessor">#endif // __APPLE__</span></div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;    </div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;}</div>
+<div class="line"><a name="l00364"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">  364</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">require_directory</a>(v8::Isolate * isolate, v8::Local&lt;v8::Context&gt; context, std::string directory_name)</div>
+<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;{</div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;    </div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;<span class="comment">// #include &lt;boost/filesystem.hpp&gt;</span></div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    <span class="comment">//</span></div>
+<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;    <span class="comment">// boost::filesystem::path p = boost::filesystem::current_path();</span></div>
+<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;    <span class="comment">// boost::filesystem::directory_iterator it{p};</span></div>
+<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160;    <span class="comment">// while (it != boost::filesystem::directory_iterator{})</span></div>
+<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    <span class="comment">//   std::cout &lt;&lt; *it++ &lt;&lt; &#39;\n&#39;;</span></div>
+<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;    <span class="comment">//</span></div>
+<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;</div>
+<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;    <span class="comment">// This probably works on more than just APPLE</span></div>
+<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;<span class="preprocessor">#ifdef __APPLE__</span></div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;    DIR * dir = opendir(<span class="stringliteral">&quot;.&quot;</span>);</div>
+<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;    <span class="keywordflow">if</span> (dir == NULL)</div>
+<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160;            <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;    <span class="keyword">struct </span>dirent * dp;</div>
+<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;    </div>
+<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    <span class="keyword">auto</span> require_path = std::vector&lt;std::string&gt;{directory_name};</div>
+<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    <span class="keywordflow">while</span> ((dp = readdir(dir)) != NULL) {</div>
+<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;        </div>
+<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;        <a class="code" href="namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685">require</a>(isolate, context, dp-&gt;d_name, require_path);</div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;            <span class="comment">// if (dp-&gt;d_namlen == len &amp;&amp; strcmp(dp-&gt;d_name, name) == 0) {</span></div>
+<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;            <span class="comment">//         (void)closedir(dir);</span></div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;            <span class="comment">//         return (FOUND);</span></div>
+<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;            <span class="comment">// }</span></div>
+<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;    }</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;    (void)closedir(dir);</div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;    <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;    </div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;<span class="preprocessor">#endif // __APPLE__</span></div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;    </div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;}</div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;</div>
 <div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;</div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;</div>
-<div class="line"><a name="l00400"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">  400</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">print_v8_value_details</a>(v8::Local&lt;v8::Value&gt; local_value) {</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;    </div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;    <span class="keyword">auto</span> value = *local_value;</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;    </div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;undefined: &quot;</span> &lt;&lt; value-&gt;IsUndefined() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;null: &quot;</span> &lt;&lt; value-&gt;IsNull() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;true: &quot;</span> &lt;&lt; value-&gt;IsTrue() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;false: &quot;</span> &lt;&lt; value-&gt;IsFalse() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;name: &quot;</span> &lt;&lt; value-&gt;IsName() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;string: &quot;</span> &lt;&lt; value-&gt;IsString() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;symbol: &quot;</span> &lt;&lt; value-&gt;IsSymbol() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;function: &quot;</span> &lt;&lt; value-&gt;IsFunction() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;array: &quot;</span> &lt;&lt; value-&gt;IsArray() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;object: &quot;</span> &lt;&lt; value-&gt;IsObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;boolean: &quot;</span> &lt;&lt; value-&gt;IsBoolean() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;number: &quot;</span> &lt;&lt; value-&gt;IsNumber() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;external: &quot;</span> &lt;&lt; value-&gt;IsExternal() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;isint32: &quot;</span> &lt;&lt; value-&gt;IsInt32() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;isuint32: &quot;</span> &lt;&lt; value-&gt;IsUint32() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;date: &quot;</span> &lt;&lt; value-&gt;IsDate() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;argument object: &quot;</span> &lt;&lt; value-&gt;IsArgumentsObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;boolean object: &quot;</span> &lt;&lt; value-&gt;IsBooleanObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;number object: &quot;</span> &lt;&lt; value-&gt;IsNumberObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;string object: &quot;</span> &lt;&lt; value-&gt;IsStringObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;symbol object: &quot;</span> &lt;&lt; value-&gt;IsSymbolObject() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;native error: &quot;</span> &lt;&lt; value-&gt;IsNativeError() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;regexp: &quot;</span> &lt;&lt; value-&gt;IsRegExp() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;generator function: &quot;</span> &lt;&lt; value-&gt;IsGeneratorFunction() &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;generator object: &quot;</span> &lt;&lt; value-&gt;IsGeneratorObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00399"></a><span class="lineno"><a class="line" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">  399</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">print_v8_value_details</a>(v8::Local&lt;v8::Value&gt; local_value) {</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;    </div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;    <span class="keyword">auto</span> value = *local_value;</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;    </div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;undefined: &quot;</span> &lt;&lt; value-&gt;IsUndefined() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;null: &quot;</span> &lt;&lt; value-&gt;IsNull() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;true: &quot;</span> &lt;&lt; value-&gt;IsTrue() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;false: &quot;</span> &lt;&lt; value-&gt;IsFalse() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;name: &quot;</span> &lt;&lt; value-&gt;IsName() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;string: &quot;</span> &lt;&lt; value-&gt;IsString() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;symbol: &quot;</span> &lt;&lt; value-&gt;IsSymbol() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;function: &quot;</span> &lt;&lt; value-&gt;IsFunction() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;array: &quot;</span> &lt;&lt; value-&gt;IsArray() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;object: &quot;</span> &lt;&lt; value-&gt;IsObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;boolean: &quot;</span> &lt;&lt; value-&gt;IsBoolean() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;number: &quot;</span> &lt;&lt; value-&gt;IsNumber() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;external: &quot;</span> &lt;&lt; value-&gt;IsExternal() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;isint32: &quot;</span> &lt;&lt; value-&gt;IsInt32() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;isuint32: &quot;</span> &lt;&lt; value-&gt;IsUint32() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;date: &quot;</span> &lt;&lt; value-&gt;IsDate() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;argument object: &quot;</span> &lt;&lt; value-&gt;IsArgumentsObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;boolean object: &quot;</span> &lt;&lt; value-&gt;IsBooleanObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;number object: &quot;</span> &lt;&lt; value-&gt;IsNumberObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;string object: &quot;</span> &lt;&lt; value-&gt;IsStringObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;symbol object: &quot;</span> &lt;&lt; value-&gt;IsSymbolObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;native error: &quot;</span> &lt;&lt; value-&gt;IsNativeError() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;regexp: &quot;</span> &lt;&lt; value-&gt;IsRegExp() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;generator function: &quot;</span> &lt;&lt; value-&gt;IsGeneratorFunction() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    std::cout &lt;&lt; <span class="stringliteral">&quot;generator object: &quot;</span> &lt;&lt; value-&gt;IsGeneratorObject() &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    </div>
 <div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;    </div>
 <div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;    </div>
-<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;    </div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;}</div>
+<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;}</div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;</div>
 <div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;</div>
 <div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;</div>
 <div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;</div>
-<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;</div>
-<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;}  <span class="comment">// namespace v8toolkit</span></div>
+<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;}  <span class="comment">// namespace v8toolkit</span></div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;</div>
 <div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;</div>
 <div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;</div>
 <div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;</div>
-<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;</div>
 <div class="ttc" id="namespacev8toolkit_html_a0994334c3bc7fc7cc14ca39cd887fd41"><div class="ttname"><a href="namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41">v8toolkit::get_all_values</a></div><div class="ttdeci">std::vector&lt; v8::Local&lt; v8::Value &gt; &gt; get_all_values(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, int depth)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00101">v8toolkit.cpp:101</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a849759dd00446ac0a4a99fcd958ce328"><div class="ttname"><a href="namespacev8toolkit.html#a849759dd00446ac0a4a99fcd958ce328">v8toolkit::expose_gc</a></div><div class="ttdeci">void expose_gc()</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00033">v8toolkit.cpp:33</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_aa9b28f14167aeb893de283963a466685"><div class="ttname"><a href="namespacev8toolkit.html#aa9b28f14167aeb893de283963a466685">v8toolkit::require</a></div><div class="ttdeci">v8::Local&lt; v8::Value &gt; require(v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; &amp;context, std::string filename, const std::vector&lt; std::string &gt; &amp;paths)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00235">v8toolkit.cpp:235</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_af862fcf6371d6f78cd4cc3d217692524"><div class="ttname"><a href="namespacev8toolkit.html#af862fcf6371d6f78cd4cc3d217692524">v8toolkit::get_loaded_modules</a></div><div class="ttdeci">std::map&lt; std::string, v8::Global&lt; v8::Value &gt; &amp; &gt; get_loaded_modules(v8::Isolate *isolate)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00215">v8toolkit.cpp:215</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00038">v8toolkit.h:38</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a7badaa73751f15a3e3324edd94b34e7a"><div class="ttname"><a href="namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a">v8toolkit::scoped_run</a></div><div class="ttdeci">R scoped_run(v8::Isolate *isolate, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00039">v8toolkit.h:39</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_aba15a4be8b966582b74e1f5bf1b8ba0b"><div class="ttname"><a href="namespacev8toolkit.html#aba15a4be8b966582b74e1f5bf1b8ba0b">v8toolkit::printobj_callback</a></div><div class="ttdeci">void printobj_callback(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00161">v8toolkit.cpp:161</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_ae5dc09550fef3e9c21c7745f3acfb71a"><div class="ttname"><a href="namespacev8toolkit.html#ae5dc09550fef3e9c21c7745f3acfb71a">v8toolkit::_printf_helper</a></div><div class="ttdeci">void _printf_helper(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00093">v8toolkit.cpp:93</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a47464d8e4fef77f56fedfac883b5b720"><div class="ttname"><a href="namespacev8toolkit.html#a47464d8e4fef77f56fedfac883b5b720">v8toolkit::printobj</a></div><div class="ttdeci">void printobj(v8::Local&lt; v8::Context &gt; context, v8::Local&lt; v8::Object &gt; object)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00143">v8toolkit.cpp:143</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a7eff9a25386faa32c87137a24fc6703a"><div class="ttname"><a href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">v8toolkit::add_module_list</a></div><div class="ttdeci">void add_module_list(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00331">v8toolkit.cpp:331</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a5212431cf43a6986955cde4289952947"><div class="ttname"><a href="namespacev8toolkit.html#a5212431cf43a6986955cde4289952947">v8toolkit::_print_helper</a></div><div class="ttdeci">void _print_helper(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00125">v8toolkit.cpp:125</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a2efdafa0edc85939c97eedb4d60ce328"><div class="ttname"><a href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">v8toolkit::require_directory</a></div><div class="ttdeci">void require_directory(v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; context, std::string directory_name)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00365">v8toolkit.cpp:365</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a2efdafa0edc85939c97eedb4d60ce328"><div class="ttname"><a href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">v8toolkit::require_directory</a></div><div class="ttdeci">void require_directory(v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; context, std::string directory_name)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00364">v8toolkit.cpp:364</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_ac3b6638c2b56fde3864854d5c5bb3e70"><div class="ttname"><a href="namespacev8toolkit.html#ac3b6638c2b56fde3864854d5c5bb3e70">v8toolkit::add_print</a></div><div class="ttdeci">void add_print(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; object_template)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00170">v8toolkit.cpp:170</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_abec4c1293f78feb6211c6bc235b674a7"><div class="ttname"><a href="namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7">v8toolkit::_format_helper</a></div><div class="ttdeci">std::string _format_helper(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00060">v8toolkit.cpp:60</a></div></div>
 <div class="ttc" id="v8toolkit_8h_html"><div class="ttname"><a href="v8toolkit_8h.html">v8toolkit.h</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a3b2ed619814469ff03ef483d4b891bb8"><div class="ttname"><a href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a></div><div class="ttdeci">void add_function(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, void(*function)(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;))</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00053">v8toolkit.cpp:53</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_aa48d55bbed31ad98f5492be6fc6c6228"><div class="ttname"><a href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">v8toolkit::add_variable</a></div><div class="ttdeci">void add_variable(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Value &gt; value)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00040">v8toolkit.cpp:40</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a79aaaf536e31f8fab5d2e3d8cd44aaa3"><div class="ttname"><a href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3">v8toolkit::make_function_template</a></div><div class="ttdeci">v8::Local&lt; v8::FunctionTemplate &gt; make_function_template(v8::Isolate *isolate, std::function&lt; R(Args...)&gt; f)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00332">v8toolkit.h:332</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a29444df591cd5d038ed1f9466ccd4f1d"><div class="ttname"><a href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">v8toolkit::print_v8_value_details</a></div><div class="ttdeci">void print_v8_value_details(v8::Local&lt; v8::Value &gt; local_value)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00400">v8toolkit.cpp:400</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a79aaaf536e31f8fab5d2e3d8cd44aaa3"><div class="ttname"><a href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3">v8toolkit::make_function_template</a></div><div class="ttdeci">v8::Local&lt; v8::FunctionTemplate &gt; make_function_template(v8::Isolate *isolate, std::function&lt; R(Args...)&gt; f)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00334">v8toolkit.h:334</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a29444df591cd5d038ed1f9466ccd4f1d"><div class="ttname"><a href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">v8toolkit::print_v8_value_details</a></div><div class="ttdeci">void print_v8_value_details(v8::Local&lt; v8::Value &gt; local_value)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00399">v8toolkit.cpp:399</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html"><div class="ttname"><a href="namespacev8toolkit.html">v8toolkit</a></div><div class="ttdef"><b>Definition:</b> <a href="casts_8hpp_source.html#l00014">casts.hpp:14</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a798082283e50c5025dfc6da7b5d61c7c"><div class="ttname"><a href="namespacev8toolkit.html#a798082283e50c5025dfc6da7b5d61c7c">v8toolkit::get_file_contents</a></div><div class="ttdeci">std::string get_file_contents(const char *filename)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00189">v8toolkit.cpp:189</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_a3c8aeeda89a9c35fe4192ec294edd086"><div class="ttname"><a href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require</a></div><div class="ttdeci">void add_require(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const std::vector&lt; std::string &gt; &amp;paths)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00338">v8toolkit.cpp:338</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a3c8aeeda89a9c35fe4192ec294edd086"><div class="ttname"><a href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require</a></div><div class="ttdeci">void add_require(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const std::vector&lt; std::string &gt; &amp;paths)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00337">v8toolkit.cpp:337</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_af61c605180d6163dcf8c93f24929316c"><div class="ttname"><a href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c">v8toolkit::process_v8_flags</a></div><div class="ttdeci">void process_v8_flags(int &amp;argc, char **argv)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00027">v8toolkit.cpp:27</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a10db5b4c9c99ffa3d9d3eba341f5024d"><div class="ttname"><a href="namespacev8toolkit.html#a10db5b4c9c99ffa3d9d3eba341f5024d">v8toolkit::require_results</a></div><div class="ttdeci">static std::map&lt; v8::Isolate *, std::map&lt; std::string, v8::Global&lt; v8::Value &gt; &amp; &gt; &gt; require_results</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00212">v8toolkit.cpp:212</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_ad53d46ec15ebf6cceb9ca48498a48c90"><div class="ttname"><a href="namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90">v8toolkit::for_each_own_property</a></div><div class="ttdeci">void for_each_own_property(const v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; object, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00182">v8toolkit.h:182</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_ad53d46ec15ebf6cceb9ca48498a48c90"><div class="ttname"><a href="namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90">v8toolkit::for_each_own_property</a></div><div class="ttdeci">void for_each_own_property(const v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; object, T callable)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8h_source.html#l00183">v8toolkit.h:183</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a8a8bbfe466704ace26c0657fca6f1a64"><div class="ttname"><a href="namespacev8toolkit.html#a8a8bbfe466704ace26c0657fca6f1a64">v8toolkit::require_results_mutex</a></div><div class="ttdeci">std::mutex require_results_mutex</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00211">v8toolkit.cpp:211</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html_a3186ba9791dfe15390af63c7646fd17c"><div class="ttname"><a href="namespacev8toolkit.html#a3186ba9791dfe15390af63c7646fd17c">v8toolkit::set_global_object_alias</a></div><div class="ttdeci">void set_global_object_alias(v8::Isolate *isolate, const v8::Local&lt; v8::Context &gt; context, std::string alias_name)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00020">v8toolkit.cpp:20</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Feb 2 2016 20:38:11 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Feb 4 2016 01:58:23 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

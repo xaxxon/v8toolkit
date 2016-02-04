@@ -117,18 +117,24 @@ Public Types</h2></td></tr>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a97a4d5059931bb433163382c3482816e"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a97a4d5059931bb433163382c3482816e">~V8ClassWrapper</a> ()</td></tr>
 <tr class="separator:a97a4d5059931bb433163382c3482816e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac4a24dbb39aeb04e82d1eb9bc89040d8"><td class="memTemplParams" colspan="2">template&lt;typename... CONSTRUCTOR_PARAMETER_TYPES&gt; </td></tr>
-<tr class="memitem:ac4a24dbb39aeb04e82d1eb9bc89040d8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#ac4a24dbb39aeb04e82d1eb9bc89040d8">add_constructor</a> (std::string js_constructor_name, v8::Local&lt; v8::ObjectTemplate &gt; &amp;parent_template)</td></tr>
-<tr class="separator:ac4a24dbb39aeb04e82d1eb9bc89040d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56893f6164ed00c271e942fbe3412302"><td class="memTemplParams" colspan="2">template&lt;typename... CONSTRUCTOR_PARAMETER_TYPES&gt; </td></tr>
+<tr class="memitem:a56893f6164ed00c271e942fbe3412302"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a56893f6164ed00c271e942fbe3412302">add_constructor</a> (std::string js_constructor_name, v8::Local&lt; v8::ObjectTemplate &gt; parent_template)</td></tr>
+<tr class="separator:a56893f6164ed00c271e942fbe3412302"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae860b0c21f7201910b1f73e168b50342"><td class="memTemplParams" colspan="2">template&lt;class BEHAVIOR &gt; </td></tr>
 <tr class="memitem:ae860b0c21f7201910b1f73e168b50342"><td class="memTemplItemLeft" align="right" valign="top">v8::Local&lt; v8::Value &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#ae860b0c21f7201910b1f73e168b50342">wrap_existing_cpp_object</a> (v8::Local&lt; v8::Context &gt; context, T *existing_cpp_object)</td></tr>
 <tr class="separator:ae860b0c21f7201910b1f73e168b50342"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd805562bff7a1a703071fbe8465daf3"><td class="memTemplParams" colspan="2">template&lt;typename MEMBER_TYPE &gt; </td></tr>
 <tr class="memitem:abd805562bff7a1a703071fbe8465daf3"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#abd805562bff7a1a703071fbe8465daf3">add_member</a> (MEMBER_TYPE T::*member, std::string member_name)</td></tr>
 <tr class="separator:abd805562bff7a1a703071fbe8465daf3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a38447cdc105b23f6ab4cbecbd950d694"><td class="memTemplParams" colspan="2">template&lt;class METHOD_TYPE &gt; </td></tr>
-<tr class="memitem:a38447cdc105b23f6ab4cbecbd950d694"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a38447cdc105b23f6ab4cbecbd950d694">add_method</a> (METHOD_TYPE method, std::string method_name)</td></tr>
-<tr class="separator:a38447cdc105b23f6ab4cbecbd950d694"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a074b1f33d90adcc00a6d232a852f1de7"><td class="memTemplParams" colspan="2">template&lt;class R , class... Args&gt; </td></tr>
+<tr class="memitem:a074b1f33d90adcc00a6d232a852f1de7"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a074b1f33d90adcc00a6d232a852f1de7">add_method</a> (R(T::*method)(Args...) const, std::string method_name)</td></tr>
+<tr class="separator:a074b1f33d90adcc00a6d232a852f1de7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5814ae7e5ebe10eeaff0dc780ac59be8"><td class="memTemplParams" colspan="2">template&lt;class R , class... Args&gt; </td></tr>
+<tr class="memitem:a5814ae7e5ebe10eeaff0dc780ac59be8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a5814ae7e5ebe10eeaff0dc780ac59be8">add_method</a> (R(T::*method)(Args...), std::string method_name)</td></tr>
+<tr class="separator:a5814ae7e5ebe10eeaff0dc780ac59be8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a477abf6735470ac89be6e5d80a8c2d5f"><td class="memTemplParams" colspan="2">template&lt;class M &gt; </td></tr>
+<tr class="memitem:a477abf6735470ac89be6e5d80a8c2d5f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f">_add_method</a> (M method, std::string method_name)</td></tr>
+<tr class="separator:a477abf6735470ac89be6e5d80a8c2d5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -155,7 +161,7 @@ template&lt;class T&gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00335">335</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00334">334</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 </div>
 </div>
@@ -218,7 +224,7 @@ template&lt;class T&gt; </div>
 
 <p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
 
-<p>Referenced by <a class="el" href="sample_8cpp_source.html#l00076">main()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00413">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00431">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, and <a class="el" href="javascript_8h_source.html#l00540">v8toolkit::IsolateHelper::wrap_class()</a>.</p>
+<p>Referenced by <a class="el" href="sample_8cpp_source.html#l00077">main()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00440">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00458">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, and <a class="el" href="javascript_8h_source.html#l00549">v8toolkit::IsolateHelper::wrap_class()</a>.</p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -235,7 +241,7 @@ Here is the caller graph for this function:</div>
 
 </div>
 </div>
-<a class="anchor" id="ac4a24dbb39aeb04e82d1eb9bc89040d8"></a>
+<a class="anchor" id="a56893f6164ed00c271e942fbe3412302"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
@@ -255,7 +261,7 @@ template&lt;typename... CONSTRUCTOR_PARAMETER_TYPES&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">v8::Local&lt; v8::ObjectTemplate &gt; &amp;&#160;</td>
+          <td class="paramtype">v8::Local&lt; v8::ObjectTemplate &gt;&#160;</td>
           <td class="paramname"><em>parent_template</em>&#160;</td>
         </tr>
         <tr>
@@ -313,7 +319,7 @@ template&lt;class BEHAVIOR &gt; </div>
 </div><div class="memdoc">
 <p>Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with add_variable to give a javascript name to an existing c++ object </p><div class="fragment"><div class="line"><a class="code" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">add_variable</a>(context, context-&gt;GetGlobal(), <span class="stringliteral">&quot;js_name&quot;</span>, class_wrapper.wrap_existing_cpp_object(context, some_c++_object));</div>
 </div><!-- fragment --> 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00305">305</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00304">304</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 <p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00018">V8_CLASS_WRAPPER_DEBUG</a>.</p>
 
@@ -356,17 +362,17 @@ template&lt;typename MEMBER_TYPE &gt; </div>
 </div><div class="memdoc">
 <p>Adds a getter and setter method for the specified class member add_member(&amp;ClassName::member_name, "javascript_attribute_name"); </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00343">343</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00342">342</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
 </div>
 </div>
-<a class="anchor" id="a38447cdc105b23f6ab4cbecbd950d694"></a>
+<a class="anchor" id="a074b1f33d90adcc00a6d232a852f1de7"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;class T&gt; </div>
 <div class="memtemplate">
-template&lt;class METHOD_TYPE &gt; </div>
+template&lt;class R , class... Args&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -374,7 +380,60 @@ template&lt;class METHOD_TYPE &gt; </div>
         <tr>
           <td class="memname"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt;T&gt;&amp; <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">v8toolkit::V8ClassWrapper</a>&lt; T &gt;::add_method </td>
           <td>(</td>
-          <td class="paramtype">METHOD_TYPE&#160;</td>
+          <td class="paramtype">R(T::*)(Args...) const&#160;</td>
+          <td class="paramname"><em>method</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>method_name</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00366">366</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+
+<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00381">v8toolkit::V8ClassWrapper&lt; T &gt;::_add_method()</a>.</p>
+
+<p><div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1V8ClassWrapper_a074b1f33d90adcc00a6d232a852f1de7_cgraph.png" border="0" usemap="#classv8toolkit_1_1V8ClassWrapper_a074b1f33d90adcc00a6d232a852f1de7_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1V8ClassWrapper_a074b1f33d90adcc00a6d232a852f1de7_cgraph" id="classv8toolkit_1_1V8ClassWrapper_a074b1f33d90adcc00a6d232a852f1de7_cgraph">
+<area shape="rect" id="node2" href="classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f" title="v8toolkit::V8ClassWrapper\l::_add_method" alt="" coords="216,5,378,41"/>
+<area shape="rect" id="node3" href="namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c" title="v8toolkit::bind" alt="" coords="426,11,521,35"/>
+</map>
+</div>
+</p>
+
+</div>
+</div>
+<a class="anchor" id="a5814ae7e5ebe10eeaff0dc780ac59be8"></a>
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T&gt; </div>
+<div class="memtemplate">
+template&lt;class R , class... Args&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt;T&gt;&amp; <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">v8toolkit::V8ClassWrapper</a>&lt; T &gt;::add_method </td>
+          <td>(</td>
+          <td class="paramtype">R(T::*)(Args...)&#160;</td>
           <td class="paramname"><em>method</em>, </td>
         </tr>
         <tr>
@@ -397,16 +456,81 @@ template&lt;class METHOD_TYPE &gt; </div>
 </div><div class="memdoc">
 <p>Adds the ability to call the specified class instance method on an object of this type </p>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00368">368</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00375">375</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00626">v8toolkit::bind()</a>.</p>
+<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00381">v8toolkit::V8ClassWrapper&lt; T &gt;::_add_method()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><img src="classv8toolkit_1_1V8ClassWrapper_a38447cdc105b23f6ab4cbecbd950d694_cgraph.png" border="0" usemap="#classv8toolkit_1_1V8ClassWrapper_a38447cdc105b23f6ab4cbecbd950d694_cgraph" alt=""/></div>
-<map name="classv8toolkit_1_1V8ClassWrapper_a38447cdc105b23f6ab4cbecbd950d694_cgraph" id="classv8toolkit_1_1V8ClassWrapper_a38447cdc105b23f6ab4cbecbd950d694_cgraph">
+<div class="center"><img src="classv8toolkit_1_1V8ClassWrapper_a5814ae7e5ebe10eeaff0dc780ac59be8_cgraph.png" border="0" usemap="#classv8toolkit_1_1V8ClassWrapper_a5814ae7e5ebe10eeaff0dc780ac59be8_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1V8ClassWrapper_a5814ae7e5ebe10eeaff0dc780ac59be8_cgraph" id="classv8toolkit_1_1V8ClassWrapper_a5814ae7e5ebe10eeaff0dc780ac59be8_cgraph">
+<area shape="rect" id="node2" href="classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f" title="v8toolkit::V8ClassWrapper\l::_add_method" alt="" coords="216,5,378,41"/>
+<area shape="rect" id="node3" href="namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c" title="v8toolkit::bind" alt="" coords="426,11,521,35"/>
+</map>
+</div>
+</p>
+
+</div>
+</div>
+<a class="anchor" id="a477abf6735470ac89be6e5d80a8c2d5f"></a>
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T&gt; </div>
+<div class="memtemplate">
+template&lt;class M &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a>&lt;T&gt;&amp; <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">v8toolkit::V8ClassWrapper</a>&lt; T &gt;::_add_method </td>
+          <td>(</td>
+          <td class="paramtype">M&#160;</td>
+          <td class="paramname"><em>method</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>method_name</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00381">381</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00641">v8toolkit::bind()</a>.</p>
+
+<p>Referenced by <a class="el" href="v8__class__wrapper_8h_source.html#l00366">v8toolkit::V8ClassWrapper&lt; T &gt;::add_method()</a>.</p>
+
+<p><div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_cgraph.png" border="0" usemap="#classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_cgraph" alt=""/></div>
+<map name="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_cgraph" id="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_cgraph">
 <area shape="rect" id="node2" href="namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c" title="v8toolkit::bind" alt="" coords="216,11,311,35"/>
+</map>
+</div>
+</p>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_icgraph.png" border="0" usemap="#classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_icgraph" alt=""/></div>
+<map name="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_icgraph" id="classv8toolkit_1_1V8ClassWrapper_a477abf6735470ac89be6e5d80a8c2d5f_icgraph">
+<area shape="rect" id="node2" href="classv8toolkit_1_1V8ClassWrapper.html#a074b1f33d90adcc00a6d232a852f1de7" title="v8toolkit::V8ClassWrapper\l::add_method" alt="" coords="216,5,378,41"/>
 </map>
 </div>
 </p>
@@ -419,7 +543,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Feb 2 2016 20:38:12 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Feb 4 2016 01:58:24 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['_5fadd_5fmethod',['_add_method',['../classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f',1,'v8toolkit::V8ClassWrapper']]],
   ['_5fformat_5fhelper',['_format_helper',['../namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7',1,'v8toolkit']]],
   ['_5fprint_5fhelper',['_print_helper',['../namespacev8toolkit.html#a5212431cf43a6986955cde4289952947',1,'v8toolkit']]],
   ['_5fprintf_5fhelper',['_printf_helper',['../namespacev8toolkit.html#ae5dc09550fef3e9c21c7745f3acfb71a',1,'v8toolkit']]],
