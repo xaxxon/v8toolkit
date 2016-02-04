@@ -362,19 +362,32 @@ public:
 	}
 
 
+	template<class R, class... Args>
+	V8ClassWrapper<T> & add_method(R(T::*method)(Args...) const, std::string method_name) {
+		return _add_method(method, method_name);
+	}
+    
+
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
-	template<class METHOD_TYPE>
-	V8ClassWrapper<T> & add_method(METHOD_TYPE method, std::string method_name)
+	template<class R, class... Args>
+	V8ClassWrapper<T> & add_method(R(T::*method)(Args...), std::string method_name)
 	{
-		
+		return _add_method(method, method_name);
+    }
+    
+    template<class M>
+    V8ClassWrapper<T> & _add_method(M method, std::string method_name)
+    {
 		// stop additional constructors from being added
 		member_or_method_added = true;
 		
 		// this is leaked if this ever isn't used anymore
 		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) 
 		{
+            auto isolate = info.GetIsolate();
+            
 			// get the behind-the-scenes c++ object
 			auto self = info.Holder();
 			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
@@ -383,7 +396,17 @@ public:
 			
 			// bind the object and method into a std::function then build the parameters for it and call it
 			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
-			v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>()(bound_method, info);			
+            
+            using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>;
+            
+            PB_TYPE pb;
+            auto arity = PB_TYPE::ARITY;
+            if(info.Length() < arity) {
+                std::stringstream ss;
+                ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+                isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+            }
+			pb(bound_method, info);
 		});
 		
 		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
@@ -392,7 +415,10 @@ public:
 			constructor_template.Get(isolate)->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		}
 		return *this;
-	}	
+	}
+    
+    
+    
 };
 
 /**
@@ -447,8 +473,7 @@ struct CastToJS<T&> {
 template<typename T>
 struct CastToNative
 {
-	// implementation for above struct's operator()
-	T & operator()(v8::Local<v8::Value> & value){
+	T & operator()(v8::Local<v8::Value> value){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
 		auto object = v8::Object::Cast(*value);
 		assert(object->InternalFieldCount() > 0);
