@@ -343,11 +343,11 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
         PB_TYPE pb;
         
         auto arity = PB_TYPE::ARITY;
-        printf("Checking parameter count, got %d, expected %d\n", args.Length(), arity);
         if(args.Length() < arity) {
             std::stringstream ss;
             ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << args.Length();
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+            return;
         }
         pb(callable, args);
     }, v8::External::New(isolate, (void*)copy));

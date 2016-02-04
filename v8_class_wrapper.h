@@ -405,6 +405,7 @@ public:
                 std::stringstream ss;
                 ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                 isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+                return; // return now so the exception can be thrown inside the javascript
             }
 			pb(bound_method, info);
 		});
