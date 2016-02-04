@@ -246,7 +246,7 @@ public:
 			 decltype(std::declval<T>()(), 1) = 1>
 	R operator()(T callable)
 	{
-		v8::Locker l(isolate);
+        v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
@@ -260,7 +260,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
 	R operator()(T callable)
 	{
-		v8::Locker l(isolate);
+        v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}
@@ -274,7 +274,7 @@ public:
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
 	R operator()(T callable)
 	{
-		v8::Locker l(isolate);
+        v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
 		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
 	}

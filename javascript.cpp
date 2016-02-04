@@ -55,7 +55,6 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
         v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
         if (compiled_script.IsEmpty()) {
             v8::String::Utf8Value exception(try_catch.Exception());
-            printf("Compile failed '%s', throwing exception\n", *exception);
             throw CompilationError(*exception);
         }
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
@@ -73,9 +72,7 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
         auto local_script = v8::Local<v8::Script>::New(isolate, script);
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
-            // printf("Execution failed, throwing exception\n");
             auto e = try_catch.Exception();
-            printf("Details on value thrown from javascript execution:\n");
             print_v8_value_details(e);
             if(e->IsObject()){
                 printobj(*this, e->ToObject());
