@@ -56,6 +56,7 @@ struct Line {
     Point p;
     Point & get_point(){return this->p;}
     Point get_rvalue_point(){return Point();}
+    void some_method(int){}
 };
 
 
@@ -71,7 +72,7 @@ void print_maybe_value(v8::MaybeLocal<v8::Value> maybe_value)
     }
 }
 
-
+void some_function(int){}
 
 int main(int argc, char* argv[]) 
 {
@@ -105,6 +106,8 @@ int main(int argc, char* argv[])
             v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
         
             add_print(isolate, global_templ);
+            
+            add_function(isolate, global_templ, "some_function", some_function);
 
             // // add the function "four()" to javascript
             // global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
@@ -122,8 +125,8 @@ int main(int argc, char* argv[])
             //   at least not without some serious finagling of storing a mapping between a singlne name and
             //   multiple function templates as well as some sort of "closeness" function for determining
             //   which primitive type parameters most closely match the javascript values provided
-            wrapped_point.add_method<int (Point::*)(char *)>(&Point::overloaded_method, "overloaded_method1");
-            wrapped_point.add_method<int (Point::*)(int)>(&Point::overloaded_method, "overloaded_method2");
+            wrapped_point.add_method<int, char*>(&Point::overloaded_method, "overloaded_method1");
+            wrapped_point.add_method<int, int>(&Point::overloaded_method, "overloaded_method2");
             wrapped_point.add_method(&Point::make_point, "make_point");
 
             wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
@@ -180,8 +183,40 @@ int main(int argc, char* argv[])
                 v8::String::NewFromUtf8(isolate, get_file_contents("sample2.js").c_str());
             v8::Local<v8::Script> script2 = v8::Script::Compile(context, source2).ToLocalChecked();
             (void)script2->Run(context);
-        });
 
+            // throwing a c++ exception here immediately terminates the process
+            // add_function(context, context->Global(), "throw_exception", [](){throw std::exception();});
+            printf("Checking that calling a normal function with too few parameters throws\n");
+            v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
+            v8::TryCatch tc(isolate);
+            try{
+                (void)script3->Run(context);
+                if(tc.HasCaught()){
+                    printf("TC has caught\n");
+                } else {
+                    printf("TC has not caught\n");
+                }
+            } catch(...) {
+                printf("Caught in regular trycatch\n");
+            }
+            
+            printf("Checking that calling a class method with too few parameters throws\n");
+            v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
+            v8::TryCatch tc2(isolate);
+            try{
+                (void)script4->Run(context);
+                if(tc2.HasCaught()){
+                    printf("tc2 has caught\n");
+                } else {
+                    printf("tc2 has not caught\n");
+                }
+            } catch(...) {
+                printf("Caught in regular trycatch\n");
+            }
+            
+                        
+        });
+        
     }
 
     // Dispose the isolate and tear down V8.

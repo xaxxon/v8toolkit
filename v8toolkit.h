@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -222,8 +223,8 @@ struct CallCallable{};
 template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable, 
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
     }
 };
 
@@ -282,8 +283,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
     enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
-        this->super::operator()(function, info, std::forward<Ts>(ts)..., CastToNative<HEAD>()(info[depth])); 
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
     }
 };
 
@@ -304,8 +305,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
-        this->super::operator()(function, info, std::forward<Ts>(ts)..., info); 
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info); 
     }
 };
 
@@ -318,6 +319,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
 template<int depth, class T>
 struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
 {
+    enum {DEPTH = 0, ARITY=0};
     void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> function, const v8::FunctionCallbackInfo<v8::Value> & info) {
         function(info);
     }
@@ -333,8 +335,21 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 {
     auto copy = new std::function<R(Args...)>(f);
     return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+        auto isolate = args.GetIsolate();
+
         auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(args.Data()))->Value();
-        ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>()(callable, args);
+
+        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>;
+        PB_TYPE pb;
+        
+        auto arity = PB_TYPE::ARITY;
+        printf("Checking parameter count, got %d, expected %d\n", args.Length(), arity);
+        if(args.Length() < arity) {
+            std::stringstream ss;
+            ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << args.Length();
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+        }
+        pb(callable, args);
     }, v8::External::New(isolate, (void*)copy));
 }
 

@@ -330,7 +330,6 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
 
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
-    
     std::lock_guard<std::mutex> l(require_results_mutex);
     add_function(isolate, object_template, "module_list", [isolate]{return scoped_run(isolate,[isolate]{return require_results[isolate];});});
 }
