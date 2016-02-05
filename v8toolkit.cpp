@@ -430,6 +430,10 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
     
 }
 
+AnyBase::~AnyBase()
+{
+    
+}
 
 
 

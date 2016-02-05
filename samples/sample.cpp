@@ -57,6 +57,7 @@ struct Line {
     Point & get_point(){return this->p;}
     Point get_rvalue_point(){return Point();}
     void some_method(int){}
+    void throw_exception(){throw std::exception();}
 };
 
 
@@ -108,6 +109,7 @@ int main(int argc, char* argv[])
             add_print(isolate, global_templ);
             
             add_function(isolate, global_templ, "some_function", some_function);
+            add_function(isolate, global_templ, "throw_exception", [](){throw std::exception();});
 
             // // add the function "four()" to javascript
             // global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
@@ -141,6 +143,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_method(&Line::get_point, "get_point");
             wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
             wrapped_line.add_member(&Line::p, "p");
+            wrapped_line.add_method(&Line::some_method, "some_method").add_method(&Line::throw_exception, "throw_exception");
         
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
             wrapped_foo.add_member(&Foo::i, "i");
@@ -185,19 +188,18 @@ int main(int argc, char* argv[])
             (void)script2->Run(context);
 
             // throwing a c++ exception here immediately terminates the process
-            // add_function(context, context->Global(), "throw_exception", [](){throw std::exception();});
             printf("Checking that calling a normal function with too few parameters throws\n");
             v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
             v8::TryCatch tc(isolate);
             try{
                 (void)script3->Run(context);
                 if(tc.HasCaught()){
-                    printf("TC has caught\n");
+                    printf("Too few parameters exception caught\n");
                 } else {
                     printf("TC has not caught\n");
                 }
             } catch(...) {
-                printf("Caught in regular trycatch\n");
+                printf("This should be impossible\n");
             }
             
             printf("Checking that calling a class method with too few parameters throws\n");
@@ -206,13 +208,42 @@ int main(int argc, char* argv[])
             try{
                 (void)script4->Run(context);
                 if(tc2.HasCaught()){
-                    printf("tc2 has caught\n");
+                    printf("Too few parameters exception caught\n");
                 } else {
                     printf("tc2 has not caught\n");
                 }
             } catch(...) {
-                printf("Caught in regular trycatch\n");
+                printf("This should be impossible\n");
             }
+            
+            printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
+            v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
+            v8::TryCatch tc3(isolate);
+            try{
+                (void)script5->Run(context);
+                if(tc3.HasCaught()){
+                    printf("Exception successfully re-thrown and caught\n");
+                } else {
+                    printf("tc3 has not caught\n");
+                }
+            } catch(...) {
+                printf("This should be impossible\n");
+            }
+            
+            printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
+            v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
+            v8::TryCatch tc4(isolate);
+            try{
+                (void)script6->Run(context);
+                if(tc4.HasCaught()){
+                    printf("Exception successfully re-thrown and caught\n");
+                } else {
+                    printf("tc4 has not caught\n");
+                }
+            } catch(...) {
+                printf("This should be impossible\n");
+            }
+            
             
                         
         });

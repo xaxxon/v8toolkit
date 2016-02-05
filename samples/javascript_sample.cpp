@@ -107,9 +107,66 @@ auto test_lifetimes()
 }
 
 
+struct A { int i=1; }; 
+struct B { int i=2; }; 
+struct C : A, B { int i=3; virtual ~C(){}};
+
+class NotFamily {};
+
+class NotWrapped {};
+
+void run_type_conversion_test()
+{
+    auto i = PlatformHelper::create_isolate();
+    (*i)([&]{
+        i->wrap_class<C>().add_constructor("C", i->get_object_template());
+        i->wrap_class<A>().add_constructor("A", i->get_object_template()).set_compatible_types<C>();
+        i->wrap_class<B>().add_constructor("B", i->get_object_template()).set_compatible_types<C>();
+        i->wrap_class<NotFamily>().add_constructor("NotFamily", i->get_object_template());
+        i->add_function("a", [](A * a) {
+            printf("In 'A' function, A::i = %d (1) &a=%p\n", a->i, a);
+        });
+        i->add_function("b", [](B * b) {
+            printf("In 'B' function, B::i = %d (2) &b=%p\n", b->i, b);
+        });
+        i->add_function("c", [](C * c) {
+            printf("In 'C' function, C::i = %d (3) &c=%p\n", c->i, c);
+        });
+        i->add_function("not_wrapped", [](NotWrapped * nw) {
+            printf("In 'not_wrapped' function\n");
+        });
+        auto c = i->create_context();
+        c->run("a(new A())");
+        c->run("a(new C())");
+        c->run("b(new B())");
+        c->run("b(new C())");
+        c->run("c(new C())");
+        
+        printf("The following 3 lines are the same c++ object but casted to each type's starting address\n");
+        c->run("var cvar = new C(); a(cvar); b(cvar); c(cvar);");
+        
+        
+        try {
+            c->run("a(new NotFamily())");
+            printf("(BAD) Didn't catch exception\n");
+        } catch(...) {
+            printf("(GOOD) Caught exception calling parent() function with incompatible wrapped object\n");
+        }
+        try {
+            c->run("not_wrapped(new C())");
+            printf("(BAD) Didn't catch exception calling not_wrapped()\n");
+        } catch(...) {
+            printf("(GOOD) Caught exception calling not_wrapped when its parameter type is unknown to v8classwrapper\n");
+        }
+    });
+}
+
+
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
+    
+    run_type_conversion_test();
     
     auto future = test_lifetimes();
     printf("Nothing should have been destroyed yet\n");
@@ -119,7 +176,6 @@ int main(int argc, char ** argv) {
         printf("Nothing should have been destroyed yet after getting future results\n");
     }
     printf("The script, context, and isolate helpers should have all been destroyed\n");
-
 
     auto context = run_tests();
     printf("The script, context, and isolate helpers should have all been destroyed\n");

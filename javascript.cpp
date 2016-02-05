@@ -73,7 +73,7 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
             auto e = try_catch.Exception();
-            print_v8_value_details(e);
+            // print_v8_value_details(e);
             if(e->IsObject()){
                 printobj(*this, e->ToObject());
             }

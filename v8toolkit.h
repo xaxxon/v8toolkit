@@ -234,8 +234,8 @@ struct CallCallable<std::function<R(Args...)>> {
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
     void operator()(std::function<void(Args...)> callable, 
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-        callable(std::forward<Args>(args)...);
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+        callable(args...);
     }
 };
 
@@ -349,7 +349,14 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
             return;
         }
-        pb(callable, args);
+        try {
+            pb(callable, args);
+        } catch (std::exception & e) {
+            printf("caught C++ exception, converting to V8 exception %s\n", e.what());
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "asdf"));
+            return;
+        }
+        return;
     }, v8::External::New(isolate, (void*)copy));
 }
 
@@ -611,6 +618,19 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     R operator()(Args... params){
         return (object.*method)(params...); 
     }
+};
+
+struct AnyBase
+{
+    virtual ~AnyBase();
+};
+
+template<class T>
+struct Any : public AnyBase {
+    Any(T * data) : data(data) {}
+    virtual ~Any(){}
+    T* data;
+    T * get() {return data;}
 };
 
 /** 
