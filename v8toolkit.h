@@ -4,6 +4,9 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <functional>
+
+#include <string.h>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -322,6 +325,38 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
     }
 };
 
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
+        public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+            
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    std::unique_ptr<char[]> buffer;
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      buffer = CastToNative<const char *>()(info[depth]);
+      this->super::operator()(function, info, ts..., buffer.get()); 
+    }
+    };
+    
+    
+    template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+    struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
+						      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    std::unique_ptr<char[]> buffer;
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      buffer = CastToNative<const char *>()(info[depth]);
+      this->super::operator()(function, info, ts..., buffer.get()); 
+    }
+};
+
+
+
+ 
 /**
 * specialization for functions that want to take a v8::FunctionCallbackInfo object in addition
 *   to javascript-provided parameters.  depth parameter isn't incremented because this doesn't
@@ -332,7 +367,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 *   javascript
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : 
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> &,TAIL...)>> : 
         public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
             
     typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;

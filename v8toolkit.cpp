@@ -4,6 +4,9 @@
 #include <string>
 #include <sstream>
 #include <regex>
+#include <mutex>
+
+#include <assert.h>
 
 //
 //
@@ -63,10 +66,9 @@ std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
     auto values = get_all_values(args);
     
     if (args.Length() > 0) {
-        auto string = *v8::String::Utf8Value(values[0]);
-        auto format = boost::format(string);
+        auto format = boost::format(*v8::String::Utf8Value(values[0]));
 
-        int i;
+        unsigned int i;
         for (i = 1; format.remaining_args() > 0; i++) {
             if (i < values.size()) {
                 format % *v8::String::Utf8Value(values[i]);
@@ -234,6 +236,7 @@ std::map<std::string, v8::Global<v8::Value>&> get_loaded_modules(v8::Isolate * i
 */
 v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, std::string filename, const std::vector<std::string> & paths)
 {
+
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
         printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
@@ -351,7 +354,7 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
         }
     }
 
-    (void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{        
+    (void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
         

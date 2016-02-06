@@ -49,6 +49,8 @@ var require_result = require("module.js");
 println("Running the cached return value from requiring the same module");
 require_result.function();
 
+println();
+println("Dumping module list");
 println(dumpdata(module_list()));
 
 
