@@ -28,6 +28,31 @@ public:
   virtual const char * what() const noexcept override {return message.c_str();}
 };
 
+
+struct AnyBase
+{
+    virtual ~AnyBase();
+};
+
+
+template<class T>
+struct Any : public AnyBase {
+    Any(T * data) : data(data) {}
+    virtual ~Any(){}
+    T* data;
+    T * get() {return data;}
+};
+
+template<class T>
+struct AnyPtr : public AnyBase {
+    AnyPtr(T data) : data(data) {}
+    virtual ~AnyPtr(){}
+    T data;
+    T get() {return data;}
+};
+
+
+
 /**
 * Helper function to run the callable inside contexts.
 * If the isolate is currently inside a context, it will use that context automatically
@@ -349,12 +374,18 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
             return;
         }
+        std::exception_ptr exception_pointer;
         try {
             pb(callable, args);
-        } catch (std::exception & e) {
-            printf("caught C++ exception, converting to V8 exception %s\n", e.what());
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "asdf"));
-            return;
+        } catch (...) {
+            scoped_run(isolate,[&](){
+                fprintf(stderr, "caught exception from non-method function\n");
+                auto anyptr_t = new AnyPtr<std::exception_ptr>( std::current_exception());
+                fprintf(stderr, "Created AnyPtr<T> for the exception ptr with anybase at %p\n", static_cast<AnyBase*>(anyptr_t));
+                isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
+                // isolate->ThrowException(v8::String::NewFromUtf8(isolate, "asdf"));
+                fprintf(stderr, "called isolate->ThrowException\n");
+            });
         }
         return;
     }, v8::External::New(isolate, (void*)copy));
@@ -620,18 +651,6 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     }
 };
 
-struct AnyBase
-{
-    virtual ~AnyBase();
-};
-
-template<class T>
-struct Any : public AnyBase {
-    Any(T * data) : data(data) {}
-    virtual ~Any(){}
-    T* data;
-    T * get() {return data;}
-};
 
 /** 
 * Bind specialization for handling const class methods

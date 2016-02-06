@@ -17,7 +17,7 @@
 namespace v8toolkit {
 
 #define V8_CLASS_WRAPPER_DEBUG false
-    
+
 class CastException : public std::exception {
 private:
   std::string reason;
@@ -25,7 +25,6 @@ private:
 public:
     CastException(const std::string & reason) : reason(reason) {}
     virtual const char * what() const noexcept override {return reason.c_str();}
-     
 };
 
 /**
@@ -255,36 +254,6 @@ private:
 	{
 		StdFunctionCallbackType * callback_lambda = (StdFunctionCallbackType *)v8::External::Cast(*(args.Data()))->Value();		
 		(*callback_lambda)(args);
-	}
-	
-	// data to pass into a setweak callback
-	struct SetWeakCallbackParameter
-	{
-		T * cpp_object;
-		v8::Global<v8::Object> javascript_object;
-		std::unique_ptr<DestructorBehavior<T>> behavior;
-	};
-	
-	
-	
-	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
-	// garbage collected
-	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
-		auto isolate = data.GetIsolate();
-
-		SetWeakCallbackParameter * parameter = data.GetParameter();
-		
-		// delete our internal c++ object and tell V8 the memory has been removed
-		(*parameter->behavior)(isolate, parameter->cpp_object);
-		
-		// TODO: Need to remove object from existing_wrapped_objects hash properly resetting the global 
-		
-		
-		// Clear out the Global<Object> handle
-		parameter->javascript_object.Reset();
-
-		// Delete the heap-allocated std::pair from v8_constructor
-		delete parameter;
 	}
 
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with

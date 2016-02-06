@@ -15,6 +15,10 @@ int x = 1;
 int y = 2;
 int y2 = 3;
 
+class TestException : std::exception {
+    virtual const char * what() const noexcept override {return "TestException What";}
+};
+
 auto run_tests()
 {
     
@@ -27,6 +31,7 @@ auto run_tests()
         // expose global variable x as "x" in all contexts created from this isolate
         ih1->expose_variable("x", x);
         ih1->add_function("return_hi", [](){return "hi";});
+        ih1->add_function("throw_test_exception", [](){throw TestException();});
         
         auto c = ih1->create_context();
         auto c2 = ih1->create_context();
@@ -38,14 +43,15 @@ auto run_tests()
         ih1->expose_variable("y", y);
         ih1->add_function("return_bye", [](){return "bye";});
         
+        printf("*** Expecting exception\n");
         try {
             c->run("println(y)");
-        } catch(v8toolkit::ContextHelper::ExecutionError & e) {
+        } catch(v8toolkit::V8Exception & e) {
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
         try {
             c->run("println(return_bye())");
-        } catch(v8toolkit::ContextHelper::ExecutionError & e) {
+        } catch(v8toolkit::V8Exception & e) {
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
         }
         
@@ -67,13 +73,19 @@ auto run_tests()
         printf("but they're still not on c2, which was made at the same time as c\n");
         try {
             c2->run("println(y)");
-        } catch(v8toolkit::ContextHelper::ExecutionError & e) {
+        } catch(v8toolkit::V8Exception & e) {
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
         try {
             c2->run("println(return_bye())");
-        } catch(v8toolkit::ContextHelper::ExecutionError & e) {
+        } catch(v8toolkit::V8Exception & e) {
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
+        }
+        
+        try {
+            c->run("throw_test_exception()");
+        } catch(TestException & e) {
+            printf("Caught TestException as expected");
         }
         
         // returning context to demonstrate how having a context alive keeps an IsolateHelper alive even though the

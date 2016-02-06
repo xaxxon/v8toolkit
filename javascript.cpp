@@ -72,23 +72,23 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
         auto local_script = v8::Local<v8::Script>::New(isolate, script);
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
-            auto e = try_catch.Exception();
-            // print_v8_value_details(e);
-            if(e->IsObject()){
-                printobj(*this, e->ToObject());
+
+            
+            v8::Local<v8::Value> e = try_catch.Exception();
+            print_v8_value_details(e);
+            
+            
+            if(e->IsExternal()) {
+                auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
+                auto anyptr_exception_ptr = dynamic_cast<AnyPtr<std::exception_ptr> *>(anybase);
+                assert(anyptr_exception_ptr);
+            
+                std::rethrow_exception(anyptr_exception_ptr->get());
+            } else {
+                throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
             }
-            printf("\n");
-            v8::String::Utf8Value exception(e);
-                                std::cout<<std::endl<<*exception<<std::endl;;
-            throw ExecutionError(v8::Global<v8::Value>(isolate, e), *exception);
-                                std::cout<<"#";
         }
         v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-        // printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
-        // printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
-        // Convert the result to an UTF8 string and print it.
-        v8::String::Utf8Value utf8(result);
-        // printf("run script result: %s\n", *utf8);
     
         return v8::Global<v8::Value>(isolate, result);
     });
