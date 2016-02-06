@@ -54,8 +54,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
         // Compile the source code.
         v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
         if (compiled_script.IsEmpty()) {
-            v8::String::Utf8Value exception(try_catch.Exception());
-            throw CompilationError(*exception);
+            throw V8CompilationError(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
         }
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
@@ -81,7 +80,7 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
             if(e->IsExternal()) {
                 auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
                 auto anyptr_exception_ptr = dynamic_cast<AnyPtr<std::exception_ptr> *>(anybase);
-                assert(anyptr_exception_ptr);
+                assert(anyptr_exception_ptr); // cannot handle other types at this time TODO: throw some other type of exception if this happens UnknownExceptionException or something
             
                 std::rethrow_exception(anyptr_exception_ptr->get());
             } else {
@@ -152,11 +151,12 @@ IsolateHelper::operator v8::Isolate*()
     return this->isolate;
 }
 
-void IsolateHelper::add_print()
+IsolateHelper & IsolateHelper::add_print()
 {
     (*this)([this](){
         v8toolkit::add_print(isolate, get_object_template());
     });
+    return *this;
 }
 
 void IsolateHelper::add_require(std::vector<std::string> paths)

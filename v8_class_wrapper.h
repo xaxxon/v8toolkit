@@ -564,6 +564,7 @@ struct CastToNative
 	T & operator()(v8::Local<v8::Value> value){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
         if(!value->IsObject()){
+            // TODO: Don't use castexception anywhere just use V8ExecutionException
             throw CastException("No specialized CastToNative found and value was not a Javascript Object");
         }
 		auto object = v8::Object::Cast(*value);

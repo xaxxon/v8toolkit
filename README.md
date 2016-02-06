@@ -16,7 +16,7 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 #javascript
 (poorly named) A system for creation and management of the v8 platform, isolates, and contexts.  Requires V8ClassWrapper.  This is the simplest way to embed V8 in your application, as it requires virtually no understanding of the underlying V8 APIs.
 
-# Usage example:
+
 
 #### Your First V8 program
 
@@ -42,26 +42,23 @@ Here is the simplest program you can write to execute some javascript:
         context_helper->run("println('Hello JavaScript World!');"); 
     }
 
-Working backwards, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects remains in the context
-and will be seen any other JavaScript run within that same context.   
+Working backwards, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects in a context persist 
+and will be seen any other JavaScript run within that same context.
 
-An isolate contains any number of relatex context objects.   Objects in a context can be moved to another context in the same isolate.   An isolate can be customized
-so that all contexts created after the customization share that customization.   In the example above, if we made another context by callig isolate_helper->create_context(), 
-it would also have access to the print helpers added by add_print().    However if another isolate were made, contexts created from it would not have the print helpers unless
-add_print() was also called on that second isolate.  Also, only one thread can be in any context in a given isolate.   If you want multiple threads running JavaScript, you
-must have multiple isolates (which prevents directly moving javascripts between them since they are different isolates).
+An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling isolate_helper->create_context() a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
 
-PlatformHelper manages the per-process configuration for V8 and creating isolates.  It has no interaction with your JavaScript execution. 
+PlatformHelper manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
+
 
 #### Exposing C++ functions to javascript
 
-Simply running pure javascript isn't interesting, though.  We want to cross the boundary between JavaScript and C++ seemlessly.  Skipping the boilerplate in the first example,
-here's how to call a custom C++ function from JavaScript.  (i = isolate_helper, c = context_helper)
+Simply running pure javascript as in the previous example just isn't interesting, though.  We want to cross the boundary between JavaScript and C++ seemlessly.  
+Skipping some of the boilerplate in the previous example, here's how to call a custom C++ function from JavaScript.
 
     // just a normal function, nothing special about it
-    int add_numbers(int i, int j) 
+    int add_numbers(int x, int y) 
     { 
-        return i + j; 
+        return x + y; 
     }
     
     auto i = PlatformHelper::create_isolate();
@@ -75,16 +72,17 @@ here's how to call a custom C++ function from JavaScript.  (i = isolate_helper, 
     // prints 9
     c->run("println(js_add_numbers(4,5));");
 
-This introduces add_function() which takes a name to expose the function as in JavaScript and "something to be called" when the javascript function
-is invoked.  This can be a function, a functor (a class with an overloaded operator() method), a lambda (capturing or not), or anything else that
-std::function can hold.   The magic here is that this library knows what the parameter types and return type of the function you're calling are and
-tries its best to convert the javascript values passed in to match the types the function wants.  All the standard C++ types are supported and 
+This example introduces add_function() method which takes a name and "something to be called". This "something" can be a function, a functor 
+(a class with an overloaded operator() method), a lambda (capturing or not), or anything else that std::function can hold.   The magic here is 
+that this library knows what the parameter types and return type of the function you're calling are and tries its best to convert the javascript 
+values passed in to match the types the function wants.  All the standard C++ types are supported and 
 conversion happens using the same mechanism used when converting types in javascript.  User-defined types as well as many common STL containers are
-supported as well, but we'll get to that later.
+supported as well and are described in detail below.
+
 
 #### Exposing global C++ variables to JavaScript
 
-Global variables (as well as class public statics) can be exposed to javascript, as well.   
+Global variables (as well as class public static variables) can be exposed to javascript, as well.   
 
     int x = 0;
     i->expose_variable("x", x);
@@ -92,9 +90,12 @@ Global variables (as well as class public statics) can be exposed to javascript,
     c->run("x = 4; println(x);"); // prints 4
     printf("%d\n", x); // also prints 4
 
+This works very similarly to the add_function method above.  Give it a name and the variable to expose and JavaScript now has access to it.
+
+
 #### Using STL containers 
 
-Many common STL containers are supported and behave in a fairly predictable manner.   If the container acts mostly like an array, it is turned into
+Many common STL containers are supported and behave in a fairly intuitive manner.   If the container acts mostly like an array, it is turned into
 an array when passed back to JavaScript.   If the container acts more like an associatie array (key/value pairs), it is turned into a javascript 
 object.
 
@@ -107,18 +108,19 @@ object.
     ...
     c->run("a=make_three_element_array(2,3,5); println(a[1]);"); // prints 3
 
-This example shows a C++ function returning a vector and it being turned into a JavaScript array.   During that conversion, the std::vector is turned
-into an array and then each element inside the vector is converted, so vectors containing any other supported type are supported.   This includes 
-maps of std::string's to vectors of ints (which would be returned as a JavaScript object value where the keys are strings and the values are arrays of 
-ints).  This method of exposing functions to javascript does not support variable arguments, but, if you're willing to learn more about the V8 API,
-you can write a function taking a variable number of arguments without too much additional work and there's an example of this later.
+This example shows a C++ function returning a vector which is turned into a JavaScript array.   During that conversion, the std::vector is converted
+to an array and then each element inside the vector is converted, so vectors containing any other supported type are supported.   This includes 
+containers of containers of containers...  The add_function() method does not support funtions taking a variable number of arguments, but if you're 
+willing to learn more about the V8 API, you can write a function taking a variable number of arguments without too much additional work and there's 
+an example on this later.
 
 Currently there is no support for passing a JavaScript array or object to a C++ function and having it turned into a STL container as an input
 parameter.   This is not believed to be a technical limitation, just a missing featuer.
 
+
 #### Exposing your C++ class to javascript
 
-Now things really start to get interesting: user-defined types.   Most features of a class are supported, though there are some limitations, and some
+Now things really start to get interesting: user-defined types.   Most of the commonly-used features of a C++ class are supported, though there are some limitations, and other
 concepts don't map directly, but are still accessible.
 
 Let's first define a type to work with:
@@ -139,8 +141,8 @@ Let's first define a type to work with:
         int get_age(){return age;}
     }
 
-To make Person available in javascript, first tell the library it's a class it should know about, then tell it what parts of that class it should make 
-available to javascript.  There's no requirement to make everything available and unfortunately there's no introspection in C++ to look at the class
+To make Person available in javascript, first tell the library it's a class it should know about.  Then tell it what parts of that class it should make 
+available to javascript.  There's no requirement to make everything available, and unfortunately there's no introspection in C++ to look at the class
 and make everything available automatically.
 
     auto person_wrapper = i->wrap_class<Person>;
@@ -162,10 +164,9 @@ and make everything available automatically.
     c = i->create_context();
     c->run("p = new Person();  p.speak(); println(p.get_name(), ' is ', p.get_age(), ' years old'); println('Favorite color: ', p.favorite_color);  ");
 
-If you class has multiple constructors, for example, if there were a default constructor for person that made "John Smith" age 18, that could also
-be added with an additional call to add_constructor(), but a different JavaScript function name would have to be used, like "PersonNoParams" or 
-something.   This is a limitation of the C++ type system and how constructors must be called (if you know this or any other specified limitation
-to be false, please let me know).   add_constructor<>("PersonNoParams"); would be the syntax if Person had a default constructor.
+If there was also a default constructor for Person that made "John Smith" age 18, that could be added with an additional call to add_constructor(), 
+but a different JavaScript function name would have to be used, like "PersonDefault".   This is a limitation of the C++ type system and how constructors 
+must be called.   `add_constructor<>("PersonNoParams");` would be the syntax to add a default Person constructor if it were present.
 
 The same limitation exists for overloaded plain functions and methods.  They can each be exposed to JavaScript, but they must have different names.
 
@@ -174,8 +175,8 @@ a function, or in an STL container.
 
 #### Introducing the ScriptHelper
 
-There's one more "helper" type we haven't talked about, since it's not needed for simple examples, but it's likely the same code will be run multiple
-times and compiling it each time is a huge waste.   That's where the ScriptHelper type comes in.
+There's one more "helper" type we haven't talked about, since it's not needed for simple examples shown so far.  It's likely in a real-world project
+the same code will be run multiple times and compiling it each time is a huge waste.   That's where the ScriptHelper type comes in.
 
     // returns a compiled script that can be run multiple times without re-compiling
     auto script = context->compile("println('Hello Javascript World!');");
@@ -188,74 +189,84 @@ That compiled script always runs in the context it was created in.   If you need
 
 #### *Helper object lifetimes
 
-If you're noticing that all the examples use the c++11 "auto" type for holding the helpers, the reason is that they're always returned as 
-std::shared_ptr<[HelperType]>.  If you're not familiar with shared_ptr, it holds a reference to an object allocated with new and when the last
-shared_ptr() goes away, delete is called on the object it points to.   Not only is a shared pointer returned to the user when a Helper is created, but
-another one is stored when you create a *Helper object from another *Helper.   This means that even if your variable storing your IsolateHelper goes 
-out of scope, if you've created a ContextHelper from it and still have that object around, the associated IsolateHelper will stick around.   This is
-very important, since the v8::Isolate stored in the IsolateHelper is required for your context to function.   The same is true for ScriptHelper objects
-keeping their ContextHelper object around (which in turn keeps its IsolateHelper around).   This guarantees that as long as you can make the call to
-run some JavaScript code, the necessary state information will be available for it to succeed.   To illustrate this:
+In the following sections, *Helper refers to all of IsolateHelper, ContextHelper, and ScriptHelper
+
+In V8, a context is invalid if the isolate it was created in has been cleaned up.   Similarly, a compiled script isn't valid if its context is
+destroyed or invalid.  To help manage these object dependencies, each IsolateHelper, ContextHelper, and ScriptHelper track their dependencies and make
+sure those dependencies are not destroyed until they are no longer needed.
+
+If you've noticed in all the examples, the variable storing all the *Helper objects is always set as "auto".  The actual type
+returned when creating these types is a std::shared_ptr<>.  In addition, when a ContextHelper is created from an IsolateHelper or a ScriptHelper from a 
+ContextHelper, the newly created object has a shared_ptr to it's parent object.  This ensures an IsolateHelper will not be destroyed while a ContextHelper 
+is depending on it or a ContextHelper destroyed while a ScriptHelper is depending on it.  This means that even if your variable storing your IsolateHelper 
+goes out of scope, if you've created a ContextHelper from it and still have that object around, the associated IsolateHelper will stick around.  This 
+guarantees that as long as you can make the call to run some JavaScript code, the necessary state information will be available for it to succeed.   
+
+To illustrate this:
 
     {
         std::shared_ptr<ScriptHelper> s;
         {
-            auto i = PlatformHelper::create_context(); // PlatformHelper is a singleton and never goes away
-            auto c = i->create_context();
+            // PlatformHelper is a singleton and never goes away
+            auto i = PlatformHelper::create_context(); // i reference count is 1
+            auto c = i->create_context(); // c reference count is 1, i reference count is now 2
         
-            // remember, S is declared in an outer scope
-            s = c->compile("4;"); // 4 is valid javascript
-        } // i and c are not destroyed even though they can no longer be referenced, because s is still available
+            s = c->compile("4;"); // s reference count is 1, c reference count is now 2, i is still 2
+        } // i and c variables go out of scope, dropping the reference count to both their objects from 2 to 1
     
         s->run(); // this is fine, i and c still exist and are not leaked
     } 
-    // s has gone out of scope and is destroyed.   After it cleans up, it's shared_ptr to c (which is the shared_ptr to c)
-    //   is cleaned up causing c's destructor to be called.   After c's destructor has run, it's shared_ptr to i
-    //   (again, the last shared_ptr to i) is cleaned up causing i's destructor to be called.
+    // s goes out of scope, dropping s's reference count from 1 to 0 causing it to be destroyed.   Destroying s
+    // destroys it's shared_ptr to c, dropping c's reference count to 0 causing c to be destroyed.  Destroying
+    // c destroys its shared_ptr to i, dropping i's reference count to 0 causing i to be destroyed  
 
 This behavior means you never have to worry about having your *Helper objects being cleaned up too soon and leaving your compiled scripts unrunnable or
 making sure you manually clean up the *Helpers in order to not have a memory leak.   If you can possibly use a *Helper again, it will be there for you
-and if you can't, it is destroyed automatically.  Also, if want to get a handle from a ScriptHelper to its ContextHelper or a ContextHelper to its
-IsolateHelper, there are methods on those classes for that.
+and if you can't, it is destroyed automatically.
+
 
 #### Running JavaScript in a separate thread
 
-in all our examples so far, the JavaScript has been executed on the current thread: ->run() is called, the JavaScript executes and when it's done,
-execution resumes in your code.   However, it's quite easy to run javascript in a separate thread.  There are 3 options for how to run background
-Javascript, std::async/std::future, std::thread (joinable), and std::thread(detached).  This section is after the Helper Lifetime section because it's
-important to understand that the methods for running JavaScript in a separate thread all maintain a shared_ptr to the ScriptHelper they were run from
-(which in turn keeps the associated ContextHelper and IsolateHelpers around).  Also, even if you don't explicitly create a ScriptHelper and call
-context->run(some_javascript_source), a ScriptHelper object is implicitly created behind the scenes and is destroyed automatically when the execution
-is complete.
+This section is intentionally after the Helper Object Lifetime section because it's important to understand how the *Helper objects maintain their
+dependencies.  The description of the dependency mechanism is expanded on in this section, so if you didn't read Helper Object Lifetime (or it didn't 
+make sense the first time), go back and read it (again) before continuing with this section.
 
-If you've shared existing C++ variables or objects in multiple isolates, it is your job to make sure there are no race conditions if you run multiple
-contexts (from different isolates) at the same time.
+In all our examples so far, the JavaScript has been executed on the current thread: context->run() or script->run() is called, the JavaScript executes immediately
+and when it's done, execution resumes in your code.   However, it's quite easy to run javascript in a separate thread.  There are 3 options provided for running background
+Javascript, std::async/std::future, std::thread (joinable), and std::thread(detached) and each of maintains a shared_ptr to the ScriptHelper they are run from
+so nothing you do while it is running can cause the objects it depends on to be destroyed.  Note that even if you don't explicitly create a ScriptHelper 
+and simply call context->run(some_code), a ScriptHelper is created behind the scenes for you.
 
-##### run_detached()
 
-Calling run_detached() is completely fire and forget.   It creates a thread for your code to run on, kicks it off, and returns.   You don't get
-anything back.   The detached thread will hold open the *Helpers it needs until it completes, but that is all invisible to you.   You cannot find
-when or even if the thread will end.  The code you're executing could set variables to note its progress or completion, but run_async() doesn't 
-provide anything on its own.
 
 ##### run_threaded()
 
-Using run_threaded() does the same as run_detached, but returns the std::thread object associated with the thread.  This allows the user to call
-thread.join() to wait for the thread to complete and know that it has finished.   Calling thread.detach() is exactly the same as what run_detached()
-does, so if the thread won't be joined, just call run_detached() instead.  The implementation of run_detached literally calls run_threaded(), then
-thread.detach(); and returns void to the caller. 
+Calling run_threaded() creates a new thread running the requested JavaScript and returns the std::thread object associated with that thread to the caller.  
+This allows the caller to do some work and then call thread.join() to wait for the thread to complete if it hasn't already.  
 
 The std::thread library is pretty bare compared to native threading libraries in modern OSs, but std::thread gives you access to the underlying 
 implementation via thread.native_handle(), so you can use all the advanced pthreads or Windows threads functionality you want to control your
 thread.
 
-Remember, if the std::thread object returned by run_threaded goes out of scope before detach() or join() are called, your program will exit 
+Remember, if the std::thread object returned by run_threaded() goes out of scope before you call detach() or join() on it, your program will exit 
 immediately.   This is part of the C++ standard, so be careful.
+
+
+##### run_detached()
+
+Calling run_detached() is completely fire and forget.   It kicks off your javascript on a new thread and returns.   You don't get
+anything back.   You cannot  find out if the thread has finished.  The code you're executing could potentially set variables to note its progress or completion, but run_detached() 
+doesn't provide anything for you directly.  The detached thread will hold open the *Helpers it needs until it completes.   
+
+The implementation of run_detached literally calls run_threaded(), then thread.detach(); and returns void to the caller. 
+
+
+
 
 ##### run_async()
 
 Running javascript in a std::async behaves exactly like running any other code in a std::async.   The work is put in the async, and
-a std::future object is returned.   Later, after doing some other unrelated work, the main thread calls future.get() and the result of the completed
+a std::future object is returned.   At any later time, the execution path calls future.get() and the result of the completed
 async is returned.  If the async has not completed, get() will block until it has completed.  Note, future.get() does not directly return the result
 of your JavaScript, it returns a std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>.  This means that even if you lost all your handles
 to your isolate, context, and script, you can still use the results in the future, since the shared_ptr in the future is keeping everything alive
@@ -269,60 +280,112 @@ for you.
         // do something with result->first (if you aren't going to use the result, you should use run_threaded instead of async)
     } 
     // the future goes out of scope, so it's no longer keeping your ScriptHelper so if you use the result after here
-    //   you have to be careful that it's still valid (neither the associated context or isolate have been destroyed)
+    //   you have to be careful that it's still valid (ensure neither the associated context or isolate have been destroyed)
 
 
-Remember, only one context per isolate can be
-executing on a thread at a time.   This means if you spawn off a thread to run in the background, and then try to do something in another context
-in the same isolate, one of the two will block (whichever doesn't get to the internal V8 lock in the v8::Isolate object first) until the other completes.
-This means it is possible to create a deadlock if your background thread is caught in an infinite loop and your main thread then tries to do something
-requiring the lock.   
+It's important to note that only one context per isolate can be executing on a thread at a time.   This means if you spawn off a thread to run in the 
+background, and then try to do something in another context in the same isolate, one of the two will block (whichever doesn't get to the internal V8 
+lock in the v8::Isolate object first) until the other completes.  This means it is possible to create a deadlock if your background thread is caught 
+in an infinite loop and your main thread then tries to do something requiring the lock.   
 
 
 #### Writing more complicated C++ functions using the V8 API
-[Variable-argument functions by using V8 callback info object directly - are return types automatically grabbed or do you have to set it manually in the info object?]
+
+Earlier, in the section about using STL containers, a function taking 3 ints and returning a vector with those values in it was shown.   While a function with any
+number of arguments could have been made, it had to be a fixed number.   Here, we will learn how to write a function in C++ that can take any number of parameters
+from javascript and decide how to act on them.
+
+This will require delving a little bit into the V8 API however.   The API is complex, not particularly straightforward, and the documentation is hit or miss.   
+
+The most up-to-date documentation lives here:  http://v8.paulfryzel.com/docs/master/
+
+With the power to write more flexible functions comes the responsibility of doing this work manually.
+
+First, a function wanting to handle the javascript parameter directly must have the following signature: a single input paramter of type 
+`const v8::FunctionCallbackInfo<v8::Value> &` and a `void` return type. Only for functions with exactly this signature will the raw data will be passed through 
+to the function with no "magic" behind the scenes.
+
+Second, the function must manipulate its FunctionCallbackInfo<T> object which represents the javascript function invocation.  There three important parts of 
+FunctionCallbackInfo<T> for this are:
+
+Length() - the number of parameters passed in from JavaScript.
+operator[N] - returns the javascript parameter at position N (N must be < Length())
+GetReturnValue() - Used for returning a v8::Value back to the JavaScript caller
+
+Lastly, the types must be marshalled from their JavaScript types to traditional C++ types and then back to a JavaScrit value for the return value.  There are two 
+functors for doing these conversions - they are called CastToNative<T> and CastToJS<T>.  T always refers to the native
+type as the JavaScript type is always v8::Value.
+
+
+With this information, here is an example of a function taking an arbitrary number of parameters and returning a std::vector<int> with all the parameters in it:
+
+    void make_vector(const v8::FunctionCallbackInfo<v8::Value> info &) {
+        std::vector<int> v;
+        for(int i = 0; i < info.Length(); i++) {
+            v.push_back(CastToNative<int>(info[i]));
+        }
+        info.GetReturnValue.Set(CastToJS<std::vector<int>>(v));
+    }
+
+That's it.   It loops through each parameter passed in from JavaScript, runs CastToNative<int> on each JavaScript value to coerce it into an int
+(how good that coercion is depends on how integer-y the JavaScript values are), and pushes that int onto the end of the vector. Then, to return
+the result back to the JavaScript caller, it takes the vector and turns it into a v8::Value appropriate for returning back to the JavaScript caller.
+
+If the type you want to cast to or from isn't supported, more V8 API work is in store, but fortunately the next section is:
+
+#### Extending CastToNative and CastToJS
+
+The two functors CastToNative<T> and CastToJS<T> are responsible for converting back and forth between v8::Value (which can represent any JavaScript type)
+and a specific native type.  Most of the casts are in casts.hpp.  There are a large number of specializations - all the native C++ types as well as many 
+types from std::.
+
+The casts missing from casts.hpp are the ones responsible for handling user-defined types.  These are located in v8_class_wrapper.h.   There should be 
+no need to change these.  They are only selected when no exact match is found.
+
+There should be enough examples of how to use the V8 API for wrapping types in the existig casts for other types.   For example, to wrap a new STL 
+container, look at the existing casts for STL containers: std::vector is quite simple, std::map is more complex, and std::multimap is fairly complex 
+as it creates an object with vectors for values.
+
+
+#### Exceptions
+
+The short version:
+
+Exceptions work just like you'd expect.  Exceptions thrown in a C++ function called from JavaScript will immediately stop
+JavaScript execution and bubble up to your script->run() call where you should catch and handle them.   There are also a few exception types that can be 
+thrown by the system: V8CompilationException and V8ExecutionException.   These override std::exception and provide the what() method which returns 
+a const char * string description of what happened.   It also contains the actual v8::Value object thrown by V8 if you need that much detail.  If
+you are going to be using the *Helper objects for all your V8 interactions, you can stop here and be happy.  No need to read any more of this section.
+
+The long version:
+
+The V8 JavaScript engine is not exception safe (and is compiled with -fno-exceptions).  Any exception making it into actual V8 library code will 
+cause your application to immediately exit.  To add to the confusion, V8 has "exceptions" but they are not related, in any way, to C++ exceptions.
+
+Knowing this, then, how can "the short version" be true?  Well, exceptions thrown in C++ code called from ScriptHelper->run() (remember, a ScriptHelper
+is created behind the scenes if you call context->run()) are wrapped in a V8 
+Exception before re-entering V8 code and then re-thrown once execution leaves the V8 library stack.  This re-thrown exception is the same exception 
+as the one thrown inside the callbacks (using std::current_exception and std::exception_ptr to accomplish this).  Code not using *Helper objects, must 
+deal with any thrown C++ exceptions on their own to make sure they don't reach any V8 code.  To throw a V8 exception, use v8::Isolate::ThrowException 
+and to catch a V8 exception, declare a v8::TryCatch object on the stack where you want to catch V8 exceptions and you can test TryCatch::HasCaught() 
+to see if it "has caught" and exception.  Also, often the return value of the V8 call in which the V8 exception was thrown will be a Maybe or a 
+MaybeLocal which will contain no value.   That's a sign to check the TryCatch object for an Exception.   TryCatch::Exception() returns the actual v8::Value 
+passed to v8::Isolate::ThrowException().  
+
+
 
 #### Lifetime rules for wrapped objects
-[wrapped-object lifetime - destructorbehavior stuff goes here]
+DO NOT READ THIS SECTION
+In the process of JavaScript creating, using, and destroying JavaScript objects backed by C++ objects (like custom-wrapped user-defined classes),
+it's not always clear when the underlying C++ object should be destroyed versus when it should remain.   Take object creation, for example: There
+are many situations in which a user-class C++ object may be instantiated.   JavaScript calls the registered constructor (new Person()), a registered
+C++ function returns a newly created object with C++'s new (a factory method, for instance, returning a Person * or Pereson &), a registered C++ 
+function returning an r-value.  What about a user-defined class containing another user-defined object with an accessor to return that contained type.
 
-The V8 JavaScript engine is not thread safe, but exceptions thrown in your C++ called from javascript are wrapped and re-thrown as the same exception
-so you should wrap calls to ->run() with a try/catch.   Even if your code doesn't throw exceptions, V8 can throw it's own "exceptions" (V8 exceptions 
-don't rely on the C++ exception mechanism) if you try to access an attribute on an undefined value.   These exceptions are of type 
-V8Exception (inheriting from std::exception) and provide the expected what() method which returns a string describing the exception.  If this isn't 
-sufficient, the actual JavaScript value thrown by V8 can be obtained, but using that requires directly using the V8 API.  Usually the string is
-sufficient as it will say something like "Reference error: a is not defined" if you try to access a variable that doesn't exist.  There are also 
-compiler errors thrown as CompilationError (again, with a what() method returning a descriptive string).  This allows you to tell if your call to
-->run() with source code (versus a compiled script) failed during compilation or execution.   
+How to determine the correct behavior is an ongoing process for this library.  The rest of this section is a bit of a brain-dump.   Usually the time
+when it's known best what the right thing to do 
+OK TO START READING AGAIN
 
-
-
-	#include "javascript.h"
-	using v8toolkit;
-
-	class MyClass{
-	public:
-	    MyClass(int x) : x(x){}
-		int x;
-		int add_to_x(int y){return x + y;}
-	};
-
-	int y = 12;
-
-	int main(int argc, char ** argv) {
-
-		PlatformHelper::init(argc, argv);
-		
-		auto isolate_helper = PlatformHelper::create_isolate();
-		isolate_helper.expose_variable("y", y); // exposes the global variable y as "y" within javascript
-	
-		auto class_wrapper = isolate_helper.wrap_class<MyClass>();
-		class_wrapper.add_constructor<int>("MyClass");
-		class_wrapper.add_member("x", &MyClass::x); // make MyClass::x directly accessible within javascript
-		class_wrapper.add_method("add_to_x", &MyClass::add_to_x);
-		
-		auto context_helper = isolate_helper->create_context(); // all code must be run in a context
-		context_helper.run("var myclass = new MyClass(5); myclass.add_to_x(y); myclass.x = 3; myclass.add_to_x(5);");
-	}
 
 For full example use that's guaranteed to be up to date, please see sample.cpp, toolbox_sample.cpp, and javascript_sample.cpp.  Also see threaded_smaple.cpp for examples of how to do multithreaded calls.
 

@@ -28,13 +28,18 @@ public:
   virtual const char * what() const noexcept override {return message.c_str();}
 };
 
-
+/**
+* When passing an Any-type through a void *, always static_cast it to an AnyBase *
+*   pointer and pass that as the void *.  This allows you to safely cast it back to
+*   a AnyBase* on the other side and then dynamic_cast to any child types to 
+*   determine the type of the object actually stored.
+*/
 struct AnyBase
 {
     virtual ~AnyBase();
 };
 
-
+// TODO: The names Any and AnyPtr are pretty darned backwards
 template<class T>
 struct Any : public AnyBase {
     Any(T * data) : data(data) {}
@@ -43,6 +48,10 @@ struct Any : public AnyBase {
     T * get() {return data;}
 };
 
+/**
+* Best used for types that are intrinsically pointers like std::shared_ptr or
+*   std::exception_ptr
+*/
 template<class T>
 struct AnyPtr : public AnyBase {
     AnyPtr(T data) : data(data) {}
@@ -378,14 +387,11 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
         try {
             pb(callable, args);
         } catch (...) {
-            scoped_run(isolate,[&](){
-                fprintf(stderr, "caught exception from non-method function\n");
-                auto anyptr_t = new AnyPtr<std::exception_ptr>( std::current_exception());
-                fprintf(stderr, "Created AnyPtr<T> for the exception ptr with anybase at %p\n", static_cast<AnyBase*>(anyptr_t));
-                isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
-                // isolate->ThrowException(v8::String::NewFromUtf8(isolate, "asdf"));
-                fprintf(stderr, "called isolate->ThrowException\n");
-            });
+            auto anyptr_t = new AnyPtr<std::exception_ptr>( std::current_exception());
+            
+            // always put in the base ptr so you can cast to it safely and then use dynamic_cast to try to figure
+            //   out what it really is
+            isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
         }
         return;
     }, v8::External::New(isolate, (void*)copy));

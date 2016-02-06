@@ -20,35 +20,8 @@ class ScriptHelper;
 *
 */
 
-/**
-* Exception class returned to caller when a compilation error is encountered
-* The what() method can be used to get the error string associated with the
-*   error
-*/
-class CompilationError : std::exception {
-	std::string what_string;
-public:
-	CompilationError(std::string what_string) : what_string(what_string) {}
-	const char* what() const noexcept override {return what_string.c_str();}
-};
 
-/**
-* Exception class returned to caller when a javascript execution error is 
-*   encountered
-* The what() method can be used to get the error string associated with the
-*   error
-*/
-class ExecutionError : std::exception {
-    
-    /// the actual object thrown from javascript
-    v8::Global<v8::Value> exception;
-    
-	std::string what_string;
-    
-public:
-	ExecutionError(v8::Global<v8::Value> && exception, std::string what_string) : exception(std::move(exception)), what_string(what_string) {}
-	const char* what() const noexcept override {return what_string.c_str();}
-};
+
 
 /**
 * When the V8 engine itself generates an error (or a user calls isolate->ThrowException manually with a v8::Value for some reason)
@@ -56,7 +29,7 @@ public:
 * get_local_value must be called within a HandleScope
 * get_value returns a new Global handle to the value.  
 */
-class V8Exception : std::exception {
+class V8ExecutionException : std::exception {
 private:
     v8::Isolate * isolate;
     v8::Global<v8::Value> value;
@@ -70,6 +43,18 @@ public:
     v8::Local<v8::Value> get_local_value(){return value.Get(isolate);}
     v8::Isolate * get_isolate(){return isolate;}
     v8::Global<v8::Value> get_value(){return v8::Global<v8::Value>(isolate, value);}
+};
+
+
+
+/**
+* Same as a V8 exception, except if this type is thrown it indicates the exception was generated
+*   during compilation, not at runtime.
+*/
+class V8CompilationException : public V8Exception {
+public:
+    V8CompilationError(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
 };
 
 
@@ -476,7 +461,7 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-	void add_print();
+	IsolateHelper & add_print();
     
     /**
     * Adds require() function to javascript as defined in
