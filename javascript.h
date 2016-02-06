@@ -29,7 +29,7 @@ class ScriptHelper;
 * get_local_value must be called within a HandleScope
 * get_value returns a new Global handle to the value.  
 */
-class V8ExecutionException : std::exception {
+class V8Exception : std::exception {
 private:
     v8::Isolate * isolate;
     v8::Global<v8::Value> value;
@@ -45,7 +45,11 @@ public:
     v8::Global<v8::Value> get_value(){return v8::Global<v8::Value>(isolate, value);}
 };
 
-
+class V8ExecutionException : public V8Exception {
+public:
+    V8ExecutionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+};
 
 /**
 * Same as a V8 exception, except if this type is thrown it indicates the exception was generated
@@ -53,7 +57,7 @@ public:
 */
 class V8CompilationException : public V8Exception {
 public:
-    V8CompilationError(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
+    V8CompilationException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
         V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
 };
 

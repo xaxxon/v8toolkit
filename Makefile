@@ -1,9 +1,19 @@
 # DEBUG = -g
-V8DIR = /users/xaxxon/v8
-#V8_LIB_DIR = ${V8DIR}/out/native
-V8_LIB_DIR = ${V8DIR}/out/x64.debug
-#V8_LIB_DIR = ${V8DIR}/out/x64.release
-#V8_LIB_DIR = ${V8DIR}/out/x64.debug
+V8_DIR = /users/xaxxon/v8
+V8_INCLUDE_DIR = ${V8_DIR}
+V8_TARGET = native
+#V8_LIB_DIR = ${V8_DIR}/out/native
+
+# OS X put libs in first location, linux puts in second two
+V8_LIB_DIR = ${V8_DIR}/out/${V8_TARGET}/
+V8_LIB_DIR2 = ${V8_LIB_DIR}/obj.target/tools/gyp/
+V8_LIB_DIR3 = ${V8_LIB_DIR}/obj.target/third_party/icu/
+
+V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR}
+#V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR2} -L${V8_LIB_DIR3}
+
+#V8_LIB_DIR = ${V8_DIR}/out/x64.release
+#V8_LIB_DIR = ${V8_DIR}/out/x64.debug
 
 # Whether you want to use snapshot files, but easier not to use them.  I see a .05s decrease in startup speed by not using them
 ifdef USE_SNAPSHOTS
@@ -14,10 +24,10 @@ else
 V8_LIBS = -lv8_base -lv8_libbase -licudata -licuuc -licui18n -lv8_base -lv8_libplatform -lv8_nosnapshot
 endif
 
-CPPFLAGS = -I${V8DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
+CPPFLAGS = -I${V8_INCLUDE_DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
 
 # LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
-LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS}
+LIBS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS}
 
 
 

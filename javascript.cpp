@@ -54,7 +54,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
         // Compile the source code.
         v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
         if (compiled_script.IsEmpty()) {
-            throw V8CompilationError(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
+            throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
         }
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });

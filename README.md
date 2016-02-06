@@ -16,6 +16,34 @@ Utilities for automatically wrapping c++ classes for use in javascript with the 
 #javascript
 (poorly named) A system for creation and management of the v8 platform, isolates, and contexts.  Requires V8ClassWrapper.  This is the simplest way to embed V8 in your application, as it requires virtually no understanding of the underlying V8 APIs.
 
+#### Building V8
+
+Building V8 is not a simple process.
+
+First, you need git:   https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+
+Second, you need "depot tools", a collection of google build tools: http://dev.chromium.org/developers/how-tos/install-depot-tools
+You git clone this then set your path (I've been able to just type in the whole path when I want to use them instead of setting my PATH)
+
+(following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
+
+Third, run `gclient`,(assuming you put depot-tools in your path, otherwise type out the full path to gclient) a tool in depot-tools 
+which will make sure the tools are up to date (not sure how important this is)
+
+Fourth, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the code in a directory called v8.
+
+Fifth, go into the v8 directory and type "make native".   This will build V8 for the computer you are on.   If you do a `make all`, it will
+attempt to build for x86, x64, as well as ARM and can lead to errors if your computer isn't set up for cross compiling and it takes a LOT longer.
+
+Once this finishes, from the v8 directory, you can `cd out/native` and then run `./d8` which is a javascript shell. (ctrl-d to quit d8)  In this directory
+you should see a large number of .a files (but sometimes they seem to be buried in subdirectories).   These are how you will link your application against V8.
+The include files are located back off the base v8 directory in the v8/includes directory, but your -I option to your compiler cannot include the "/includes" 
+portion of the path as the V8 .h files expect to find themselves in "includes/FILENAME.h"
+
+
+
+
+
 
 
 #### Your First V8 program
