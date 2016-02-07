@@ -1,10 +1,15 @@
 
-ifdef LINUX_BUILD
-CPP=g++
-V8_DIR = /home/xaxxon/v8
+V8_TARGET = native
+#V8_TARGET = x64.release
+#V8_TARGET = x64.debug
+DEBUG = -g
 
-V8_LIB_DIR2 = ${V8_LIB_DIR}/obj.target/tools/gyp/
-V8_LIB_DIR3 = ${V8_LIB_DIR}/obj.target/third_party/icu/
+ifdef LINUX
+CPP=g++
+V8_DIR = /home/xaxxon/v8/
+
+V8_LIB_DIR2 = ${V8_DIR}/out/${V8_TARGET}/obj.target/tools/gyp/
+V8_LIB_DIR3 = ${V8_DIR}/out/${V8_TARGET}/obj.target/third_party/icu/
 V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR2} -L${V8_LIB_DIR3}
 
 LINUX_LIBS = -lpthread -licuuc -licudata -ldl
@@ -19,13 +24,8 @@ V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR}
 
 endif
 
-DEBUG = -g
+
 V8_INCLUDE_DIR = ${V8_DIR}
-V8_TARGET = native
-
-#V8_LIB_DIR = ${V8_DIR}/out/x64.release
-#V8_LIB_DIR = ${V8_DIR}/out/x64.debug
-
 
 # Whether you want to use snapshot files, but easier not to use them.  I see a .05s decrease in startup speed by not using them
 ifdef USE_SNAPSHOTS
