@@ -48,7 +48,7 @@ clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git
 
 go into the v8-class-wrapper directory (this name will be changed soon)
 
-edit the Makefile so that V8_DIR=<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
+edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
 To build the libray, on OS X, type `make`, on Linux, type "make LINUX=1"
 
@@ -104,14 +104,14 @@ Successfully running the commands below will build your program as `./a.out`
 
 On OS X (command line - unknown how/if xcode works):
 
-    clang++ -std=c++14 -g -I./ -I<PATH_TO_V8_BASE_DIRECTORY> -g -I<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  YOUR_PROGRAM_CPP  
-    -L<PATH_TO_V8_BASE_DIRECTORY>/out/native/  -I<PATH_TO_V8TOOLKIT> <PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  
+    clang++ -std=c++14 -g -I./ -I\<PATH_TO_V8_BASE_DIRECTORY> -g -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  YOUR_PROGRAM_CPP  
+    -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/  -I\<PATH_TO_V8TOOLKIT> \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  
     
 On Linux (tested on Ubuntu Desktop 15.10)
 
-    g++ -std=c++14 -g -I<PATH_TO_V8TOOLKIT> -I<PATH_TO_V8_BASE_DIRECTORY>  -I<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  <YOUR_PROGRAM_CPP>
-    -L<PATH_TO_V8_BASE_DIRECTORY>/native/obj.target/tools/gyp/ -L<PATH_TO_V8_BASE_DIRECTORY>/out/native/obj.target/third_party/icu/  -I<PATH_TO_V8TOOLKIT>
-    <PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  -lpthread -licuuc -licudata -ldl
+    g++ -std=c++14 -g -I\<PATH_TO_V8TOOLKIT> -I\<PATH_TO_V8_BASE_DIRECTORY>  -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  \<YOUR_PROGRAM_CPP>
+    -L\<PATH_TO_V8_BASE_DIRECTORY>/native/obj.target/tools/gyp/ -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/obj.target/third_party/icu/  -I\<PATH_TO_V8TOOLKIT>
+    \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  -lpthread -licuuc -licudata -ldl
     
 Currently no information on windows builds using either MinGW or MSVC++
 
@@ -262,7 +262,7 @@ destroyed or invalid.  To help manage these object dependencies, each IsolateHel
 sure those dependencies are not destroyed until they are no longer needed.
 
 If you've noticed in all the examples, the variable storing all the *Helper objects is always set as "auto".  The actual type
-returned when creating these types is a std::shared_ptr<>.  In addition, when a ContextHelper is created from an IsolateHelper or a ScriptHelper from a 
+returned when creating these types is a std::shared_ptr\<>.  In addition, when a ContextHelper is created from an IsolateHelper or a ScriptHelper from a 
 ContextHelper, the newly created object has a shared_ptr to it's parent object.  This ensures an IsolateHelper will not be destroyed while a ContextHelper 
 is depending on it or a ContextHelper destroyed while a ScriptHelper is depending on it.  This means that even if your variable storing your IsolateHelper 
 goes out of scope, if you've created a ContextHelper from it and still have that object around, the associated IsolateHelper will stick around.  This 
@@ -334,7 +334,7 @@ The implementation of run_detached literally calls run_threaded(), then thread.d
 Running javascript in a std::async behaves exactly like running any other code in a std::async.   The work is put in the async, and
 a std::future object is returned.   At any later time, the execution path calls future.get() and the result of the completed
 async is returned.  If the async has not completed, get() will block until it has completed.  Note, future.get() does not directly return the result
-of your JavaScript, it returns a std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>.  This means that even if you lost all your handles
+of your JavaScript, it returns a `std::pair<v8::Global<v8::Value>`, `std::shared_ptr<ScriptHelper>>`.  This means that even if you lost all your handles
 to your isolate, context, and script, you can still use the results in the future, since the shared_ptr in the future is keeping everything alive
 for you.
 
@@ -371,19 +371,19 @@ First, a function wanting to handle the javascript parameter directly must have 
 `const v8::FunctionCallbackInfo<v8::Value> &` and a `void` return type. Only for functions with exactly this signature will the raw data will be passed through 
 to the function with no "magic" behind the scenes.
 
-Second, the function must manipulate its FunctionCallbackInfo<T> object which represents the javascript function invocation.  There three important parts of 
-FunctionCallbackInfo<T> for this are:
+Second, the function must manipulate its `FunctionCallbackInfo<T>` object which represents the javascript function invocation.  There three important parts of 
+`FunctionCallbackInfo<T>`` for this are:
 
-Length() - the number of parameters passed in from JavaScript.
-operator[N] - returns the javascript parameter at position N (N must be < Length())
-GetReturnValue() - Used for returning a v8::Value back to the JavaScript caller
+`Length()` - the number of parameters passed in from JavaScript.
+`operator[N]` - returns the javascript parameter at position N (N must be \< Length())
+`GetReturnValue()` - Used for returning a v8::Value back to the JavaScript caller
 
 Lastly, the types must be marshalled from their JavaScript types to traditional C++ types and then back to a JavaScrit value for the return value.  There are two 
-functors for doing these conversions - they are called CastToNative<T> and CastToJS<T>.  T always refers to the native
+functors for doing these conversions - they are called `CastToNative<T>` and `CastToJS<T>`.  T always refers to the native
 type as the JavaScript type is always v8::Value.
 
 
-With this information, here is an example of a function taking an arbitrary number of parameters and returning a std::vector<int> with all the parameters in it:
+With this information, here is an example of a function taking an arbitrary number of parameters and returning a `std::vector<int>` with all the parameters in it:
 
     void make_vector(const v8::FunctionCallbackInfo<v8::Value> info &) {
         std::vector<int> v;
@@ -393,7 +393,7 @@ With this information, here is an example of a function taking an arbitrary numb
         info.GetReturnValue.Set(CastToJS<std::vector<int>>(v));
     }
 
-That's it.   It loops through each parameter passed in from JavaScript, runs CastToNative<int> on each JavaScript value to coerce it into an int
+That's it.   It loops through each parameter passed in from JavaScript, runs `CastToNative<int>` on each JavaScript value to coerce it into an int
 (how good that coercion is depends on how integer-y the JavaScript values are), and pushes that int onto the end of the vector. Then, to return
 the result back to the JavaScript caller, it takes the vector and turns it into a v8::Value appropriate for returning back to the JavaScript caller.
 
@@ -401,7 +401,7 @@ If the type you want to cast to or from isn't supported, more V8 API work is in 
 
 #### Extending CastToNative and CastToJS
 
-The two functors CastToNative<T> and CastToJS<T> are responsible for converting back and forth between v8::Value (which can represent any JavaScript type)
+The two functors `CastToNative<T>` and `CastToJS<T>` are responsible for converting back and forth between v8::Value (which can represent any JavaScript type)
 and a specific native type.  Most of the casts are in casts.hpp.  There are a large number of specializations - all the native C++ types as well as many 
 types from std::.
 
