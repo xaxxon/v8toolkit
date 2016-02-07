@@ -1,20 +1,7 @@
-##This library is not polished.  While it should work, you will have to do some customization for your own environment
-
-## This library requires a version of V8 gotten from source after 1/30/16 or version 4.11.0.0 or later
-
-## Note, the current version is not compatible with the production version of V8 because of a poorly designed v8::Local constructor.  It can easily be modified by changing some std::string parameters back to const char * but the v8 api should be changed instead..
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8-class-wrapper/docs/html/index.html
 
-# v8toolkit
-Standalone tools for using V8.  These are helper functions for use when using the V8 API and will not, on their own, get you very far.  You must have a working knowledge of V8, but
-the tools in here will help you with a lot of common tasks that are time-consuming to write out on their own.
-
-# v8_class_wrapper
-Utilities for automatically wrapping c++ classes for use in javascript with the V8 Javascript engine - compatible with V8 v4.9.0.0 (i.e. the current API as of early 2016).  For usage, see sample.cpp.  This builds on top of the toolbox code to easily allow for complex C++ objects to be used in your javascript.
-
-#javascript
-(poorly named) A system for creation and management of the v8 platform, isolates, and contexts.  Requires V8ClassWrapper.  This is the simplest way to embed V8 in your application, as it requires virtually no understanding of the underlying V8 APIs.
+## Tutorial for using this library
 
 #### Building V8
 
@@ -61,11 +48,11 @@ portion of the path as the V8 .h files expect to find themselves in "includes/FI
 
 #### Building/installing Boost
 
-V8 doesn't require Boost, but v8toolkit has additional features when boost is present. 
+V8 doesn't use Boost, but v8toolkit has additional, desirable features when boost is present. 
 
 With apt-get:  `sudo apt-get install libboost-all-dev`
 
-OS X with brew: `brew install boost --c++11` (the --c++11 part is required  )
+OS X with brew: `brew install boost --c++11`
 
 From source:
 
