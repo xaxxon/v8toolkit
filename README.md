@@ -92,13 +92,13 @@ PlatformHelper manages the per-process configuration for V8 and is used to creat
 Here are some example command lines for building an application using V8.  In it are some things that will need to be replaced with the actual location on the 
 computer being used:
 
-<PATH_TO_V8_BASE_DIRECTORY> - the directory containing the v8 include directory.   This cannot include the "include/" directory.
+\<PATH_TO_V8_BASE_DIRECTORY> - the directory containing the v8 include directory.   This cannot include the "include/" directory.
 
-<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR> - location where boost/format.hpp is located.  This is likely /usr/local/include and cannot include the "boost/" directory
+\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR> - location where boost/format.hpp is located.  This is likely /usr/local/include and cannot include the "boost/" directory
 
-<YOUR_PROGRAM_CPP> - your source code
+\<YOUR_PROGRAM_CPP> - your source code
 
-<PATH_TO_V8TOOLKIT> - path where this library is installed and built and the file libv8toolkit.a exists
+\<PATH_TO_V8TOOLKIT> - path where this library is installed and built and the file libv8toolkit.a exists
 
 Successfully running the commands below will build your program as `./a.out`
 
