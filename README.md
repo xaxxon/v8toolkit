@@ -23,15 +23,15 @@ For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  The 
 either be set on the command line or put in your ~/.bash_profile (if you put them in your .bash_profile, you must either start a new
 shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell)
 
-export CXX="`which clang++` -std=c++11 -stdlib=libc++"
-export CC="`which clang`"
-export CPP="`which clang` -E"
-export LINK="`which clang++` -std=c++11 -stdlib=libc++"
-export CXX_host="`which clang++`"
-export CC_host="`which clang`"
-export CPP_host="`which clang` -E"
-export LINK_host="`which clang++`"
-export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
+    export CXX="`which clang++` -std=c++11 -stdlib=libc++"
+    export CC="`which clang`"
+    export CPP="`which clang` -E"
+    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
+    export CXX_host="`which clang++`"
+    export CC_host="`which clang`"
+    export CPP_host="`which clang` -E"
+    export LINK_host="`which clang++`"
+    export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
 
 Again, the above lines are ONLY for OS X builds.
 
