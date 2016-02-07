@@ -48,7 +48,7 @@ portion of the path as the V8 .h files expect to find themselves in "includes/FI
 
 #### Your First V8 program
 
-Here is the simplest program you can write to execute some javascript:
+Here is the simplest program you can write to execute some javascript using the v8toolkit library:
 
     #include "javascript.h"
     using v8toolkit;
@@ -77,8 +77,36 @@ An isolate contains the necessary state for any number of related context object
 
 PlatformHelper manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
 
+#### Compiler options to build your program
 
-#### Exposing C++ functions to javascript
+Here are some example command lines for building an application using V8.  In it are some things that will need to be replaced with the actual location on the 
+computer being used:
+
+<PATH_TO_V8_BASE_DIRECTORY> - the directory containing the v8 include directory.   This cannot include the "include/" directory.
+
+<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR> - location where boost/format.hpp is located.  This is likely /usr/local/include and cannot include the "boost/" directory
+
+<YOUR_PROGRAM_CPP> - your source code
+
+<PATH_TO_V8TOOLKIT> - path where this library is installed and built and the file libv8toolkit.a exists
+
+Successfully running the commands below will build your program as `./a.out`
+
+On OS X (command line - unknown how/if xcode works):
+
+    clang++ -std=c++14 -g -I./ -I<PATH_TO_V8_BASE_DIRECTORY> -g -I<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  YOUR_PROGRAM_CPP  
+    -L<PATH_TO_V8_BASE_DIRECTORY>/out/native/  -I<PATH_TO_V8TOOLKIT> <PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  
+    
+On Linux (tested on Ubuntu Desktop 15.10)
+
+    g++ -std=c++14 -g -I<PATH_TO_V8TOOLKIT> -I<PATH_TO_V8_BASE_DIRECTORY>  -I<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  <YOUR_PROGRAM_CPP>
+    -L<PATH_TO_V8_BASE_DIRECTORY>/native/obj.target/tools/gyp/ -L<PATH_TO_V8_BASE_DIRECTORY>/out/native/obj.target/third_party/icu/  -I<PATH_TO_V8TOOLKIT>
+    <PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  -lpthread -licuuc -licudata -ldl
+    
+Currently no information on windows builds using either MinGW or MSVC++
+
+
+#### Exposing C++ functions to JavaScript
 
 Simply running pure javascript as in the previous example just isn't interesting, though.  We want to cross the boundary between JavaScript and C++ seemlessly.  
 Skipping some of the boilerplate in the previous example, here's how to call a custom C++ function from JavaScript.

@@ -131,6 +131,8 @@ struct TypeChecker<T, Head> : public TypeCheckerBase<T>
     }
 };
 
+// tests an AnyBase * against a list of types compatible with T
+//   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
 struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
     using SUPER = TypeChecker<T, Tail...>;

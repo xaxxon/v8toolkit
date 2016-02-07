@@ -10,22 +10,18 @@ V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR2} -L${V8_LIB_DIR3}
 LINUX_LIBS = -lpthread -licuuc -licudata -ldl
 
 else
+
 V8_DIR = /Users/xaxxon/v8
 
 CPP=clang++
 V8_LIB_DIR = ${V8_DIR}/out/${V8_TARGET}/
 V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR}
 
-
 endif
-
-
 
 DEBUG = -g
 V8_INCLUDE_DIR = ${V8_DIR}
 V8_TARGET = native
-
-
 
 #V8_LIB_DIR = ${V8_DIR}/out/x64.release
 #V8_LIB_DIR = ${V8_DIR}/out/x64.debug
@@ -65,19 +61,19 @@ warning:
 
 
 thread_sample: lib
-	${CPP} -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
+	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
 
 javascript: lib
-	${CPP} -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
+	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
 
 sample: lib
-	${CPP} -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
+	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
 
 toolbox_sample: lib
-	${CPP} -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
+	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
 
 exception_sample: lib
-	${CPP} -std=c++14 ${DEBUG} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
+	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
 
 
 lib: ${OBJS}
