@@ -32,6 +32,24 @@ which will make sure the tools are up to date (not sure how important this is)
 
 Fourth, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the code in a directory called v8.
 
+For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  The following environment variables must be set.  They can
+either be set on the command line or put in your ~/.bash_profile (if you put them in your .bash_profile, you must either start a new
+shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell)
+
+export CXX="`which clang++` -std=c++11 -stdlib=libc++"
+export CC="`which clang`"
+export CPP="`which clang` -E"
+export LINK="`which clang++` -std=c++11 -stdlib=libc++"
+export CXX_host="`which clang++`"
+export CC_host="`which clang`"
+export CPP_host="`which clang` -E"
+export LINK_host="`which clang++`"
+export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
+
+Again, the above lines are ONLY for OS X builds.
+
+
+
 Fifth, go into the v8 directory and type "make native".   This will build V8 for the computer you are on.   If you do a `make all`, it will
 attempt to build for x86, x64, as well as ARM and can lead to errors if your computer isn't set up for cross compiling and it takes a LOT longer.
 
@@ -39,6 +57,28 @@ Once this finishes, from the v8 directory, you can `cd out/native` and then run 
 you should see a large number of .a files (but sometimes they seem to be buried in subdirectories).   These are how you will link your application against V8.
 The include files are located back off the base v8 directory in the v8/includes directory, but your -I option to your compiler cannot include the "/includes" 
 portion of the path as the V8 .h files expect to find themselves in "includes/FILENAME.h"
+
+
+#### Building/installing Boost
+
+V8 doesn't require Boost, but v8toolkit has additional features when boost is present. 
+
+With apt-get:  `sudo apt-get install libboost-all-dev`
+
+OS X with brew: `brew install boost --c++11` (the --c++11 part is required  )
+
+From source:
+
+Get boost: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html#get-boost
+
+Install boost: 
+
+Short version: untar, go into boost directory, `./bootstrap.sh`, `./b2` (this can take a while), `./b2 install` (this will install with the prefix /usr/local/include)
+
+More detailed install information: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html
+
+NOTE: If you plan on using the boost libraries that have to be compiled (as opposed to header-only ones), you'll need to build boost with libc++.  Here is an example
+on how to do that: https://gist.github.com/jimporter/10442880
 
 
 
@@ -415,15 +455,15 @@ as it creates an object with vectors for values.
 
 #### Exceptions
 
-The short version:
+##### The ignorance-is-bliss short version:
 
 Exceptions work just like you'd expect.  Exceptions thrown in a C++ function called from JavaScript will immediately stop
-JavaScript execution and bubble up to your script->run() call where you should catch and handle them.   There are also a few exception types that can be 
+JavaScript execution and bubble up to your script->run() call where you should catch and handle them.   There are also a few exception types 
 thrown by the system: V8CompilationException and V8ExecutionException.   These override std::exception and provide the what() method which returns 
-a const char * string description of what happened.   It also contains the actual v8::Value object thrown by V8 if you need that much detail.  If
-you are going to be using the *Helper objects for all your V8 interactions, you can stop here and be happy.  No need to read any more of this section.
+a const char * string description of what happened.  If you are going to be using the *Helper objects for all your V8 interactions, you can stop 
+here and be happy.  No need to read any more of this section.
 
-The long version:
+##### The long version:
 
 The V8 JavaScript engine is not exception safe (and is compiled with -fno-exceptions).  Any exception making it into actual V8 library code will 
 cause your application to immediately exit.  To add to the confusion, V8 has "exceptions" but they are not related, in any way, to C++ exceptions.
