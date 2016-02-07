@@ -42,7 +42,17 @@ portion of the path as the V8 .h files expect to find themselves in "includes/FI
 
 
 
+#### Build v8toolkit
 
+clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git 
+
+go into the v8-class-wrapper directory (this name will be changed soon)
+
+edit the Makefile so that V8_DIR=<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
+
+To build the libray, on OS X, type `make`, on Linux, type "make LINUX=1"
+
+The library and some sample programs should build.   To confirm everything is working, `make run` will run the sample programs.
 
 
 
