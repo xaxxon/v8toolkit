@@ -1,4 +1,5 @@
 <map id="run_tests" name="run_tests">
 <area shape="rect" id="node2" href="$classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b" title="v8toolkit::PlatformHelper\l::create_isolate" alt="" coords="124,5,276,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#ae5334f833b8b90a981b2cc52d0191e11" title="v8toolkit::ContextHelper\l::ExecutionError::what" alt="" coords="126,65,274,101"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1V8Exception.html#aed7854b8689fa65e59ce3cf079434e59" title="v8toolkit::V8Exception\l::what" alt="" coords="130,65,270,101"/>
+<area shape="rect" id="node4" href="$namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="324,71,459,95"/>
 </map>

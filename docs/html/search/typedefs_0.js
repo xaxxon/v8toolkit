@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['stdfunctioncallbacktype',['StdFunctionCallbackType',['../classv8toolkit_1_1V8ClassWrapper.html#afa534560f9881125560026476bd7b3bd',1,'v8toolkit::V8ClassWrapper']]],
-  ['super',['super',['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07HEAD_00_01TAIL_8_8_8_08_4_01_4.html#a4cd05e1be4f29c381b40797ce26c80a0',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(HEAD, TAIL...)&gt; &gt;::super()'],['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0a05abe384fa73cfcef7c072a12533d53.html#a1cda674f0006963efe93ec9d9eb7b008',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;info, TAIL...)&gt; &gt;::super()']]]
+  ['cached_5fisolate_5fmodules_5ft',['cached_isolate_modules_t',['../namespacev8toolkit.html#a4f9fc0d27475362592510e0bb288f4c2',1,'v8toolkit']]],
+  ['cached_5fmodule_5ft',['cached_module_t',['../namespacev8toolkit.html#a1ad5649f3d46fe61665f5b71448d570c',1,'v8toolkit']]]
 ];

@@ -1,7 +1,13 @@
 <map id="main" name="main">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef" title="v8toolkit::PlatformHelper\l::init" alt="" coords="101,5,253,41"/>
-<area shape="rect" id="node3" href="$javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="141,114,212,138"/>
-<area shape="rect" id="node6" href="$javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="131,66,222,90"/>
-<area shape="rect" id="node4" href="$classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b" title="v8toolkit::PlatformHelper\l::create_isolate" alt="" coords="301,60,453,96"/>
-<area shape="rect" id="node5" href="$classv8toolkit_1_1ContextHelper_1_1ExecutionError.html#ae5334f833b8b90a981b2cc52d0191e11" title="v8toolkit::ContextHelper\l::ExecutionError::what" alt="" coords="302,120,451,156"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef" title="v8toolkit::PlatformHelper\l::init" alt="" coords="104,5,256,41"/>
+<area shape="rect" id="node3" href="$javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="110,114,250,138"/>
+<area shape="rect" id="node5" href="$javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="145,66,215,90"/>
+<area shape="rect" id="node8" href="$javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="101,162,259,186"/>
+<area shape="rect" id="node9" href="$javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="137,210,223,234"/>
+<area shape="rect" id="node10" href="$javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="142,306,218,330"/>
+<area shape="rect" id="node12" href="$javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="134,258,226,282"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b" title="v8toolkit::PlatformHelper\l::create_isolate" alt="" coords="307,180,459,216"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1V8Exception.html#aed7854b8689fa65e59ce3cf079434e59" title="v8toolkit::V8Exception\l::what" alt="" coords="314,60,453,96"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a" title="v8toolkit::scoped_run" alt="" coords="507,66,642,90"/>
+<area shape="rect" id="node11" href="$namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228" title="v8toolkit::add_variable" alt="" coords="313,306,454,330"/>
 </map>

@@ -1,8 +1,10 @@
 var searchData=
 [
+  ['c',['C',['../structC.html',1,'']]],
   ['callcallable',['CallCallable',['../namespacev8toolkit.html#structv8toolkit_1_1CallCallable',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20r_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20void_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; void(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
+  ['castexception',['CastException',['../classv8toolkit_1_1CastException.html',1,'v8toolkit']]],
   ['casttojs',['CastToJS',['../structv8toolkit_1_1CastToJS.html',1,'v8toolkit']]],
   ['casttojs_3c_20bool_20_3e',['CastToJS&lt; bool &gt;',['../structv8toolkit_1_1CastToJS_3_01bool_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20char_20_2a_20_3e',['CastToJS&lt; char * &gt;',['../structv8toolkit_1_1CastToJS_3_01char_01_5_01_4.html',1,'v8toolkit']]],
@@ -23,7 +25,9 @@ var searchData=
   ['casttojs_3c_20std_3a_3alist_3c_20u_20_3e_20_3e',['CastToJS&lt; std::list&lt; U &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1list_3_01U_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20std_3a_3amap_3c_20a_2c_20b_20_3e_20_3e',['CastToJS&lt; std::map&lt; A, B &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1map_3_01A_00_01B_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20std_3a_3amultimap_3c_20a_2c_20b_20_3e_20_3e',['CastToJS&lt; std::multimap&lt; A, B &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1multimap_3_01A_00_01B_01_4_01_4.html',1,'v8toolkit']]],
+  ['casttojs_3c_20std_3a_3apair_3c_20t_2c_20u_20_3e_20_3e',['CastToJS&lt; std::pair&lt; T, U &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1pair_3_01T_00_01U_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20std_3a_3astring_20_3e',['CastToJS&lt; std::string &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1string_01_4.html',1,'v8toolkit']]],
+  ['casttojs_3c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastToJS&lt; std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20std_3a_3aunordered_5fmap_3c_20a_2c_20b_20_3e_20_3e',['CastToJS&lt; std::unordered_map&lt; A, B &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1unordered__map_3_01A_00_01B_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20std_3a_3avector_3c_20u_20_3e_20_3e',['CastToJS&lt; std::vector&lt; U &gt; &gt;',['../structv8toolkit_1_1CastToJS_3_01std_1_1vector_3_01U_01_4_01_4.html',1,'v8toolkit']]],
   ['casttojs_3c_20t_20_26_20_3e',['CastToJS&lt; T &amp; &gt;',['../structv8toolkit_1_1CastToJS_3_01T_01_6_01_4.html',1,'v8toolkit']]],
@@ -54,12 +58,15 @@ var searchData=
   ['casttonative_3c_20short_20_3e',['CastToNative&lt; short &gt;',['../structv8toolkit_1_1CastToNative_3_01short_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20std_3a_3astring_20_3e',['CastToNative&lt; std::string &gt;',['../structv8toolkit_1_1CastToNative_3_01std_1_1string_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20std_3a_3avector_3c_20u_20_3e_20_3e',['CastToNative&lt; std::vector&lt; U &gt; &gt;',['../structv8toolkit_1_1CastToNative_3_01std_1_1vector_3_01U_01_4_01_4.html',1,'v8toolkit']]],
+  ['casttonative_3c_20t_20_2a_20_3e',['CastToNative&lt; T * &gt;',['../structv8toolkit_1_1CastToNative_3_01T_01_5_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20char_20_3e',['CastToNative&lt; unsigned char &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01char_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20int_20_3e',['CastToNative&lt; unsigned int &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01int_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20long_20_3e',['CastToNative&lt; unsigned long &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01long_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20long_20long_20_3e',['CastToNative&lt; unsigned long long &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01long_01long_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20short_20_3e',['CastToNative&lt; unsigned short &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01short_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20wchar_5ft_20_3e',['CastToNative&lt; wchar_t &gt;',['../structv8toolkit_1_1CastToNative_3_01wchar__t_01_4.html',1,'v8toolkit']]],
-  ['compilationerror',['CompilationError',['../classv8toolkit_1_1ContextHelper_1_1CompilationError.html',1,'v8toolkit::ContextHelper']]],
+  ['casttupletojs',['CastTupleToJS',['../namespacev8toolkit.html#structv8toolkit_1_1CastTupleToJS',1,'v8toolkit']]],
+  ['casttupletojs_3c_200_2c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastTupleToJS&lt; 0, std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastTupleToJS_3_010_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
+  ['casttupletojs_3c_20position_2c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastTupleToJS&lt; position, std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastTupleToJS_3_01position_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
   ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ContextHelper.html',1,'v8toolkit']]]
 ];

@@ -103,6 +103,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <code>#include &lt;list&gt;</code><br />
 <code>#include &lt;deque&gt;</code><br />
 <code>#include &lt;array&gt;</code><br />
+<code>#include &lt;memory&gt;</code><br />
 <code>#include &quot;include/libplatform/libplatform.h&quot;</code><br />
 <code>#include &quot;include/v8.h&quot;</code><br />
 <code>#include &lt;assert.h&gt;</code><br />
@@ -110,6 +111,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Include dependency graph for casts.hpp:</div>
 <div class="dyncontent">
 <div class="center"><img src="casts_8hpp__incl.png" border="0" usemap="#casts_8hpp" alt=""/></div>
+<map name="casts_8hpp" id="casts_8hpp">
+</map>
 </div>
 </div><div class="textblock"><div class="dynheader">
 This graph shows which files directly or indirectly include this file:</div>
@@ -237,6 +240,16 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1multimap_3_01A_00_01B_01_4_01_4.html">v8toolkit::CastToJS&lt; std::multimap&lt; A, B &gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1pair_3_01T_00_01U_01_4_01_4.html">v8toolkit::CastToJS&lt; std::pair&lt; T, U &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:structv8toolkit_1_1CastTupleToJS"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#structv8toolkit_1_1CastTupleToJS">v8toolkit::CastTupleToJS&lt; position, T &gt;</a></td></tr>
+<tr class="separator:structv8toolkit_1_1CastTupleToJS"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastTupleToJS_3_010_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html">v8toolkit::CastTupleToJS&lt; 0, std::tuple&lt; Args... &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastTupleToJS_3_01position_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html">v8toolkit::CastTupleToJS&lt; position, std::tuple&lt; Args... &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html">v8toolkit::CastToJS&lt; std::tuple&lt; Args... &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1unordered__map_3_01A_00_01B_01_4_01_4.html">v8toolkit::CastToJS&lt; std::unordered_map&lt; A, B &gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CastToJS_3_01std_1_1deque_3_01T_01_4_01_4.html">v8toolkit::CastToJS&lt; std::deque&lt; T &gt; &gt;</a></td></tr>
@@ -249,10 +262,28 @@ Namespaces</h2></td></tr>
 <tr class="memitem:namespacev8toolkit"><td class="memItemLeft" align="right" valign="top"> &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html">v8toolkit</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<hr/><h2 class="groupheader">Class Documentation</h2>
+<a name="structv8toolkit_1_1CastTupleToJS" id="structv8toolkit_1_1CastTupleToJS"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">struct v8toolkit::CastTupleToJS</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<div class="textblock"><h3>template&lt;int position, class T&gt;<br />
+struct v8toolkit::CastTupleToJS&lt; position, T &gt;</h3>
+
+
+<p>Definition at line <a class="el" href="casts_8hpp_source.html#l00385">385</a> of file <a class="el" href="casts_8hpp_source.html">casts.hpp</a>.</p>
+</div>
+</div>
+</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Feb 4 2016 01:58:23 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Feb 10 2016 02:10:31 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

@@ -3,10 +3,9 @@
 <area shape="rect" id="node4" href="$namespacev8toolkit.html#a5212431cf43a6986955cde4289952947" title="v8toolkit::_print_helper" alt="" coords="368,87,510,111"/>
 <area shape="rect" id="node5" href="$namespacev8toolkit.html#ae5dc09550fef3e9c21c7745f3acfb71a" title="v8toolkit::_printf\l_helper" alt="" coords="193,31,298,67"/>
 <area shape="rect" id="node6" href="$namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="175,142,316,166"/>
-<area shape="rect" id="node8" href="$namespacev8toolkit.html#aba15a4be8b966582b74e1f5bf1b8ba0b" title="v8toolkit::printobj\l_callback" alt="" coords="190,191,301,227"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="568,55,675,91"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4" title="v8toolkit::stringify\l_value" alt="" coords="189,192,302,228"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="570,55,677,91"/>
 <area shape="rect" id="node7" href="$namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="364,136,514,172"/>
-<area shape="rect" id="node9" href="$namespacev8toolkit.html#a47464d8e4fef77f56fedfac883b5b720" title="v8toolkit::printobj" alt="" coords="383,197,495,221"/>
-<area shape="rect" id="node10" href="$namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90" title="v8toolkit::for_each\l_own_property" alt="" coords="562,191,681,227"/>
-<area shape="rect" id="node11" href="$namespacev8toolkit.html#aa0676b882716072bb5da15374cc04924" title="v8toolkit::for_each\l_value" alt="" coords="729,191,848,227"/>
+<area shape="rect" id="node9" href="$namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="562,220,685,256"/>
+<area shape="rect" id="node10" href="$namespacev8toolkit.html#a9a1ef27a4d9967f402179c66b15dc3d2" title="v8toolkit::make_set\l_from_object_keys" alt="" coords="377,248,501,284"/>
 </map>

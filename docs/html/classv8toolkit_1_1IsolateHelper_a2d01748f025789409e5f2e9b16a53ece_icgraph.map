@@ -1,7 +1,8 @@
 <map id="v8toolkit::IsolateHelper::get_object_template" name="v8toolkit::IsolateHelper::get_object_template">
 <area shape="rect" id="node2" href="$classv8toolkit_1_1IsolateHelper.html#a19ca3f4c7fa5ffc87c440c49472b023b" title="v8toolkit::IsolateHelper\l::add_function" alt="" coords="196,5,339,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html#a910b676d6d1d55cad054b8c02ee10774" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="196,65,339,101"/>
-<area shape="rect" id="node4" href="$classv8toolkit_1_1IsolateHelper.html#a4e0eab2f685c8348014e48174c7e34a2" title="v8toolkit::IsolateHelper\l::add_require" alt="" coords="196,125,339,161"/>
-<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a4eb6ce7983c1540aaed41eedf9463a59" title="v8toolkit::IsolateHelper\l::create_context" alt="" coords="196,185,339,221"/>
-<area shape="rect" id="node6" href="$classv8toolkit_1_1IsolateHelper.html#a95d9e67161781996159366dfccccd7ae" title="v8toolkit::IsolateHelper\l::expose_variable" alt="" coords="196,245,339,281"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1IsolateHelper.html#a4f4103bd438306414dfc9cb897eb2ebc" title="v8toolkit::IsolateHelper\l::add_print" alt="" coords="196,65,339,101"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a4e0eab2f685c8348014e48174c7e34a2" title="v8toolkit::IsolateHelper\l::add_require" alt="" coords="196,125,339,161"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1IsolateHelper.html#a4eb6ce7983c1540aaed41eedf9463a59" title="v8toolkit::IsolateHelper\l::create_context" alt="" coords="196,185,339,221"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1IsolateHelper.html#a95d9e67161781996159366dfccccd7ae" title="v8toolkit::IsolateHelper\l::expose_variable" alt="" coords="196,245,339,281"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html#a8c786314442f66d4cb5641496e3838bb" title="v8toolkit::IsolateHelper\l::add_assert" alt="" coords="387,5,530,41"/>
 </map>
