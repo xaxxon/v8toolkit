@@ -369,6 +369,56 @@ struct CastToJS<std::multimap<A, B>> {
 };
 
 
+template<class T, class U>
+struct CastToJS<std::pair<T, U>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::pair<T, U> & pair){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
+        (void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
+        return array;
+    }
+};
+
+template<int position, class T>
+struct CastTupleToJS;
+
+template<class... Args>
+struct CastTupleToJS<0, std::tuple<Args...>> {
+    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple){
+        constexpr int array_position = sizeof...(Args) - 0 - 1;
+        
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        (void)array->Set(context, array_position, CastToJS<typename std::tuple_element<array_position, std::tuple<Args...>>::type>()(isolate, std::get<array_position>(tuple)));
+        return array;
+    }
+};
+
+template<int position, class... Args>
+struct CastTupleToJS<position, std::tuple<Args...>> {
+    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple){
+        constexpr int array_position = sizeof...(Args) - position - 1;
+        
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = CastTupleToJS<position - 1, std::tuple<Args...>>()(isolate, tuple);
+        (void)array->Set(context, array_position, CastToJS<typename std::tuple_element<array_position, std::tuple<Args...>>::type>()(isolate, std::get<array_position>(tuple)));
+        return array;
+    }
+};
+
+
+
+template<class... Args>
+struct CastToJS<std::tuple<Args...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::tuple<Args...> tuple) {
+        return CastTupleToJS<sizeof...(Args) - 1, std::tuple<Args...>>()(isolate, tuple);
+    }
+};
+
 
 /**
 * supports unordered_maps containing any type also supported by CastToJS to javascript arrays

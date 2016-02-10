@@ -151,8 +151,10 @@ int main(int argc, char* argv[])
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
             
-
-            auto js_code = get_file_contents("code.js");
+            std::string js_code;
+            if(!get_file_contents("code.js", js_code)) {
+                assert(false);
+            }
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),
                                     v8::NewStringType::kNormal).ToLocalChecked();
@@ -164,28 +166,8 @@ int main(int argc, char* argv[])
             auto result = script->Run(context);
             print_maybe_value(result);
 
-            std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
-            add_variable(context, context->Global(), "v", CastToJS<decltype(v)>()(isolate, v));
-            std::list<float> l{1.5, 2.5, 3.5, 4.5};
-            add_variable(context, context->Global(), "l", CastToJS<decltype(l)>()(isolate, l));
-            std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
-            add_variable(context, context->Global(), "m", CastToJS<decltype(m)>()(isolate, m));
-            std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
-            add_variable(context, context->Global(), "m2", CastToJS<decltype(m2)>()(isolate, m2));
-            std::deque<long> d{7000000000, 8000000000, 9000000000};
-            add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
-            std::multimap<int, int> mm{{1,1},{1,2},{1,3},{2,4},{3,5},{3,6}};
-            add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
-            std::array<int, 3> a{{1,2,3}};
-            add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));
-            
-            std::map<string, vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
-            add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
-            
-            v8::Local<v8::String> source2 =
-                v8::String::NewFromUtf8(isolate, get_file_contents("sample2.js").c_str());
-            v8::Local<v8::Script> script2 = v8::Script::Compile(context, source2).ToLocalChecked();
-            (void)script2->Run(context);
+
+
 
             // throwing a c++ exception here immediately terminates the process
             printf("Checking that calling a normal function with too few parameters throws\n");

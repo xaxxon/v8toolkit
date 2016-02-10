@@ -4,7 +4,8 @@
 
 using namespace v8toolkit;
 
-
+// This program verifies exceptions thrown in FunctionTemplates are properly
+//   passed through V8 and rethrown on the other side
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
@@ -25,5 +26,4 @@ int main(int argc, char ** argv) {
     } catch(...){
         printf("caught throw 4 exception\n");
     }   
-    
 }

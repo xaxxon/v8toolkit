@@ -53,16 +53,17 @@ public:
 
 template <bool... b> struct static_all_of;
 
-//implementation: recurse, if the first argument is true
-template <bool... tail> 
+// If the first parameter is true, look at the rest of the list
+template <bool... tail>
 struct static_all_of<true, tail...> : static_all_of<tail...> {};
 
-//end recursion if first argument is false - 
-template <bool... tail> 
+// if any parameter is false, return false
+template <bool... tail>
 struct static_all_of<false, tail...> : std::false_type {};
 
-// - or if no more arguments
+// If there are no parameters left, no false was found so return true
 template <> struct static_all_of<> : std::true_type {};
+
 
 
 /***
@@ -122,8 +123,8 @@ template<class T, class Head>
 struct TypeChecker<T, Head> : public TypeCheckerBase<T>
 {
     T * check(AnyBase * any_base) {
-        Any<Head> * any = nullptr;
-        if((any = dynamic_cast<Any<Head> *>(any_base)) != nullptr) {
+        AnyPtr<Head> * any = nullptr;
+        if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
             return static_cast<T*>(any->get());
         } else {
             return nullptr;
@@ -137,8 +138,8 @@ template<class T, class Head, class... Tail>
 struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
     using SUPER = TypeChecker<T, Tail...>;
     T * check(AnyBase * any_base) {
-        Any<Head> * any = nullptr;
-        if((any = dynamic_cast<Any<Head> *>(any_base)) != nullptr) {
+        AnyPtr<Head> * any = nullptr;
+        if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
             return static_cast<T*>(any->get());
         } else {
             return SUPER::check(any_base);
@@ -169,7 +170,7 @@ private:
 	template<class BEHAVIOR>
 	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
 	{
-        auto any = new Any<T>(cpp_object);
+        auto any = new AnyPtr<T>(cpp_object);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
 		
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
@@ -275,8 +276,8 @@ public:
     {
         if(type_checker != nullptr) {
             return type_checker->check(any_base);
-        } else if (dynamic_cast<Any<T>*>(any_base)) {
-                return static_cast<Any<T>*>(any_base)->get();
+        } else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
+                return static_cast<AnyPtr<T>*>(any_base)->get();
         }
         return nullptr;
          

@@ -2,7 +2,7 @@
 V8_TARGET = native
 #V8_TARGET = x64.release
 #V8_TARGET = x64.debug
-DEBUG = -g
+# DEBUG = -g
 
 ifdef LINUX
 CPP=g++

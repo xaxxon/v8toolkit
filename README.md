@@ -3,25 +3,25 @@
 
 ## Tutorial for using this library
 
+#### Install git
+
+Type `git` on the command line.   If you don't have it, go here: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+
+
 #### Building V8
 
 Building V8 is not a simple process.
 
-First, you need git:   https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-
-Second, you need "depot tools", a collection of google build tools: http://dev.chromium.org/developers/how-tos/install-depot-tools
-You git clone this then set your path (I've been able to just type in the whole path when I want to use them instead of setting my PATH)
+"depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
+`git clone` this then include it in the PATH environment variable (I've been able to just type in the whole path when I want to use them instead of setting my PATH)
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
-Third, run `gclient`,(assuming you put depot-tools in your path, otherwise type out the full path to gclient) a tool in depot-tools 
-which will make sure the tools are up to date (not sure how important this is)
+Next, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the source for V8 in a directory called v8.
 
-Fourth, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the code in a directory called v8.
-
-For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  The following environment variables must be set.  They can
-either be set on the command line or put in your ~/.bash_profile (if you put them in your .bash_profile, you must either start a new
-shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell)
+For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
+They can either be set on the command line or put in your `~/.bash_profile`.  If you put them in your `.bash_profile`, you must either start a new
+shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell
 
     export CXX="`which clang++` -std=c++11 -stdlib=libc++"
     export CC="`which clang`"
@@ -33,17 +33,14 @@ shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment varia
     export LINK_host="`which clang++`"
     export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
 
-Again, the above lines are ONLY for OS X builds.
+Again, the above lines are ONLY for OS X builds.  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++, 
+the code written to use it will not link and spew errors about std::string being an undefined symbol.
 
 
+Start the build by going into the v8 directory and running `make native`.   This will build V8 for the platform of the computer.   Running `make all` will
+attempt to build for x86, x64, as well as ARM and can lead to errors if the environment isn't set up for cross compiling and takes much longer.
 
-Fifth, go into the v8 directory and type "make native".   This will build V8 for the computer you are on.   If you do a `make all`, it will
-attempt to build for x86, x64, as well as ARM and can lead to errors if your computer isn't set up for cross compiling and it takes a LOT longer.
-
-Once this finishes, from the v8 directory, you can `cd out/native` and then run `./d8` which is a javascript shell. (ctrl-d to quit d8)  In this directory
-you should see a large number of .a files (but sometimes they seem to be buried in subdirectories).   These are how you will link your application against V8.
-The include files are located back off the base v8 directory in the v8/includes directory, but your -I option to your compiler cannot include the "/includes" 
-portion of the path as the V8 .h files expect to find themselves in "includes/FILENAME.h"
+Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
 
 
 #### Building/installing Boost
@@ -71,7 +68,7 @@ on how to do that: https://gist.github.com/jimporter/10442880
 
 #### Build v8toolkit
 
-clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git 
+git clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git 
 
 go into the v8-class-wrapper directory (this name will be changed soon)
 
