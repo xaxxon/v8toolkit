@@ -20,6 +20,70 @@ class ScriptHelper;
 *
 */
 
+
+/**
+* When the V8 engine itself generates an error (or a user calls isolate->ThrowException manually with a v8::Value for some reason)
+* That exception is re-thrown as a standard C++ exception of this type.   The V8 Value thrown is available.
+* get_local_value must be called within a HandleScope
+* get_value returns a new Global handle to the value.  
+*/
+class V8Exception : public std::exception {
+private:
+    v8::Isolate * isolate;
+    v8::Global<v8::Value> value;
+
+public:
+    V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {}
+    V8Exception(v8::Isolate * isolate, v8::Local<v8::Value> value) : V8Exception(isolate, v8::Global<v8::Value>(isolate, value)) {printf("V8Exception constructor creating global from local\n");}
+    V8Exception(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, v8::String::NewFromUtf8(isolate, reason.c_str())) {}
+    virtual const char * what() const noexcept override {
+        return scoped_run(isolate,[&]{
+            return *v8::String::Utf8Value(value.Get(isolate));
+        });
+    }
+    v8::Local<v8::Value> get_local_value(){return value.Get(isolate);}
+    v8::Isolate * get_isolate(){return isolate;}
+    v8::Global<v8::Value> get_value(){return v8::Global<v8::Value>(isolate, value);}
+};
+
+
+class V8AssertionException : public V8Exception {
+public:
+    V8AssertionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+        V8Exception(isolate, value) {}
+    V8AssertionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+    V8AssertionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+};
+
+class V8ExecutionException : public V8Exception {
+public:
+    
+    V8ExecutionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+    V8ExecutionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+        V8Exception(isolate, value) {}    
+    V8ExecutionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+        
+};
+
+
+/**
+* Same as a V8 exception, except if this type is thrown it indicates the exception was generated
+*   during compilation, not at runtime.
+*/
+class V8CompilationException : public V8Exception {
+public:
+    V8CompilationException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+    V8CompilationException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+        V8Exception(isolate, value) {}    
+    V8CompilationException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+    
+};
+
+
+
 /**
 * Wrapper around a v8::Cnotext object with a link back to its associated isolate
 * This object can be used wherever a v8::Isolate * or a Local or Global v8::Context
@@ -30,37 +94,6 @@ class ContextHelper : public std::enable_shared_from_this<ContextHelper>
 {
     friend class IsolateHelper;
 public:
-    
-    /**
-    * Exception class returned to caller when a compilation error is encountered
-    * The what() method can be used to get the error string associated with the
-    *   error
-    */
-	class CompilationError : std::exception {
-		std::string what_string;
-	public:
-		CompilationError(std::string what_string) : what_string(what_string) {}
-		const char* what() const noexcept override {return what_string.c_str();}
-	};
-    
-    /**
-    * Exception class returned to caller when a javascript execution error is 
-    *   encountered
-    * The what() method can be used to get the error string associated with the
-    *   error
-    */
-	class ExecutionError : std::exception {
-        
-        /// the actual object thrown from javascript
-        v8::Global<v8::Value> exception;
-        
-		std::string what_string;
-        
-	public:
-		ExecutionError(v8::Global<v8::Value> && exception, std::string what_string) : exception(std::move(exception)), what_string(what_string) {}
-		const char* what() const noexcept override {return what_string.c_str();}
-	};
-
 
 private:
 	ContextHelper() = delete;
@@ -454,7 +487,9 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-	void add_print();
+	IsolateHelper & add_print();
+    
+    void add_assert();
     
     /**
     * Adds require() function to javascript as defined in

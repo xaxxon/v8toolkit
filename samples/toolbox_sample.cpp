@@ -86,7 +86,10 @@ int main(int argc, char* argv[])
         // runs the following code in an isolate, handle, and context scope
         scoped_run(isolate, context, [isolate, context](){
             // Create a string containing the JavaScript source code.
-            auto js_code = get_file_contents("toolbox_sample.js");
+             std::string js_code;
+            if(!get_file_contents("toolbox_sample.js", js_code)) {
+                assert(false);
+            }
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),
                                     v8::NewStringType::kNormal).ToLocalChecked();
@@ -97,7 +100,6 @@ int main(int argc, char* argv[])
 
             auto result = script->Run(context);
             print_maybe_value(result);
-            
         });
     });
 

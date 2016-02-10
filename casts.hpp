@@ -7,6 +7,7 @@
 #include <list>
 #include <deque>
 #include <array>
+#include <memory>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -102,24 +103,39 @@ struct CastToNative<long double> {
 	long double operator()(v8::Local<v8::Value> value){return value->ToNumber()->Value();}
 };
 
-
-// strings
+/**
+ * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
+ *   to store the string, a std::unique_ptr<char[]> is returned.
+ */
 template<>
 struct CastToNative<char *> {
-	char * operator()(v8::Local<v8::Value> value){return *v8::String::Utf8Value(value);}
+  std::unique_ptr<char[]> operator()(v8::Local<v8::Value> value){
+    char * string = *v8::String::Utf8Value(value);
+    auto string_length = strlen(string);
+    auto new_string = new char[string_length + 1];
+    strncpy(new_string, string, string_length + 1);
+    return std::unique_ptr<char[]>(new_string);
+  }
 };
+
+
+/**
+ * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
+ *   to store the string, a std::unique_ptr<char[]> is returned.
+ */
 template<>
 struct CastToNative<const char *> {
-	const char * operator()(v8::Local<v8::Value> value){return CastToNative<char *>()(value);}
+  std::unique_ptr<char[]>  operator()(v8::Local<v8::Value> value){return CastToNative<char *>()(value); }
 };
+
 template<>
 struct CastToNative<std::string> {
-	std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<char *>()(value));}
+  std::string operator()(v8::Local<v8::Value> value){return std::string(*v8::String::Utf8Value(value));}
 };
 
 template<>
 struct CastToNative<const std::string> {
-	const std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<char *>()(value));}
+  const std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<std::string>()(value));}
 };
 
 
@@ -221,13 +237,10 @@ template<>
 struct CastToJS<const char *> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const char * value){return v8::String::NewFromUtf8(isolate, value);}
 };
-// template<>
-// struct CastToJS<const std::basic_string<char>> {
-//     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::basic_string<char> & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
-// };
+
 template<>
 struct CastToJS<std::string> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
+  v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
 };
 template<>
 struct CastToJS<const std::string> {
@@ -274,7 +287,7 @@ struct CastToJS<std::vector<U>> {
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
         auto size = vector.size();
-        for(int i = 0; i < size; i++) {
+        for(unsigned int i = 0; i < size; i++) {
             (void)array->Set(context, i, CastToJS<U>()(isolate, vector.at(i)));
         }
         return array;
@@ -356,6 +369,56 @@ struct CastToJS<std::multimap<A, B>> {
 };
 
 
+template<class T, class U>
+struct CastToJS<std::pair<T, U>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::pair<T, U> & pair){
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
+        (void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
+        return array;
+    }
+};
+
+template<int position, class T>
+struct CastTupleToJS;
+
+template<class... Args>
+struct CastTupleToJS<0, std::tuple<Args...>> {
+    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple){
+        constexpr int array_position = sizeof...(Args) - 0 - 1;
+        
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        (void)array->Set(context, array_position, CastToJS<typename std::tuple_element<array_position, std::tuple<Args...>>::type>()(isolate, std::get<array_position>(tuple)));
+        return array;
+    }
+};
+
+template<int position, class... Args>
+struct CastTupleToJS<position, std::tuple<Args...>> {
+    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple){
+        constexpr int array_position = sizeof...(Args) - position - 1;
+        
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = CastTupleToJS<position - 1, std::tuple<Args...>>()(isolate, tuple);
+        (void)array->Set(context, array_position, CastToJS<typename std::tuple_element<array_position, std::tuple<Args...>>::type>()(isolate, std::get<array_position>(tuple)));
+        return array;
+    }
+};
+
+
+
+template<class... Args>
+struct CastToJS<std::tuple<Args...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::tuple<Args...> tuple) {
+        return CastTupleToJS<sizeof...(Args) - 1, std::tuple<Args...>>()(isolate, tuple);
+    }
+};
+
 
 /**
 * supports unordered_maps containing any type also supported by CastToJS to javascript arrays
@@ -384,7 +447,7 @@ struct CastToJS<std::deque<T>> {
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
         auto size = deque.size();
-        for(int i = 0; i < size; i++) {
+        for(unsigned int i = 0; i < size; i++) {
             (void)array->Set(context, i, CastToJS<T>()(isolate, deque.at(i)));
         }
         return array;
@@ -399,7 +462,7 @@ struct CastToJS<std::array<T, N>> {
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
         // auto size = arr.size();
-        for(int i = 0; i < N; i++) {
+        for(unsigned int i = 0; i < N; i++) {
             (void)array->Set(context, i, CastToJS<T>()(isolate, arr.at(i)));
         }
         return array;

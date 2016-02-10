@@ -37,7 +37,14 @@ ContextHelper::~ContextHelper() {
 
 std::shared_ptr<ScriptHelper> ContextHelper::compile_from_file(const std::string filename)
 {
-    return this->compile(get_file_contents(filename.c_str()));
+    std::string contents;
+    time_t modification_time = 0;
+    if (!get_file_contents(filename, contents, modification_time)) {
+        
+        throw V8CompilationException(*this, std::string("Could not load file: ") + filename);
+    }
+
+    return compile(contents);
 }
 
 
@@ -45,6 +52,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
 {
     return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
     
+        // printf("Compiling %s\n", javascript_source.c_str());
         // This catches any errors thrown during script compilation
         v8::TryCatch try_catch(isolate);
     
@@ -54,8 +62,7 @@ std::shared_ptr<ScriptHelper> ContextHelper::compile(const std::string javascrip
         // Compile the source code.
         v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
         if (compiled_script.IsEmpty()) {
-            v8::String::Utf8Value exception(try_catch.Exception());
-            throw CompilationError(*exception);
+            throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
         }
         return std::shared_ptr<ScriptHelper>(new ScriptHelper(shared_from_this(), compiled_script.ToLocalChecked()));
     });
@@ -72,23 +79,24 @@ v8::Global<v8::Value> ContextHelper::run(const v8::Global<v8::Script> & script)
         auto local_script = v8::Local<v8::Script>::New(isolate, script);
         auto maybe_result = local_script->Run(context.Get(isolate));
         if(maybe_result.IsEmpty()) {
-            auto e = try_catch.Exception();
-            print_v8_value_details(e);
-            if(e->IsObject()){
-                printobj(*this, e->ToObject());
+
+            
+            v8::Local<v8::Value> e = try_catch.Exception();
+            // print_v8_value_details(e);
+            
+            
+            if(e->IsExternal()) {
+                auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
+                auto anyptr_exception_ptr = dynamic_cast<Any<std::exception_ptr> *>(anybase);
+                assert(anyptr_exception_ptr); // cannot handle other types at this time TODO: throw some other type of exception if this happens UnknownExceptionException or something
+            
+                std::rethrow_exception(anyptr_exception_ptr->get());
+            } else {
+                printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
+                throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
             }
-            printf("\n");
-            v8::String::Utf8Value exception(e);
-                                std::cout<<std::endl<<*exception<<std::endl;;
-            throw ExecutionError(v8::Global<v8::Value>(isolate, e), *exception);
-                                std::cout<<"#";
         }
         v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-        // printf("Run result is object? %s\n", result->IsObject() ? "Yes" : "No");
-        // printf("Run result is string? %s\n", result->IsString() ? "Yes" : "No");
-        // Convert the result to an UTF8 string and print it.
-        v8::String::Utf8Value utf8(result);
-        // printf("run script result: %s\n", *utf8);
     
         return v8::Global<v8::Value>(isolate, result);
     });
@@ -152,11 +160,12 @@ IsolateHelper::operator v8::Isolate*()
     return this->isolate;
 }
 
-void IsolateHelper::add_print()
+IsolateHelper & IsolateHelper::add_print()
 {
     (*this)([this](){
         v8toolkit::add_print(isolate, get_object_template());
     });
+    return *this;
 }
 
 void IsolateHelper::add_require(std::vector<std::string> paths)
@@ -201,6 +210,50 @@ IsolateHelper::~IsolateHelper()
     
     this->isolate->Dispose();
     printf("End of isolate helper destructor\n");
+}
+
+void IsolateHelper::add_assert()
+{
+    add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
+        auto isolate = info.GetIsolate();
+        auto context = isolate->GetCurrentContext();
+        printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
+        
+        printf("AKA: %s\n",  *v8::String::Utf8Value(info[0]->ToString()));
+
+        v8::TryCatch tc(isolate);
+        auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
+        if(tc.HasCaught()) {
+            printf("Caught compilation error\n");
+            tc.ReThrow();
+            return;
+        }
+        auto script = script_maybe.ToLocalChecked();
+        auto result_maybe = script->Run(context);
+        if(tc.HasCaught()) {
+            printf("Caught runtime exception\n");
+            tc.ReThrow();
+            return;
+        }
+        auto result = result_maybe.ToLocalChecked();
+        // print_v8_value_details(result);
+        
+        bool default_value = false;
+        bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
+        if (!assert_result) {
+            throw V8AssertionException(isolate, std::string("Expression returned false: ") + *v8::String::Utf8Value(info[0]));
+        }
+        
+        printf("Done in assert\n");
+    });
+    
+    add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
+        auto isolate = args.GetIsolate();
+        if(args.Length() != 2 || !compare_contents(*this, args[0], args[1])) {
+            printf("Throwing v8assertionexception\n");
+            throw V8AssertionException(*this, std::string("Data structures do not contain the same contents: ")+ stringify_value(isolate, args[0]).c_str() + " " + stringify_value(isolate, args[1]));
+        }
+    });
 }
 
 

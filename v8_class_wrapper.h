@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <type_traits>
 
 #include <functional>
 #include <iostream>
@@ -16,6 +17,15 @@
 namespace v8toolkit {
 
 #define V8_CLASS_WRAPPER_DEBUG false
+
+class CastException : public std::exception {
+private:
+  std::string reason;
+  
+public:
+    CastException(const std::string & reason) : reason(reason) {}
+    virtual const char * what() const noexcept override {return reason.c_str();}
+};
 
 /**
 * Design Questions:
@@ -40,6 +50,21 @@ namespace v8toolkit {
     with v8toolkit::add_function, but there should be a way in v8classwrapper to say every object
     of the type gets the method, too
 */
+
+template <bool... b> struct static_all_of;
+
+// If the first parameter is true, look at the rest of the list
+template <bool... tail>
+struct static_all_of<true, tail...> : static_all_of<tail...> {};
+
+// if any parameter is false, return false
+template <bool... tail>
+struct static_all_of<false, tail...> : std::false_type {};
+
+// If there are no parameters left, no false was found so return true
+template <> struct static_all_of<> : std::true_type {};
+
+
 
 /***
 * set of classes for determining what to do do the underlying c++
@@ -80,6 +105,50 @@ struct DestructorBehaviorLeaveAlone : DestructorBehavior<T>
 };
 
 
+
+
+
+
+template<class T>
+struct TypeCheckerBase {
+  public:
+      virtual ~TypeCheckerBase(){}
+      virtual T * check(AnyBase *) = 0;
+};
+
+template<class, class...>
+struct TypeChecker;
+
+template<class T, class Head>
+struct TypeChecker<T, Head> : public TypeCheckerBase<T>
+{
+    T * check(AnyBase * any_base) {
+        AnyPtr<Head> * any = nullptr;
+        if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
+            return static_cast<T*>(any->get());
+        } else {
+            return nullptr;
+        }
+    }
+};
+
+// tests an AnyBase * against a list of types compatible with T
+//   to see if the AnyBase is an Any<TypeList...> ihn
+template<class T, class Head, class... Tail>
+struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
+    using SUPER = TypeChecker<T, Tail...>;
+    T * check(AnyBase * any_base) {
+        AnyPtr<Head> * any = nullptr;
+        if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
+            return static_cast<T*>(any->get());
+        } else {
+            return SUPER::check(any_base);
+        }
+    }
+};
+
+
+
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 * Can provide a JS constructor method or wrap objects created in another c++ function
@@ -101,7 +170,8 @@ private:
 	template<class BEHAVIOR>
 	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
 	{
-	    js_object->SetInternalField(0, v8::External::New(isolate, (void*) cpp_object));
+        auto any = new AnyPtr<T>(cpp_object);
+	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
 		
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
@@ -188,41 +258,13 @@ private:
 		StdFunctionCallbackType * callback_lambda = (StdFunctionCallbackType *)v8::External::Cast(*(args.Data()))->Value();		
 		(*callback_lambda)(args);
 	}
-	
-	// data to pass into a setweak callback
-	struct SetWeakCallbackParameter 
-	{
-		T * cpp_object;
-		v8::Global<v8::Object> javascript_object;
-		std::unique_ptr<DestructorBehavior<T>> behavior;
-	};
-	
-	
-	
-	// Helper for cleaning up the underlying wrapped c++ object when the corresponding javascript object is
-	// garbage collected
-	static void v8_destructor(const v8::WeakCallbackData<v8::Object, SetWeakCallbackParameter> & data) {
-		auto isolate = data.GetIsolate();
-
-		SetWeakCallbackParameter * parameter = data.GetParameter();
-		
-		// delete our internal c++ object and tell V8 the memory has been removed
-		(*parameter->behavior)(isolate, parameter->cpp_object);
-		
-		// TODO: Need to remove object from existing_wrapped_objects hash properly resetting the global 
-		
-		
-		// Clear out the Global<Object> handle
-		parameter->javascript_object.Reset();
-
-		// Delete the heap-allocated std::pair from v8_constructor
-		delete parameter;
-	}
 
 	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
 	std::vector<v8::Global<v8::FunctionTemplate>> constructor_templates;
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects;
 	v8::Isolate * isolate;
+
+    static std::unique_ptr<TypeCheckerBase<T>> type_checker;
     
     // this is to signal undesirable usage patterns where methods or members won't be visible to 
     //   objects created in certain ways
@@ -230,6 +272,16 @@ private:
 	
 public:
 	
+    static T * cast(AnyBase * any_base)
+    {
+        if(type_checker != nullptr) {
+            return type_checker->check(any_base);
+        } else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
+                return static_cast<AnyPtr<T>*>(any_base)->get();
+        }
+        return nullptr;
+         
+    }
 	
 	/**
 	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
@@ -249,6 +301,23 @@ public:
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Returning v8 wrapper: %p\n", object);
 		return *object;
 	}
+
+
+    /**
+    * Species other types that can be substituted for T when calling a function expecting T
+    *   but T is not being passsed.   Only available for classes derived from T.
+    * T is always compatible and should not be specified here.
+    * Not calling this means that only T objects will be accepted for things that want a T.
+    * There is no automatic determination of inherited types by this library because I cannot
+    *   figure out how.
+    */
+    template<class... CompatibleTypes>
+    static
+    std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value>
+    set_compatible_types()
+    {
+        type_checker.reset(new TypeChecker<T, T, CompatibleTypes...>());
+    }
 	
 	/**
 	* V8ClassWrapper objects shouldn't be deleted during the normal flow of your program unless the associated isolate
@@ -405,8 +474,18 @@ public:
                 std::stringstream ss;
                 ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                 isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+                return; // return now so the exception can be thrown inside the javascript
             }
-			pb(bound_method, info);
+            
+            // V8 does not support C++ exceptions, so all exceptions must be caught before control
+            //   is returned to V8 or the program will instantly terminate
+            try {
+    			pb(bound_method, info);
+            } catch(std::exception & e) {
+                isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+                return;
+            }
+            return;
 		});
 		
 		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
@@ -416,15 +495,17 @@ public:
 		}
 		return *this;
 	}
-    
-    
-    
 };
 
 /**
 * Stores the "singleton" per isolate
 */
-template <class T> std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
+template <class T> 
+std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
+
+template<class T>
+std::unique_ptr<TypeCheckerBase<T>> V8ClassWrapper<T>::type_checker = std::make_unique<TypeChecker<T, T>>();
+
 
 template<typename T>
 struct CastToJS {
@@ -470,16 +551,39 @@ struct CastToJS<T&> {
 	}
 };
 
+
+template<typename T>
+struct CastToNative<T*>
+{
+	T * operator()(v8::Local<v8::Value> value){
+        return & CastToNative<T>()(value);
+    }
+};
+
+
 template<typename T>
 struct CastToNative
 {
 	T & operator()(v8::Local<v8::Value> value){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+        if(!value->IsObject()){
+            // TODO: Don't use castexception anywhere just use V8ExecutionException
+            throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+        }
 		auto object = v8::Object::Cast(*value);
-		assert(object->InternalFieldCount() > 0);
+		if (object->InternalFieldCount() <= 0) {
+            throw CastException("No specialization CastToNative found and provided Object is not a wrapped C++ object.  It is a native Javascript Object");
+        }
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-		return *cpp_object;
+        
+        // I don't know any way to determine if a type is
+        auto any_base = (v8toolkit::AnyBase *)wrap->Value();
+        T * t = nullptr;
+        if ((t = V8ClassWrapper<T>::cast(any_base)) == nullptr) {
+            throw CastException("Wrapped class isn't an exact match for the parameter type and using inherited types isn't supported");
+        }
+        
+		return *t;
 	}
 };
 

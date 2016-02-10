@@ -4,6 +4,9 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <functional>
+
+#include <string.h>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
@@ -27,6 +30,40 @@ public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
 };
+
+/**
+* When passing an Any-type through a void *, always static_cast it to an AnyBase *
+*   pointer and pass that as the void *.  This allows you to safely cast it back to
+*   a AnyBase* on the other side and then dynamic_cast to any child types to 
+*   determine the type of the object actually stored.
+*/
+struct AnyBase
+{
+    virtual ~AnyBase();
+};
+
+// TODO: The names Any and AnyPtr are pretty darned backwards
+template<class T>
+struct AnyPtr : public AnyBase {
+    AnyPtr(T * data) : data(data) {}
+    virtual ~AnyPtr(){}
+    T* data;
+    T * get() {return data;}
+};
+
+/**
+* Best used for types that are intrinsically pointers like std::shared_ptr or
+*   std::exception_ptr
+*/
+template<class T>
+struct Any : public AnyBase {
+    Any(T data) : data(data) {}
+    virtual ~Any(){}
+    T data;
+    T get() {return data;}
+};
+
+
 
 /**
 * Helper function to run the callable inside contexts.
@@ -234,8 +271,8 @@ struct CallCallable<std::function<R(Args...)>> {
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
     void operator()(std::function<void(Args...)> callable, 
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&&... args) {
-        callable(std::forward<Args>(args)...);
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
+        callable(args...);
     }
 };
 
@@ -288,6 +325,38 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
     }
 };
 
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
+        public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+            
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    std::unique_ptr<char[]> buffer;
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      buffer = CastToNative<const char *>()(info[depth]);
+      this->super::operator()(function, info, ts..., buffer.get()); 
+    }
+    };
+    
+    
+    template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+    struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
+						      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    std::unique_ptr<char[]> buffer;
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      buffer = CastToNative<const char *>()(info[depth]);
+      this->super::operator()(function, info, ts..., buffer.get()); 
+    }
+};
+
+
+
+ 
 /**
 * specialization for functions that want to take a v8::FunctionCallbackInfo object in addition
 *   to javascript-provided parameters.  depth parameter isn't incremented because this doesn't
@@ -298,7 +367,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 *   javascript
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> & info,TAIL...)>> : 
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> &,TAIL...)>> : 
         public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
             
     typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
@@ -343,13 +412,23 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
         PB_TYPE pb;
         
         auto arity = PB_TYPE::ARITY;
-        printf("Checking parameter count, got %d, expected %d\n", args.Length(), arity);
         if(args.Length() < arity) {
             std::stringstream ss;
             ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << args.Length();
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+            return;
         }
-        pb(callable, args);
+        std::exception_ptr exception_pointer;
+        try {
+            pb(callable, args);
+        } catch (...) {
+            auto anyptr_t = new Any<std::exception_ptr>( std::current_exception());
+            
+            // always put in the base ptr so you can cast to it safely and then use dynamic_cast to try to figure
+            //   out what it really is
+            isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
+        }
+        return;
     }, v8::External::New(isolate, (void*)copy));
 }
 
@@ -578,15 +657,23 @@ void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 /**
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
+*
 * println same as print but automatically appends a newlines
+*
 * printf - only available if USE_BOOST is defined and treats the first parameter as a format string.  
 *          any additional values will be used to fill the format string.  If there are insufficient parameters
 *          to fill the format, the empty string "" will be used.   Any extra parameters will be printed after
 *          the filled format string separated by spaces
+*
 * printfln - same as printf but automatically appends a newline
+*
 * printobj - prints a bunch of information about an object - format highly susceptible to change
 */
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template );
+
+// returns true if the two values are the same by value, including nested data structures
+bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
+
 
 /**
 * Accepts an object and a method on that object to be called later via its operator()
@@ -612,6 +699,7 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
         return (object.*method)(params...); 
     }
 };
+
 
 /** 
 * Bind specialization for handling const class methods
@@ -671,10 +759,17 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 };
 
 
+/**
+* If the filename `filename` exists, reeturns true and sets the last modificaiton time and contents
+*   otherwise returns false
+*/
+bool get_file_contents(std::string filename, std::string & file_contents, time_t & file_modification_time);
 
-// helper for testing code, not a part of the library
-// read the contents of the file and return it as a std::string
-std::string get_file_contents(const char *filename);
+/**
+* same as longer version, just doesn't return modification time if it's not desired
+*/
+bool get_file_contents(std::string filename, std::string & file_contents);
+
 
 
 /**
@@ -700,12 +795,19 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 */ 
 v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, 
                              std::string filename, 
-                             const std::vector<std::string> & paths);
+                             const std::vector<std::string> & paths,
+                             bool track_modification_times = false);
 
 /**
 * prints out a ton of info about a v8::Value
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
+
+
+
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
+
+
 
 // void require_directory(std::string directory_name)
 // {
