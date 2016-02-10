@@ -236,7 +236,7 @@ void IsolateHelper::add_assert()
             return;
         }
         auto result = result_maybe.ToLocalChecked();
-        print_v8_value_details(result);
+        // print_v8_value_details(result);
         
         bool default_value = false;
         bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
