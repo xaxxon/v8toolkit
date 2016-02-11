@@ -382,18 +382,42 @@ void test_asserts()
     c->run("if({}){println('{} is true');} else{println('{} is false');}");
     c->run("assert('({})')"); // the program "{}" is an empty program, not an empty object
 
-    printf("Dont testing asserts\n");
-    
-    
+    printf("Dont testing asserts\n");   
+}
+
+
+
+void require_directory_test()
+{
+    printf("In require directory test\n");
+    auto i = PlatformHelper::create_isolate();
+    (*i)([&](){
+        i->add_require();
+        i->add_print();
+        add_module_list(*i, i->get_object_template());
+        auto c = i->create_context();
+        (*c)([&]{
+            require_directory(*c, "modules");
+            c->run("printobj(module_list())");
+            
+            require_directory(*c, "modules");
+            c->run("printobj(module_list())");
+            
+            require_directory(*c, "modules");
+            c->run("printobj(module_list())");
+            
+        });
+    });
 }
 
 
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
-    
+    printf("Running from %s\n", argv[0]);
+
     run_type_conversion_test();
-    
+
     auto future = test_lifetimes();
     printf("Nothing should have been destroyed yet\n");
     {
@@ -405,17 +429,19 @@ int main(int argc, char ** argv) {
 
     auto context = run_tests();
     printf("The script, context, and isolate helpers should have all been destroyed\n");
-    
+
     printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
-    
+
     printf("Running comparison tests\n");
     run_comparison_tests();
-    
+
     printf("Testing casts\n");
     test_casts();
-    
+
     printf("Testing asserts\n");
     test_asserts();
+    
+    require_directory_test();
     
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
 }

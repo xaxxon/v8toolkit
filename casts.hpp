@@ -277,12 +277,14 @@ struct CastToJS<v8::Global<v8::Value> &> {
 };
 
 
+
+
 /**
 * supports vectors containing any type also supported by CastToJS to javascript arrays
 */
-template<class U>
-struct CastToJS<std::vector<U>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U> vector){
+template<class U, class... Rest>
+struct CastToJS<std::vector<U, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U, Rest...> vector){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
@@ -297,9 +299,9 @@ struct CastToJS<std::vector<U>> {
 /**
 * supports lists containing any type also supported by CastToJS to javascript arrays
 */
-template<class U>
-struct CastToJS<std::list<U>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U> list){
+template<class U, class... Rest>
+struct CastToJS<std::list<U, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U, Rest...> list){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
@@ -316,9 +318,9 @@ struct CastToJS<std::list<U>> {
 /**
 * supports maps containing any type also supported by CastToJS to javascript arrays
 */
-template<class A, class B>
-struct CastToJS<std::map<A, B>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<A, B> map){
+template<class A, class B, class... Rest>
+struct CastToJS<std::map<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::map<A, B, Rest...> & map){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
@@ -334,9 +336,9 @@ struct CastToJS<std::map<A, B>> {
 * It creates an object of key => [values...]
 * All values are arrays, even if there is only one value in the array.
 */
-template<class A, class B>
-struct CastToJS<std::multimap<A, B>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::multimap<A, B> map){
+template<class A, class B, class... Rest>
+struct CastToJS<std::multimap<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> map){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
@@ -423,9 +425,9 @@ struct CastToJS<std::tuple<Args...>> {
 /**
 * supports unordered_maps containing any type also supported by CastToJS to javascript arrays
 */
-template<class A, class B>
-struct CastToJS<std::unordered_map<A, B>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B> map){
+template<class A, class B, class... Rest>
+struct CastToJS<std::unordered_map<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> map){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
@@ -440,9 +442,9 @@ struct CastToJS<std::unordered_map<A, B>> {
 /**
 * supports deques containing any type also supported by CastToJS to javascript arrays
 */
-template<class T>
-struct CastToJS<std::deque<T>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T> deque){
+template<class T, class... Rest>
+struct CastToJS<std::deque<T, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T, Rest...> deque){
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
@@ -471,13 +473,10 @@ struct CastToJS<std::array<T, N>> {
 
 
 
-//TODO: array
 
 //TODO: forward_list
 
 //TODO: stack
-
-//TODO: queue
 
 //TODO: set
 

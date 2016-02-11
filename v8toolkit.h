@@ -793,8 +793,9 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that
 */ 
-v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & context, 
+bool require(v8::Local<v8::Context> & context, 
                              std::string filename, 
+                             v8::Local<v8::Value> & result,
                              const std::vector<std::string> & paths,
                              bool track_modification_times = false);
 
@@ -803,8 +804,17 @@ v8::Local<v8::Value> require(v8::Isolate * isolate, v8::Local<v8::Context> & con
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
 
+/**
+* requires all the files in a directory
+*/
+void require_directory(v8::Local<v8::Context> context, std::string directory_name);
 
 
+/**
+* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
+*
+* Good for looking at the contents of a value and also used for printobj() method added by add_print
+*/
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
 
 

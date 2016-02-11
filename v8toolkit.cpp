@@ -22,6 +22,95 @@
 
 #include "./v8toolkit.h"
 
+
+// template<class Container, class Data>
+// struct A;
+//
+// template< template Container, class Data>
+// struct A<Container<Data>> {
+//     using data = Data;
+// };
+
+template<class Container,
+         class Callable>
+struct MapperHelper;
+
+template<template <typename, typename...> class Container,
+class Data,
+class... AddParams,
+class Callable>
+struct MapperHelper<Container<Data, AddParams...>, Callable>
+{
+    auto operator()(Container<Data, AddParams...> container, Callable callable) -> Container<decltype(callable(std::declval<Data>())), AddParams...>
+    {
+        Container<decltype(callable(std::declval<Data>())), AddParams...> results;
+        for (auto element : container) {
+            results.push_back(callable(element));
+        }
+        return results;
+    }
+};
+
+
+template<
+class Key,
+class Value,
+class... AddParams,
+class Callable>
+struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
+{
+    auto operator()(std::map<Key, Value, AddParams...> container, Callable callable) -> std::map<decltype(callable(std::declval<std::pair<Key, Value>>()).first), decltype(callable(std::declval<std::pair<Key, Value>>()).second), AddParams...>
+    {
+        std::map<decltype(callable(std::declval<std::pair<Key, Value>>()).first), decltype(callable(std::declval<std::pair<Key, Value>>()).second), AddParams...> results;
+        for (auto element : container) {
+            results.insert(callable(element));
+        }
+        return results;
+    }
+};
+
+
+
+
+
+
+
+// simple map/transform method for a container supporting push_back
+// TODO: Needs SFINAE
+template <class Callable,
+          template <typename, typename...> class Container,
+          typename... ContainerParams >
+auto mapper(const Container<ContainerParams...> & container, Callable callable) -> decltype(MapperHelper<Container<ContainerParams...>, Callable>()(container, callable))
+{
+    return MapperHelper<Container<ContainerParams...>, Callable>()(container, callable);
+}
+
+template <class Callable,
+          template <typename, typename...> class Container,
+typename Key,
+          typename Value,
+          typename... AddParams >
+auto reducer(const Container<Key, Value, AddParams...> & container, Callable callable) -> std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))>
+{
+    std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))> results;
+    for(auto pair : container) {
+        results.push_back(callable(pair));
+    }
+    return results;
+}
+
+
+
+
+//
+// template<class Foo>
+// auto mapper(Foo container) -> typename A<Foo>::data
+// {
+//
+// }
+//
+
+
 namespace v8toolkit {
 
 void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name)
@@ -185,7 +274,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 
     add_function(isolate, object_template, "printobj", [](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        printf("%s", stringify_value(isolate, info[0]).c_str());
+        printf("%s\n", stringify_value(isolate, info[0]).c_str());
     });
 }
 
@@ -258,6 +347,40 @@ cached_isolate_modules_t get_loaded_modules(v8::Isolate * isolate)
 }
 
 
+/**
+* Takes in javascript source and attempts to compile it to a script.
+* On error, it sets the output parameter `error` and returns `false`
+*/
+bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Local<v8::Script> & script, v8::Local<v8::Value> & error)
+{
+    auto isolate = context->GetIsolate();
+    v8::TryCatch try_catch(isolate);
+    auto source_maybe =
+        v8::String::NewFromUtf8(isolate, source.c_str(),
+                                v8::NewStringType::kNormal);
+                                
+    if (try_catch.HasCaught()) {
+        error = try_catch.Exception();
+        printf("Couldn't make string for %s\n", source.c_str());
+        return false;
+    }
+    
+    auto local_source = source_maybe.ToLocalChecked();
+                                
+    auto script_maybe = v8::Script::Compile(context, local_source);
+    
+    if (try_catch.HasCaught()) {
+        error = try_catch.Exception();
+        printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
+        return false;
+    }
+    
+    script = script_maybe.ToLocalChecked();
+    return true;
+    
+}
+
+
 
 /** Attempts to load the specified external resource.  
 * Attempts to load exact match filename in each path, then <filename>.js in each path, then <filename>.json in each path
@@ -271,17 +394,19 @@ cached_isolate_modules_t get_loaded_modules(v8::Isolate * isolate)
 * The goal of this function is to be as close to node.js require as possible, so patches or descriptions of how it differs are appreciated.
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
-v8::Local<v8::Value> require(v8::Isolate * isolate, 
-    v8::Local<v8::Context> & context, 
-    std::string filename, 
+bool require(
+    v8::Local<v8::Context> & context,
+    std::string filename,
+    v8::Local<v8::Value> & result,
     const std::vector<std::string> & paths,
     bool track_file_modification_times)
 {
-
+    auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
         printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
-        return v8::Object::New(isolate);
+        isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Cannot specify a file containing .."));
+        return false;
     }
 
     for (auto suffix : std::vector<std::string>{"", ".js", ".json", }) {
@@ -304,19 +429,22 @@ v8::Local<v8::Value> require(v8::Isolate * isolate,
         
                     auto cached_require_results = isolate_require_results.find(complete_filename);
                     if (cached_require_results != isolate_require_results.end()) {
-                        printf("Found cached results, using cache instead of re-running module\n");
+                        // printf("Found cached results, using cache instead of re-running module\n");
                         
                         // if we don't care about file modifications or the file modification time is the same as before,
                         //   return the cached result
                         if (!track_file_modification_times || file_modification_time == cached_require_results->second.first) {
-                            return cached_require_results->second.second.Get(isolate);
+                            // printf("Returning cached results\n");
+                            result = cached_require_results->second.second.Get(isolate);
+                            return true;
+                        } else {
+                            // printf("Not returning cached results because modification time was no good\n");
                         }
                     } else {
-                        printf("Didn't find cached version %p %s\n", isolate, complete_filename.c_str());
+                        // printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
                     }
                 }
 
-    
                 // create a new context for it (this may be the wrong thing to do)
                 auto module_global_template = v8::ObjectTemplate::New(isolate);     
                 add_print(isolate, module_global_template);
@@ -335,105 +463,128 @@ v8::Local<v8::Value> require(v8::Isolate * isolate,
                 add_variable(module_context, module_global_object, "exports", exports_object);
                 (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
 
-                v8::Local<v8::String> source =
-                    v8::String::NewFromUtf8(isolate, file_contents.c_str(),
-                                            v8::NewStringType::kNormal).ToLocalChecked();
-
 
                 // Compile the source code.
-                v8::Local<v8::Script> script = v8::Script::Compile(module_context, source).ToLocalChecked();
                 v8::MaybeLocal<v8::Value> maybe_result;
-                if (std::regex_match(filename, std::regex(".json$"))) {
-                    printf("About to start evaluate .json file\n");
+                                            
+                if (std::regex_search(filename, std::regex(".json$"))) {
+                    v8::Local<v8::Script> script;
+                    v8::Local<v8::Value> error;
+                    if (!compile_source(module_context, std::string("(") + file_contents + ")", script, error)) {
+                        isolate->ThrowException(error);
+                        printf("Couldn't compile json for %s\n", complete_filename.c_str());
+                        return false;
+                    }
+                    v8::TryCatch try_catch(isolate);
                     maybe_result = script->Run(context);
-                
+                    if (try_catch.HasCaught()) {
+                        try_catch.ReThrow();
+                        printf("Couldn't run json for %s\n", complete_filename.c_str());
+                        return false;
+                    }
                 } else {
-
-                    printf("About to start running script\n");
+                    v8::Local<v8::Script> script;
+                    v8::Local<v8::Value> error;
+                    if (!compile_source(module_context, file_contents, script, error)) {
+                        isolate->ThrowException(error);
+                        // printf("Couldn't compile .js for %s\n", complete_filename.c_str());
+                        return false;
+                    }
+                        
+                    v8::TryCatch try_catch(isolate);
+                    
+                    // return value of run doesn't matter, only what is hooked up to export variable
                     (void)script->Run(context);
-    
+                    if (try_catch.HasCaught()) {
+                        try_catch.ReThrow();
+                        // printf("Couldn't run .js for %s\n", complete_filename.c_str());
+                        return false;
+                    }
+                    
                     maybe_result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports"));
                 }
-                
+
                 // cache the result for subsequent requires of the same module in the same isolate
-                auto result = maybe_result.ToLocalChecked();
-                auto new_global = new v8::Global<v8::Value>(isolate, result);
+                auto final_result = maybe_result.ToLocalChecked();
+                auto new_global = new v8::Global<v8::Value>(isolate, final_result);
                 {
                     std::lock_guard<std::mutex> l(require_results_mutex);
                     auto & isolate_require_results = require_results[isolate];
                     isolate_require_results.insert(std::pair<std::string, cached_module_t>(complete_filename, cached_module_t(file_modification_time, *new_global)));
                 }
-
-                return result;
+                result = final_result;
+                // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
+                // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
+                return true;
             }catch(...) {}
             // if any failures, try the next path if it exists
         }
     }
-    return v8::Object::New(isolate);
-}
+    // printf("Couldn't find any matches for %s\n", filename.c_str());
+    isolate->ThrowException(v8::String::NewFromUtf8(isolate, "No such module found in any search path"));
+    return false;
 
+}
 
 
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
-    std::lock_guard<std::mutex> l(require_results_mutex);
-    add_function(isolate, object_template, "module_list", [isolate]{return scoped_run(isolate,[isolate]{return require_results[isolate];});});
+    add_function(isolate, object_template, "module_list", 
+        [isolate]{return scoped_run(isolate,[isolate]{return mapper(require_results[isolate],[](auto module_info){
+            // don't return the modification time
+            return std::pair<std::string, v8::Global<v8::Value>&>(module_info.first, module_info.second.second);
+        });});}
+    );
 }
 
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {
     
-    static bool require_added = false;
-    if (require_added) {
-        printf("Require already added, not doing anything\n");
-    }
-    require_added = true;
-    
-    
     // if there's no entry for cached results for this isolate, make one now
     {
-        v8::Locker l(isolate);
+        std::lock_guard<std::mutex> guard(require_results_mutex);
         if (require_results.find(isolate) == require_results.end()) {
             require_results.insert(make_pair(isolate, cached_isolate_modules_t()));
         }
     }
 
-    (void)add_function(isolate, object_template, "require", [paths](const v8::FunctionCallbackInfo<v8::Value> & info, std::string filename)->v8::Local<v8::Value>{
-        auto isolate = info.GetIsolate();
-        auto context = isolate->GetCurrentContext();
-        
-        return require(isolate, context, filename, paths);
-
-    });
+    (void)add_function(isolate, object_template, "require", 
+        [isolate, paths](std::string filename) {
+            auto context = isolate->GetCurrentContext();
+            v8::Local<v8::Value> result; 
+            
+            // if require returns false, it will throw a javascript exception
+            //   so it doesn't matter if the result sent back is good
+            if(require(context, filename, result, paths)) {
+                printf("Require returning to caller: '%s'\n", stringify_value(isolate, result).c_str());
+            }
+            return result;
+        });
 }
 
 
-void require_directory(v8::Isolate * isolate, v8::Local<v8::Context> context, std::string directory_name)
-{
-    
-// #include <boost/filesystem.hpp>
-    //
-    // boost::filesystem::path p = boost::filesystem::current_path();
-    // boost::filesystem::directory_iterator it{p};
-    // while (it != boost::filesystem::directory_iterator{})
-    //   std::cout << *it++ << '\n';
-    //
-
+void require_directory(v8::Local<v8::Context> context, std::string directory_name)
+{   
     // This probably works on more than just APPLE
 #ifdef __APPLE__
-    DIR * dir = opendir(".");
-    if (dir == NULL)
-            return;
+    auto full_directory_name = std::string("./") + directory_name;
+    DIR * dir = opendir(full_directory_name.c_str());
+    if (dir == NULL) {
+        return;
+    }
     struct dirent * dp;
     
     auto require_path = std::vector<std::string>{directory_name};
     while ((dp = readdir(dir)) != NULL) {
-        
-        require(isolate, context, dp->d_name, require_path);
-            // if (dp->d_namlen == len && strcmp(dp->d_name, name) == 0) {
-            //         (void)closedir(dir);
-            //         return (FOUND);
-            // }
+        if (dp->d_type == DT_DIR) {
+            // printf("Skipping %s because it's a directory\n", dp->d_name);
+            continue;
+        }
+        // printf("reading directory, got %s\n", dp->d_name);
+        v8::Local<v8::Value> result;
+        require(context, dp->d_name, result, require_path);
+        // printf("Back from require\n");
     }
+    // printf("Done reading directory\n");
     (void)closedir(dir);
     return;
     
@@ -610,16 +761,14 @@ AnyBase::~AnyBase() {}
 
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation)
 {
-    // printf("Comparing two things\n");
     auto context = isolate->GetCurrentContext();
     
     std::string output = indentation;
     
     // if the left is a bool, return true if right is a bool and they match, otherwise false
-    if (value->IsBoolean() || value->IsNumber() || value->IsString()) {
+    if (value->IsBoolean() || value->IsNumber() || value->IsString() || value->IsFunction()) {
         output += *v8::String::Utf8Value(value);
     } else if (value->IsArray()) {
-        // printf("Stringifying array\n");
         auto array = v8::Local<v8::Array>::Cast(value);
         auto array_length = get_array_length(isolate, array);
         
@@ -632,8 +781,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
             first_element = false;
             auto value = array->Get(context, i);
             output += stringify_value(isolate, value.ToLocalChecked(), indentation);
-        }
-        
+        }        
         output += "]";
     } else {
         // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)

@@ -28,7 +28,6 @@ public:
         return instance_count;
     }
     static int instance_count;
-    
 };
 
 int Point::instance_count = 0;
