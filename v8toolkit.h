@@ -634,7 +634,7 @@ namespace v8toolkit { // re-start the namespace
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
-void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
+std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
 #endif // USE_BOOST
 
@@ -647,13 +647,8 @@ std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<
 
 
 // prints out arguments with a space between them
-void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
+std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
-/**
-* prints out information about the guts of an object
-*/
-void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args);
-void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 /**
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
@@ -669,7 +664,7 @@ void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 *
 * printobj - prints a bunch of information about an object - format highly susceptible to change
 */
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template );
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());return;} );
 
 // returns true if the two values are the same by value, including nested data structures
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);

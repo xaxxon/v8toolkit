@@ -3,6 +3,7 @@
 #include <thread>
 #include <mutex>
 #include <future>
+#include <functional>
 
 #include "v8_class_wrapper.h"
 
@@ -487,7 +488,8 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-	IsolateHelper & add_print();
+    IsolateHelper & add_print(std::function<void(const std::string &)>);
+    IsolateHelper & add_print();
     
     void add_assert();
     
