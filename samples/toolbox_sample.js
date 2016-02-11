@@ -1,18 +1,3 @@
-dumpdata=function(data){
-	if(Array.isArray(data)) {
-        return sprintf("[ %s ]", data.map(function(e){return dumpdata(e);}).join(", "));
-
-    } else if (typeof(data)=="object") {
-        return sprintf("{ %s }", Object.keys(data).map(function(k){
-                return sprintf("%s: %s", k, dumpdata(data[k]));
-        	}).join(", "));
-
-    } else {
-        return data;
-    }
-}
-
-
 
 bar();
 foo(5);
@@ -38,10 +23,19 @@ function some_global_function(){
 	println("In some global function");
 }
 
-println("This module doesn't exist:");
-require("this-module-does-not-exist.js");
+var caught_expected_exception = false;
+try {
+    require("this-module-does-not-exist.js");
+} catch (e) {
+    println("Caught expected exception for module that doesn't exist");
+    caught_expected_exception = true;
+}
 
+
+printfln("Attempting to include module that does exist: module.js");
 var require_result = require("module.js");
+println("Running contents of module");
+printobj(require_result);
 require_result.function();
 
 println("Rerunning same require, shouldn't print anything from inside the module");
@@ -51,7 +45,7 @@ require_result.function();
 
 println();
 println("Dumping module list");
-println(dumpdata(module_list()));
+printobj(module_list());
 
 
 'yay'
