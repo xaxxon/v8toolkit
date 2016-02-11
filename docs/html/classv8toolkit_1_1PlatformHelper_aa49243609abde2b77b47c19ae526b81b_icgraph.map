@@ -1,10 +1,11 @@
 <map id="v8toolkit::PlatformHelper::create_isolate" name="v8toolkit::PlatformHelper::create_isolate">
 <area shape="rect" id="node2" href="$exception__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="261,5,308,29"/>
-<area shape="rect" id="node3" href="$javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="215,53,354,77"/>
-<area shape="rect" id="node5" href="$javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,101,320,125"/>
-<area shape="rect" id="node6" href="$javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,149,364,173"/>
-<area shape="rect" id="node7" href="$javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,197,328,221"/>
-<area shape="rect" id="node8" href="$javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,245,322,269"/>
-<area shape="rect" id="node9" href="$javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,293,330,317"/>
-<area shape="rect" id="node4" href="$javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,173,459,197"/>
+<area shape="rect" id="node3" href="$javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239" title="require_directory_test" alt="" coords="216,53,353,77"/>
+<area shape="rect" id="node5" href="$javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="215,101,354,125"/>
+<area shape="rect" id="node6" href="$javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,149,320,173"/>
+<area shape="rect" id="node7" href="$javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,197,364,221"/>
+<area shape="rect" id="node8" href="$javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,245,328,269"/>
+<area shape="rect" id="node9" href="$javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,293,322,317"/>
+<area shape="rect" id="node10" href="$javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,341,330,365"/>
+<area shape="rect" id="node4" href="$javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,197,459,221"/>
 </map>

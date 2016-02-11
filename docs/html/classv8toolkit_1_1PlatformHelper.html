@@ -191,9 +191,9 @@ Here is the caller graph for this function:</div>
 </div><div class="memdoc">
 <p>Parses argv for v8-specific options, applies them, and removes them from argv and adjusts argc accordingly. Looks in argv[0] for the v8 .bin files </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00260">260</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00261">261</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00034">v8toolkit::process_v8_flags()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00123">v8toolkit::process_v8_flags()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -229,7 +229,7 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Shuts down V8. <a class="el" href="structv8toolkit_1_1Any.html">Any</a> subsequent V8 usage is probably undefined, so make sure everything is done before you call this. </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00283">283</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00284">284</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -255,9 +255,9 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Creates a new <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> wrapping a new v8::Isolate instance. Each isolate is completely separate from all the others and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time) An <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will remain as long as the caller has a shared_ptr to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> or any ContextHelpers created from the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> still exist. Once neither of those things is the case, the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will be automatically destroyed. If any threads are still running when this happens, the results are undefined. TODO: Can active threads maintain links to their ContextHelpers to stop this from happening? </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00293">293</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00294">294</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00009">main()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00168">run_comparison_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00021">run_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00122">run_type_conversion_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00320">test_asserts()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00261">test_casts()</a>, and <a class="el" href="javascript__sample_8cpp_source.html#l00090">test_lifetimes()</a>.</p>
+<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00009">main()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00390">require_directory_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00168">run_comparison_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00021">run_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00122">run_type_conversion_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00320">test_asserts()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00261">test_casts()</a>, and <a class="el" href="javascript__sample_8cpp_source.html#l00090">test_lifetimes()</a>.</p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -265,13 +265,14 @@ Here is the caller graph for this function:</div>
 <div class="center"><img src="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph.png" border="0" usemap="#classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph" alt=""/></div>
 <map name="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph" id="classv8toolkit_1_1PlatformHelper_aa49243609abde2b77b47c19ae526b81b_icgraph">
 <area shape="rect" id="node2" href="exception__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="261,5,308,29"/>
-<area shape="rect" id="node3" href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="215,53,354,77"/>
-<area shape="rect" id="node5" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,101,320,125"/>
-<area shape="rect" id="node6" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,149,364,173"/>
-<area shape="rect" id="node7" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,197,328,221"/>
-<area shape="rect" id="node8" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,245,322,269"/>
-<area shape="rect" id="node9" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,293,330,317"/>
-<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,173,459,197"/>
+<area shape="rect" id="node3" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239" title="require_directory_test" alt="" coords="216,53,353,77"/>
+<area shape="rect" id="node5" href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="215,101,354,125"/>
+<area shape="rect" id="node6" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,149,320,173"/>
+<area shape="rect" id="node7" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,197,364,221"/>
+<area shape="rect" id="node8" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,245,328,269"/>
+<area shape="rect" id="node9" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,293,322,317"/>
+<area shape="rect" id="node10" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,341,330,365"/>
+<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,197,459,221"/>
 </map>
 </div>
 </p>
@@ -285,7 +286,7 @@ Here is the caller graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 02:10:32 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

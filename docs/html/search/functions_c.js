@@ -1,7 +1,9 @@
 var searchData=
 [
-  ['require',['require',['../namespacev8toolkit.html#aafaa64a84b952e11ae6c5e564f418582',1,'v8toolkit']]],
-  ['require_5fdirectory',['require_directory',['../namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328',1,'v8toolkit']]],
+  ['reducer',['reducer',['../v8toolkit_8cpp.html#a991218dd951bc60a0c271591d1f8f57a',1,'v8toolkit.cpp']]],
+  ['require',['require',['../namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1',1,'v8toolkit']]],
+  ['require_5fdirectory',['require_directory',['../namespacev8toolkit.html#acff8a379e70819196b119e240d620575',1,'v8toolkit']]],
+  ['require_5fdirectory_5ftest',['require_directory_test',['../javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239',1,'javascript_sample.cpp']]],
   ['run',['run',['../classv8toolkit_1_1ContextHelper.html#a958fd98d015eb126d257af9a37142851',1,'v8toolkit::ContextHelper::run(const v8::Global&lt; v8::Script &gt; &amp;script)'],['../classv8toolkit_1_1ContextHelper.html#a5af1fa6f3a4cc76040dd682683bfe247',1,'v8toolkit::ContextHelper::run(const std::string)'],['../classv8toolkit_1_1ContextHelper.html#a2dcb84785f9978e9d9a89b7d49390d82',1,'v8toolkit::ContextHelper::run(const v8::Local&lt; v8::Value &gt; script)'],['../classv8toolkit_1_1ScriptHelper.html#a453edf59dfb2baec3c820dccb6a47b8a',1,'v8toolkit::ScriptHelper::run()']]],
   ['run_5fasync',['run_async',['../classv8toolkit_1_1ContextHelper.html#ac612b4c627d3f965f8adcdf6f38a5cf2',1,'v8toolkit::ContextHelper::run_async()'],['../classv8toolkit_1_1ScriptHelper.html#a44cb18b96db28abf3073bd8b6dd21717',1,'v8toolkit::ScriptHelper::run_async()']]],
   ['run_5fcomparison_5ftests',['run_comparison_tests',['../javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e',1,'javascript_sample.cpp']]],

@@ -90,6 +90,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a> &#124;
@@ -124,6 +125,15 @@ Include dependency graph for v8toolkit.cpp:</div>
 </div>
 <p><a href="v8toolkit_8cpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:structMapperHelper"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="v8toolkit_8cpp.html#structMapperHelper">MapperHelper&lt; Container, Callable &gt;</a></td></tr>
+<tr class="separator:structMapperHelper"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMapperHelper_3_01Container_3_01Data_00_01AddParams_8_8_8_01_4_00_01Callable_01_4.html">MapperHelper&lt; Container&lt; Data, AddParams... &gt;, Callable &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMapperHelper_3_01std_1_1map_3_01Key_00_01Value_00_01AddParams_8_8_8_01_4_00_01Callable_01_4.html">MapperHelper&lt; std::map&lt; Key, Value, AddParams... &gt;, Callable &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:namespacev8toolkit"><td class="memItemLeft" align="right" valign="top"> &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html">v8toolkit</a></td></tr>
@@ -138,6 +148,12 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a4326a98acd9da8f8ab4b3bc286c99a75"><td class="memTemplParams" colspan="2">template&lt;class Callable , template&lt; typename, typename... &gt; class Container, typename... ContainerParams&gt; </td></tr>
+<tr class="memitem:a4326a98acd9da8f8ab4b3bc286c99a75"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="v8toolkit_8cpp.html#a4326a98acd9da8f8ab4b3bc286c99a75">mapper</a> (const Container&lt; ContainerParams... &gt; &amp;container, Callable callable) -&gt; decltype(<a class="el" href="v8toolkit_8cpp.html#structMapperHelper">MapperHelper</a>&lt; Container&lt; ContainerParams... &gt;, Callable &gt;()(container, callable))</td></tr>
+<tr class="separator:a4326a98acd9da8f8ab4b3bc286c99a75"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a991218dd951bc60a0c271591d1f8f57a"><td class="memTemplParams" colspan="2">template&lt;class Callable , template&lt; typename, typename... &gt; class Container, typename Key , typename Value , typename... AddParams&gt; </td></tr>
+<tr class="memitem:a991218dd951bc60a0c271591d1f8f57a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="v8toolkit_8cpp.html#a991218dd951bc60a0c271591d1f8f57a">reducer</a> (const Container&lt; Key, Value, AddParams... &gt; &amp;container, Callable callable) -&gt; std::vector&lt; decltype(callable(std::declval&lt; std::pair&lt; Key, Value &gt;&gt;()))&gt;</td></tr>
+<tr class="separator:a991218dd951bc60a0c271591d1f8f57a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3186ba9791dfe15390af63c7646fd17c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3186ba9791dfe15390af63c7646fd17c">v8toolkit::set_global_object_alias</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Context &gt; context, std::string alias_name)</td></tr>
 <tr class="separator:a3186ba9791dfe15390af63c7646fd17c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af61c605180d6163dcf8c93f24929316c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c">v8toolkit::process_v8_flags</a> (int &amp;argc, char **argv)</td></tr>
@@ -172,14 +188,16 @@ Functions</h2></td></tr>
 <tr class="separator:a98c8fc8c126e396be89c145152337f78"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afb095162ccafdf29bacabbe3598183d1"><td class="memItemLeft" align="right" valign="top">cached_isolate_modules_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#afb095162ccafdf29bacabbe3598183d1">v8toolkit::get_loaded_modules</a> (v8::Isolate *isolate)</td></tr>
 <tr class="separator:afb095162ccafdf29bacabbe3598183d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aafaa64a84b952e11ae6c5e564f418582"><td class="memItemLeft" align="right" valign="top">v8::Local&lt; v8::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aafaa64a84b952e11ae6c5e564f418582">v8toolkit::require</a> (v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; &amp;context, std::string filename, const std::vector&lt; std::string &gt; &amp;paths, bool track_file_modification_times)</td></tr>
-<tr class="separator:aafaa64a84b952e11ae6c5e564f418582"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b41c2ee3a693286069560197d02b673"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673">v8toolkit::compile_source</a> (v8::Local&lt; v8::Context &gt; &amp;context, std::string source, v8::Local&lt; v8::Script &gt; &amp;script, v8::Local&lt; v8::Value &gt; &amp;error)</td></tr>
+<tr class="separator:a2b41c2ee3a693286069560197d02b673"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95a791d73a5c900c7ea7197d50c0bca1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1">v8toolkit::require</a> (v8::Local&lt; v8::Context &gt; &amp;context, std::string filename, v8::Local&lt; v8::Value &gt; &amp;result, const std::vector&lt; std::string &gt; &amp;paths, bool track_file_modification_times)</td></tr>
+<tr class="separator:a95a791d73a5c900c7ea7197d50c0bca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7eff9a25386faa32c87137a24fc6703a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">v8toolkit::add_module_list</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template)</td></tr>
 <tr class="separator:a7eff9a25386faa32c87137a24fc6703a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3c8aeeda89a9c35fe4192ec294edd086"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const std::vector&lt; std::string &gt; &amp;paths)</td></tr>
 <tr class="separator:a3c8aeeda89a9c35fe4192ec294edd086"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2efdafa0edc85939c97eedb4d60ce328"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2efdafa0edc85939c97eedb4d60ce328">v8toolkit::require_directory</a> (v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; context, std::string directory_name)</td></tr>
-<tr class="separator:a2efdafa0edc85939c97eedb4d60ce328"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acff8a379e70819196b119e240d620575"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">v8toolkit::require_directory</a> (v8::Local&lt; v8::Context &gt; context, std::string directory_name)</td></tr>
+<tr class="separator:acff8a379e70819196b119e240d620575"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">v8toolkit::print_v8_value_details</a> (v8::Local&lt; v8::Value &gt; local_value)</td></tr>
 <tr class="separator:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad915ca75357d04538a9aa09a3ef5abc2"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2">v8toolkit::get_array_length</a> (v8::Isolate *isolate, v8::Local&lt; v8::Array &gt; array)</td></tr>
@@ -198,10 +216,107 @@ Variables</h2></td></tr>
 <tr class="memitem:ae11990eff5d6debfc42e18bda75335eb"><td class="memItemLeft" align="right" valign="top">static std::map&lt; v8::Isolate *, cached_isolate_modules_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ae11990eff5d6debfc42e18bda75335eb">v8toolkit::require_results</a></td></tr>
 <tr class="separator:ae11990eff5d6debfc42e18bda75335eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<hr/><h2 class="groupheader">Class Documentation</h2>
+<a name="structMapperHelper" id="structMapperHelper"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">struct MapperHelper</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<div class="textblock"><h3>template&lt;class Container, class Callable&gt;<br />
+struct MapperHelper&lt; Container, Callable &gt;</h3>
+
+
+<p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00036">36</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
+</div>
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a class="anchor" id="a4326a98acd9da8f8ab4b3bc286c99a75"></a>
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class Callable , template&lt; typename, typename... &gt; class Container, typename... ContainerParams&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto mapper </td>
+          <td>(</td>
+          <td class="paramtype">const Container&lt; ContainerParams... &gt; &amp;&#160;</td>
+          <td class="paramname"><em>container</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Callable&#160;</td>
+          <td class="paramname"><em>callable</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> -&gt; decltype(<a class="el" href="v8toolkit_8cpp.html#structMapperHelper">MapperHelper</a>&lt;Container&lt;ContainerParams...&gt;, Callable&gt;()(container, callable))
+</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00083">83</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
+
+<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00530">v8toolkit::add_module_list()</a>.</p>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="v8toolkit_8cpp_a4326a98acd9da8f8ab4b3bc286c99a75_icgraph.png" border="0" usemap="#v8toolkit_8cpp_a4326a98acd9da8f8ab4b3bc286c99a75_icgraph" alt=""/></div>
+<map name="v8toolkit_8cpp_a4326a98acd9da8f8ab4b3bc286c99a75_icgraph" id="v8toolkit_8cpp_a4326a98acd9da8f8ab4b3bc286c99a75_icgraph">
+<area shape="rect" id="node2" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="115,66,275,90"/>
+<area shape="rect" id="node3" href="classv8toolkit_1_1IsolateHelper.html#ae85984f094ab11a650e13eabb5f5f72a" title="v8toolkit::IsolateHelper\l::add_module_list" alt="" coords="323,5,465,41"/>
+<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239" title="require_directory_test" alt="" coords="325,66,463,90"/>
+<area shape="rect" id="node6" href="toolbox__sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="370,114,418,138"/>
+<area shape="rect" id="node5" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="513,66,561,90"/>
+</map>
+</div>
+</p>
+
+</div>
+</div>
+<a class="anchor" id="a991218dd951bc60a0c271591d1f8f57a"></a>
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class Callable , template&lt; typename, typename... &gt; class Container, typename Key , typename Value , typename... AddParams&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto reducer </td>
+          <td>(</td>
+          <td class="paramtype">const Container&lt; Key, Value, AddParams... &gt; &amp;&#160;</td>
+          <td class="paramname"><em>container</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Callable&#160;</td>
+          <td class="paramname"><em>callable</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> -&gt; std::vector&lt;decltype(callable(std::declval&lt;std::pair&lt;Key, Value&gt;&gt;()))&gt;
+</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00093">93</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
+
+</div>
+</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 02:10:31 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

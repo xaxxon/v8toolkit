@@ -279,10 +279,12 @@ Functions</h2></td></tr>
 <tr class="separator:a3c8aeeda89a9c35fe4192ec294edd086"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7eff9a25386faa32c87137a24fc6703a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">v8toolkit::add_module_list</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template)</td></tr>
 <tr class="separator:a7eff9a25386faa32c87137a24fc6703a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aafaa64a84b952e11ae6c5e564f418582"><td class="memItemLeft" align="right" valign="top">v8::Local&lt; v8::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aafaa64a84b952e11ae6c5e564f418582">v8toolkit::require</a> (v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; &amp;context, std::string filename, const std::vector&lt; std::string &gt; &amp;paths, bool track_file_modification_times)</td></tr>
-<tr class="separator:aafaa64a84b952e11ae6c5e564f418582"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95a791d73a5c900c7ea7197d50c0bca1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1">v8toolkit::require</a> (v8::Local&lt; v8::Context &gt; &amp;context, std::string filename, v8::Local&lt; v8::Value &gt; &amp;result, const std::vector&lt; std::string &gt; &amp;paths, bool track_file_modification_times)</td></tr>
+<tr class="separator:a95a791d73a5c900c7ea7197d50c0bca1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">v8toolkit::print_v8_value_details</a> (v8::Local&lt; v8::Value &gt; local_value)</td></tr>
 <tr class="separator:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acff8a379e70819196b119e240d620575"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">v8toolkit::require_directory</a> (v8::Local&lt; v8::Context &gt; context, std::string directory_name)</td></tr>
+<tr class="separator:acff8a379e70819196b119e240d620575"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0ff46c24b7d0aba375452f4066af95f4"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4">v8toolkit::stringify_value</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Value &gt; &amp;value, std::string indentation)</td></tr>
 <tr class="separator:a0ff46c24b7d0aba375452f4066af95f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -359,7 +361,7 @@ struct v8toolkit::Bind&lt; T, U &gt;</h3>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 02:10:31 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

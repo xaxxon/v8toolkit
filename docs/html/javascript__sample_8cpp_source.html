@@ -481,44 +481,70 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    c-&gt;run(<span class="stringliteral">&quot;if({}){println(&#39;{} is true&#39;);} else{println(&#39;{} is false&#39;);}&quot;</span>);</div>
 <div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    c-&gt;run(<span class="stringliteral">&quot;assert(&#39;({})&#39;)&quot;</span>); <span class="comment">// the program &quot;{}&quot; is an empty program, not an empty object</span></div>
 <div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;    printf(<span class="stringliteral">&quot;Dont testing asserts\n&quot;</span>);</div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;    </div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;    </div>
-<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;}</div>
+<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;    printf(<span class="stringliteral">&quot;Dont testing asserts\n&quot;</span>);   </div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;}</div>
+<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;</div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;</div>
 <div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;</div>
-<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;</div>
-<div class="line"><a name="l00391"></a><span class="lineno"><a class="line" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">  391</a></span>&#160;<span class="keywordtype">int</span> <a class="code" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a>(<span class="keywordtype">int</span> argc, <span class="keywordtype">char</span> ** argv) {</div>
-<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;    </div>
-<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;    <a class="code" href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef">PlatformHelper::init</a>(argc, argv);</div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;    </div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1">run_type_conversion_test</a>();</div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;    </div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;    <span class="keyword">auto</span> future = <a class="code" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f">test_lifetimes</a>();</div>
-<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;    printf(<span class="stringliteral">&quot;Nothing should have been destroyed yet\n&quot;</span>);</div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;    {</div>
-<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;        <span class="keyword">auto</span> results = future.get();</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;        results.first.Reset();</div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;        printf(<span class="stringliteral">&quot;Nothing should have been destroyed yet after getting future results\n&quot;</span>);</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;    }</div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;    printf(<span class="stringliteral">&quot;The script, context, and isolate helpers should have all been destroyed\n&quot;</span>);</div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;</div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;    <span class="keyword">auto</span> context = <a class="code" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159">run_tests</a>();</div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    printf(<span class="stringliteral">&quot;The script, context, and isolate helpers should have all been destroyed\n&quot;</span>);</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;    </div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;    printf(<span class="stringliteral">&quot;after run_tests, one isolate helper was destroyed, since it made no contexts\n&quot;</span>);</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    </div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    printf(<span class="stringliteral">&quot;Running comparison tests\n&quot;</span>);</div>
-<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e">run_comparison_tests</a>();</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;    </div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    printf(<span class="stringliteral">&quot;Testing casts\n&quot;</span>);</div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366">test_casts</a>();</div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    </div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    printf(<span class="stringliteral">&quot;Testing asserts\n&quot;</span>);</div>
-<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8">test_asserts</a>();</div>
-<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    </div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;    printf(<span class="stringliteral">&quot;Program ending, so last context and the isolate that made it will now be destroyed\n&quot;</span>);</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;}</div>
-<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;</div>
+<div class="line"><a name="l00390"></a><span class="lineno"><a class="line" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239">  390</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239">require_directory_test</a>()</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;{</div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;    printf(<span class="stringliteral">&quot;In require directory test\n&quot;</span>);</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;    <span class="keyword">auto</span> i = <a class="code" href="classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b">PlatformHelper::create_isolate</a>();</div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;    (*i)([&amp;](){</div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;        i-&gt;add_require();</div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;        i-&gt;add_print();</div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;        <a class="code" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">add_module_list</a>(*i, i-&gt;get_object_template());</div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;        <span class="keyword">auto</span> c = i-&gt;create_context();</div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;        (*c)([&amp;]{</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;            <a class="code" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">require_directory</a>(*c, <span class="stringliteral">&quot;modules&quot;</span>);</div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;            c-&gt;run(<span class="stringliteral">&quot;printobj(module_list())&quot;</span>);</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;            </div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;            <a class="code" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">require_directory</a>(*c, <span class="stringliteral">&quot;modules&quot;</span>);</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;            c-&gt;run(<span class="stringliteral">&quot;printobj(module_list())&quot;</span>);</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;            </div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;            <a class="code" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">require_directory</a>(*c, <span class="stringliteral">&quot;modules&quot;</span>);</div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;            c-&gt;run(<span class="stringliteral">&quot;printobj(module_list())&quot;</span>);</div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;            </div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;        });</div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    });</div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;}</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;</div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;</div>
+<div class="line"><a name="l00414"></a><span class="lineno"><a class="line" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">  414</a></span>&#160;<span class="keywordtype">int</span> <a class="code" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a>(<span class="keywordtype">int</span> argc, <span class="keywordtype">char</span> ** argv) {</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    </div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    <a class="code" href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef">PlatformHelper::init</a>(argc, argv);</div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    printf(<span class="stringliteral">&quot;Running from %s\n&quot;</span>, argv[0]);</div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;</div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1">run_type_conversion_test</a>();</div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    <span class="keyword">auto</span> future = <a class="code" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f">test_lifetimes</a>();</div>
+<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    printf(<span class="stringliteral">&quot;Nothing should have been destroyed yet\n&quot;</span>);</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;    {</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;        <span class="keyword">auto</span> results = future.get();</div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;        results.first.Reset();</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;        printf(<span class="stringliteral">&quot;Nothing should have been destroyed yet after getting future results\n&quot;</span>);</div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    }</div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    printf(<span class="stringliteral">&quot;The script, context, and isolate helpers should have all been destroyed\n&quot;</span>);</div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;</div>
+<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;    <span class="keyword">auto</span> context = <a class="code" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159">run_tests</a>();</div>
+<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;    printf(<span class="stringliteral">&quot;The script, context, and isolate helpers should have all been destroyed\n&quot;</span>);</div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;</div>
+<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;    printf(<span class="stringliteral">&quot;after run_tests, one isolate helper was destroyed, since it made no contexts\n&quot;</span>);</div>
+<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;</div>
+<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;    printf(<span class="stringliteral">&quot;Running comparison tests\n&quot;</span>);</div>
+<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e">run_comparison_tests</a>();</div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;</div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;    printf(<span class="stringliteral">&quot;Testing casts\n&quot;</span>);</div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366">test_casts</a>();</div>
+<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;</div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;    printf(<span class="stringliteral">&quot;Testing asserts\n&quot;</span>);</div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8">test_asserts</a>();</div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;    </div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;    <a class="code" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239">require_directory_test</a>();</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;    </div>
+<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;    printf(<span class="stringliteral">&quot;Program ending, so last context and the isolate that made it will now be destroyed\n&quot;</span>);</div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;}</div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;</div>
 <div class="ttc" id="javascript__sample_8cpp_html_a6150e0515f7202e2fb518f7206ed97dc"><div class="ttname"><a href="javascript__sample_8cpp.html#a6150e0515f7202e2fb518f7206ed97dc">x</a></div><div class="ttdeci">int x</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00016">javascript_sample.cpp:16</a></div></div>
 <div class="ttc" id="structC_html_a07f8d16dd9c6220be8b08222f8f30ede"><div class="ttname"><a href="structC.html#a07f8d16dd9c6220be8b08222f8f30ede">C::i</a></div><div class="ttdeci">int i</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00116">javascript_sample.cpp:116</a></div></div>
 <div class="ttc" id="classFoo_html"><div class="ttname"><a href="classFoo.html">Foo</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00009">javascript_sample.cpp:9</a></div></div>
@@ -526,13 +552,14 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="ttc" id="javascript__sample_8cpp_html_classNotFamily"><div class="ttname"><a href="javascript__sample_8cpp.html#classNotFamily">NotFamily</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00118">javascript_sample.cpp:118</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_a1aa9c8cf37ce0df43f20ebaa98a58159"><div class="ttname"><a href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159">run_tests</a></div><div class="ttdeci">auto run_tests()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00021">javascript_sample.cpp:21</a></div></div>
 <div class="ttc" id="structA_html_a25e173c87d15c817660eb7007f679de0"><div class="ttname"><a href="structA.html#a25e173c87d15c817660eb7007f679de0">A::i</a></div><div class="ttdeci">int i</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00114">javascript_sample.cpp:114</a></div></div>
-<div class="ttc" id="javascript__sample_8cpp_html_a3c04138a5bfe5d72780bb7e82a18e627"><div class="ttname"><a href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a></div><div class="ttdeci">int main(int argc, char **argv)</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00391">javascript_sample.cpp:391</a></div></div>
-<div class="ttc" id="classv8toolkit_1_1PlatformHelper_html_aa49243609abde2b77b47c19ae526b81b"><div class="ttname"><a href="classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b">v8toolkit::PlatformHelper::create_isolate</a></div><div class="ttdeci">static std::shared_ptr&lt; IsolateHelper &gt; create_isolate()</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00293">javascript.cpp:293</a></div></div>
+<div class="ttc" id="javascript__sample_8cpp_html_a3c04138a5bfe5d72780bb7e82a18e627"><div class="ttname"><a href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a></div><div class="ttdeci">int main(int argc, char **argv)</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00414">javascript_sample.cpp:414</a></div></div>
+<div class="ttc" id="classv8toolkit_1_1PlatformHelper_html_aa49243609abde2b77b47c19ae526b81b"><div class="ttname"><a href="classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b">v8toolkit::PlatformHelper::create_isolate</a></div><div class="ttdeci">static std::shared_ptr&lt; IsolateHelper &gt; create_isolate()</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8cpp_source.html#l00294">javascript.cpp:294</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_ab40fe1216151ffc10a48ebfafc8790e1"><div class="ttname"><a href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1">run_type_conversion_test</a></div><div class="ttdeci">void run_type_conversion_test()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00122">javascript_sample.cpp:122</a></div></div>
 <div class="ttc" id="structB_html"><div class="ttname"><a href="structB.html">B</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00115">javascript_sample.cpp:115</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_ab01055e87d61c94f71e59f1116867f60"><div class="ttname"><a href="javascript__sample_8cpp.html#ab01055e87d61c94f71e59f1116867f60">y2</a></div><div class="ttdeci">int y2</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00018">javascript_sample.cpp:18</a></div></div>
 <div class="ttc" id="structC_html_ae644b680747216f89d3ccd65eb38ae4c"><div class="ttname"><a href="structC.html#ae644b680747216f89d3ccd65eb38ae4c">C::~C</a></div><div class="ttdeci">virtual ~C()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00116">javascript_sample.cpp:116</a></div></div>
 <div class="ttc" id="structB_html_aa28aa85fe83b440a511383b12b47ca7f"><div class="ttname"><a href="structB.html#aa28aa85fe83b440a511383b12b47ca7f">B::i</a></div><div class="ttdeci">int i</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00115">javascript_sample.cpp:115</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_a7eff9a25386faa32c87137a24fc6703a"><div class="ttname"><a href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">v8toolkit::add_module_list</a></div><div class="ttdeci">void add_module_list(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00530">v8toolkit.cpp:530</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_a73122d07274535490620a6991a6b375f"><div class="ttname"><a href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f">test_lifetimes</a></div><div class="ttdeci">auto test_lifetimes()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00090">javascript_sample.cpp:90</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_a5556fe2766323699667a40d273aeb8e8"><div class="ttname"><a href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8">test_asserts</a></div><div class="ttdeci">void test_asserts()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00320">javascript_sample.cpp:320</a></div></div>
 <div class="ttc" id="javascript_8h_html"><div class="ttname"><a href="javascript_8h.html">javascript.h</a></div></div>
@@ -541,18 +568,20 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="ttc" id="javascript__sample_8cpp_html_a62c700b238aab318e2fa3b332753aeb8"><div class="ttname"><a href="javascript__sample_8cpp.html#a62c700b238aab318e2fa3b332753aeb8">get_foo</a></div><div class="ttdeci">Foo get_foo()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00014">javascript_sample.cpp:14</a></div></div>
 <div class="ttc" id="classv8toolkit_1_1PlatformHelper_html_a6ef35cacbad78bd2076bba5b07a9b6ef"><div class="ttname"><a href="classv8toolkit_1_1PlatformHelper.html#a6ef35cacbad78bd2076bba5b07a9b6ef">v8toolkit::PlatformHelper::init</a></div><div class="ttdeci">static void init(char *path_to_bin_files)</div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_a0a2f84ed7838f07779ae24c5a9086d33"><div class="ttname"><a href="javascript__sample_8cpp.html#a0a2f84ed7838f07779ae24c5a9086d33">y</a></div><div class="ttdeci">int y</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00017">javascript_sample.cpp:17</a></div></div>
-<div class="ttc" id="namespacev8toolkit_html_aa48d55bbed31ad98f5492be6fc6c6228"><div class="ttname"><a href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">v8toolkit::add_variable</a></div><div class="ttdeci">void add_variable(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Value &gt; value)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00047">v8toolkit.cpp:47</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_aa48d55bbed31ad98f5492be6fc6c6228"><div class="ttname"><a href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">v8toolkit::add_variable</a></div><div class="ttdeci">void add_variable(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Value &gt; value)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00136">v8toolkit.cpp:136</a></div></div>
 <div class="ttc" id="classv8toolkit_1_1V8Exception_html"><div class="ttname"><a href="classv8toolkit_1_1V8Exception.html">v8toolkit::V8Exception</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript_8h_source.html#l00030">javascript.h:30</a></div></div>
 <div class="ttc" id="structv8toolkit_1_1CastToJS_html"><div class="ttname"><a href="structv8toolkit_1_1CastToJS.html">v8toolkit::CastToJS</a></div><div class="ttdef"><b>Definition:</b> <a href="casts_8hpp_source.html#l00148">casts.hpp:148</a></div></div>
 <div class="ttc" id="classv8toolkit_1_1V8AssertionException_html"><div class="ttname"><a href="classv8toolkit_1_1V8AssertionException.html">v8toolkit::V8AssertionException</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript_8h_source.html#l00050">javascript.h:50</a></div></div>
 <div class="ttc" id="namespacev8toolkit_html"><div class="ttname"><a href="namespacev8toolkit.html">v8toolkit</a></div><div class="ttdef"><b>Definition:</b> <a href="casts_8hpp_source.html#l00015">casts.hpp:15</a></div></div>
 <div class="ttc" id="structC_html"><div class="ttname"><a href="structC.html">C</a></div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00116">javascript_sample.cpp:116</a></div></div>
+<div class="ttc" id="namespacev8toolkit_html_acff8a379e70819196b119e240d620575"><div class="ttname"><a href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">v8toolkit::require_directory</a></div><div class="ttdeci">void require_directory(v8::Local&lt; v8::Context &gt; context, std::string directory_name)</div><div class="ttdef"><b>Definition:</b> <a href="v8toolkit_8cpp_source.html#l00565">v8toolkit.cpp:565</a></div></div>
 <div class="ttc" id="javascript__sample_8cpp_html_af7748b53d4fb77b275a29b808936fd4e"><div class="ttname"><a href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e">run_comparison_tests</a></div><div class="ttdeci">void run_comparison_tests()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00168">javascript_sample.cpp:168</a></div></div>
+<div class="ttc" id="javascript__sample_8cpp_html_a874295064db0d73d98339d5630776239"><div class="ttname"><a href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239">require_directory_test</a></div><div class="ttdeci">void require_directory_test()</div><div class="ttdef"><b>Definition:</b> <a href="javascript__sample_8cpp_source.html#l00390">javascript_sample.cpp:390</a></div></div>
 <div class="ttc" id="classv8toolkit_1_1V8Exception_html_aed7854b8689fa65e59ce3cf079434e59"><div class="ttname"><a href="classv8toolkit_1_1V8Exception.html#aed7854b8689fa65e59ce3cf079434e59">v8toolkit::V8Exception::what</a></div><div class="ttdeci">virtual const char * what() const  noexcept override</div><div class="ttdef"><b>Definition:</b> <a href="javascript_8h_source.html#l00039">javascript.h:39</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 02:10:30 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>
