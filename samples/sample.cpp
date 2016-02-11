@@ -21,7 +21,7 @@ struct Foo {
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-    Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor)\n");}
+    Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor) at %p with x %d y %d\n", this, x_, y_);}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
     Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
     ~Point(){instance_count--; if (SAMPLE_DEBUG) printf("Point destructor called on %p\n", this);}
@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
             auto result = script->Run(context);
             print_maybe_value(result);
 
-
+            
 
 
             // throwing a c++ exception here immediately terminates the process

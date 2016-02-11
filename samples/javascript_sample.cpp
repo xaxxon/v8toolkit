@@ -6,12 +6,6 @@
 
 using namespace v8toolkit;
 
-class Foo {
-
-};
-
-
-Foo get_foo(){printf("in get_foo\n");return Foo();}
 
 int x = 1;
 int y = 2;

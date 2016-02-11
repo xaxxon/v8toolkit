@@ -567,6 +567,8 @@ void require_directory(v8::Local<v8::Context> context, std::string directory_nam
     
 #endif // __APPLE__
     
+    assert(false);
+    
 }
 
 
@@ -599,7 +601,6 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
     std::cout << "regexp: " << value->IsRegExp() << std::endl;
     std::cout << "generator function: " << value->IsGeneratorFunction() << std::endl;
     std::cout << "generator object: " << value->IsGeneratorObject() << std::endl;
-    
 }
 
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array) {
@@ -763,8 +764,8 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
     } else {
         // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)
         // objects must have all the same keys and each key must have the same as determined by calling this function on each value
-        printf("About to see if we can stringify this as an object\n");
-        print_v8_value_details(value);
+        // printf("About to see if we can stringify this as an object\n");
+        // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
         if(value->IsObject() && !object.IsEmpty()) {
             // printf("Stringifying object\n");

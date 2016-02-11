@@ -171,6 +171,7 @@ private:
 	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
 	{
         auto any = new AnyPtr<T>(cpp_object);
+        printf("inserting anyptr at address %p pointing to cpp object at %p\n", any, cpp_object);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
 		
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
@@ -204,8 +205,7 @@ private:
 						   
 		v8::Local<v8::Object> self = info.Holder();				   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
-
+        auto cpp_object = cast(static_cast<AnyBase *>(wrap->Value()));
 		// This function returns a reference to member in question
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 	
@@ -221,7 +221,7 @@ private:
 	{
 		v8::Local<v8::Object> self = info.Holder();				   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = static_cast<T *>(wrap->Value());
+		T * cpp_object = cast(static_cast<AnyBase *>(wrap->Value()));
 
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 		auto & member_ref = (*member_reference_getter)(cpp_object);
@@ -280,7 +280,6 @@ public:
                 return static_cast<AnyPtr<T>*>(any_base)->get();
         }
         return nullptr;
-         
     }
 	
 	/**
@@ -460,8 +459,7 @@ public:
 			// get the behind-the-scenes c++ object
 			auto self = info.Holder();
 			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-			void* ptr = wrap->Value();
-			auto backing_object_pointer = static_cast<T*>(ptr);
+            auto backing_object_pointer = cast(static_cast<AnyBase *>(wrap->Value()));
 			
 			// bind the object and method into a std::function then build the parameters for it and call it
 			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
@@ -491,7 +489,8 @@ public:
 		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
 		
 		for(auto & constructor_template : this->constructor_templates) {
-			constructor_template.Get(isolate)->InstanceTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+            // methods are put into the protype of the newly created javascript object
+			constructor_template.Get(isolate)->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		}
 		return *this;
 	}
