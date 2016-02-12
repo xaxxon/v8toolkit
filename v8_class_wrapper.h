@@ -106,9 +106,6 @@ struct DestructorBehaviorLeaveAlone : DestructorBehavior<T>
 
 
 
-
-
-
 template<class T>
 struct TypeCheckerBase {
   public:
@@ -164,7 +161,6 @@ private:
 	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;	
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &) = delete;
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &&) = delete;
-	void foo() = delete;
 	
 	// Common tasks to do for any new js object regardless of how it is created
 	template<class BEHAVIOR>
@@ -186,14 +182,6 @@ private:
 	// users of the library should call get_instance, not the constructor directly
 	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate)
 	{
-		// this is a bit weird and there's probably a better way, but create an unbound functiontemplate for use
-		//   when wrapping an object that is created outside javascript when there is no way to create that
-		//   class type directly from javascript (no js constructor)
-		v8toolkit::scoped_run(isolate, [this](auto isolate) {
-			auto constructor_template = v8::FunctionTemplate::New(isolate);
-			constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-			this->constructor_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, constructor_template));
-		});
 	}
 	
     // function used to return the value of a C++ variable backing a javascript variable visible
@@ -225,17 +213,18 @@ private:
 
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 		auto & member_ref = (*member_reference_getter)(cpp_object);
-	  	member_ref = CastToNative<VALUE_T>()(value);
+	  	member_ref = CastToNative<VALUE_T>()(info.GetIsolate(), value);
 		(*member_reference_getter)(cpp_object);
 	}
     
+    // Calls the C++ constructor with javascript-provided arguments
 	template <typename... Fs, size_t... ns> 
-	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & args, std::index_sequence<ns...>){
-		return new T(CastToNative<Fs>()(args[ns])...);
+	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<ns...>){
+		return new T(CastToNative<Fs>()(info.GetIsolate(), info[ns])...);
 	}
     
 	
-	// Helper for creating objects when "new MyClass" is called from java
+	// Helper for creating objects when "new MyClass" is called from javascript
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
@@ -259,16 +248,35 @@ private:
 		(*callback_lambda)(args);
 	}
 
-	// these are tightly tied, as a FunctionTemplate is only valid in the isolate it was created with
-	std::vector<v8::Global<v8::FunctionTemplate>> constructor_templates;
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects;
 	v8::Isolate * isolate;
 
+    // Stores a functor capable of converting compatible types into a <T> object
     static std::unique_ptr<TypeCheckerBase<T>> type_checker;
+        
+    /**
+    * Creates a function template with all the currently registered member and method adders
+    */
+    v8::Local<v8::FunctionTemplate> make_function_template(v8::FunctionCallback callback, v8::Local<v8::Value> data) {
+        auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
+        init_instance_object_template(function_template->InstanceTemplate());
+        init_prototype_object_template(function_template->PrototypeTemplate());
+        
+        return function_template;
+    }
     
-    // this is to signal undesirable usage patterns where methods or members won't be visible to 
-    //   objects created in certain ways
-	bool member_or_method_added = false;
+    void init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
+		object_template->SetInternalFieldCount(1);
+        for (auto adder : this->member_adders) {
+            adder(object_template);
+        }
+    }
+
+    void init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
+        for (auto adder : this->method_adders) {
+            adder(object_template);
+        }
+    }
 	
 public:
 	
@@ -302,6 +310,18 @@ public:
 	}
 
 
+    // when making objects from this, add in the prototypes from these places
+    template<class... DerivedFrom>
+    std::enable_if_t<static_all_of<std::is_base_of<DerivedFrom, T>::value...>::value>
+    set_parent_types()
+    {
+        // when creating an object of this type, 
+        
+        
+        assert(false);
+    }
+    
+
     /**
     * Species other types that can be substituted for T when calling a function expecting T
     *   but T is not being passsed.   Only available for classes derived from T.
@@ -309,6 +329,7 @@ public:
     * Not calling this means that only T objects will be accepted for things that want a T.
     * There is no automatic determination of inherited types by this library because I cannot
     *   figure out how.
+    *
     */
     template<class... CompatibleTypes>
     static
@@ -331,27 +352,16 @@ public:
 	}
 	
 	/**
-	* Creates a javascript method with the specified name which, when called with the "new" keyword, will return
+	* Creates a javascript method with the specified name inside `parent_template` which, when called with the "new" keyword, will return
 	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template) 
-	{
-		// if you add a constructor after adding a member or method, it will be missing on objects created with
-		//   this constructor
-		assert(member_or_method_added == false);
-				
+	{				
 		// create a function template even if no javascript constructor will be used so 
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
 		//   later the FunctionTemplate will be ready to go
-		auto constructor_template = v8::FunctionTemplate::New(isolate, V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>);
-		
-		// When creating a new object, make sure they have room for a c++ object to shadow it
-		constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-		
-		// store it so it doesn't go away
-		this->constructor_templates.push_back(v8::Global<v8::FunctionTemplate>(isolate, constructor_template));
-				
+        auto constructor_template = make_function_template(V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());				
 				
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
@@ -359,8 +369,6 @@ public:
 		return *this;
 	}
 	
-	// Not sure if this properly sets the prototype of the new object like when the constructor functiontemplate is called as
-	//   a constructor from javascript
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
     *   add_variable to give a javascript name to an existing c++ object 
@@ -373,7 +381,6 @@ public:
 	{
 		auto isolate = this->isolate;
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
-		
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
 		v8::Local<v8::Object> javascript_object;
@@ -388,7 +395,15 @@ public:
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
-			javascript_object = this->constructor_templates[0].Get(isolate)->InstanceTemplate()->NewInstance();
+            // TODO: No reason to do this every time, make something, cache it, and invalidate it if it
+            //       the attribute adders change
+            auto instance_template = v8::ObjectTemplate::New(isolate);
+            init_instance_object_template(instance_template);
+            auto prototype_template = v8::ObjectTemplate::New(isolate);
+            init_prototype_object_template(prototype_template);
+            javascript_object = instance_template->NewInstance();
+            javascript_object->SetPrototype(prototype_template->NewInstance());
+
 			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
 			// this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
@@ -401,7 +416,8 @@ public:
 
 	typedef std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> StdFunctionCallbackType;
 
-
+    using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
+    std::vector<AttributeAdder> member_adders;
 	/**
 	* Adds a getter and setter method for the specified class member
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
@@ -410,23 +426,18 @@ public:
 	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) 
 	{
 
-		// stop additional constructors from being added
-		member_or_method_added = true;
-		
-		// this lambda is shared between the getter and the setter so it can only do work needed by both
-        // TODO: this is leaked if the classwrapper ever goes away (which it shouldn't), but it's still not right to do
-		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
-			return cpp_object->*member;
-		});
-        
-		for(auto & constructor_template : this->constructor_templates) {
-			constructor_template.Get(isolate)->InstanceTemplate()->SetAccessor(v8::String::NewFromUtf8(isolate, 
+         member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+    		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
+    			return cpp_object->*member;
+    		});
+            
+			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, 
 				member_name.c_str()), 
 				_getter_helper<MEMBER_TYPE>, 
 				_setter_helper<MEMBER_TYPE>, 
 				v8::External::New(isolate, get_member_reference));
-		}
-		return *this;
+        });
+        return *this;
 	}
 
 
@@ -435,7 +446,7 @@ public:
 		return _add_method(method, method_name);
 	}
     
-
+    
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
@@ -445,55 +456,55 @@ public:
 		return _add_method(method, method_name);
     }
     
+    std::vector<AttributeAdder> method_adders;
+    
     template<class M>
     V8ClassWrapper<T> & _add_method(M method, std::string method_name)
     {
-		// stop additional constructors from being added
-		member_or_method_added = true;
-		
-		// this is leaked if this ever isn't used anymore
-		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) 
-		{
-            auto isolate = info.GetIsolate();
+        
+        method_adders.emplace_back([this, method, method_name](v8::Local<v8::ObjectTemplate> & constructor_template) {
+    		// this is leaked if this ever isn't used anymore
+    		StdFunctionCallbackType * f = new StdFunctionCallbackType([method](const v8::FunctionCallbackInfo<v8::Value>& info) 
+    		{
+                auto isolate = info.GetIsolate();
             
-			// get the behind-the-scenes c++ object
-			auto self = info.Holder();
-			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-            auto backing_object_pointer = cast(static_cast<AnyBase *>(wrap->Value()));
+    			// get the behind-the-scenes c++ object
+    			auto self = info.Holder();
+    			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+                auto backing_object_pointer = cast(static_cast<AnyBase *>(wrap->Value()));
 			
-			// bind the object and method into a std::function then build the parameters for it and call it
-			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
+    			// bind the object and method into a std::function then build the parameters for it and call it
+    			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
             
-            using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>;
+                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>;
             
-            PB_TYPE pb;
-            auto arity = PB_TYPE::ARITY;
-            if(info.Length() < arity) {
-                std::stringstream ss;
-                ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
-                isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
-                return; // return now so the exception can be thrown inside the javascript
-            }
+                PB_TYPE pb;
+                auto arity = PB_TYPE::ARITY;
+                if(info.Length() < arity) {
+                    std::stringstream ss;
+                    ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+                    return; // return now so the exception can be thrown inside the javascript
+                }
             
-            // V8 does not support C++ exceptions, so all exceptions must be caught before control
-            //   is returned to V8 or the program will instantly terminate
-            try {
-    			pb(bound_method, info);
-            } catch(std::exception & e) {
-                isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+                // V8 does not support C++ exceptions, so all exceptions must be caught before control
+                //   is returned to V8 or the program will instantly terminate
+                try {
+        			pb(bound_method, info);
+                } catch(std::exception & e) {
+                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+                    return;
+                }
                 return;
-            }
-            return;
-		});
+    		});
 		
-		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
+    		auto function_template = v8::FunctionTemplate::New(this->isolate, callback_helper, v8::External::New(this->isolate, f));
 		
-		for(auto & constructor_template : this->constructor_templates) {
             // methods are put into the protype of the newly created javascript object
-			constructor_template.Get(isolate)->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
-		}
-		return *this;
-	}
+    		constructor_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+    	});
+        return *this;
+    }
 };
 
 /**
@@ -554,8 +565,8 @@ struct CastToJS<T&> {
 template<typename T>
 struct CastToNative<T*>
 {
-	T * operator()(v8::Local<v8::Value> value){
-        return & CastToNative<T>()(value);
+	T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+        return & CastToNative<T>()(isolate, value);
     }
 };
 
@@ -563,7 +574,7 @@ struct CastToNative<T*>
 template<typename T>
 struct CastToNative
 {
-	T & operator()(v8::Local<v8::Value> value){
+	T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
         if(!value->IsObject()){
             // TODO: Don't use castexception anywhere just use V8ExecutionException
@@ -578,7 +589,7 @@ struct CastToNative
         // I don't know any way to determine if a type is
         auto any_base = (v8toolkit::AnyBase *)wrap->Value();
         T * t = nullptr;
-        if ((t = V8ClassWrapper<T>::cast(any_base)) == nullptr) {
+        if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
             throw CastException("Wrapped class isn't an exact match for the parameter type and using inherited types isn't supported");
         }
         

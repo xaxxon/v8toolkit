@@ -1,20 +1,25 @@
 
+// var p = new Point();
+// println(p.x);
+// println(p.y);
+// println(p.stringthing());
+// p.thing(4, "four");
 
 // run garbage collector tests if javascript-exposed GC is enabled
 if (typeof gc == 'function') {
-	gc(); // make sure any existig garbage is gone
-	println("Testing garbage collection, one Point object should be GC'd and deleted");
-	var gc_test_1 = new Point();
-	println("C++ Point object count should be 1: ", point_instance_count())
+    gc(); // make sure any existig garbage is gone
+    println("Testing garbage collection, one Point object should be GC'd and deleted");
+    var gc_test_1 = new Point();
+    println("C++ Point object count should be 1: ", point_instance_count())
 
-	gc_test_1 = undefined;
-	println("Running GC");
-	gc();
-	println("C++ Point object count should be 0: ", point_instance_count())
+    gc_test_1 = undefined;
+    println("Running GC");
+    gc();
+    println("C++ Point object count should be 0: ", point_instance_count())
 
-	println("Done running GC");
+    println("Done running GC");
 } else {
-	println("Not running garbage collector from javascript because it's not exposed via --enable-gc")
+    println("Not running garbage collector from javascript because it's not exposed via --enable-gc")
 }
 println();
 
@@ -62,7 +67,7 @@ printfln("These objects should be the same javascript object: %s\n", line_point_
 var override_method_point = new Point();
 printobj(override_method_point);
 println("About to run the original thing()");
-override_method_point.thing(1, "asdf"); 
+override_method_point.thing(1, "asdf");
 override_method_point.thing = function(){println("This is not the original thing method!!")};
 printobj(override_method_point);
 override_method_point.thing(1, "asdf");

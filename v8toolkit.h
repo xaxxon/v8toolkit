@@ -42,7 +42,6 @@ struct AnyBase
     virtual ~AnyBase();
 };
 
-// TODO: The names Any and AnyPtr are pretty darned backwards
 template<class T>
 struct AnyPtr : public AnyBase {
     AnyPtr(T * data) : data(data) {}
@@ -321,7 +320,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
+        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info.GetIsolate(), info[depth])); 
     }
 };
 
@@ -334,7 +333,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info[depth]);
+      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
     };
@@ -349,7 +348,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info[depth]);
+      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
 };
@@ -543,7 +542,7 @@ void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallback
 template<class VARIABLE_TYPE>
 void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
-    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
+    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
 }
 
 
