@@ -567,6 +567,45 @@ void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Obje
 */
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&));
 
+template<int position, class Tuple>
+struct TupleForEach;
+
+template<int position, class Tuple>
+struct TupleForEach : public TupleForEach<position - 1, Tuple> {
+    using super = TupleForEach<position - 1, Tuple>;
+    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> * params, Tuple & tuple){
+        constexpr int array_position = position - 1;
+        params[array_position] = CastToJS<typename std::tuple_element<array_position, Tuple>::type>()(isolate, std::get<array_position>(tuple));
+        super::operator()(isolate, params, tuple);
+    }
+};
+
+template<class Tuple>
+struct TupleForEach<0, Tuple> {
+  void operator()(v8::Isolate *, v8::Local<v8::Value> *, Tuple &){}
+};
+
+
+
+template<class TupleType>
+v8::Local<v8::Value> call_javascript_function(v8::Local<v8::Context> context, 
+                                              v8::Local<v8::Function> function, 
+                                              v8::Local<v8::Object> receiver, 
+                                              TupleType & tuple)
+{
+    constexpr int tuple_size = std::tuple_size<TupleType>::value;
+    v8::Local<v8::Value> parameters[tuple_size];
+    auto isolate = context->GetIsolate();
+    TupleForEach<tuple_size, TupleType>()(isolate, parameters, tuple);
+    
+    v8::TryCatch tc(isolate);
+    
+    auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
+    if(tc.HasCaught()) {                                                              
+        assert(false);                                                                
+    }                                                                                 
+    return maybe_result.ToLocalChecked();
+}
 
 // helper for getting exposed variables
 template<class VARIABLE_TYPE>

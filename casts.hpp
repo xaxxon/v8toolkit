@@ -25,88 +25,88 @@ struct CastToNative;
 // integers
 template<>
 struct CastToNative<long long> {
-	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned long long> {
-	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<long> {
-	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned long> {
-	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<int> {
-	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned int> {
-	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<short> {
-	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned short> {
-	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char> {
-	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned char> {
-	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<bool> {
-	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToBoolean()->Value();}
+	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToBoolean()->Value();}
 };
 
 template<>
 struct CastToNative<wchar_t> {
-	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char16_t> {
-	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char32_t> {
-	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 
 #include <assert.h>
 
 template<class U>
 struct CastToNative<std::vector<U>> {
-    std::vector<U> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){assert(false);}
+    std::vector<U> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {assert(false);}
 };
 
 
 // floats
 template<>
 struct CastToNative<float> {
-	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
 };
 template<>
 struct CastToNative<double> {
-	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
 };
 template<>
 struct CastToNative<long double> {
-	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
 };
 
 
 template<>
 struct CastToNative<v8::Local<v8::Function>> {
-	v8::Local<v8::Function> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+	v8::Local<v8::Function> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         if(value->IsFunction()) {
             return v8::Local<v8::Function>::Cast(value);
         } else {
@@ -122,7 +122,7 @@ struct CastToNative<v8::Local<v8::Function>> {
  */
 template<>
 struct CastToNative<char *> {
-  std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+  std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     char * string = *v8::String::Utf8Value(value);
     auto string_length = strlen(string);
     auto new_string = new char[string_length + 1];
@@ -138,17 +138,17 @@ struct CastToNative<char *> {
  */
 template<>
 struct CastToNative<const char *> {
-  std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return CastToNative<char *>()(isolate, value); }
+  std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return CastToNative<char *>()(isolate, value); }
 };
 
 template<>
 struct CastToNative<std::string> {
-  std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return std::string(*v8::String::Utf8Value(value));}
+  std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(*v8::String::Utf8Value(value));}
 };
 
 template<>
 struct CastToNative<const std::string> {
-  const std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return std::string(CastToNative<std::string>()(isolate, value));}
+  const std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(CastToNative<std::string>()(isolate, value));}
 };
 
 
@@ -160,7 +160,7 @@ struct CastToNative<const std::string> {
 template<typename T>
 struct CastToJS;
 
-
+//TODO: Should all these operator()'s be const?
 // integers
 template<>
 struct CastToJS<char> { 
