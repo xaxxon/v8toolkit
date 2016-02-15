@@ -31,21 +31,21 @@ public:
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
     auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\
     CastToNative<ReturnType> cast_to_native;\
-    return scoped_run(isolate, global_context, [&](auto isolate, auto context){    \
-        v8::TryCatch tc(isolate);                                                                             \
-        auto js_object = global_js_object.Get(isolate);                                                       \
-        auto maybe_function_value = js_object->Get(context, v8::String::NewFromUtf8(isolate, #name));    \
-        if(!maybe_function_value.IsEmpty()) {  \
-            if(!maybe_function_value.ToLocalChecked()->IsUndefined()) {                                       \
-                auto jsfunction = v8::Local<v8::Function>::Cast(maybe_function_value.ToLocalChecked());       \
-                if(!jsfunction.IsEmpty()) {   \
-                    v8::Local<v8::Value> result = call_javascript_function(context, jsfunction, js_object, parameter_tuple);  \
-                    return cast_to_native(isolate, result);\
-                }\
-            }\
-        }\
-        return this->std::remove_pointer<decltype(this)>::type::BASE_TYPE::name( __VA_ARGS__ );\
-    });\
+    return scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
+        v8::TryCatch tc(isolate); \
+        auto js_object = global_js_object.Get(isolate); \
+        auto maybe_function_value = js_object->Get(context, v8::String::NewFromUtf8(isolate, #name)); \
+        if(!maybe_function_value.IsEmpty()) { \
+            if(!maybe_function_value.ToLocalChecked()->IsUndefined()) { \
+                auto jsfunction = v8::Local<v8::Function>::Cast(maybe_function_value.ToLocalChecked()); \
+                if(!jsfunction.IsEmpty()) { \
+                    v8::Local<v8::Value> result = call_javascript_function(context, jsfunction, js_object, parameter_tuple); \
+                    return cast_to_native(isolate, result); \
+                } \
+            } \
+        } \
+        return this->std::remove_pointer<decltype(this)>::type::BASE_TYPE::name( __VA_ARGS__ ); \
+    });
 
 
 // defines a JS_ACCESS function for a method taking no parameters
@@ -99,7 +99,7 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8,
     JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 
-}
+};
 
    
 
@@ -176,7 +176,6 @@ public:
 };
 
 
-
 map<string, std::unique_ptr<Factory<Animal>>> animal_factories;
 vector<Animal*> animals;
 
@@ -185,7 +184,6 @@ void register_animal_factory(v8::Isolate * isolate, string type, v8::Local<v8::F
     printf("In registere animal factory got isolate: %p\n", isolate);
     animal_factories.emplace(type, make_unique<JSFactory<Animal>>(isolate, factory_method));
 }
-
 
 
 int main(int argc, char ** argv)
@@ -213,3 +211,4 @@ int main(int argc, char ** argv)
         cout << a->add(4,5)<<endl;
     }   
 }
+
