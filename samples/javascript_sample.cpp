@@ -403,39 +403,81 @@ void require_directory_test()
         });
     });
 }
+void run_custom_object_creator_test()
+{
+    
+    auto i = PlatformHelper::create_isolate();
+    i->add_function("create", [](const v8::FunctionCallbackInfo<v8::Value>& info){
+        const auto isolate = info.GetIsolate();
+        v8::HandleScope scope(isolate);
+        v8::Local<v8::Object> prototype = info[0];
+        if (!prototype->IsNull() && !prototype->IsJSReceiver()) {
+            assert(false);
+          // THROW_NEW_ERROR_RETURN_FAILURE(
+          //     isolate, NewTypeError(MessageTemplate::kProtoObjectOrNull, prototype));
+        }
+
+        // Generate the map with the specified {prototype} based on the Object                               
+        // function's initial map from the current native context.                                           
+        // TODO(bmeurer): Use a dedicated cache for Object.create; think about                               
+        // slack tracking for Object.create.                                                                 
+        Handle<Map> map(isolate->native_context()->object_function()->initial_map(),
+                        isolate);
+        if (map->prototype() != *prototype) {
+          map = Map::TransitionToPrototype(map, prototype, FAST_PROTOTYPE);
+        }
+
+        // Actually allocate the object.                                                                     
+        Handle<JSObject> object = isolate->factory()->NewJSObjectFromMap(map);
+
+        // Define the properties if properties was specified and is not undefined.                           
+        Handle<Object> properties = args.atOrUndefined(isolate, 2);
+        if (!properties->IsUndefined()) {
+          RETURN_FAILURE_ON_EXCEPTION(
+              isolate, JSReceiver::DefineProperties(isolate, object, properties));
+        }
+
+        return *object;
+        
+    })
+    
+}
+
 
 
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
-    printf("Running from %s\n", argv[0]);
 
-    run_type_conversion_test();
+    run_custom_object_creator_test();
 
-    auto future = test_lifetimes();
-    printf("Nothing should have been destroyed yet\n");
-    {
-        auto results = future.get();
-        results.first.Reset();
-        printf("Nothing should have been destroyed yet after getting future results\n");
-    }
-    printf("The script, context, and isolate helpers should have all been destroyed\n");
-
-    auto context = run_tests();
-    printf("The script, context, and isolate helpers should have all been destroyed\n");
-
-    printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
-
-    printf("Running comparison tests\n");
-    run_comparison_tests();
-
-    printf("Testing casts\n");
-    test_casts();
-
-    printf("Testing asserts\n");
-    test_asserts();
-    
-    require_directory_test();
+    //
+    // run_type_conversion_test();
+    //
+    // auto future = test_lifetimes();
+    // printf("Nothing should have been destroyed yet\n");
+    // {
+    //     auto results = future.get();
+    //     results.first.Reset();
+    //     printf("Nothing should have been destroyed yet after getting future results\n");
+    // }
+    // printf("The script, context, and isolate helpers should have all been destroyed\n");
+    //
+    // auto context = run_tests();
+    // printf("The script, context, and isolate helpers should have all been destroyed\n");
+    //
+    // printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
+    //
+    // printf("Running comparison tests\n");
+    // run_comparison_tests();
+    //
+    // printf("Testing casts\n");
+    // test_casts();
+    //
+    // printf("Testing asserts\n");
+    // test_asserts();
+    //
+    // require_directory_test();
     
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
 }

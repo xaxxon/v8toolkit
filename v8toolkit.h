@@ -64,6 +64,9 @@ struct Any : public AnyBase {
 
 
 
+
+
+
 /**
 * Helper function to run the callable inside contexts.
 * If the isolate is currently inside a context, it will use that context automatically
@@ -133,6 +136,7 @@ R scoped_run(v8::Isolate * isolate, T callable)
 
 
 
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -152,6 +156,8 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
     return callable();
 }
 
+
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -171,6 +177,7 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
     return callable(isolate);
 }
 
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -188,6 +195,19 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
     v8::Context::Scope context_scope(context);
 
     return callable(isolate, context);
+}
+    
+
+// Same as the ones above, but this one takes a global context for convenience
+// Isolate is required since a Local<Context> cannot be created without creating a locker
+//   and handlescope which require an isolate to create
+template<class T,
+class R = decltype(scoped_run(std::declval<v8::Isolate*>(), std::declval<T>()))>
+R scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T callable) {
+    v8::Locker l(isolate);
+    v8::HandleScope hs(isolate);
+    auto local_context = context.Get(isolate);
+    return scoped_run(isolate, local_context, callable);
 }
     
 
@@ -296,9 +316,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
         // use CallCallable to differentiate between void and non-void return types
-        CallCallable<FUNCTION_TYPE>()(function, info, std::forward<Ts>(ts)...);
+        CallCallable<FUNCTION_TYPE>()(function, info, ts...);
     }
 };
 
@@ -377,6 +397,25 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
         this->super::operator()(function, info, ts..., info); 
     }
 };
+
+
+/**
+* Specialization for functions that want the isolate pointer (but not all the rest of the stuff
+*   in the FunctionCallbackInfo for simplicity's sake)
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+            
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info.GetIsolate()); 
+    }
+};
+
 
 
 /**

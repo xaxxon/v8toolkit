@@ -103,6 +103,19 @@ struct CastToNative<long double> {
 	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){return value->ToNumber()->Value();}
 };
 
+
+template<>
+struct CastToNative<v8::Local<v8::Function>> {
+	v8::Local<v8::Function> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+        if(value->IsFunction()) {
+            return v8::Local<v8::Function>::Cast(value);
+        } else {
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+            return v8::Local<v8::Function>();
+        }
+    }
+};
+
 /**
  * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
  *   to store the string, a std::unique_ptr<char[]> is returned.

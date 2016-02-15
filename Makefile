@@ -1,7 +1,7 @@
 
-V8_TARGET = native
+# V8_TARGET = native
 #V8_TARGET = x64.release
-#V8_TARGET = x64.debug
+V8_TARGET = x64.debug
 # DEBUG = -g
 
 ifdef LINUX
@@ -61,19 +61,22 @@ warning:
 
 
 thread_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
 
 javascript: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
 
 sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
 
 toolbox_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
 
 exception_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
+
+bidirectional_sample: lib
+	${CPP} -I./ ${CPPFLAGS}  samples/bidirectional_sample.cpp -o samples/bidirectional_sample ${LIBS}
 
 
 lib: ${OBJS}
