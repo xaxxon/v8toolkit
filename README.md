@@ -235,6 +235,8 @@ To make Person available in javascript, first tell the library it's a class it s
 available to javascript.  There's no requirement to make everything available, and unfortunately there's no introspection in C++ to look at the class
 and make everything available automatically.
 
+###NOTE: the following code is out of date, add_constructor must go AFTER adding members and methods and a call to finalize() stating that all members and methods are added.
+
     auto person_wrapper = i->wrap_class<Person>;
     
     // adds a constructor function in JavaScript called "Person"

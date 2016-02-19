@@ -163,7 +163,7 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
     add_function(isolate, object_template, "assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
-        if (V8_TOOLKIT_DEBUG) printf(("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
+        if (V8_TOOLKIT_DEBUG) printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
 
         v8::TryCatch tc(isolate);
         auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
