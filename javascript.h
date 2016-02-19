@@ -343,6 +343,14 @@ public:
 	{
 		v8toolkit::expose_variable(get_context(), get_context()->Global(), name.c_str(), variable);
 	}
+    
+    template<class Variable>
+    void expose_variable_readonly(std::string name, Variable & variable)
+    {
+		v8toolkit::expose_variable_readonly(get_context(), get_context()->Global(), name.c_str(), variable);
+        
+    }
+    
 	
 	/**
 	* Returns a javascript object representation of the given c++ object
@@ -583,6 +591,13 @@ public:
 	{
 		v8toolkit::expose_variable(isolate, this->get_object_template(), name.c_str(), variable);
 	}
+    
+    template<class Variable>
+    void expose_variable_readonly(std::string name, Variable & variable)
+    {
+		v8toolkit::expose_variable_readonly(isolate, this->get_object_template(), name.c_str(), variable);
+        
+    }
 	
 	/**
 	* Returns a V8ClassWrapper object for wrapping C++ classes in this isolate.	 Classes must be wrapped

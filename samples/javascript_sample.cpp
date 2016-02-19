@@ -293,33 +293,56 @@ void test_casts()
             std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
             c->add_variable("m", CastToJS<decltype(m)>()(isolate, m));
             c->run("assert_contents(m, {'one': 1, 'two': 2, 'three': 3});");
-    
+
             std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
             c->add_variable("m2", CastToJS<decltype(m2)>()(isolate, m2));
             c->run("assert_contents(m2, {'four': 4, 'five': 5, 'six': 6});");
-    
+
             std::deque<long> d{7000000000, 8000000000, 9000000000};
             add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
             c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
-    
+
             std::multimap<int, int> mm{{1,1},{1,2},{1,3},{2,4},{3,5},{3,6}};
             add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
             c->run("assert_contents(mm, {1: [1, 2, 3], 2: [4], 3: [5, 6]});");
-    
+
             std::array<int, 3> a{{1,2,3}};
             add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));
             c->run("assert_contents(a, [1, 2, 3]);");
-    
+
             std::map<std::string, std::vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
             add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
             c->run("assert_contents(composite, {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]});");
-            
+
             std::string tuple_string("Hello");
             auto tuple = make_tuple(1, 2.2, tuple_string);
             c->expose_variable("tuple", tuple);
             c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
 
             printf("Done testing STL container casts\n");
+
+
+            auto unique = std::make_unique<std::vector<int>>(4, 1);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("unique", unique);
+            c->run("assert_contents(unique, [1,1,1,1])");
+            
+            auto ulist = std::make_unique<std::list<int>>(4, 4);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("ulist", ulist);
+            c->run("assert_contents(ulist, [4, 4, 4, 4])");
+            
+            
+            auto shared = std::make_shared<std::vector<int>>(4, 3);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("shared", shared);
+            c->run("assert_contents(shared, [3, 3, 3, 3])");
+            
+            std::vector<int> vector(4, 2);
+            auto & vector_reference = vector;
+            c->expose_variable("vector_reference", vector_reference);
+            c->run("assert_contents(vector_reference, [2,2,2,2])");
+            
         } catch (std::exception & e) {
             printf("Cast tests unexpectedily failed: %s\n", e.what());
             assert(false);  
@@ -479,9 +502,9 @@ int main(int argc, char ** argv) {
     test_asserts();
 
     require_directory_test();
-    
+
     run_inheritance_test();
-    
+
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
 }
 

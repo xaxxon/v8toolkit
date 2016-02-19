@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CASTS_HPP
+#define CASTS_HPP
 
 #include <assert.h>
 
@@ -19,10 +20,10 @@ namespace v8toolkit {
 template<typename T>
 struct CastToNative;
 
+
 /**
 * Casts from a boxed Javascript type to a native type
 */
-
 
 // integers
 template<>
@@ -85,11 +86,11 @@ struct CastToNative<char32_t> {
 
 
 // TODO: Make sure this is tested
-template<class ElementType>
-struct CastToNative<std::vector<ElementType>> {
-    std::vector<ElementType> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+template<class ElementType, class... Rest>
+struct CastToNative<std::vector<ElementType, Rest...>> {
+    std::vector<ElementType, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         auto context = isolate->GetCurrentContext();
-        std::vector<ElementType> v;
+        std::vector<ElementType, Rest...> v;
         if(value->IsArray()) {
             auto array = v8::Local<v8::Object>::Cast(value);
             auto array_length = array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value();
@@ -99,8 +100,8 @@ struct CastToNative<std::vector<ElementType>> {
             }
         } else {
             isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
-            return v;
         }
+        return v;
     }
 };
 
@@ -277,6 +278,14 @@ struct CastToJS<const std::string> {
 };
 
 
+template<class T>
+struct CastToJS<T**> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const T** multi_pointer) {
+        return CastToJS<T*>(isolate, *multi_pointer);
+    }
+};
+
+
 
 /**
 * Special passthrough type for objects that want to take javascript object objects directly
@@ -314,6 +323,7 @@ struct CastToJS<v8::Global<v8::Value> &> {
 template<class U, class... Rest>
 struct CastToJS<std::vector<U, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U, Rest...> vector){
+        // return CastToJS<std::vector<U, Rest...>*>()(isolate, &vector);
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
@@ -322,8 +332,12 @@ struct CastToJS<std::vector<U, Rest...>> {
             (void)array->Set(context, i, CastToJS<U>()(isolate, vector.at(i)));
         }
         return array;
+        
     }
+    
 };
+
+
 
 /**
 * supports lists containing any type also supported by CastToJS to javascript arrays
@@ -513,5 +527,33 @@ struct CastToJS<std::array<T, N>> {
 
 
 
+/**
+* Does NOT transfer ownership.  Original ownership is maintained.
+*/
+template<class T>
+struct CastToJS<std::unique_ptr<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::unique_ptr<T> & unique_ptr) {
+        return CastToJS<T*>()(isolate, unique_ptr.get());
+    }
+};
+
+
+
+
+/**
+* Storing the resulting javascript object does NOT maintain a reference count on the shared object,
+*   so the underlying data can disappear out from under the object if all actual shared_ptr references
+*   are lost.
+*/
+template<class T>
+struct CastToJS<std::shared_ptr<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::shared_ptr<T> & shared_ptr) {
+        return CastToJS<T*>()(isolate, shared_ptr.get());
+    }
+};
+
 
 } // end namespace v8toolkit
+
+
+#endif // CASTS_HPP

@@ -14,7 +14,6 @@
 #include "v8helpers.h"
 #include "casts.hpp"
 
-
 #include <dirent.h>
 
 #define USE_BOOST
@@ -22,7 +21,7 @@
 #define V8_TOOLKIT_DEBUG false
 
 namespace v8toolkit {
-    
+
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -34,9 +33,6 @@ public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
 };
-
-
-
 
 
 
@@ -544,6 +540,8 @@ void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallback
 template<class VARIABLE_TYPE>
 void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
+    // using ResultType = decltype(CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value));
+    // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
     *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
 }
 

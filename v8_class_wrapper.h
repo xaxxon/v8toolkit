@@ -1,4 +1,6 @@
-#pragma once
+#ifndef V8_CLASS_WRAPPER_H
+#define V8_CLASS_WRAPPER_H
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +15,7 @@
 #include <assert.h>
 
 #include "v8toolkit.h"
+#include "casts.hpp"
 
 namespace v8toolkit {
 
@@ -446,12 +449,20 @@ public:
 	template<class BEHAVIOR>
 	v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
 	{
-        assert(((void)"Type must be finalized before calling wrap_existing_cpp_object", this->finalized) == true);
-        
 		auto isolate = this->isolate;
+        
+        // if it's not finalized, try to find an existing CastToJS conversion
+        if (!this->is_finalized()) {
+            return CastToJS<T>()(isolate, *existing_cpp_object);
+        }
+        
+        
+        // assert(((void)"Type must be finalized before calling wrap_existing_cpp_object", this->finalized) == true);
+        
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
+        //   This makes sure if the same object is returned multiple times, the javascript object is also the same
 		v8::Local<v8::Object> javascript_object;
 		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Found existing javascript object for c++ object %p\n", existing_cpp_object);
@@ -730,3 +741,5 @@ struct CastToNative
 
 
 }
+
+#endif // #ifdef V8_CLASS_WRAPPER_H
