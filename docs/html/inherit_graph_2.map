@@ -1,3 +1,4 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structLine.html" title="Line" alt="" coords="5,5,49,29"/>
+<area shape="rect" id="node1" href="$classFactory.html" title="Factory\&lt; RealClass \&gt;" alt="" coords="5,11,142,35"/>
+<area shape="rect" id="node2" href="$classJSFactory.html" title="JSFactory\&lt; RealClass,\l JSWrapperClass \&gt;" alt="" coords="190,5,334,41"/>
 </map>

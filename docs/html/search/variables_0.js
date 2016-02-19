@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['buffer',['buffer',['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_06c06b652f8532d13899e41ac42519699.html#a331d6ea3866e975057a4c7d495042e2b',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const char *, TAIL...)&gt; &gt;::buffer()'],['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_052ef0be30fde3a80baafc68808518d21.html#aea6517b1965b2d99befe50eb3cb724ab',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(char *, TAIL...)&gt; &gt;::buffer()']]]
+  ['animal_5ffactories',['animal_factories',['../bidirectional__sample_8cpp.html#a0318a1a68528fd6e1bae99f70675faad',1,'bidirectional_sample.cpp']]],
+  ['animals',['animals',['../bidirectional__sample_8cpp.html#a2323f598769a7241b072aebb9239e736',1,'bidirectional_sample.cpp']]]
 ];

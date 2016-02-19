@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['cast',['cast',['../classv8toolkit_1_1V8ClassWrapper.html#ade42d695bc02aba2135b0f2f3c30c13c',1,'v8toolkit::V8ClassWrapper']]],
+  ['call_5fjavascript_5ffunction',['call_javascript_function',['../namespacev8toolkit.html#a4972593f281f8e0c61c1709d49d256f5',1,'v8toolkit']]],
+  ['cast',['cast',['../classv8toolkit_1_1V8ClassWrapper.html#a5c409a57d01082287505ffbfd3bc3685',1,'v8toolkit::V8ClassWrapper']]],
   ['castexception',['CastException',['../classv8toolkit_1_1CastException.html#a18766ced90226a07594dbda617680de9',1,'v8toolkit::CastException']]],
   ['check',['check',['../structv8toolkit_1_1TypeCheckerBase.html#a5811480763f7445179ae965012c211ec',1,'v8toolkit::TypeCheckerBase::check()'],['../structv8toolkit_1_1TypeChecker_3_01T_00_01Head_01_4.html#acb4cd7e999ab70e2560deea1e371ea11',1,'v8toolkit::TypeChecker&lt; T, Head &gt;::check()'],['../structv8toolkit_1_1TypeChecker_3_01T_00_01Head_00_01Tail_8_8_8_01_4.html#a777758c991ba6de730cdc7257cb7a579',1,'v8toolkit::TypeChecker&lt; T, Head, Tail... &gt;::check()']]],
   ['cleanup',['cleanup',['../classv8toolkit_1_1PlatformHelper.html#a63ac69cf85a93e998f537178572c7f16',1,'v8toolkit::PlatformHelper']]],

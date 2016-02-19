@@ -119,7 +119,7 @@ Static Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="structA.html">A</a> singleton responsible for initializing the v8 platform and creating isolate helpers. </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00592">592</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00615">615</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a class="anchor" id="a6ef35cacbad78bd2076bba5b07a9b6ef"></a>
 <div class="memitem">
@@ -191,9 +191,9 @@ Here is the caller graph for this function:</div>
 </div><div class="memdoc">
 <p>Parses argv for v8-specific options, applies them, and removes them from argv and adjusts argc accordingly. Looks in argv[0] for the v8 .bin files </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00261">261</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00275">275</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00123">v8toolkit::process_v8_flags()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00030">v8toolkit::process_v8_flags()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -229,7 +229,7 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Shuts down V8. <a class="el" href="structv8toolkit_1_1Any.html">Any</a> subsequent V8 usage is probably undefined, so make sure everything is done before you call this. </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00284">284</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00298">298</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -255,9 +255,9 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Creates a new <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> wrapping a new v8::Isolate instance. Each isolate is completely separate from all the others and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time) An <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will remain as long as the caller has a shared_ptr to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> or any ContextHelpers created from the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> still exist. Once neither of those things is the case, the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will be automatically destroyed. If any threads are still running when this happens, the results are undefined. TODO: Can active threads maintain links to their ContextHelpers to stop this from happening? </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00294">294</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00308">308</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00009">main()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00390">require_directory_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00168">run_comparison_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00021">run_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00122">run_type_conversion_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00320">test_asserts()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00261">test_casts()</a>, and <a class="el" href="javascript__sample_8cpp_source.html#l00090">test_lifetimes()</a>.</p>
+<p>Referenced by <a class="el" href="exception__sample_8cpp_source.html#l00009">main()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00424">require_directory_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00179">run_comparison_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00456">run_inheritance_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00015">run_tests()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00133">run_type_conversion_test()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00354">test_asserts()</a>, <a class="el" href="javascript__sample_8cpp_source.html#l00272">test_casts()</a>, and <a class="el" href="javascript__sample_8cpp_source.html#l00101">test_lifetimes()</a>.</p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -267,12 +267,13 @@ Here is the caller graph for this function:</div>
 <area shape="rect" id="node2" href="exception__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="261,5,308,29"/>
 <area shape="rect" id="node3" href="javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239" title="require_directory_test" alt="" coords="216,53,353,77"/>
 <area shape="rect" id="node5" href="javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e" title="run_comparison_tests" alt="" coords="215,101,354,125"/>
-<area shape="rect" id="node6" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,149,320,173"/>
-<area shape="rect" id="node7" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,197,364,221"/>
-<area shape="rect" id="node8" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,245,328,269"/>
-<area shape="rect" id="node9" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,293,322,317"/>
-<area shape="rect" id="node10" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,341,330,365"/>
-<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,197,459,221"/>
+<area shape="rect" id="node6" href="javascript__sample_8cpp.html#ad47ef0993bebec5e0d15b31b4dda387b" title="run_inheritance_test" alt="" coords="220,149,350,173"/>
+<area shape="rect" id="node7" href="javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159" title="run_tests" alt="" coords="249,197,320,221"/>
+<area shape="rect" id="node8" href="javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1" title="run_type_conversion_test" alt="" coords="205,245,364,269"/>
+<area shape="rect" id="node9" href="javascript__sample_8cpp.html#a5556fe2766323699667a40d273aeb8e8" title="test_asserts" alt="" coords="242,293,328,317"/>
+<area shape="rect" id="node10" href="javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="247,341,322,365"/>
+<area shape="rect" id="node11" href="javascript__sample_8cpp.html#a73122d07274535490620a6991a6b375f" title="test_lifetimes" alt="" coords="239,389,330,413"/>
+<area shape="rect" id="node4" href="javascript__sample_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title="main" alt="" coords="412,221,459,245"/>
 </map>
 </div>
 </p>
@@ -286,7 +287,7 @@ Here is the caller graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Feb 19 2016 00:39:37 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

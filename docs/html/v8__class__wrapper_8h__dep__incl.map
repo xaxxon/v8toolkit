@@ -1,8 +1,9 @@
 <map id="v8_class_wrapper.h" name="v8_class_wrapper.h">
-<area shape="rect" id="node2" href="$javascript_8h.html" title="javascript.h" alt="" coords="266,77,348,101"/>
-<area shape="rect" id="node7" href="$sample_8cpp.html" title="samples/sample.cpp" alt="" coords="373,77,503,101"/>
+<area shape="rect" id="node2" href="$javascript_8h.html" title="javascript.h" alt="" coords="336,77,418,101"/>
+<area shape="rect" id="node8" href="$sample_8cpp.html" title="samples/sample.cpp" alt="" coords="442,77,573,101"/>
 <area shape="rect" id="node3" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,155,100,179"/>
-<area shape="rect" id="node4" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,155,312,179"/>
-<area shape="rect" id="node5" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,149,457,185"/>
-<area shape="rect" id="node6" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,155,652,179"/>
+<area shape="rect" id="node4" href="$bidirectional__sample_8cpp.html" title="samples/bidirectional\l_sample.cpp" alt="" coords="125,149,258,185"/>
+<area shape="rect" id="node5" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="282,155,471,179"/>
+<area shape="rect" id="node6" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="495,149,615,185"/>
+<area shape="rect" id="node7" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="639,155,810,179"/>
 </map>

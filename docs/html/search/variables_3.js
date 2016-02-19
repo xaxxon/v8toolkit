@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['method',['method',['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_4.html#a8de72d0d0c37a2014a659b84ac1edfbb',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...)&gt;::method()'],['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_01const_01_01_4.html#a3c609f66da77553e80213cb63c7fd416',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const  &gt;::method()']]]
+  ['global_5fcontext',['global_context',['../classv8toolkit_1_1JSWrapper.html#a71c72599d853c2b33edd67f74ed11ed7',1,'v8toolkit::JSWrapper::global_context()'],['../classJSFactory.html#ab530cd1d1e4ca0fe748d4752bb1be011',1,'JSFactory::global_context()']]],
+  ['global_5fjavascript_5ffunction',['global_javascript_function',['../classJSFactory.html#a3ec3bb0327c695cb7bbb5137c83d67b6',1,'JSFactory']]],
+  ['global_5fjs_5fobject',['global_js_object',['../classv8toolkit_1_1JSWrapper.html#a1f5df78cadc3271ab4bd82413afd99e7',1,'v8toolkit::JSWrapper']]]
 ];

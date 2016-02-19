@@ -108,13 +108,15 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <code>#include &lt;utility&gt;</code><br />
 <code>#include &lt;assert.h&gt;</code><br />
 <code>#include &quot;<a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="casts_8hpp_source.html">casts.hpp</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for v8_class_wrapper.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="v8__class__wrapper_8h__incl.png" border="0" usemap="#v8__class__wrapper_8h" alt=""/></div>
 <map name="v8__class__wrapper_8h" id="v8__class__wrapper_8h">
-<area shape="rect" id="node12" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="631,77,706,101"/>
-<area shape="rect" id="node17" href="casts_8hpp.html" title="casts.hpp" alt="" coords="781,149,854,173"/>
+<area shape="rect" id="node12" href="v8toolkit_8h.html" title="v8toolkit.h" alt="" coords="699,77,774,101"/>
+<area shape="rect" id="node19" href="casts_8hpp.html" title="casts.hpp" alt="" coords="1197,149,1270,173"/>
+<area shape="rect" id="node17" href="v8helpers_8h.html" title="v8helpers.h" alt="" coords="816,149,899,173"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -122,12 +124,13 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="v8__class__wrapper_8h__dep__incl.png" border="0" usemap="#v8__class__wrapper_8hdep" alt=""/></div>
 <map name="v8__class__wrapper_8hdep" id="v8__class__wrapper_8hdep">
-<area shape="rect" id="node2" href="javascript_8h.html" title="javascript.h" alt="" coords="266,77,348,101"/>
-<area shape="rect" id="node7" href="sample_8cpp.html" title="samples/sample.cpp" alt="" coords="373,77,503,101"/>
+<area shape="rect" id="node2" href="javascript_8h.html" title="javascript.h" alt="" coords="336,77,418,101"/>
+<area shape="rect" id="node8" href="sample_8cpp.html" title="samples/sample.cpp" alt="" coords="442,77,573,101"/>
 <area shape="rect" id="node3" href="javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,155,100,179"/>
-<area shape="rect" id="node4" href="exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,155,312,179"/>
-<area shape="rect" id="node5" href="javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,149,457,185"/>
-<area shape="rect" id="node6" href="thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,155,652,179"/>
+<area shape="rect" id="node4" href="bidirectional__sample_8cpp.html" title="samples/bidirectional\l_sample.cpp" alt="" coords="125,149,258,185"/>
+<area shape="rect" id="node5" href="exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="282,155,471,179"/>
+<area shape="rect" id="node6" href="javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="495,149,615,185"/>
+<area shape="rect" id="node7" href="thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="639,155,810,179"/>
 </map>
 </div>
 </div>
@@ -207,7 +210,7 @@ struct v8toolkit::static_all_of&lt; b &gt;</h3>
 </li>
 </ul>
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00054">54</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00057">57</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 </div>
 </div>
 </div>
@@ -239,16 +242,16 @@ struct v8toolkit::TypeChecker&lt; class,... &gt;</h3>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00019">19</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
+<p>Definition at line <a class="el" href="v8__class__wrapper_8h_source.html#l00022">22</a> of file <a class="el" href="v8__class__wrapper_8h_source.html">v8_class_wrapper.h</a>.</p>
 
-<p>Referenced by <a class="el" href="v8__class__wrapper_8h_source.html#l00290">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00086">v8toolkit::DestructorBehaviorDelete&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00101">v8toolkit::DestructorBehaviorLeaveAlone&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00513">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00539">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00567">v8toolkit::CastToNative&lt; T &gt;::operator()()</a>, and <a class="el" href="v8__class__wrapper_8h_source.html#l00373">v8toolkit::V8ClassWrapper&lt; T &gt;::wrap_existing_cpp_object()</a>.</p>
+<p>Referenced by <a class="el" href="v8__class__wrapper_8h_source.html#l00557">v8toolkit::V8ClassWrapper&lt; T &gt;::_add_method()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00327">v8toolkit::V8ClassWrapper&lt; T &gt;::cast()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00125">v8toolkit::TypeChecker&lt; T, Head &gt;::check()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00359">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00089">v8toolkit::DestructorBehaviorDelete&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00104">v8toolkit::DestructorBehaviorLeaveAlone&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00661">v8toolkit::CastToJS&lt; T &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00690">v8toolkit::CastToJS&lt; T * &gt;::operator()()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00719">v8toolkit::CastToNative&lt; T &gt;::operator()()</a>, and <a class="el" href="v8__class__wrapper_8h_source.html#l00450">v8toolkit::V8ClassWrapper&lt; T &gt;::wrap_existing_cpp_object()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Feb 10 2016 19:58:35 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Feb 19 2016 00:39:36 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

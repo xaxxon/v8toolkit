@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['foo_2ecpp',['foo.cpp',['../foo_8cpp.html',1,'']]]
+  ['exception_5fsample_2ecpp',['exception_sample.cpp',['../exception__sample_8cpp.html',1,'']]]
 ];

@@ -1,6 +1,9 @@
 <map id="v8toolkit::V8ClassWrapper::get_instance" name="v8toolkit::V8ClassWrapper::get_instance">
-<area shape="rect" id="node2" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="264,5,311,29"/>
-<area shape="rect" id="node3" href="$structv8toolkit_1_1CastToJS.html#a6ceb7a7c257559eeb0048e5136835be0" title="v8toolkit::CastToJS\l::operator()" alt="" coords="226,54,349,90"/>
-<area shape="rect" id="node4" href="$structv8toolkit_1_1CastToJS_3_01T_01_5_01_4.html#a2b81207ac0de02a89f209db9d13a6bf1" title="v8toolkit::CastToJS\l\&lt; T * \&gt;::operator()" alt="" coords="226,114,349,150"/>
-<area shape="rect" id="node5" href="$classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6" title="v8toolkit::IsolateHelper\l::wrap_class" alt="" coords="216,174,359,210"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f" title="v8toolkit::V8ClassWrapper\l::_add_method" alt="" coords="216,5,378,41"/>
+<area shape="rect" id="node4" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="273,66,321,90"/>
+<area shape="rect" id="node5" href="$structv8toolkit_1_1CastToJS.html#a6ceb7a7c257559eeb0048e5136835be0" title="v8toolkit::CastToJS\l::operator()" alt="" coords="235,115,359,151"/>
+<area shape="rect" id="node6" href="$structv8toolkit_1_1CastToJS_3_01T_01_5_01_4.html#a2b81207ac0de02a89f209db9d13a6bf1" title="v8toolkit::CastToJS\l\&lt; T * \&gt;::operator()" alt="" coords="235,175,359,211"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1V8ClassWrapper.html#ab052cb7fbb20f28288e3241b7a3f8cdc" title="v8toolkit::V8ClassWrapper\l::set_parent_type" alt="" coords="216,235,378,271"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6" title="v8toolkit::IsolateHelper\l::wrap_class" alt="" coords="226,295,368,331"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1V8ClassWrapper.html#a074b1f33d90adcc00a6d232a852f1de7" title="v8toolkit::V8ClassWrapper\l::add_method" alt="" coords="426,5,589,41"/>
 </map>

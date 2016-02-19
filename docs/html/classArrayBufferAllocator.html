@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>v8helper: ArrayBufferAllocator Class Reference</title>
+<title>v8toolkit: ArrayBufferAllocator Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -29,7 +29,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">v8helper
+   <div id="projectname">v8toolkit
    &#160;<span id="projectnumber">0.0.1</span>
    </div>
    <div id="projectbrief">Utility library for embedding V8 Javascript engine in a c++ program</div>
@@ -46,6 +46,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div id="navrow1" class="tabs">
     <ul class="tablist">
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -97,34 +98,35 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">ArrayBufferAllocator Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
-
-<p><code>#include &lt;<a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for ArrayBufferAllocator:</div>
 <div class="dyncontent">
 <div class="center"><img src="classArrayBufferAllocator__inherit__graph.png" border="0" usemap="#ArrayBufferAllocator_inherit__map" alt="Inheritance graph"/></div>
+<map name="ArrayBufferAllocator_inherit__map" id="ArrayBufferAllocator_inherit__map">
+</map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
 Collaboration diagram for ArrayBufferAllocator:</div>
 <div class="dyncontent">
 <div class="center"><img src="classArrayBufferAllocator__coll__graph.png" border="0" usemap="#ArrayBufferAllocator_coll__map" alt="Collaboration graph"/></div>
+<map name="ArrayBufferAllocator_coll__map" id="ArrayBufferAllocator_coll__map">
+</map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a2e101c8084d73ef62a77d9946292ed6c"><td class="memItemLeft" align="right" valign="top">virtual void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#a2e101c8084d73ef62a77d9946292ed6c">Allocate</a> (size_t length)</td></tr>
-<tr class="separator:a2e101c8084d73ef62a77d9946292ed6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a81f4c7b7dacf994fb3a1bb506a8382b4"><td class="memItemLeft" align="right" valign="top">virtual void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#a81f4c7b7dacf994fb3a1bb506a8382b4">AllocateUninitialized</a> (size_t length)</td></tr>
-<tr class="separator:a81f4c7b7dacf994fb3a1bb506a8382b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aefa008d42614469e3d3ac56bfed6c949"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#aefa008d42614469e3d3ac56bfed6c949">Free</a> (void *data, size_t)</td></tr>
-<tr class="separator:aefa008d42614469e3d3ac56bfed6c949"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8726881ffd517549f0fe7aa32eced9d"><td class="memItemLeft" align="right" valign="top">virtual void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#ac8726881ffd517549f0fe7aa32eced9d">Allocate</a> (size_t length) override</td></tr>
+<tr class="separator:ac8726881ffd517549f0fe7aa32eced9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3750e3fec8f74656bc98edbaa5a7425b"><td class="memItemLeft" align="right" valign="top">virtual void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#a3750e3fec8f74656bc98edbaa5a7425b">AllocateUninitialized</a> (size_t length) override</td></tr>
+<tr class="separator:a3750e3fec8f74656bc98edbaa5a7425b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdcd69a364ebfdd9f9d86adbfc5f4d15"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classArrayBufferAllocator.html#abdcd69a364ebfdd9f9d86adbfc5f4d15">Free</a> (void *data, size_t) override</td></tr>
+<tr class="separator:abdcd69a364ebfdd9f9d86adbfc5f4d15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>bog standard allocator code from V8 Docs </p>
-
-<p>Definition at line <a class="el" href="v8__toolbox_8hpp_source.html#l00412">412</a> of file <a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a>.</p>
+<div class="textblock">
+<p>Definition at line <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html#l00009">9</a> of file <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html">pure_v8_api_base_code_for_reproducing_issues.cpp</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="a2e101c8084d73ef62a77d9946292ed6c"></a>
+<a class="anchor" id="ac8726881ffd517549f0fe7aa32eced9d"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -141,33 +143,16 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__toolbox_8hpp_source.html#l00414">414</a> of file <a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a>.</p>
-
-<p>References <a class="el" href="v8__toolbox_8hpp_source.html#l00418">AllocateUninitialized()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;                                        {</div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    <span class="keywordtype">void</span>* data = <a class="code" href="classArrayBufferAllocator.html#a81f4c7b7dacf994fb3a1bb506a8382b4">AllocateUninitialized</a>(length);</div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;    <span class="keywordflow">return</span> data == NULL ? data : memset(data, 0, length);</div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;  }</div>
-<div class="ttc" id="classArrayBufferAllocator_html_a81f4c7b7dacf994fb3a1bb506a8382b4"><div class="ttname"><a href="classArrayBufferAllocator.html#a81f4c7b7dacf994fb3a1bb506a8382b4">ArrayBufferAllocator::AllocateUninitialized</a></div><div class="ttdeci">virtual void * AllocateUninitialized(size_t length)</div><div class="ttdef"><b>Definition:</b> <a href="v8__toolbox_8hpp_source.html#l00418">v8_toolbox.hpp:418</a></div></div>
-</div><!-- fragment -->
-<p><div class="dynheader">
-Here is the call graph for this function:</div>
-<div class="dyncontent">
-<div class="center"><img src="classArrayBufferAllocator_a2e101c8084d73ef62a77d9946292ed6c_cgraph.png" border="0" usemap="#classArrayBufferAllocator_a2e101c8084d73ef62a77d9946292ed6c_cgraph" alt=""/></div>
-<map name="classArrayBufferAllocator_a2e101c8084d73ef62a77d9946292ed6c_cgraph" id="classArrayBufferAllocator_a2e101c8084d73ef62a77d9946292ed6c_cgraph">
-<area shape="rect" id="node2" href="classArrayBufferAllocator.html#a81f4c7b7dacf994fb3a1bb506a8382b4" title="ArrayBufferAllocator\l::AllocateUninitialized" alt="" coords="182,5,317,41"/>
-</map>
-</div>
-</p>
+<p>Definition at line <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html#l00011">11</a> of file <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html">pure_v8_api_base_code_for_reproducing_issues.cpp</a>.</p>
 
 </div>
 </div>
-<a class="anchor" id="a81f4c7b7dacf994fb3a1bb506a8382b4"></a>
+<a class="anchor" id="a3750e3fec8f74656bc98edbaa5a7425b"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -184,29 +169,16 @@ Here is the call graph for this function:</div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__toolbox_8hpp_source.html#l00418">418</a> of file <a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a>.</p>
-
-<p>Referenced by <a class="el" href="v8__toolbox_8hpp_source.html#l00414">Allocate()</a>.</p>
-<div class="fragment"><div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;{ <span class="keywordflow">return</span> malloc(length); }</div>
-</div><!-- fragment -->
-<p><div class="dynheader">
-Here is the caller graph for this function:</div>
-<div class="dyncontent">
-<div class="center"><img src="classArrayBufferAllocator_a81f4c7b7dacf994fb3a1bb506a8382b4_icgraph.png" border="0" usemap="#classArrayBufferAllocator_a81f4c7b7dacf994fb3a1bb506a8382b4_icgraph" alt=""/></div>
-<map name="classArrayBufferAllocator_a81f4c7b7dacf994fb3a1bb506a8382b4_icgraph" id="classArrayBufferAllocator_a81f4c7b7dacf994fb3a1bb506a8382b4_icgraph">
-<area shape="rect" id="node2" href="classArrayBufferAllocator.html#a2e101c8084d73ef62a77d9946292ed6c" title="ArrayBufferAllocator\l::Allocate" alt="" coords="189,5,317,41"/>
-</map>
-</div>
-</p>
+<p>Definition at line <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html#l00015">15</a> of file <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html">pure_v8_api_base_code_for_reproducing_issues.cpp</a>.</p>
 
 </div>
 </div>
-<a class="anchor" id="aefa008d42614469e3d3ac56bfed6c949"></a>
+<a class="anchor" id="abdcd69a364ebfdd9f9d86adbfc5f4d15"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -233,23 +205,22 @@ Here is the caller graph for this function:</div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="v8__toolbox_8hpp_source.html#l00419">419</a> of file <a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a>.</p>
-<div class="fragment"><div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;{ free(data); }</div>
-</div><!-- fragment -->
+<p>Definition at line <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html#l00016">16</a> of file <a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html">pure_v8_api_base_code_for_reproducing_issues.cpp</a>.</p>
+
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="v8__toolbox_8hpp_source.html">v8_toolbox.hpp</a></li>
+<li>samples/<a class="el" href="pure__v8__api__base__code__for__reproducing__issues_8cpp_source.html">pure_v8_api_base_code_for_reproducing_issues.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jan 21 2016 17:56:56 for v8helper by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Feb 19 2016 00:39:36 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

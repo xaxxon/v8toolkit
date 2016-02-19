@@ -1,6 +1,7 @@
 <map id="javascript.h" name="javascript.h">
 <area shape="rect" id="node2" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="5,83,100,107"/>
-<area shape="rect" id="node3" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="124,83,312,107"/>
-<area shape="rect" id="node4" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="337,77,457,113"/>
-<area shape="rect" id="node5" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="480,83,652,107"/>
+<area shape="rect" id="node3" href="$bidirectional__sample_8cpp.html" title="samples/bidirectional\l_sample.cpp" alt="" coords="125,77,258,113"/>
+<area shape="rect" id="node4" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="282,83,471,107"/>
+<area shape="rect" id="node5" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="495,77,615,113"/>
+<area shape="rect" id="node6" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="639,83,810,107"/>
 </map>
