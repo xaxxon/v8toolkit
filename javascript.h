@@ -483,6 +483,12 @@ public:
     *   where a v8::Isolate* would otherwise be required
     */ 
 	operator v8::Isolate*();
+    
+    /**
+    * Implicit cast to Local<ObjectTemplate> for the global object
+    *   template used to create new contexts
+    */
+    operator v8::Local<v8::ObjectTemplate>();
 		
     /**
     * Adds print helpers to global object template as defined in 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 #include <string>
 #include <vector>
 #include <map>
@@ -81,11 +83,25 @@ struct CastToNative<char32_t> {
 	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 
-#include <assert.h>
 
-template<class U>
-struct CastToNative<std::vector<U>> {
-    std::vector<U> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {assert(false);}
+// TODO: Make sure this is tested
+template<class ElementType>
+struct CastToNative<std::vector<ElementType>> {
+    std::vector<ElementType> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        auto context = isolate->GetCurrentContext();
+        std::vector<ElementType> v;
+        if(value->IsArray()) {
+            auto array = v8::Local<v8::Object>::Cast(value);
+            auto array_length = array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value();
+            for(int i = 0; i < array_length; i++) {
+                auto value = array->Get(context, i).ToLocalChecked();
+                v.push_back(CastToNative<ElementType>()(isolate, value));
+            }
+        } else {
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+            return v;
+        }
+    }
 };
 
 

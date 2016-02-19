@@ -20,6 +20,7 @@ auto run_tests()
     
     return (*ih1)([&](){
         ih1->add_print();
+        ih1->add_assert();
         
         // expose global variable x as "x" in all contexts created from this isolate
         ih1->expose_variable("x", x);
@@ -29,23 +30,31 @@ auto run_tests()
         auto c2 = ih1->create_context();
         
         c->run("5");
-        c->run("println(\"x is: \", x);");
-        c->run("println('return_hi():',return_hi());");
+        c->run("assert('x == 1');");
+        c->run("assert_contents(return_hi(), 'hi')");
         
         ih1->expose_variable("y", y);
         ih1->add_function("return_bye", [](){return "bye";});
         
         printf("*** Expecting exception\n");
+        bool got_expected_failure = false;
         try {
             c->run("println(y)");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
         try {
             c->run("println(return_bye())");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         
         auto c3 = ih1->create_context();
         printf("But they do exist on c3, as it was created after they were added to the isolate helper\n");
@@ -66,13 +75,21 @@ auto run_tests()
         try {
             c2->run("println(y)");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         try {
             c2->run("println(return_bye())");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         
         // returning context to demonstrate how having a context alive keeps an IsolateHelper alive even though the
         //   direct shared_ptr to it is destroyed at the end of this function
@@ -117,10 +134,10 @@ void run_type_conversion_test()
 {
     auto i = PlatformHelper::create_isolate();
     (*i)([&]{
-        i->wrap_class<C>().add_constructor("C", i->get_object_template());
-        i->wrap_class<A>().add_constructor("A", i->get_object_template()).set_compatible_types<C>();
-        i->wrap_class<B>().add_constructor("B", i->get_object_template()).set_compatible_types<C>();
-        i->wrap_class<NotFamily>().add_constructor("NotFamily", i->get_object_template());
+        i->wrap_class<C>().finalize().add_constructor("C", i->get_object_template());
+        i->wrap_class<A>().set_compatible_types<C>().finalize().add_constructor("A", i->get_object_template());
+        i->wrap_class<B>().set_compatible_types<C>().finalize().add_constructor("B", i->get_object_template());
+        i->wrap_class<NotFamily>().finalize().add_constructor("NotFamily", i->get_object_template());
         i->add_function("a", [](A * a) {
             printf("In 'A' function, A::i = %d (1) &a=%p\n", a->i, a);
         });
@@ -385,6 +402,7 @@ void require_directory_test()
 {
     printf("In require directory test\n");
     auto i = PlatformHelper::create_isolate();
+    i->add_assert();
     (*i)([&](){
         i->add_require();
         i->add_print();
@@ -392,92 +410,77 @@ void require_directory_test()
         auto c = i->create_context();
         (*c)([&]{
             require_directory(*c, "modules");
+            c->run("assert_contents(module_list()['modules/b.json'], {\"aa\": [1,2,3,{\"a\":4, \"b\": 5}, 6,7,8]})");
             c->run("printobj(module_list())");
             
             require_directory(*c, "modules");
-            c->run("printobj(module_list())");
-            
-            require_directory(*c, "modules");
+            c->run("assert_contents(module_list()['modules/b.json'], {\"aa\": [1,2,3,{\"a\":4, \"b\": 5}, 6,7,8]})");
             c->run("printobj(module_list())");
             
         });
     });
 }
-void run_custom_object_creator_test()
+
+
+struct IT_A {
+    int get_int(){return 5;}
+};
+
+struct IT_B : public IT_A {
+
+};
+
+void run_inheritance_test()
 {
-    
     auto i = PlatformHelper::create_isolate();
-    i->add_function("create", [](const v8::FunctionCallbackInfo<v8::Value>& info){
-        const auto isolate = info.GetIsolate();
-        v8::HandleScope scope(isolate);
-        v8::Local<v8::Object> prototype = info[0];
-        if (!prototype->IsNull() && !prototype->IsJSReceiver()) {
-            assert(false);
-          // THROW_NEW_ERROR_RETURN_FAILURE(
-          //     isolate, NewTypeError(MessageTemplate::kProtoObjectOrNull, prototype));
-        }
-
-        // Generate the map with the specified {prototype} based on the Object                               
-        // function's initial map from the current native context.                                           
-        // TODO(bmeurer): Use a dedicated cache for Object.create; think about                               
-        // slack tracking for Object.create.                                                                 
-        Handle<Map> map(isolate->native_context()->object_function()->initial_map(),
-                        isolate);
-        if (map->prototype() != *prototype) {
-          map = Map::TransitionToPrototype(map, prototype, FAST_PROTOTYPE);
-        }
-
-        // Actually allocate the object.                                                                     
-        Handle<JSObject> object = isolate->factory()->NewJSObjectFromMap(map);
-
-        // Define the properties if properties was specified and is not undefined.                           
-        Handle<Object> properties = args.atOrUndefined(isolate, 2);
-        if (!properties->IsUndefined()) {
-          RETURN_FAILURE_ON_EXCEPTION(
-              isolate, JSReceiver::DefineProperties(isolate, object, properties));
-        }
-
-        return *object;
+    (*i)([&]{
+        i->add_print();
+        i->add_assert();
         
-    })
-    
-}
+        // it's critical to wrap both classes and have the base class set the child as "compatible" and the child set the parent as "parent"
+        i->wrap_class<IT_A>().add_method(&IT_A::get_int, "get_int").set_compatible_types<IT_B>().finalize().add_constructor<>("IT_A", *i);
+        i->wrap_class<IT_B>().set_parent_type<IT_A>().finalize().add_constructor<>("IT_B", *i);
+        
+        auto c = i->create_context();
 
+        c->run("var it_b = new IT_B(); assert('it_b.get_int() == 5');");
+        c->run("assert('Object.create(new IT_A()).get_int() == 5')");
+    });
+}
 
 
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
 
-    run_custom_object_creator_test();
+    run_type_conversion_test();
 
-    //
-    // run_type_conversion_test();
-    //
-    // auto future = test_lifetimes();
-    // printf("Nothing should have been destroyed yet\n");
-    // {
-    //     auto results = future.get();
-    //     results.first.Reset();
-    //     printf("Nothing should have been destroyed yet after getting future results\n");
-    // }
-    // printf("The script, context, and isolate helpers should have all been destroyed\n");
-    //
-    // auto context = run_tests();
-    // printf("The script, context, and isolate helpers should have all been destroyed\n");
-    //
-    // printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
-    //
-    // printf("Running comparison tests\n");
-    // run_comparison_tests();
-    //
-    // printf("Testing casts\n");
-    // test_casts();
-    //
-    // printf("Testing asserts\n");
-    // test_asserts();
-    //
-    // require_directory_test();
+    auto future = test_lifetimes();
+    printf("Nothing should have been destroyed yet\n");
+    {
+        auto results = future.get();
+        results.first.Reset();
+        printf("Nothing should have been destroyed yet after getting future results\n");
+    }
+    printf("The script, context, and isolate helpers should have all been destroyed\n");
+
+    auto context = run_tests();
+    printf("The script, context, and isolate helpers should have all been destroyed\n");
+
+    printf("after run_tests, one isolate helper was destroyed, since it made no contexts\n");
+
+    printf("Running comparison tests\n");
+    run_comparison_tests();
+
+    printf("Testing casts\n");
+    test_casts();
+
+    printf("Testing asserts\n");
+    test_asserts();
+
+    require_directory_test();
+    
+    run_inheritance_test();
     
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
 }

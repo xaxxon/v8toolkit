@@ -10,12 +10,16 @@
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
+
+#include "v8helpers.h"
 #include "casts.hpp"
 
 
 #include <dirent.h>
 
 #define USE_BOOST
+
+#define V8_TOOLKIT_DEBUG false
 
 namespace v8toolkit {
     
@@ -29,37 +33,6 @@ private:
 public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
-};
-
-/**
-* When passing an Any-type through a void *, always static_cast it to an AnyBase *
-*   pointer and pass that as the void *.  This allows you to safely cast it back to
-*   a AnyBase* on the other side and then dynamic_cast to any child types to 
-*   determine the type of the object actually stored.
-*/
-struct AnyBase
-{
-    virtual ~AnyBase();
-};
-
-template<class T>
-struct AnyPtr : public AnyBase {
-    AnyPtr(T * data) : data(data) {}
-    virtual ~AnyPtr(){}
-    T* data;
-    T * get() {return data;}
-};
-
-/**
-* Best used for types that are intrinsically pointers like std::shared_ptr or
-*   std::exception_ptr
-*/
-template<class T>
-struct Any : public AnyBase {
-    Any(T data) : data(data) {}
-    virtual ~Any(){}
-    T data;
-    T get() {return data;}
 };
 
 
@@ -212,61 +185,6 @@ R scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T c
     
 
 /**
-* When passed a value representing an array, runs callable with each element of that array (but not on arrays 
-*   contained within the outer array)
-* On any other object type, runs callable with that element
-*/
-template<class T>
-void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, T callable) {
-    
-    if (value->IsArray()) {
-        auto array = v8::Object::Cast(*value);
-        int i = 0;
-        while(array->Has(context, i).FromMaybe(false)) {
-            callable(array->Get(context, i).ToLocalChecked());
-            i++;
-        }
-    } else {
-        callable(value);
-    }
-}
-
-
-/**
-* Calls callable with each javascript "own property" in the object passed.
-*/
-template<class T>
-void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T callable)
-{
-    auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
-    for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
-        auto property_value = object->Get(context, property_name);
-        
-        callable(property_name, property_value.ToLocalChecked());
-    });
-}
-
-/**
-* Creates a variable with the given alias_name in the context's global object to point back to the global object
-* Same as node.js "global" variable or a web browser "window" object
-*/
-void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
-
-/**
-* parses v8-related flags and removes them, adjusting argc as needed
-*/
-void process_v8_flags(int & argc, char ** argv);
-
-
-/**
-* exposes the garbage collector to javascript
-* same as passing --expose-gc as a command-line flag
-* To encourage javascript garbage collection run from c++, use: 
-*   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
-*/  
-void expose_gc();
-
-/**
 * Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript
 * Mostly for v8toolkit internal use
 */
@@ -281,6 +199,7 @@ struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
+        if (V8_TOOLKIT_DEBUG) printf("Just set returnvalue in CallCallable for type %s\n", typeid(R).name());
     }
 };
 
@@ -570,28 +489,33 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 template<int position, class Tuple>
 struct TupleForEach;
 
+/**
+* Populates an array of v8::Values with the values of the tuple, casted by the tuple element's type 
+*/
 template<int position, class Tuple>
 struct TupleForEach : public TupleForEach<position - 1, Tuple> {
     using super = TupleForEach<position - 1, Tuple>;
-    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> * params, Tuple & tuple){
+    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> * params, const Tuple & tuple){
         constexpr int array_position = position - 1;
         params[array_position] = CastToJS<typename std::tuple_element<array_position, Tuple>::type>()(isolate, std::get<array_position>(tuple));
         super::operator()(isolate, params, tuple);
     }
 };
 
+/** 
+* Base case for no remaining elements to parse (as determined by the position being 0)
+*/
 template<class Tuple>
 struct TupleForEach<0, Tuple> {
-  void operator()(v8::Isolate *, v8::Local<v8::Value> *, Tuple &){}
+  void operator()(v8::Isolate *, v8::Local<v8::Value> *, const Tuple &){}
 };
 
 
-
-template<class TupleType>
-v8::Local<v8::Value> call_javascript_function(v8::Local<v8::Context> context, 
-                                              v8::Local<v8::Function> function, 
-                                              v8::Local<v8::Object> receiver, 
-                                              TupleType & tuple)
+template<class TupleType = std::tuple<>>
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & context, 
+                                              const v8::Local<v8::Function> & function, 
+                                              const v8::Local<v8::Object> & receiver, 
+                                              const TupleType & tuple = {})
 {
     constexpr int tuple_size = std::tuple_size<TupleType>::value;
     v8::Local<v8::Value> parameters[tuple_size];
@@ -727,6 +651,9 @@ std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<
 std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
 /**
+* Adds the print functions listed below to the given object_template (usually a v8::Context's global object)
+* Optional callback function can be used to send the output to another source (defaults to stdout)
+*
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
 *
@@ -739,9 +666,11 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 *
 * printfln - same as printf but automatically appends a newline
 *
-* printobj - prints a bunch of information about an object - format highly susceptible to change
+* printobj - prints a bunch of information about an object - format highly susceptible to frequent change
 */
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());return;} );
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
+
+void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template);
 
 // returns true if the two values are the same by value, including nested data structures
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
@@ -763,6 +692,7 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     
     Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) ) :
       object(object), method(method){}
+      ~Bind(){}
     
     CLASS_TYPE & object;
     R(CLASS_TYPE::*method)(Args...);

@@ -46,7 +46,7 @@ LIBS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_L
 
 all: warning thread_sample javascript sample toolbox_sample exception_sample
 
-SRCS=v8toolkit.cpp javascript.cpp
+SRCS=v8toolkit.cpp javascript.cpp v8helpers.cpp
 
 OBJS=$(SRCS:.cpp=.o)
 
@@ -80,10 +80,12 @@ bidirectional_sample: lib
 
 
 lib: ${OBJS}
-	ar cr libv8toolkit.a v8toolkit.o javascript.o
+	ar cr libv8toolkit.a $(OBJS)
 
 clean:
 	rm -f *.o *.a samples/*sample
+	rm -rf samples/*.dSYM
+
 
 run:
 	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample)
