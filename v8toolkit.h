@@ -670,6 +670,12 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 */
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
 
+/**
+* Adds an assert method that calls assert.h assert() on failure.  This is different than the add_assert() in javascript.h that throws an exception on failure
+*   because if an exception is not caught before it reaches V8 execution, the program is terminated.  javascript.h *Helper classes automatically catch
+*   and re-throw exceptions so it is safe to throw in that version, but not this one.  The error message resulting from throwing an exception
+*   reaching code compiled without exception support is not easy to understand which is why a simple assert is preferable.
+*/
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template);
 
 // returns true if the two values are the same by value, including nested data structures

@@ -473,7 +473,7 @@ public:
             this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());			
 		}
-        printf("Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
+        if (V8_CLASS_WRAPPER_DEBUG) printf("Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
 		return v8::Local<v8::Value>::Cast(javascript_object);
 	}
 
@@ -551,10 +551,10 @@ public:
     		// this is leaked if this ever isn't used anymore
     		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method](const v8::FunctionCallbackInfo<v8::Value>& info) 
     		{
-                printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
                 // print_v8_value_details(info.Holder());
                 // print_v8_value_details(info.This());
-                printf("holder: %s This: %s\n", *v8::String::Utf8Value(info.Holder()), *v8::String::Utf8Value(info.This()));
+                if (V8_CLASS_WRAPPER_DEBUG) printf("holder: %s This: %s\n", *v8::String::Utf8Value(info.Holder()), *v8::String::Utf8Value(info.This()));
 
                 auto isolate = info.GetIsolate();
 
@@ -565,7 +565,7 @@ public:
     			auto holder = info.Holder();
                 v8::Local<v8::Object> self;
                 
-                
+#ifdef V8_CLASS_WRAPPER_DEBUG
                 // debug helper block to see prototype chain
                 auto foo = info.Holder();
                 printf("Looking at prototype chain\n");
@@ -576,18 +576,19 @@ public:
                     foo = v8::Local<v8::Object>::Cast(foo->GetPrototype());
                 }
                 printf("Done looking at prototype chain\n");
+#endif
                 
-                printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
                 for(auto & function_template : this->this_class_function_templates) {
                     self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
                     if(!self.IsEmpty() && !self->IsNull()) {
-                        printf("Found instance match in prototype chain, breaking\n");
+                        if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain, breaking\n");
                         break;
                     }
                 }
-                printf("Done looking for instance match in prototype chain\n");
-                printf("Match: %s:\n", *v8::String::Utf8Value(self));
-                printf("%s\n", stringify_value(isolate, self).c_str());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
+                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
                 
                 
                 assert(!self.IsEmpty());
@@ -596,12 +597,12 @@ public:
 //                void* pointer = instance->GetAlignedPointerFromInternalField(0);
     			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
-                printf("uncasted internal field: %p\n", wrap->Value());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
                 auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
                 
 			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
-                printf("binding with object %p\n", backing_object_pointer);
+                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
     			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
             
                 using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>;
@@ -618,11 +619,8 @@ public:
                 // V8 does not support C++ exceptions, so all exceptions must be caught before control
                 //   is returned to V8 or the program will instantly terminate
                 try {
-                    printf("Going into PB\n");
         			pb(bound_method, info);
-                    printf("Success in PB\n");
                 } catch(std::exception & e) {
-                    printf("exception in pb\n");
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
                 }
@@ -666,7 +664,7 @@ struct CastToJS {
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorDelete<T>>(context, copy);
-        printf("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
+        if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
         
         return result;
 	}
@@ -682,7 +680,7 @@ struct CastToJS<T*> {
 		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS from T*\n");
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-        printf("CastToJS<T*> returning wrapped existing object\n");
+        if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object\n");
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorLeaveAlone<T>>(context, cpp_object);
 	}
 };
