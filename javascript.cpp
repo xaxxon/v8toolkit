@@ -161,6 +161,19 @@ IsolateHelper::operator v8::Isolate*()
     return this->isolate;
 }
 
+IsolateHelper::operator v8::Local<v8::ObjectTemplate>()
+{
+    return this->global_object_template.Get(this->isolate);
+}
+
+IsolateHelper & IsolateHelper::add_print(std::function<void(const std::string &)> callback)
+{
+    (*this)([this, callback](){
+        v8toolkit::add_print(isolate, get_object_template(), callback);
+    });
+    return *this;
+}
+
 IsolateHelper & IsolateHelper::add_print()
 {
     (*this)([this](){
@@ -168,6 +181,7 @@ IsolateHelper & IsolateHelper::add_print()
     });
     return *this;
 }
+
 
 void IsolateHelper::add_require(std::vector<std::string> paths)
 {

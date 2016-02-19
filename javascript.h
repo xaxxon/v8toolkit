@@ -3,6 +3,7 @@
 #include <thread>
 #include <mutex>
 #include <future>
+#include <functional>
 
 #include "v8_class_wrapper.h"
 
@@ -342,6 +343,14 @@ public:
 	{
 		v8toolkit::expose_variable(get_context(), get_context()->Global(), name.c_str(), variable);
 	}
+    
+    template<class Variable>
+    void expose_variable_readonly(std::string name, Variable & variable)
+    {
+		v8toolkit::expose_variable_readonly(get_context(), get_context()->Global(), name.c_str(), variable);
+        
+    }
+    
 	
 	/**
 	* Returns a javascript object representation of the given c++ object
@@ -482,12 +491,19 @@ public:
     *   where a v8::Isolate* would otherwise be required
     */ 
 	operator v8::Isolate*();
+    
+    /**
+    * Implicit cast to Local<ObjectTemplate> for the global object
+    *   template used to create new contexts
+    */
+    operator v8::Local<v8::ObjectTemplate>();
 		
     /**
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-	IsolateHelper & add_print();
+    IsolateHelper & add_print(std::function<void(const std::string &)>);
+    IsolateHelper & add_print();
     
     void add_assert();
     
@@ -575,6 +591,13 @@ public:
 	{
 		v8toolkit::expose_variable(isolate, this->get_object_template(), name.c_str(), variable);
 	}
+    
+    template<class Variable>
+    void expose_variable_readonly(std::string name, Variable & variable)
+    {
+		v8toolkit::expose_variable_readonly(isolate, this->get_object_template(), name.c_str(), variable);
+        
+    }
 	
 	/**
 	* Returns a V8ClassWrapper object for wrapping C++ classes in this isolate.	 Classes must be wrapped

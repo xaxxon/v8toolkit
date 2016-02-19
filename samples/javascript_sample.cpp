@@ -6,12 +6,6 @@
 
 using namespace v8toolkit;
 
-class Foo {
-
-};
-
-
-Foo get_foo(){printf("in get_foo\n");return Foo();}
 
 int x = 1;
 int y = 2;
@@ -26,6 +20,7 @@ auto run_tests()
     
     return (*ih1)([&](){
         ih1->add_print();
+        ih1->add_assert();
         
         // expose global variable x as "x" in all contexts created from this isolate
         ih1->expose_variable("x", x);
@@ -35,23 +30,31 @@ auto run_tests()
         auto c2 = ih1->create_context();
         
         c->run("5");
-        c->run("println(\"x is: \", x);");
-        c->run("println('return_hi():',return_hi());");
+        c->run("assert('x == 1');");
+        c->run("assert_contents(return_hi(), 'hi')");
         
         ih1->expose_variable("y", y);
         ih1->add_function("return_bye", [](){return "bye";});
         
         printf("*** Expecting exception\n");
+        bool got_expected_failure = false;
         try {
             c->run("println(y)");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
         try {
             c->run("println(return_bye())");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         
         auto c3 = ih1->create_context();
         printf("But they do exist on c3, as it was created after they were added to the isolate helper\n");
@@ -72,13 +75,21 @@ auto run_tests()
         try {
             c2->run("println(y)");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'y' is not present in contexts created before y was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         try {
             c2->run("println(return_bye())");
         } catch(v8toolkit::V8Exception & e) {
+            got_expected_failure = true;
             printf("Expected failure, as 'return_bye' is not present in contexts created before return_bye was added to isolate: %s\n", e.what());
         }
+        assert(got_expected_failure);
+        got_expected_failure = false;
+        
         
         // returning context to demonstrate how having a context alive keeps an IsolateHelper alive even though the
         //   direct shared_ptr to it is destroyed at the end of this function
@@ -123,10 +134,10 @@ void run_type_conversion_test()
 {
     auto i = PlatformHelper::create_isolate();
     (*i)([&]{
-        i->wrap_class<C>().add_constructor("C", i->get_object_template());
-        i->wrap_class<A>().add_constructor("A", i->get_object_template()).set_compatible_types<C>();
-        i->wrap_class<B>().add_constructor("B", i->get_object_template()).set_compatible_types<C>();
-        i->wrap_class<NotFamily>().add_constructor("NotFamily", i->get_object_template());
+        i->wrap_class<C>().finalize().add_constructor("C", i->get_object_template());
+        i->wrap_class<A>().set_compatible_types<C>().finalize().add_constructor("A", i->get_object_template());
+        i->wrap_class<B>().set_compatible_types<C>().finalize().add_constructor("B", i->get_object_template());
+        i->wrap_class<NotFamily>().finalize().add_constructor("NotFamily", i->get_object_template());
         i->add_function("a", [](A * a) {
             printf("In 'A' function, A::i = %d (1) &a=%p\n", a->i, a);
         });
@@ -282,33 +293,56 @@ void test_casts()
             std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
             c->add_variable("m", CastToJS<decltype(m)>()(isolate, m));
             c->run("assert_contents(m, {'one': 1, 'two': 2, 'three': 3});");
-    
+
             std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
             c->add_variable("m2", CastToJS<decltype(m2)>()(isolate, m2));
             c->run("assert_contents(m2, {'four': 4, 'five': 5, 'six': 6});");
-    
+
             std::deque<long> d{7000000000, 8000000000, 9000000000};
             add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
             c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
-    
+
             std::multimap<int, int> mm{{1,1},{1,2},{1,3},{2,4},{3,5},{3,6}};
             add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
             c->run("assert_contents(mm, {1: [1, 2, 3], 2: [4], 3: [5, 6]});");
-    
+
             std::array<int, 3> a{{1,2,3}};
             add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));
             c->run("assert_contents(a, [1, 2, 3]);");
-    
+
             std::map<std::string, std::vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
             add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
             c->run("assert_contents(composite, {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]});");
-            
+
             std::string tuple_string("Hello");
             auto tuple = make_tuple(1, 2.2, tuple_string);
             c->expose_variable("tuple", tuple);
             c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
 
             printf("Done testing STL container casts\n");
+
+
+            auto unique = std::make_unique<std::vector<int>>(4, 1);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("unique", unique);
+            c->run("assert_contents(unique, [1,1,1,1])");
+            
+            auto ulist = std::make_unique<std::list<int>>(4, 4);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("ulist", ulist);
+            c->run("assert_contents(ulist, [4, 4, 4, 4])");
+            
+            
+            auto shared = std::make_shared<std::vector<int>>(4, 3);
+            // no support for read/write on unique_ptr
+            c->expose_variable_readonly("shared", shared);
+            c->run("assert_contents(shared, [3, 3, 3, 3])");
+            
+            std::vector<int> vector(4, 2);
+            auto & vector_reference = vector;
+            c->expose_variable("vector_reference", vector_reference);
+            c->run("assert_contents(vector_reference, [2,2,2,2])");
+            
         } catch (std::exception & e) {
             printf("Cast tests unexpectedily failed: %s\n", e.what());
             assert(false);  
@@ -391,6 +425,7 @@ void require_directory_test()
 {
     printf("In require directory test\n");
     auto i = PlatformHelper::create_isolate();
+    i->add_assert();
     (*i)([&](){
         i->add_require();
         i->add_print();
@@ -398,12 +433,11 @@ void require_directory_test()
         auto c = i->create_context();
         (*c)([&]{
             require_directory(*c, "modules");
+            c->run("assert_contents(module_list()['modules/b.json'], {\"aa\": [1,2,3,{\"a\":4, \"b\": 5}, 6,7,8]})");
             c->run("printobj(module_list())");
             
             require_directory(*c, "modules");
-            c->run("printobj(module_list())");
-            
-            require_directory(*c, "modules");
+            c->run("assert_contents(module_list()['modules/b.json'], {\"aa\": [1,2,3,{\"a\":4, \"b\": 5}, 6,7,8]})");
             c->run("printobj(module_list())");
             
         });
@@ -411,10 +445,36 @@ void require_directory_test()
 }
 
 
+struct IT_A {
+    int get_int(){return 5;}
+};
+
+struct IT_B : public IT_A {
+
+};
+
+void run_inheritance_test()
+{
+    auto i = PlatformHelper::create_isolate();
+    (*i)([&]{
+        i->add_print();
+        i->add_assert();
+        
+        // it's critical to wrap both classes and have the base class set the child as "compatible" and the child set the parent as "parent"
+        i->wrap_class<IT_A>().add_method(&IT_A::get_int, "get_int").set_compatible_types<IT_B>().finalize().add_constructor<>("IT_A", *i);
+        i->wrap_class<IT_B>().set_parent_type<IT_A>().finalize().add_constructor<>("IT_B", *i);
+        
+        auto c = i->create_context();
+
+        c->run("var it_b = new IT_B(); assert('it_b.get_int() == 5');");
+        c->run("assert('Object.create(new IT_A()).get_int() == 5')");
+    });
+}
+
+
 int main(int argc, char ** argv) {
     
     PlatformHelper::init(argc, argv);
-    printf("Running from %s\n", argv[0]);
 
     run_type_conversion_test();
 
@@ -440,9 +500,11 @@ int main(int argc, char ** argv) {
 
     printf("Testing asserts\n");
     test_asserts();
-    
+
     require_directory_test();
-    
+
+    run_inheritance_test();
+
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
 }
 

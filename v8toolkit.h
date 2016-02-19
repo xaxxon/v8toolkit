@@ -10,15 +10,18 @@
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
-#include "casts.hpp"
 
+#include "v8helpers.h"
+#include "casts.hpp"
 
 #include <dirent.h>
 
 #define USE_BOOST
 
+#define V8_TOOLKIT_DEBUG false
+
 namespace v8toolkit {
-    
+
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -29,38 +32,6 @@ private:
 public:
   InvalidCallException(std::string message) : message(message) {}
   virtual const char * what() const noexcept override {return message.c_str();}
-};
-
-/**
-* When passing an Any-type through a void *, always static_cast it to an AnyBase *
-*   pointer and pass that as the void *.  This allows you to safely cast it back to
-*   a AnyBase* on the other side and then dynamic_cast to any child types to 
-*   determine the type of the object actually stored.
-*/
-struct AnyBase
-{
-    virtual ~AnyBase();
-};
-
-// TODO: The names Any and AnyPtr are pretty darned backwards
-template<class T>
-struct AnyPtr : public AnyBase {
-    AnyPtr(T * data) : data(data) {}
-    virtual ~AnyPtr(){}
-    T* data;
-    T * get() {return data;}
-};
-
-/**
-* Best used for types that are intrinsically pointers like std::shared_ptr or
-*   std::exception_ptr
-*/
-template<class T>
-struct Any : public AnyBase {
-    Any(T data) : data(data) {}
-    virtual ~Any(){}
-    T data;
-    T get() {return data;}
 };
 
 
@@ -134,6 +105,7 @@ R scoped_run(v8::Isolate * isolate, T callable)
 
 
 
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -153,6 +125,8 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
     return callable();
 }
 
+
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -172,6 +146,7 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
     return callable(isolate);
 }
 
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
 /**
 * Helper function to run the callable inside contexts.
 * This version is good when the isolate isn't currently within a context but a context
@@ -192,60 +167,18 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 }
     
 
-/**
-* When passed a value representing an array, runs callable with each element of that array (but not on arrays 
-*   contained within the outer array)
-* On any other object type, runs callable with that element
-*/
-template<class T>
-void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, T callable) {
+// Same as the ones above, but this one takes a global context for convenience
+// Isolate is required since a Local<Context> cannot be created without creating a locker
+//   and handlescope which require an isolate to create
+template<class T,
+class R = decltype(scoped_run(std::declval<v8::Isolate*>(), std::declval<T>()))>
+R scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T callable) {
+    v8::Locker l(isolate);
+    v8::HandleScope hs(isolate);
+    auto local_context = context.Get(isolate);
+    return scoped_run(isolate, local_context, callable);
+}
     
-    if (value->IsArray()) {
-        auto array = v8::Object::Cast(*value);
-        int i = 0;
-        while(array->Has(context, i).FromMaybe(false)) {
-            callable(array->Get(context, i).ToLocalChecked());
-            i++;
-        }
-    } else {
-        callable(value);
-    }
-}
-
-
-/**
-* Calls callable with each javascript "own property" in the object passed.
-*/
-template<class T>
-void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T callable)
-{
-    auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
-    for_each_value(context, own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
-        auto property_value = object->Get(context, property_name);
-        
-        callable(property_name, property_value.ToLocalChecked());
-    });
-}
-
-/**
-* Creates a variable with the given alias_name in the context's global object to point back to the global object
-* Same as node.js "global" variable or a web browser "window" object
-*/
-void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
-
-/**
-* parses v8-related flags and removes them, adjusting argc as needed
-*/
-void process_v8_flags(int & argc, char ** argv);
-
-
-/**
-* exposes the garbage collector to javascript
-* same as passing --expose-gc as a command-line flag
-* To encourage javascript garbage collection run from c++, use: 
-*   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
-*/  
-void expose_gc();
 
 /**
 * Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript
@@ -262,6 +195,7 @@ struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable, 
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
+        if (V8_TOOLKIT_DEBUG) printf("Just set returnvalue in CallCallable for type %s\n", typeid(R).name());
     }
 };
 
@@ -297,9 +231,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts&&... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
         // use CallCallable to differentiate between void and non-void return types
-        CallCallable<FUNCTION_TYPE>()(function, info, std::forward<Ts>(ts)...);
+        CallCallable<FUNCTION_TYPE>()(function, info, ts...);
     }
 };
 
@@ -321,7 +255,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info[depth])); 
+        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info.GetIsolate(), info[depth])); 
     }
 };
 
@@ -334,7 +268,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info[depth]);
+      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
     };
@@ -349,7 +283,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info[depth]);
+      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
 };
@@ -378,6 +312,25 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
         this->super::operator()(function, info, ts..., info); 
     }
 };
+
+
+/**
+* Specialization for functions that want the isolate pointer (but not all the rest of the stuff
+*   in the FunctionCallbackInfo for simplicity's sake)
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+            
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info.GetIsolate()); 
+    }
+};
+
 
 
 /**
@@ -529,6 +482,50 @@ void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Obje
 */
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&));
 
+template<int position, class Tuple>
+struct TupleForEach;
+
+/**
+* Populates an array of v8::Values with the values of the tuple, casted by the tuple element's type 
+*/
+template<int position, class Tuple>
+struct TupleForEach : public TupleForEach<position - 1, Tuple> {
+    using super = TupleForEach<position - 1, Tuple>;
+    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> * params, const Tuple & tuple){
+        constexpr int array_position = position - 1;
+        params[array_position] = CastToJS<typename std::tuple_element<array_position, Tuple>::type>()(isolate, std::get<array_position>(tuple));
+        super::operator()(isolate, params, tuple);
+    }
+};
+
+/** 
+* Base case for no remaining elements to parse (as determined by the position being 0)
+*/
+template<class Tuple>
+struct TupleForEach<0, Tuple> {
+  void operator()(v8::Isolate *, v8::Local<v8::Value> *, const Tuple &){}
+};
+
+
+template<class TupleType = std::tuple<>>
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & context, 
+                                              const v8::Local<v8::Function> & function, 
+                                              const v8::Local<v8::Object> & receiver, 
+                                              const TupleType & tuple = {})
+{
+    constexpr int tuple_size = std::tuple_size<TupleType>::value;
+    v8::Local<v8::Value> parameters[tuple_size];
+    auto isolate = context->GetIsolate();
+    TupleForEach<tuple_size, TupleType>()(isolate, parameters, tuple);
+    
+    v8::TryCatch tc(isolate);
+    
+    auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
+    if(tc.HasCaught()) {                                                              
+        assert(false);                                                                
+    }                                                                                 
+    return maybe_result.ToLocalChecked();
+}
 
 // helper for getting exposed variables
 template<class VARIABLE_TYPE>
@@ -543,7 +540,9 @@ void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallback
 template<class VARIABLE_TYPE>
 void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
-    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(value);
+    // using ResultType = decltype(CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value));
+    // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
+    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
 }
 
 
@@ -634,7 +633,7 @@ namespace v8toolkit { // re-start the namespace
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
-void _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
+std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
 #endif // USE_BOOST
 
@@ -647,14 +646,12 @@ std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<
 
 
 // prints out arguments with a space between them
-void _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
+std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
 /**
-* prints out information about the guts of an object
-*/
-void printobj_callback(const v8::FunctionCallbackInfo<v8::Value>& args);
-void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
-/**
+* Adds the print functions listed below to the given object_template (usually a v8::Context's global object)
+* Optional callback function can be used to send the output to another source (defaults to stdout)
+*
 * call this to add a set of print* functions to whatever object template you pass in (probably the global one)
 * print takes a single variable or an array and prints each value separated by spaces
 *
@@ -667,9 +664,17 @@ void printobj(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 *
 * printfln - same as printf but automatically appends a newline
 *
-* printobj - prints a bunch of information about an object - format highly susceptible to change
+* printobj - prints a bunch of information about an object - format highly susceptible to frequent change
 */
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template );
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
+
+/**
+* Adds an assert method that calls assert.h assert() on failure.  This is different than the add_assert() in javascript.h that throws an exception on failure
+*   because if an exception is not caught before it reaches V8 execution, the program is terminated.  javascript.h *Helper classes automatically catch
+*   and re-throw exceptions so it is safe to throw in that version, but not this one.  The error message resulting from throwing an exception
+*   reaching code compiled without exception support is not easy to understand which is why a simple assert is preferable.
+*/
+void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template);
 
 // returns true if the two values are the same by value, including nested data structures
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
@@ -691,6 +696,7 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     
     Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) ) :
       object(object), method(method){}
+      ~Bind(){}
     
     CLASS_TYPE & object;
     R(CLASS_TYPE::*method)(Args...);

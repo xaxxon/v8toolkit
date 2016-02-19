@@ -21,7 +21,7 @@ struct Foo {
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-    Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor)\n");}
+    Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor) at %p with x %d y %d\n", this, x_, y_);}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
     Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
     ~Point(){instance_count--; if (SAMPLE_DEBUG) printf("Point destructor called on %p\n", this);}
@@ -116,9 +116,6 @@ int main(int argc, char* argv[])
 
             // make the Point constructor function available to JS
             auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
-            wrapped_point.add_constructor("Point", global_templ);
-            wrapped_point.add_constructor("SameAsPoint", global_templ); // in case you want to have the same constructor in two places
-            wrapped_point.add_constructor<int,int>("Pii", global_templ);
             wrapped_point.add_method(&Point::thing, "thing");
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
         
@@ -136,17 +133,26 @@ int main(int argc, char* argv[])
             wrapped_point.add_member(&Point::y_, "y");
         
             // if you register a function that returns an r-value, a copy will be made using the copy constsructor
-            wrapped_point.add_method(&Point::get_foo, "get_foo");
+            wrapped_point.add_method(&Point::get_foo, "get_foo").finalize();
+            
+            // objects created from constructors won't have members/methods added after the constructor is added
+            wrapped_point.add_constructor("Point", global_templ);
+            wrapped_point.add_constructor<int,int>("Pii", global_templ);
+            
+            
         
             auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
-            wrapped_line.add_constructor("Line", global_templ);
             wrapped_line.add_method(&Line::get_point, "get_point");
             wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
             wrapped_line.add_member(&Line::p, "p");
-            wrapped_line.add_method(&Line::some_method, "some_method").add_method(&Line::throw_exception, "throw_exception");
+            wrapped_line.add_method(&Line::some_method, "some_method").add_method(&Line::throw_exception, "throw_exception").finalize();
+            
+            wrapped_line.add_constructor("Line", global_templ);
+            
         
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
-            wrapped_foo.add_member(&Foo::i, "i");
+            wrapped_foo.add_member(&Foo::i, "i").finalize()
+                ;
         
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
@@ -166,67 +172,63 @@ int main(int argc, char* argv[])
             auto result = script->Run(context);
             print_maybe_value(result);
 
+            
 
 
-
-            // throwing a c++ exception here immediately terminates the process
-            printf("Checking that calling a normal function with too few parameters throws\n");
-            v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
-            v8::TryCatch tc(isolate);
-            try{
-                (void)script3->Run(context);
-                if(tc.HasCaught()){
-                    printf("Too few parameters exception caught\n");
-                } else {
-                    printf("TC has not caught\n");
-                }
-            } catch(...) {
-                printf("This should be impossible\n");
-            }
-            
-            printf("Checking that calling a class method with too few parameters throws\n");
-            v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
-            v8::TryCatch tc2(isolate);
-            try{
-                (void)script4->Run(context);
-                if(tc2.HasCaught()){
-                    printf("Too few parameters exception caught\n");
-                } else {
-                    printf("tc2 has not caught\n");
-                }
-            } catch(...) {
-                printf("This should be impossible\n");
-            }
-            
-            printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
-            v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
-            v8::TryCatch tc3(isolate);
-            try{
-                (void)script5->Run(context);
-                if(tc3.HasCaught()){
-                    printf("Exception successfully re-thrown and caught\n");
-                } else {
-                    printf("tc3 has not caught\n");
-                }
-            } catch(...) {
-                printf("This should be impossible\n");
-            }
-            
-            printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
-            v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
-            v8::TryCatch tc4(isolate);
-            try{
-                (void)script6->Run(context);
-                if(tc4.HasCaught()){
-                    printf("Exception successfully re-thrown and caught\n");
-                } else {
-                    printf("tc4 has not caught\n");
-                }
-            } catch(...) {
-                printf("This should be impossible\n");
-            }
-            
-            
+            // // throwing a c++ exception here immediately terminates the process
+            // printf("Checking that calling a normal function with too few parameters throws\n");
+            // v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
+            // v8::TryCatch tc(isolate);
+            // try{
+            //     (void)script3->Run(context);
+            //     if(tc.HasCaught()){
+            //     } else {
+            //         printf("TC has not caught\n");
+            //     }
+            // } catch(...) {
+            //     printf("This should be impossible\n");
+            // }
+            //
+            // printf("Checking that calling a class method with too few parameters throws\n");
+            // v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
+            // v8::TryCatch tc2(isolate);
+            // try{
+            //     (void)script4->Run(context);
+            //     if(tc2.HasCaught()){
+            //     } else {
+            //         printf("tc2 has not caught\n");
+            //     }
+            // } catch(...) {
+            //     printf("This should be impossible\n");
+            // }
+            //
+            // printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
+            // v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
+            // v8::TryCatch tc3(isolate);
+            // try{
+            //     (void)script5->Run(context);
+            //     if(tc3.HasCaught()){
+            //     } else {
+            //         printf("tc3 has not caught\n");
+            //     }
+            // } catch(...) {
+            //     printf("This should be impossible\n");
+            // }
+            //
+            // printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
+            // v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
+            // v8::TryCatch tc4(isolate);
+            // try{
+            //     (void)script6->Run(context);
+            //     if(tc4.HasCaught()){
+            //     } else {
+            //         printf("tc4 has not caught\n");
+            //     }
+            // } catch(...) {
+            //     printf("This should be impossible\n");
+            // }
+            //
+            //
                         
         });
         

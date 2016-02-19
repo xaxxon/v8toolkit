@@ -13,7 +13,7 @@ Type `git` on the command line.   If you don't have it, go here: https://git-scm
 Building V8 is not a simple process.
 
 "depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
-`git clone` this then include it in the PATH environment variable (I've been able to just type in the whole path when I want to use them instead of setting my PATH)
+`git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git` this then include it in the PATH environment variable (or just type in the whole path)
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
@@ -234,6 +234,8 @@ Let's first define a type to work with:
 To make Person available in javascript, first tell the library it's a class it should know about.  Then tell it what parts of that class it should make 
 available to javascript.  There's no requirement to make everything available, and unfortunately there's no introspection in C++ to look at the class
 and make everything available automatically.
+
+###NOTE: the following code is out of date, add_constructor must go AFTER adding members and methods and a call to finalize() stating that all members and methods are added.
 
     auto person_wrapper = i->wrap_class<Person>;
     

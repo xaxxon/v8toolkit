@@ -1,4 +1,7 @@
-#pragma once
+#ifndef CASTS_HPP
+#define CASTS_HPP
+
+#include <assert.h>
 
 #include <string>
 #include <vector>
@@ -17,90 +20,117 @@ namespace v8toolkit {
 template<typename T>
 struct CastToNative;
 
+
 /**
 * Casts from a boxed Javascript type to a native type
 */
 
-
 // integers
 template<>
 struct CastToNative<long long> {
-	long long operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned long long> {
-	unsigned long long operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<long> {
-	long operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned long> {
-	unsigned long operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<int> {
-	int operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned int> {
-	unsigned int operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<short> {
-	short operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned short> {
-	unsigned short operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char> {
-	char operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<unsigned char> {
-	unsigned char operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<bool> {
-	bool operator()(v8::Local<v8::Value> value){return value->ToBoolean()->Value();}
+	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToBoolean()->Value();}
 };
 
 template<>
 struct CastToNative<wchar_t> {
-	wchar_t operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char16_t> {
-	char16_t operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 template<>
 struct CastToNative<char32_t> {
-	char32_t operator()(v8::Local<v8::Value> value){return value->ToInteger()->Value();}
+	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 
-#include <assert.h>
 
-template<class U>
-struct CastToNative<std::vector<U>> {
-    std::vector<U> operator()(v8::Local<v8::Value> value){assert(false);}
+// TODO: Make sure this is tested
+template<class ElementType, class... Rest>
+struct CastToNative<std::vector<ElementType, Rest...>> {
+    std::vector<ElementType, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        auto context = isolate->GetCurrentContext();
+        std::vector<ElementType, Rest...> v;
+        if(value->IsArray()) {
+            auto array = v8::Local<v8::Object>::Cast(value);
+            auto array_length = array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value();
+            for(int i = 0; i < array_length; i++) {
+                auto value = array->Get(context, i).ToLocalChecked();
+                v.push_back(CastToNative<ElementType>()(isolate, value));
+            }
+        } else {
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+        }
+        return v;
+    }
 };
 
 
 // floats
 template<>
 struct CastToNative<float> {
-	float operator()(v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
 };
 template<>
 struct CastToNative<double> {
-	double operator()(v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
 };
 template<>
 struct CastToNative<long double> {
-	long double operator()(v8::Local<v8::Value> value){return value->ToNumber()->Value();}
+	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+};
+
+
+template<>
+struct CastToNative<v8::Local<v8::Function>> {
+	v8::Local<v8::Function> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        if(value->IsFunction()) {
+            return v8::Local<v8::Function>::Cast(value);
+        } else {
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+            return v8::Local<v8::Function>();
+        }
+    }
 };
 
 /**
@@ -109,7 +139,7 @@ struct CastToNative<long double> {
  */
 template<>
 struct CastToNative<char *> {
-  std::unique_ptr<char[]> operator()(v8::Local<v8::Value> value){
+  std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     char * string = *v8::String::Utf8Value(value);
     auto string_length = strlen(string);
     auto new_string = new char[string_length + 1];
@@ -125,17 +155,17 @@ struct CastToNative<char *> {
  */
 template<>
 struct CastToNative<const char *> {
-  std::unique_ptr<char[]>  operator()(v8::Local<v8::Value> value){return CastToNative<char *>()(value); }
+  std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return CastToNative<char *>()(isolate, value); }
 };
 
 template<>
 struct CastToNative<std::string> {
-  std::string operator()(v8::Local<v8::Value> value){return std::string(*v8::String::Utf8Value(value));}
+  std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(*v8::String::Utf8Value(value));}
 };
 
 template<>
 struct CastToNative<const std::string> {
-  const std::string operator()(v8::Local<v8::Value> value){return std::string(CastToNative<std::string>()(value));}
+  const std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(CastToNative<std::string>()(isolate, value));}
 };
 
 
@@ -147,7 +177,7 @@ struct CastToNative<const std::string> {
 template<typename T>
 struct CastToJS;
 
-
+//TODO: Should all these operator()'s be const?
 // integers
 template<>
 struct CastToJS<char> { 
@@ -248,6 +278,14 @@ struct CastToJS<const std::string> {
 };
 
 
+template<class T>
+struct CastToJS<T**> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const T** multi_pointer) {
+        return CastToJS<T*>(isolate, *multi_pointer);
+    }
+};
+
+
 
 /**
 * Special passthrough type for objects that want to take javascript object objects directly
@@ -285,6 +323,7 @@ struct CastToJS<v8::Global<v8::Value> &> {
 template<class U, class... Rest>
 struct CastToJS<std::vector<U, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U, Rest...> vector){
+        // return CastToJS<std::vector<U, Rest...>*>()(isolate, &vector);
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
@@ -293,8 +332,12 @@ struct CastToJS<std::vector<U, Rest...>> {
             (void)array->Set(context, i, CastToJS<U>()(isolate, vector.at(i)));
         }
         return array;
+        
     }
+    
 };
+
+
 
 /**
 * supports lists containing any type also supported by CastToJS to javascript arrays
@@ -484,5 +527,33 @@ struct CastToJS<std::array<T, N>> {
 
 
 
+/**
+* Does NOT transfer ownership.  Original ownership is maintained.
+*/
+template<class T>
+struct CastToJS<std::unique_ptr<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::unique_ptr<T> & unique_ptr) {
+        return CastToJS<T*>()(isolate, unique_ptr.get());
+    }
+};
+
+
+
+
+/**
+* Storing the resulting javascript object does NOT maintain a reference count on the shared object,
+*   so the underlying data can disappear out from under the object if all actual shared_ptr references
+*   are lost.
+*/
+template<class T>
+struct CastToJS<std::shared_ptr<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::shared_ptr<T> & shared_ptr) {
+        return CastToJS<T*>()(isolate, shared_ptr.get());
+    }
+};
+
 
 } // end namespace v8toolkit
+
+
+#endif // CASTS_HPP

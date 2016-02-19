@@ -1,7 +1,7 @@
 
-V8_TARGET = native
+# V8_TARGET = native
 #V8_TARGET = x64.release
-#V8_TARGET = x64.debug
+V8_TARGET = x64.debug
 # DEBUG = -g
 
 ifdef LINUX
@@ -46,7 +46,7 @@ LIBS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_L
 
 all: warning thread_sample javascript sample toolbox_sample exception_sample
 
-SRCS=v8toolkit.cpp javascript.cpp
+SRCS=v8toolkit.cpp javascript.cpp v8helpers.cpp
 
 OBJS=$(SRCS:.cpp=.o)
 
@@ -61,26 +61,31 @@ warning:
 
 
 thread_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
 
 javascript: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
 
 sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
 
 toolbox_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
 
 exception_sample: lib
-	${CPP} ${DEBUG} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
+	${CPP} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
+
+bidirectional_sample: lib
+	${CPP} -I./ ${CPPFLAGS}  samples/bidirectional_sample.cpp -o samples/bidirectional_sample ${LIBS}
 
 
 lib: ${OBJS}
-	ar cr libv8toolkit.a v8toolkit.o javascript.o
+	ar cr libv8toolkit.a $(OBJS)
 
 clean:
 	rm -f *.o *.a samples/*sample
+	rm -rf samples/*.dSYM
+
 
 run:
 	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample)
