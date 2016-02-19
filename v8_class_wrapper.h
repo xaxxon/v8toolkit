@@ -728,34 +728,5 @@ struct CastToNative
 	}
 };
 
-// decent example:  http://www.codeproject.com/Articles/29109/Using-V-Google-s-Chrome-JavaScript-Virtual-Machin
-
-
-
-// code xecycle on freenode:##c++ gave me to call a function from values in a tuple
-//  std::get<i>(t)... turns into std::get<0>(t), std::get<1>(t),....,std::get<last_entry_in_i_sequence -1>(t)
-//
-// namespace tuple_util_impl {
-//
-// template <size_t... i, class Function, class Tuple>
-// auto spread_call(std::index_sequence<i...>, Function f, Tuple&& t)
-//   -> decltype(f(std::get<i>(t)...))
-// {
-//   return f(std::get<i>(t)...);
-// }
-//
-// } // namespace tuple_util_impl
-//
-// template <class Function, class Tuple>
-// auto spread_call(Function&& f, Tuple&& t) -> decltype(
-//   tuple_util_impl::spread_call(
-//     std::make_index_sequence<std::tuple_size<typename std::decay<Tuple>::type>::value>(),
-//     f, t))
-// {
-//   return tuple_util_impl::spread_call(
-//     std::make_index_sequence<std::tuple_size<typename std::decay<Tuple>::type>::value>(),
-//     std::forward<Function>(f), std::forward<Tuple>(t));
-// }
-
 
 }
