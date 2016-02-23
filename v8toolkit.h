@@ -507,10 +507,12 @@ struct TupleForEach<0, Tuple> {
 };
 
 
+
+
 template<class TupleType = std::tuple<>>
-v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & context, 
-                                              const v8::Local<v8::Function> & function, 
-                                              const v8::Local<v8::Object> & receiver, 
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
+                                              const v8::Local<v8::Function> function,
+                                              const v8::Local<v8::Object> receiver,
                                               const TupleType & tuple = {})
 {
     constexpr int tuple_size = std::tuple_size<TupleType>::value;
@@ -521,11 +523,22 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & con
     v8::TryCatch tc(isolate);
     
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
-    if(tc.HasCaught()) {                                                              
-        assert(false);                                                                
+    if(tc.HasCaught()) {
+        throw "Bad javascript";                                                  
     }                                                                                 
     return maybe_result.ToLocalChecked();
 }
+
+
+template<class TupleType = std::tuple<>>
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
+                                              const std::string & function_name,
+                                              const v8::Local<v8::Object> receiver,
+                                              const TupleType & tuple = {})
+{
+    return call_javascript_function(context, v8::Local<v8::Function>::Cast(receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(),function_name.c_str())).ToLocalChecked()), receiver, tuple);
+}
+
 
 // helper for getting exposed variables
 template<class VARIABLE_TYPE>
@@ -799,7 +812,7 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that
 */ 
-bool require(v8::Local<v8::Context> & context, 
+bool require(v8::Local<v8::Context> context, 
                              std::string filename, 
                              v8::Local<v8::Value> & result,
                              const std::vector<std::string> & paths,

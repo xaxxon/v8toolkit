@@ -27,6 +27,10 @@ std::shared_ptr<IsolateHelper> ContextHelper::get_isolate_helper()
     return this->isolate_helper;
 }
 
+v8::Local<v8::Value> ContextHelper::json(std::string json) {
+    return this->isolate_helper->json(json);
+}
+
 
 ContextHelper::~ContextHelper() {    
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG

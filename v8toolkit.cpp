@@ -298,7 +298,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
 bool require(
-    v8::Local<v8::Context> & context,
+    v8::Local<v8::Context> context,
     std::string filename,
     v8::Local<v8::Value> & result,
     const std::vector<std::string> & paths,

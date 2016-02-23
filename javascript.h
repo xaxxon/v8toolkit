@@ -351,13 +351,16 @@ public:
         
     }
     
+    v8::Local<v8::Value> json(std::string json);   
+    
+    
 	
 	/**
 	* Returns a javascript object representation of the given c++ object
     * see: votoolkit::V8ClassWrapper
 	*/
 	template<class T>
-	auto wrap_object(T* object);
+	v8::Local<v8::Value> wrap_object(T* object);
 	
 };
 
@@ -607,6 +610,17 @@ public:
 	auto & wrap_class() {
 		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 	}	
+    
+    /**
+    * Returns a value representing the JSON string specified or throws on bad JSON
+    */
+    v8::Local<v8::Value> json(std::string json) {
+        auto maybe = v8::JSON::Parse(this->isolate, v8::String::NewFromUtf8(this->isolate, json.c_str()));
+        if (maybe.IsEmpty()) {
+            throw "bad json";
+        }
+        return maybe.ToLocalChecked();
+    }
 };
 
 /**
@@ -650,5 +664,17 @@ public:
     */
 	static std::shared_ptr<IsolateHelper> create_isolate();
 };
+
+
+
+template<class T>
+v8::Local<v8::Value> ContextHelper::wrap_object(T* object)
+{
+    return get_isolate_helper()->wrap_class<T>().wrap_existing_cpp_object(object);
+}
+
+
+
+
 
 } // end v8toolkit namespace
