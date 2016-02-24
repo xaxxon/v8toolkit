@@ -19,12 +19,6 @@
 namespace v8toolkit {
 
 
-void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name)
-{
-    auto global_object = context->Global();
-    (void)global_object->Set(context, v8::String::NewFromUtf8(isolate, alias_name.c_str()), global_object);
-    
-}
 
 
 void process_v8_flags(int & argc, char ** argv)
@@ -348,25 +342,6 @@ bool require(
                     }
                 }
 
-                // create a new context for it (this may be the wrong thing to do)
-                auto module_global_template = v8::ObjectTemplate::New(isolate);     
-                add_print(isolate, module_global_template);
-
-                // Create module context
-                auto module_context = v8::Context::New(isolate, nullptr, module_global_template);
-
-                // Get module global object
-                auto module_global_object = module_context->Global();
-
-                // set up the module and exports stuff
-                auto module_object = v8::Object::New(isolate);
-                auto exports_object = v8::Object::New(isolate);
-                add_variable(module_context, module_object, "exports", exports_object);
-                add_variable(module_context, module_global_object, "module", module_object);
-                add_variable(module_context, module_global_object, "exports", exports_object);
-                (void)module_global_object->Set(module_context, v8::String::NewFromUtf8(isolate, "global"), module_global_object);
-
-
                 // Compile the source code.
                 v8::MaybeLocal<v8::Value> maybe_result;
                                             
@@ -385,7 +360,7 @@ bool require(
                 } else {
                     v8::Local<v8::Script> script;
                     v8::Local<v8::Value> error;
-                    if (!compile_source(module_context, file_contents, script, error)) {
+                    if (!compile_source(context, file_contents, script, error)) {
                         isolate->ThrowException(error);
                         if (V8_TOOLKIT_DEBUG) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
                         return false;
@@ -393,15 +368,31 @@ bool require(
                         
                     v8::TryCatch try_catch(isolate);
                     
+                    
+
+                    // set up the module and exports stuff
+                    auto module_object = v8::Object::New(isolate);
+                    // TODO: module object should also have "children" array, "filename" string, "id" string, "loaded" boolean, "parent" module object that first loaded this one
+                    auto exports_object = v8::Object::New(isolate);
+                    add_variable(context, module_object, "exports", exports_object);
+                    add_variable(context, context->Global(), "module", module_object);
+                    add_variable(context, context->Global(), "exports", exports_object);
+                    (void)context->Global()->Set(context, v8::String::NewFromUtf8(isolate, "global"), context->Global());
+
+                    
                     // return value of run doesn't matter, only what is hooked up to export variable
                     (void)script->Run(context);
+
+                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
+                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
+                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
+                    
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
                         if (V8_TOOLKIT_DEBUG) printf("Couldn't run .js for %s\n", complete_filename.c_str());
                         return false;
                     }
                     
-                    maybe_result = module_object->Get(module_context, v8::String::NewFromUtf8(isolate, "exports"));
                 }
 
                 // cache the result for subsequent requires of the same module in the same isolate
@@ -670,8 +661,10 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
     
     // if the left is a bool, return true if right is a bool and they match, otherwise false
     if (value->IsBoolean() || value->IsNumber() || value->IsString() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
+        // printf("Stringify: treating value as 'normal'\n");
         output += *v8::String::Utf8Value(value);
     } else if (value->IsArray()) {
+        // printf("Stringify: treating value as array\n");
         auto array = v8::Local<v8::Array>::Cast(value);
         auto array_length = get_array_length(isolate, array);
         
@@ -687,17 +680,20 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
         }        
         output += "]";
     } else {
+        // printf("Stringify: treating value as object\n");
         // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)
         // objects must have all the same keys and each key must have the same as determined by calling this function on each value
         // printf("About to see if we can stringify this as an object\n");
         // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
         if(value->IsObject() && !object.IsEmpty()) {
+            // printf("Stringify: in object\n");
             // printf("Stringifying object\n");
             output += "{";
             auto keys = make_set_from_object_keys(isolate, object);
             auto first_key = true;
             for(auto key : keys) {
+                // printf("Stringify: object key %s\n", key.c_str());
                 if (!first_key) {
                     output += ", ";
                 }

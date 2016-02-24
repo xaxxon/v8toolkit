@@ -21,6 +21,14 @@
 #define V8_TOOLKIT_DEBUG false
 
 namespace v8toolkit {
+    
+/**
+* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
+*
+* Good for looking at the contents of a value and also used for printobj() method added by add_print
+*/
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
+
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
@@ -522,9 +530,13 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     
     v8::TryCatch tc(isolate);
     
+    printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
+    printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
+    
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
     if(tc.HasCaught()) {
-        throw "Bad javascript";                                                  
+        printf("error: %s\n", *v8::String::Utf8Value(tc.Exception()));
+        throw "Bad javascript";
     }                                                                                 
     return maybe_result.ToLocalChecked();
 }
@@ -829,12 +841,6 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 void require_directory(v8::Local<v8::Context> context, std::string directory_name);
 
 
-/**
-* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
-*
-* Good for looking at the contents of a value and also used for printobj() method added by add_print
-*/
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
 
 
 
