@@ -27,7 +27,7 @@ namespace v8toolkit {
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true);
 
 
 /**
@@ -530,14 +530,13 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     
     v8::TryCatch tc(isolate);
     
-    printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
-    printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
-    
+    // printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
+    // printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
     if(tc.HasCaught()) {
         printf("error: %s\n", *v8::String::Utf8Value(tc.Exception()));
         throw "Bad javascript";
-    }                                                                                 
+    }                            
     return maybe_result.ToLocalChecked();
 }
 

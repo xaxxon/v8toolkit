@@ -647,15 +647,34 @@ AnyBase::~AnyBase() {}
 
 
 
+#include <vector>
 
-
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation)
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level)
 {
+    static std::vector<v8::Local<v8::Value>> processed_values;
+    
+    if (top_level) {
+       processed_values.clear(); 
+    };
+    
     auto context = isolate->GetCurrentContext();
     
     std::string output = "";
+
+    // TODO: This is "slow" but I'm not sure a faster way to work with the types involved
+    for(auto processed_value : processed_values) {
+        if(processed_value == value) {
+            printf("stringify_value already processed '%s', skipping because of cycle\n", *v8::String::Utf8Value(value));
+            return "";
+        }
+    }
+    // printf("Processing %p as unseen\n", *value);
+    
+    
+    processed_values.push_back(value);
     
     if(value.IsEmpty()) {
+        // printf("Value IsEmpty\n");
         return "Value specified as an empty v8::Local";
     }
     
@@ -676,7 +695,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output += stringify_value(isolate, value.ToLocalChecked(), indentation);
+            output += stringify_value(isolate, value.ToLocalChecked(), false);
         }        
         output += "]";
     } else {
@@ -701,7 +720,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
                 output += key;
                 output += ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output += stringify_value(isolate, value.ToLocalChecked(), indentation);
+                output += stringify_value(isolate, value.ToLocalChecked(), false);
             }
             output += "}";
         }
