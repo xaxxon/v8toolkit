@@ -236,21 +236,21 @@ void IsolateHelper::add_assert()
     add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
-        printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
+        // printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
         
-        printf("AKA: %s\n",  *v8::String::Utf8Value(info[0]->ToString()));
+        // printf("AKA: %s\n",  *v8::String::Utf8Value(info[0]->ToString()));
 
         v8::TryCatch tc(isolate);
         auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
         if(tc.HasCaught()) {
-            printf("Caught compilation error\n");
+            // printf("Caught compilation error\n");
             tc.ReThrow();
             return;
         }
         auto script = script_maybe.ToLocalChecked();
         auto result_maybe = script->Run(context);
         if(tc.HasCaught()) {
-            printf("Caught runtime exception\n");
+            // printf("Caught runtime exception\n");
             tc.ReThrow();
             return;
         }
@@ -263,7 +263,7 @@ void IsolateHelper::add_assert()
             throw V8AssertionException(isolate, std::string("Expression returned false: ") + *v8::String::Utf8Value(info[0]));
         }
         
-        printf("Done in assert\n");
+        // printf("Done in assert\n");
     });
     
     add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
