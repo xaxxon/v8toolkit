@@ -161,6 +161,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2af6fd9c49dc253e11ea877fe21035f6"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:a2af6fd9c49dc253e11ea877fe21035f6"><td class="memTemplItemLeft" align="right" valign="top">auto &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1IsolateHelper.html#a2af6fd9c49dc253e11ea877fe21035f6">wrap_class</a> ()</td></tr>
 <tr class="separator:a2af6fd9c49dc253e11ea877fe21035f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc3632d049b1d2c5a12ca0049eb889dd"><td class="memItemLeft" align="right" valign="top">v8::Local&lt; v8::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classv8toolkit_1_1IsolateHelper.html#adc3632d049b1d2c5a12ca0049eb889dd">json</a> (std::string json)</td></tr>
+<tr class="separator:adc3632d049b1d2c5a12ca0049eb889dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
@@ -170,7 +172,7 @@ Friends</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a v8::Isolate object. <a class="el" href="structv8toolkit_1_1Any.html">Any</a> changes made here will be reflected in any contexts created after the change was made. An IsolateHleper will remain as long as the user has a shared_ptr to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> itself or a unique_ptr to any <a class="el" href="classv8toolkit_1_1ContextHelper.html">ContextHelper</a> created from the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a>. Can only be created by calling <a class="el" href="classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b">PlatformHelper::create_isolate()</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00464">464</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00471">471</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" id="a6516b0ec415229cbe32258225d0f0b62"></a>
 <div class="memitem">
@@ -193,7 +195,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00216">216</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00220">220</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -212,7 +214,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 <p>Implicit cast to v8::Isolate* so an <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> can be used where a v8::Isolate* would otherwise be required </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00159">159</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00163">163</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -247,9 +249,9 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 <p>Adds print helpers to global object template as defined in <a class="el" href="namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168">v8toolkit::add_print()</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00169">169</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00173">173</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00145">v8toolkit::add_print()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00139">v8toolkit::add_print()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -262,7 +264,7 @@ Here is the call graph for this function:</div>
 <area shape="rect" id="node5" href="namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c" title="v8toolkit::_print_helper" alt="" coords="580,86,722,110"/>
 <area shape="rect" id="node6" href="namespacev8toolkit.html#a3252ee5d46eb483c1a71fce86a2cc197" title="v8toolkit::_printf\l_helper" alt="" coords="404,30,510,66"/>
 <area shape="rect" id="node7" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="387,141,528,165"/>
-<area shape="rect" id="node9" href="namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4" title="v8toolkit::stringify\l_value" alt="" coords="400,191,514,227"/>
+<area shape="rect" id="node9" href="namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394" title="v8toolkit::stringify\l_value" alt="" coords="400,191,514,227"/>
 <area shape="rect" id="node4" href="namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="781,54,889,90"/>
 <area shape="rect" id="node8" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="576,135,726,171"/>
 <area shape="rect" id="node10" href="namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="774,219,896,255"/>
@@ -286,9 +288,9 @@ Here is the call graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00177">177</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00181">181</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00145">v8toolkit::add_print()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00139">v8toolkit::add_print()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -301,7 +303,7 @@ Here is the call graph for this function:</div>
 <area shape="rect" id="node5" href="namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c" title="v8toolkit::_print_helper" alt="" coords="580,86,722,110"/>
 <area shape="rect" id="node6" href="namespacev8toolkit.html#a3252ee5d46eb483c1a71fce86a2cc197" title="v8toolkit::_printf\l_helper" alt="" coords="404,30,510,66"/>
 <area shape="rect" id="node7" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="387,141,528,165"/>
-<area shape="rect" id="node9" href="namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4" title="v8toolkit::stringify\l_value" alt="" coords="400,191,514,227"/>
+<area shape="rect" id="node9" href="namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394" title="v8toolkit::stringify\l_value" alt="" coords="400,191,514,227"/>
 <area shape="rect" id="node4" href="namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="781,54,889,90"/>
 <area shape="rect" id="node8" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="576,135,726,171"/>
 <area shape="rect" id="node10" href="namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="774,219,896,255"/>
@@ -325,9 +327,9 @@ Here is the call graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00230">230</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00234">234</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="javascript_8h_source.html#l00579">add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00549">v8toolkit::compare_contents()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00661">v8toolkit::stringify_value()</a>.</p>
+<p>References <a class="el" href="javascript_8h_source.html#l00586">add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00540">v8toolkit::compare_contents()</a>, and <a class="el" href="v8toolkit_8cpp_source.html#l00652">v8toolkit::stringify_value()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -336,7 +338,7 @@ Here is the call graph for this function:</div>
 <map name="classv8toolkit_1_1IsolateHelper_a8c786314442f66d4cb5641496e3838bb_cgraph" id="classv8toolkit_1_1IsolateHelper_a8c786314442f66d4cb5641496e3838bb_cgraph">
 <area shape="rect" id="node2" href="classv8toolkit_1_1IsolateHelper.html#a19ca3f4c7fa5ffc87c440c49472b023b" title="v8toolkit::IsolateHelper\l::add_function" alt="" coords="196,59,339,95"/>
 <area shape="rect" id="node6" href="namespacev8toolkit.html#aeccaa5d6f46d147cc03f023ca9ccbd67" title="v8toolkit::compare\l_contents" alt="" coords="208,119,327,155"/>
-<area shape="rect" id="node9" href="namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4" title="v8toolkit::stringify\l_value" alt="" coords="211,179,324,215"/>
+<area shape="rect" id="node9" href="namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394" title="v8toolkit::stringify\l_value" alt="" coords="211,179,324,215"/>
 <area shape="rect" id="node3" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="388,11,529,35"/>
 <area shape="rect" id="node5" href="classv8toolkit_1_1IsolateHelper.html#a2d01748f025789409e5f2e9b16a53ece" title="v8toolkit::IsolateHelper\l::get_object_template" alt="" coords="387,60,530,96"/>
 <area shape="rect" id="node4" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="578,5,728,41"/>
@@ -361,33 +363,28 @@ Here is the call graph for this function:</div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Adds <a class="el" href="namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1">require()</a> function to javascript as defined in <a class="el" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require()</a> </p>
+<p>Adds <a class="el" href="namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d">require()</a> function to javascript as defined in <a class="el" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require()</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00186">186</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00190">190</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00440">v8toolkit::add_require()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00431">v8toolkit::add_require()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
 <div class="center"><img src="classv8toolkit_1_1IsolateHelper_a4e0eab2f685c8348014e48174c7e34a2_cgraph.png" border="0" usemap="#classv8toolkit_1_1IsolateHelper_a4e0eab2f685c8348014e48174c7e34a2_cgraph" alt=""/></div>
 <map name="classv8toolkit_1_1IsolateHelper_a4e0eab2f685c8348014e48174c7e34a2_cgraph" id="classv8toolkit_1_1IsolateHelper_a4e0eab2f685c8348014e48174c7e34a2_cgraph">
-<area shape="rect" id="node2" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="199,135,335,159"/>
-<area shape="rect" id="node17" href="classv8toolkit_1_1IsolateHelper.html#a2d01748f025789409e5f2e9b16a53ece" title="v8toolkit::IsolateHelper\l::get_object_template" alt="" coords="196,184,339,220"/>
-<area shape="rect" id="node3" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="733,11,874,35"/>
-<area shape="rect" id="node5" href="namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1" title="v8toolkit::require" alt="" coords="387,135,496,159"/>
-<area shape="rect" id="node11" href="namespacev8toolkit.html#a0ff46c24b7d0aba375452f4066af95f4" title="v8toolkit::stringify\l_value" alt="" coords="747,252,860,288"/>
-<area shape="rect" id="node4" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="922,5,1072,41"/>
-<area shape="rect" id="node6" href="namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168" title="v8toolkit::add_print" alt="" coords="554,61,676,85"/>
-<area shape="rect" id="node14" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228" title="v8toolkit::add_variable" alt="" coords="544,109,685,133"/>
-<area shape="rect" id="node15" href="namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673" title="v8toolkit::compile\l_source" alt="" coords="558,157,671,193"/>
-<area shape="rect" id="node16" href="namespacev8toolkit.html#ad8ebb51dd22f6ba7533ecd77e6eb58ff" title="v8toolkit::get_file\l_contents" alt="" coords="559,217,670,253"/>
-<area shape="rect" id="node7" href="namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7" title="v8toolkit::_format\l_helper" alt="" coords="940,111,1053,147"/>
-<area shape="rect" id="node9" href="namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c" title="v8toolkit::_print_helper" alt="" coords="926,171,1068,195"/>
-<area shape="rect" id="node10" href="namespacev8toolkit.html#a3252ee5d46eb483c1a71fce86a2cc197" title="v8toolkit::_printf\l_helper" alt="" coords="751,111,856,147"/>
-<area shape="rect" id="node8" href="namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41" title="v8toolkit::get_all\l_values" alt="" coords="1127,151,1235,187"/>
-<area shape="rect" id="node12" href="namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="1120,236,1242,272"/>
-<area shape="rect" id="node13" href="namespacev8toolkit.html#a9a1ef27a4d9967f402179c66b15dc3d2" title="v8toolkit::make_set\l_from_object_keys" alt="" coords="935,276,1059,312"/>
+<area shape="rect" id="node2" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="199,121,335,145"/>
+<area shape="rect" id="node12" href="classv8toolkit_1_1IsolateHelper.html#a2d01748f025789409e5f2e9b16a53ece" title="v8toolkit::IsolateHelper\l::get_object_template" alt="" coords="196,169,339,205"/>
+<area shape="rect" id="node3" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8" title="v8toolkit::add_function" alt="" coords="387,42,528,66"/>
+<area shape="rect" id="node5" href="namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d" title="v8toolkit::require" alt="" coords="402,121,512,145"/>
+<area shape="rect" id="node9" href="namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394" title="v8toolkit::stringify\l_value" alt="" coords="400,231,514,267"/>
+<area shape="rect" id="node4" href="namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="576,5,726,41"/>
+<area shape="rect" id="node6" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228" title="v8toolkit::add_variable" alt="" coords="580,66,721,90"/>
+<area shape="rect" id="node7" href="namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673" title="v8toolkit::compile\l_source" alt="" coords="594,115,707,151"/>
+<area shape="rect" id="node8" href="namespacev8toolkit.html#ad8ebb51dd22f6ba7533ecd77e6eb58ff" title="v8toolkit::get_file\l_contents" alt="" coords="595,175,706,211"/>
+<area shape="rect" id="node10" href="namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="774,259,896,295"/>
+<area shape="rect" id="node11" href="namespacev8toolkit.html#a9a1ef27a4d9967f402179c66b15dc3d2" title="v8toolkit::make_set\l_from_object_keys" alt="" coords="589,287,713,323"/>
 </map>
 </div>
 </p>
@@ -415,9 +412,9 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00516">516</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00523">523</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00430">v8toolkit::add_module_list()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00421">v8toolkit::add_module_list()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -449,9 +446,9 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Creates a <a class="el" href="classv8toolkit_1_1ContextHelper.html">ContextHelper</a> populated by all customizations already applied to this <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a>, but subsequent customizations to the <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> will not be applied to ContextHelpers already created. </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00199">199</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00203">203</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>References <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>, and <a class="el" href="javascript_8h_source.html#l00543">operator()()</a>.</p>
+<p>References <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>, and <a class="el" href="javascript_8h_source.html#l00550">operator()()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -481,7 +478,7 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Returns the isolate associated with this <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00193">193</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00197">197</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
 </div>
 </div>
@@ -499,9 +496,9 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 <p>Returns the v8::ObjectTemplate used to create contexts from this <a class="el" href="classv8toolkit_1_1IsolateHelper.html">IsolateHelper</a> </p>
 
-<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00211">211</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8cpp_source.html#l00215">215</a> of file <a class="el" href="javascript_8cpp_source.html">javascript.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8h_source.html#l00579">add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00169">add_print()</a>, <a class="el" href="javascript_8cpp_source.html#l00186">add_require()</a>, <a class="el" href="javascript_8cpp_source.html#l00199">create_context()</a>, <a class="el" href="javascript_8h_source.html#l00590">expose_variable()</a>, and <a class="el" href="javascript_8h_source.html#l00596">expose_variable_readonly()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8h_source.html#l00586">add_function()</a>, <a class="el" href="javascript_8cpp_source.html#l00173">add_print()</a>, <a class="el" href="javascript_8cpp_source.html#l00190">add_require()</a>, <a class="el" href="javascript_8cpp_source.html#l00203">create_context()</a>, <a class="el" href="javascript_8h_source.html#l00597">expose_variable()</a>, and <a class="el" href="javascript_8h_source.html#l00603">expose_variable_readonly()</a>.</p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -546,11 +543,11 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()()), decltype(s
 </div><div class="memdoc">
 <p>wraps "callable" in appropriate thread locks, isolate, and handle scopes </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00543">543</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00550">550</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00047">v8toolkit::scoped_run()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00055">v8toolkit::scoped_run()</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00199">create_context()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00203">create_context()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -599,9 +596,9 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()(static_cast&lt
 </div><div class="memdoc">
 <p>wraps "callable" in appropriate thread locks, isolate, and handle scopes Passes the v8::Isolate * to the callable function </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00555">555</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00562">562</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00047">v8toolkit::scoped_run()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00055">v8toolkit::scoped_run()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -640,9 +637,9 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()(static_cast&lt
 </div><div class="memdoc">
 <p>wraps "callable" in appropriate thread locks, isolate, and handle scopes Passes the v8::Isolate * and v8::Local&lt;v8::Context&gt; to the callable function. Throws <a class="el" href="classv8toolkit_1_1InvalidCallException.html">v8toolkit::InvalidCallException</a> if the isolate is not currently in a context </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00568">568</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00575">575</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00047">v8toolkit::scoped_run()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00055">v8toolkit::scoped_run()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -691,11 +688,11 @@ template&lt;class Callable &gt; </div>
 </div><div class="memdoc">
 <p>Adds the specified callable as &lt;name&gt; in javascript This can be a standard C++ function, a lambda, or anything else that supports being called with operator() </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00579">579</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00586">586</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00056">v8toolkit::add_function()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8cpp_source.html#l00050">v8toolkit::add_function()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
-<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00230">add_assert()</a>.</p>
+<p>Referenced by <a class="el" href="javascript_8cpp_source.html#l00234">add_assert()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -756,9 +753,9 @@ template&lt;class Variable &gt; </div>
 </div><div class="memdoc">
 <p>Exposes an existing C++ variable as &lt;name&gt; to javascript </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00590">590</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00597">597</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00554">v8toolkit::expose_variable()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00596">v8toolkit::expose_variable()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -807,9 +804,9 @@ template&lt;class Variable &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00596">596</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00603">603</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8toolkit_8h_source.html#l00566">v8toolkit::expose_variable_readonly()</a>, and <a class="el" href="javascript_8cpp_source.html#l00211">get_object_template()</a>.</p>
+<p>References <a class="el" href="v8toolkit_8h_source.html#l00608">v8toolkit::expose_variable_readonly()</a>, and <a class="el" href="javascript_8cpp_source.html#l00215">get_object_template()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -848,9 +845,9 @@ template&lt;class T &gt; </div>
 </div><div class="memdoc">
 <p>Returns a <a class="el" href="classv8toolkit_1_1V8ClassWrapper.html">V8ClassWrapper</a> object for wrapping C++ classes in this isolate. Classes must be wrapped before contexts using them are created </p>
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00607">607</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00614">614</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
-<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00359">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>.</p>
+<p>References <a class="el" href="v8__class__wrapper_8h_source.html#l00358">v8toolkit::V8ClassWrapper&lt; T &gt;::get_instance()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -861,6 +858,33 @@ Here is the call graph for this function:</div>
 </map>
 </div>
 </p>
+
+</div>
+</div>
+<a class="anchor" id="adc3632d049b1d2c5a12ca0049eb889dd"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">v8::Local&lt;v8::Value&gt; v8toolkit::IsolateHelper::json </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>json</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Returns a value representing the JSON string specified or throws on bad JSON </p>
+
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00621">621</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 </div>
 </div>
@@ -883,7 +907,7 @@ Here is the call graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="javascript_8h_source.html#l00465">465</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
+<p>Definition at line <a class="el" href="javascript_8h_source.html#l00472">472</a> of file <a class="el" href="javascript_8h_source.html">javascript.h</a>.</p>
 
 </div>
 </div>
@@ -894,7 +918,7 @@ Here is the call graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Feb 19 2016 00:39:37 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat Feb 27 2016 14:08:25 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

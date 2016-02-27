@@ -1,6 +1,6 @@
 <map id="v8toolkit::add_variable" name="v8toolkit::add_variable">
 <area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#ae924d066e1a28fd720324330e791717a" title="v8toolkit::ContextHelper\l::add_variable" alt="" coords="194,56,343,92"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a95a791d73a5c900c7ea7197d50c0bca1" title="v8toolkit::require" alt="" coords="214,117,323,141"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d" title="v8toolkit::require" alt="" coords="214,117,323,141"/>
 <area shape="rect" id="node10" href="$javascript__sample_8cpp.html#a27bbfbbe6670fe91cb574e0287c29366" title="test_casts" alt="" coords="421,171,497,195"/>
 <area shape="rect" id="node4" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="391,62,527,86"/>
 <area shape="rect" id="node7" href="$namespacev8toolkit.html#acff8a379e70819196b119e240d620575" title="v8toolkit::require\l_directory" alt="" coords="404,111,514,147"/>

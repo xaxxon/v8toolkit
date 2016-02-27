@@ -3,7 +3,7 @@ var searchData=
   ['c',['C',['../structC.html',1,'']]],
   ['cached_5fisolate_5fmodules_5ft',['cached_isolate_modules_t',['../namespacev8toolkit.html#a4f9fc0d27475362592510e0bb288f4c2',1,'v8toolkit']]],
   ['cached_5fmodule_5ft',['cached_module_t',['../namespacev8toolkit.html#a1ad5649f3d46fe61665f5b71448d570c',1,'v8toolkit']]],
-  ['call_5fjavascript_5ffunction',['call_javascript_function',['../namespacev8toolkit.html#a4972593f281f8e0c61c1709d49d256f5',1,'v8toolkit']]],
+  ['call_5fjavascript_5ffunction',['call_javascript_function',['../namespacev8toolkit.html#a3f12566f9db04373bbf319d330158423',1,'v8toolkit::call_javascript_function(const v8::Local&lt; v8::Context &gt; context, v8::Local&lt; v8::Value &gt; &amp;result, const v8::Local&lt; v8::Function &gt; function, const v8::Local&lt; v8::Object &gt; receiver, const TupleType &amp;tuple={})'],['../namespacev8toolkit.html#aa80b4190174b3682746dbf13e5584eb5',1,'v8toolkit::call_javascript_function(const v8::Local&lt; v8::Context &gt; context, v8::Local&lt; v8::Value &gt; &amp;result, const std::string &amp;function_name, const v8::Local&lt; v8::Object &gt; receiver, const TupleType &amp;tuple={})']]],
   ['callcallable',['CallCallable',['../namespacev8toolkit.html#structv8toolkit_1_1CallCallable',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20r_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20void_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; void(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
@@ -84,8 +84,9 @@ var searchData=
   ['compile',['compile',['../classv8toolkit_1_1ContextHelper.html#a566bfafb4ecc76470ad5e43c135c4ee1',1,'v8toolkit::ContextHelper::compile(const std::string)'],['../classv8toolkit_1_1ContextHelper.html#abd714c8dd2ee16f2a4dc313c33dab2d0',1,'v8toolkit::ContextHelper::compile(const v8::Local&lt; v8::String &gt; script)']]],
   ['compile_5ffrom_5ffile',['compile_from_file',['../classv8toolkit_1_1ContextHelper.html#ac7b5f80d340536c1b949ca8467907544',1,'v8toolkit::ContextHelper']]],
   ['compile_5fsource',['compile_source',['../namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673',1,'v8toolkit']]],
-  ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ScriptHelper.html#abaab236fa7108752ee8e8c8c4f64ed79',1,'v8toolkit::ScriptHelper']]],
   ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ContextHelper.html',1,'v8toolkit']]],
+  ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ScriptHelper.html#abaab236fa7108752ee8e8c8c4f64ed79',1,'v8toolkit::ScriptHelper']]],
+  ['contexthelperptr',['ContextHelperPtr',['../namespacev8toolkit.html#a051119c66d87fd3a8052a8bef87bcf2b',1,'v8toolkit']]],
   ['create_5fcontext',['create_context',['../classv8toolkit_1_1IsolateHelper.html#a4eb6ce7983c1540aaed41eedf9463a59',1,'v8toolkit::IsolateHelper']]],
   ['create_5fisolate',['create_isolate',['../classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b',1,'v8toolkit::PlatformHelper']]]
 ];

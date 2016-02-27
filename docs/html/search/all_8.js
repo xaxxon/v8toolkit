@@ -11,6 +11,7 @@ var searchData=
   ['isolate',['isolate',['../classv8toolkit_1_1JSWrapper.html#a5417e9f47e4f28a910f66ba8bfb6c40a',1,'v8toolkit::JSWrapper::isolate()'],['../classJSFactory.html#a0ae51849fb386805a4f7033d7e664bd5',1,'JSFactory::isolate()']]],
   ['isolatehelper',['IsolateHelper',['../classv8toolkit_1_1IsolateHelper.html',1,'v8toolkit']]],
   ['isolatehelper',['IsolateHelper',['../classv8toolkit_1_1ContextHelper.html#ad8f2fd5d83760fb94c11eb98dee0cf49',1,'v8toolkit::ContextHelper']]],
+  ['isolatehelperptr',['IsolateHelperPtr',['../namespacev8toolkit.html#a4ef4608e03eac46e2266ccff8efd003d',1,'v8toolkit']]],
   ['it_5fa',['IT_A',['../structIT__A.html',1,'']]],
   ['it_5fb',['IT_B',['../structIT__B.html',1,'']]],
   ['local_3c_20v8_3a_3aobjecttemplate_20_3e',['Local&lt; v8::ObjectTemplate &gt;',['../namespacev8toolkit.html#ac0bd0b1dd65b509bf35cdbb38316ba5e',1,'v8toolkit']]]

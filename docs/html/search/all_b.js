@@ -11,6 +11,5 @@ var searchData=
   ['mapperhelper_3c_20std_3a_3amap_3c_20key_2c_20value_2c_20addparams_2e_2e_2e_20_3e_2c_20callable_20_3e',['MapperHelper&lt; std::map&lt; Key, Value, AddParams... &gt;, Callable &gt;',['../structv8toolkit_1_1MapperHelper_3_01std_1_1map_3_01Key_00_01Value_00_01AddParams_8_8_8_01_4_00_01Callable_01_4.html',1,'v8toolkit']]],
   ['member_5fadders',['member_adders',['../classv8toolkit_1_1V8ClassWrapper.html#ae822473675679da88266fa4fee8f6866',1,'v8toolkit::V8ClassWrapper']]],
   ['method',['method',['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_4.html#a8de72d0d0c37a2014a659b84ac1edfbb',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...)&gt;::method()'],['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_01const_01_01_4.html#a3c609f66da77553e80213cb63c7fd416',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const  &gt;::method()']]],
-  ['method_5fadders',['method_adders',['../classv8toolkit_1_1V8ClassWrapper.html#a86c00e2ad01cbac25b93182496c66472',1,'v8toolkit::V8ClassWrapper']]],
-  ['myclass',['MyClass',['../pure__v8__api__base__code__for__reproducing__issues_8cpp.html#a6286fa5d14d5f3b40ffb0743b1d8ba16',1,'pure_v8_api_base_code_for_reproducing_issues.cpp']]]
+  ['method_5fadders',['method_adders',['../classv8toolkit_1_1V8ClassWrapper.html#a86c00e2ad01cbac25b93182496c66472',1,'v8toolkit::V8ClassWrapper']]]
 ];

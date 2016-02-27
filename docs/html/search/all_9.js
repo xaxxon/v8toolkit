@@ -16,7 +16,8 @@ var searchData=
   ['js_5faccess_5fcore',['JS_ACCESS_CORE',['../bidirectional_8h.html#accadb007e74f40b180e2c01325947953',1,'bidirectional.h']]],
   ['jsanimal',['JSAnimal',['../classJSAnimal.html',1,'JSAnimal'],['../classJSAnimal.html#a5f075b2951ad2b270f35917085510ad1',1,'JSAnimal::JSAnimal()']]],
   ['jsfactory',['JSFactory',['../classJSFactory.html',1,'JSFactory&lt; RealClass, JSWrapperClass &gt;'],['../classJSFactory.html#afcfd3c764ecae1e0f25dc4682aa1ca31',1,'JSFactory::JSFactory()']]],
-  ['jswrapper',['JSWrapper',['../classv8toolkit_1_1JSWrapper.html',1,'v8toolkit']]],
+  ['json',['json',['../classv8toolkit_1_1ContextHelper.html#a45e7d2d1e1bdf8aa271cfaebfcb8525e',1,'v8toolkit::ContextHelper::json()'],['../classv8toolkit_1_1IsolateHelper.html#adc3632d049b1d2c5a12ca0049eb889dd',1,'v8toolkit::IsolateHelper::json()']]],
   ['jswrapper',['JSWrapper',['../classv8toolkit_1_1JSWrapper.html#a54a63b61f07317fdf19c785c2be00acb',1,'v8toolkit::JSWrapper']]],
+  ['jswrapper',['JSWrapper',['../classv8toolkit_1_1JSWrapper.html',1,'v8toolkit']]],
   ['jswrapper_3c_20animal_20_3e',['JSWrapper&lt; Animal &gt;',['../classv8toolkit_1_1JSWrapper.html',1,'v8toolkit']]]
 ];
