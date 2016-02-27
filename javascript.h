@@ -364,6 +364,9 @@ public:
 	
 };
 
+using ContextHelperPtr = std::shared_ptr<ContextHelper>;
+
+
 /**
 * Helper class for a v8::Script object.  As long as a ScriptHelper shared_ptr is around,
 *   the associated ContextHelper will be maintined (which keeps the IsolateHelper around, too)
@@ -455,6 +458,7 @@ public:
     }    
 }; 
 
+using ScriptHelperPtr = std::shared_ptr<ScriptHelper>;
 
 
 /**
@@ -623,6 +627,8 @@ public:
     }
 };
 
+using IsolateHelperPtr = std::shared_ptr<IsolateHelper>;
+
 /**
 * A singleton responsible for initializing the v8 platform and creating isolate helpers.
 */
@@ -666,15 +672,11 @@ public:
 };
 
 
-
 template<class T>
 v8::Local<v8::Value> ContextHelper::wrap_object(T* object)
 {
     return get_isolate_helper()->wrap_class<T>().wrap_existing_cpp_object(object);
 }
-
-
-
 
 
 } // end v8toolkit namespace

@@ -296,7 +296,7 @@ bool require(
     std::string filename,
     v8::Local<v8::Value> & result,
     const std::vector<std::string> & paths,
-    bool track_file_modification_times)
+    bool track_file_modification_times, bool use_cache)
 {
     auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
@@ -320,7 +320,7 @@ bool require(
                 
                 // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
                 // This is read-only and per-isolate and the only way to add is to be in the isolate
-                {
+                if (use_cache) {
                     std::lock_guard<std::mutex> l(require_results_mutex);
                     auto & isolate_require_results = require_results[isolate];
         
@@ -395,15 +395,15 @@ bool require(
                     
                 }
 
+                result = maybe_result.ToLocalChecked();
+                
                 // cache the result for subsequent requires of the same module in the same isolate
-                auto final_result = maybe_result.ToLocalChecked();
-                auto new_global = new v8::Global<v8::Value>(isolate, final_result);
-                {
+                if (use_cache) {
                     std::lock_guard<std::mutex> l(require_results_mutex);
+                    auto new_global = new v8::Global<v8::Value>(isolate, result);
                     auto & isolate_require_results = require_results[isolate];
                     isolate_require_results.insert(std::pair<std::string, cached_module_t>(complete_filename, cached_module_t(file_modification_time, *new_global)));
                 }
-                result = final_result;
                 // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
                 // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
                 return true;

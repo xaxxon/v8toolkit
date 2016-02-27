@@ -516,12 +516,15 @@ struct TupleForEach<0, Tuple> {
 
 
 
-
+/**
+* Returns true on success with the result in the "result" parameter
+*/
 template<class TupleType = std::tuple<>>
-v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
-                                              const v8::Local<v8::Function> function,
-                                              const v8::Local<v8::Object> receiver,
-                                              const TupleType & tuple = {})
+bool call_javascript_function(const v8::Local<v8::Context> context,
+                              v8::Local<v8::Value> & result,
+                              const v8::Local<v8::Function> function,
+                              const v8::Local<v8::Object> receiver,
+                              const TupleType & tuple = {})
 {
     constexpr int tuple_size = std::tuple_size<TupleType>::value;
     v8::Local<v8::Value> parameters[tuple_size];
@@ -533,21 +536,36 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     // printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     // printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
-    if(tc.HasCaught()) {
-        printf("error: %s\n", *v8::String::Utf8Value(tc.Exception()));
-        throw "Bad javascript";
+    if(tc.HasCaught() || maybe_result.IsEmpty()) {
+        printf("error: %s or result was empty\n", *v8::String::Utf8Value(tc.Exception()));
+        return false;
     }                            
-    return maybe_result.ToLocalChecked();
+    result = maybe_result.ToLocalChecked();
+    return true;
 }
 
-
+/**
+* Returns true on success with the result in the "result" parameter
+*/
 template<class TupleType = std::tuple<>>
-v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
-                                              const std::string & function_name,
-                                              const v8::Local<v8::Object> receiver,
-                                              const TupleType & tuple = {})
+bool call_javascript_function(const v8::Local<v8::Context> context,
+                              v8::Local<v8::Value> & result,
+                              const std::string & function_name,
+                              const v8::Local<v8::Object> receiver,
+                              const TupleType & tuple = {})
 {
-    return call_javascript_function(context, v8::Local<v8::Function>::Cast(receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(),function_name.c_str())).ToLocalChecked()), receiver, tuple);
+    auto maybe_value = receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(),function_name.c_str()));
+    if(maybe_value.IsEmpty()) {
+        return false;
+    }
+    
+    auto value = maybe_value.ToLocalChecked();
+    if(!value->IsFunction()) {
+        return false;
+    }    
+    
+    bool success = call_javascript_function(context, result, v8::Local<v8::Function>::Cast(value), receiver, tuple);
+    return success;
 }
 
 
@@ -827,7 +845,7 @@ bool require(v8::Local<v8::Context> context,
                              std::string filename, 
                              v8::Local<v8::Value> & result,
                              const std::vector<std::string> & paths,
-                             bool track_modification_times = false);
+                             bool track_modification_times = false, bool use_cache = true);
 
 /**
 * prints out a ton of info about a v8::Value
