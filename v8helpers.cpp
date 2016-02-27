@@ -10,7 +10,6 @@ int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array) {
 }
 
 
-
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value)
 {
     if(array_value->IsArray()) {
@@ -21,6 +20,15 @@ int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value)
     }
     assert(false); // shut up the compiler
 }
+
+
+void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name)
+{
+    auto global_object = context->Global();
+    (void)global_object->Set(context, v8::String::NewFromUtf8(isolate, alias_name.c_str()), global_object);
+    
+}
+
 
 
 }

@@ -221,7 +221,6 @@ private:
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 		auto & member_ref = (*member_reference_getter)(cpp_object);
 	  	member_ref = CastToNative<VALUE_T>()(isolate, value);
-		(*member_reference_getter)(cpp_object);
 	}
     
     // Calls the C++ constructor with javascript-provided arguments
@@ -521,19 +520,40 @@ public:
 	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) 
 	{
         assert(this->finalized == false);
+        
          member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+             
     		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
     			return cpp_object->*member;
     		});
             
-			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, 
-				member_name.c_str()), 
+			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
 				_getter_helper<MEMBER_TYPE>, 
 				_setter_helper<MEMBER_TYPE>, 
 				v8::External::New(isolate, get_member_reference));
         });
         return *this;
 	}
+    
+    template<typename MEMBER_TYPE>
+	V8ClassWrapper<T> & add_member_readonly(MEMBER_TYPE T::* member, std::string member_name) 
+	{
+        assert(this->finalized == false);
+        
+         member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+             
+    		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
+    			return cpp_object->*member;
+    		});
+            
+			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
+				_getter_helper<MEMBER_TYPE>, 
+                0,
+				v8::External::New(isolate, get_member_reference));
+        });
+        return *this;
+	}
+    
 
 
 	template<class R, class... Args>
@@ -578,15 +598,15 @@ public:
                 
 #ifdef V8_CLASS_WRAPPER_DEBUG
                 // debug helper block to see prototype chain
-                auto foo = info.Holder();
-                printf("Looking at prototype chain\n");
-                while (!foo->IsNull()) {
-                    printf("%s:\n", *v8::String::Utf8Value(foo));
-                    // print_v8_value_details(foo);
-                    // printf("%s\n", stringify_value(isolate, foo).c_str());
-                    foo = v8::Local<v8::Object>::Cast(foo->GetPrototype());
-                }
-                printf("Done looking at prototype chain\n");
+                // auto foo = info.Holder();
+                // printf("Looking at prototype chain\n");
+                // while (!foo->IsNull()) {
+                //     printf("%s:\n", *v8::String::Utf8Value(foo));
+                //     // print_v8_value_details(foo);
+                //     // printf("%s\n", stringify_value(isolate, foo).c_str());
+                //     foo = v8::Local<v8::Object>::Cast(foo->GetPrototype());
+                // }
+                // printf("Done looking at prototype chain\n");
 #endif
                 
                 if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());

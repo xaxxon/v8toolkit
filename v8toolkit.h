@@ -21,6 +21,14 @@
 #define V8_TOOLKIT_DEBUG false
 
 namespace v8toolkit {
+    
+/**
+* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
+*
+* Good for looking at the contents of a value and also used for printobj() method added by add_print
+*/
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true);
+
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
@@ -507,11 +515,16 @@ struct TupleForEach<0, Tuple> {
 };
 
 
+
+/**
+* Returns true on success with the result in the "result" parameter
+*/
 template<class TupleType = std::tuple<>>
-v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & context, 
-                                              const v8::Local<v8::Function> & function, 
-                                              const v8::Local<v8::Object> & receiver, 
-                                              const TupleType & tuple = {})
+bool call_javascript_function(const v8::Local<v8::Context> context,
+                              v8::Local<v8::Value> & result,
+                              const v8::Local<v8::Function> function,
+                              const v8::Local<v8::Object> receiver,
+                              const TupleType & tuple = {})
 {
     constexpr int tuple_size = std::tuple_size<TupleType>::value;
     v8::Local<v8::Value> parameters[tuple_size];
@@ -520,12 +533,41 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> & con
     
     v8::TryCatch tc(isolate);
     
+    // printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
+    // printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
-    if(tc.HasCaught()) {                                                              
-        assert(false);                                                                
-    }                                                                                 
-    return maybe_result.ToLocalChecked();
+    if(tc.HasCaught() || maybe_result.IsEmpty()) {
+        printf("error: %s or result was empty\n", *v8::String::Utf8Value(tc.Exception()));
+        return false;
+    }                            
+    result = maybe_result.ToLocalChecked();
+    return true;
 }
+
+/**
+* Returns true on success with the result in the "result" parameter
+*/
+template<class TupleType = std::tuple<>>
+bool call_javascript_function(const v8::Local<v8::Context> context,
+                              v8::Local<v8::Value> & result,
+                              const std::string & function_name,
+                              const v8::Local<v8::Object> receiver,
+                              const TupleType & tuple = {})
+{
+    auto maybe_value = receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(),function_name.c_str()));
+    if(maybe_value.IsEmpty()) {
+        return false;
+    }
+    
+    auto value = maybe_value.ToLocalChecked();
+    if(!value->IsFunction()) {
+        return false;
+    }    
+    
+    bool success = call_javascript_function(context, result, v8::Local<v8::Function>::Cast(value), receiver, tuple);
+    return success;
+}
+
 
 // helper for getting exposed variables
 template<class VARIABLE_TYPE>
@@ -799,11 +841,11 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that
 */ 
-bool require(v8::Local<v8::Context> & context, 
+bool require(v8::Local<v8::Context> context, 
                              std::string filename, 
                              v8::Local<v8::Value> & result,
                              const std::vector<std::string> & paths,
-                             bool track_modification_times = false);
+                             bool track_modification_times = false, bool use_cache = true);
 
 /**
 * prints out a ton of info about a v8::Value
@@ -816,12 +858,6 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 void require_directory(v8::Local<v8::Context> context, std::string directory_name);
 
 
-/**
-* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
-*
-* Good for looking at the contents of a value and also used for printobj() method added by add_print
-*/
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, std::string indentation = "");
 
 
 

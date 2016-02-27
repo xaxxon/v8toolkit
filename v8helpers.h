@@ -8,7 +8,6 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
-
 namespace v8toolkit {
 
 
@@ -80,8 +79,6 @@ void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local
 
 
 
-
-
 /**
 * Takes a container, runs each element through Callable and returns a new container
 *   of the same container type but with a data type matching the returned type
@@ -90,6 +87,7 @@ void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local
 template<class Container,
          class Callable>
 struct MapperHelper;
+
 
 /**
 * Takes a container containing type Data (only for single-type containers, not maps)
@@ -111,6 +109,7 @@ struct MapperHelper<Container<Data, AddParams...>, Callable>
         return results;
     }
 };
+
 
 /**
 * Takes a map with arbitrary key/value types and returns a new map with the types
@@ -144,6 +143,7 @@ auto mapper(const Container<ContainerParams...> & container, Callable callable) 
     return MapperHelper<Container<ContainerParams...>, Callable>()(container, callable);
 }
 
+
 template <class Callable,
           template <typename, typename...> class Container,
 typename Key,
@@ -172,6 +172,7 @@ struct AnyBase
     virtual ~AnyBase();
 };
 
+
 template<class T>
 struct AnyPtr : public AnyBase {
     AnyPtr(T * data) : data(data) {}
@@ -193,8 +194,59 @@ struct Any : public AnyBase {
 };
 
 
+template<class T>
+v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
+    bool valid = false;
+    if (std::is_same<T, v8::Function>::value) {
+        valid = value->IsFunction();
+    } else if (std::is_same<T, v8::Object>::value) {
+        valid = value->IsObject();
+    } else if (std::is_same<T, v8::Array>::value) {
+        valid = value->IsArray();
+    } else if (std::is_same<T, v8::String>::value) {
+        valid = value->IsString();
+    } else if (std::is_same<T, v8::Boolean>::value) {
+        valid = value->IsBoolean();
+    } else if (std::is_same<T, v8::Number>::value) {
+        valid = value->IsNumber();
+    } else if (std::is_same<T, v8::Value>::value) {
+        // this can be handy for dealing with global values
+        //   passed in through the version that takes globals
+        valid = true;
+    }
+
+    if (valid){
+        return v8::Local<T>::Cast(value);
+    } else {
+        throw "Bad Cast";
+    }
+}
+
+template<class T>
+v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
+    return get_value_as<T>(value.Get(isolate));
+}
 
 
+
+
+template<class T>
+v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
+    auto isolate = context->GetIsolate();
+    // printf("Looking up key %s\n", key.c_str());
+    auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
+    if(get_maybe.IsEmpty()) {
+        throw "no such key";
+    }
+    return get_value_as<T>(get_maybe.ToLocalChecked());
+}
+
+
+
+template<class T>
+v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> object, std::string key) {
+    return get_key_as<T>(context, get_value_as<v8::Object>(object), key);
+}
 
 
 

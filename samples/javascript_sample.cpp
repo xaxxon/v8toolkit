@@ -468,6 +468,21 @@ void run_inheritance_test()
 
         c->run("var it_b = new IT_B(); assert('it_b.get_int() == 5');");
         c->run("assert('Object.create(new IT_A()).get_int() == 5')");
+        
+        (*c)([&]{
+        
+        auto json = c->json("[1,2,3]");
+            (void)get_value_as<v8::Array>(json);
+            bool got_expected_exception = false;
+            try{
+                (void)get_value_as<v8::Boolean>(json);
+            } catch(...) {
+                got_expected_exception = true;
+            }
+            assert(got_expected_exception);
+            got_expected_exception = false;
+            printf("Done\n");
+        });
     });
 }
 
