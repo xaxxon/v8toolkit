@@ -220,13 +220,13 @@ private:
 
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
 		auto & member_ref = (*member_reference_getter)(cpp_object);
-	  	member_ref = CastToNative<VALUE_T>()(isolate, value);
+	  	member_ref = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
 	}
     
     // Calls the C++ constructor with javascript-provided arguments
 	template <typename... Fs, size_t... ns> 
 	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<ns...>){
-		auto cpp_object = new T(CastToNative<Fs>()(info.GetIsolate(), info[ns])...);
+		auto cpp_object = new T(CastToNative<typename std::remove_reference<Fs>::type>()(info.GetIsolate(), info[ns])...);
         if (V8_CLASS_WRAPPER_DEBUG) printf("Created new c++ object at %p for type %s\n", cpp_object, typeid(T).name());
         return cpp_object;
 	}
@@ -724,6 +724,8 @@ struct CastToJS<T&> {
 };
 
 
+
+
 template<typename T>
 struct CastToNative<T*>
 {
@@ -740,6 +742,7 @@ struct CastToNative
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
         if(!value->IsObject()){
             // TODO: Don't use castexception anywhere just use V8ExecutionException
+            printf("CastToNative failed for type: %s\n", typeid(T).name());
             throw CastException("No specialized CastToNative found and value was not a Javascript Object");
         }
 		auto object = v8::Object::Cast(*value);
@@ -751,10 +754,10 @@ struct CastToNative
         // I don't know any way to determine if a type is
         auto any_base = (v8toolkit::AnyBase *)wrap->Value();
         T * t = nullptr;
-        if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+        if ((t = V8ClassWrapper<typename std::remove_const<T>::type>::get_instance(isolate).cast(any_base)) == nullptr) {
+            printf("Failed to convert types: want %s\n", typeid(T).name());
             throw CastException("Wrapped class isn't an exact match for the parameter type and using inherited types isn't supported");
         }
-        
 		return *t;
 	}
 };

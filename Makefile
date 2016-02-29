@@ -44,7 +44,7 @@ LIBS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_L
 
 
 
-all: warning thread_sample javascript sample toolbox_sample exception_sample
+all: warning thread_sample javascript sample toolbox_sample exception_sample bidirectional_sample
 
 SRCS=v8toolkit.cpp javascript.cpp v8helpers.cpp
 
@@ -88,7 +88,7 @@ clean:
 
 
 run:
-	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample)
+	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample && ./bidirectional_sample)
 
 clean_docs:
 	rm -rf doc	
