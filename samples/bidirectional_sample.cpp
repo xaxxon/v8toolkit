@@ -39,7 +39,7 @@ public:
 
 
 
-map<string, std::unique_ptr<FactoryBase<Animal>>> animal_factories;
+map<string, std::unique_ptr<Factory<Animal>>> animal_factories;
 vector<Animal*> animals;
 
 
@@ -72,7 +72,7 @@ int main(int argc, char ** argv)
         // add new animal factories from javascript
         c->run("add_animal('mule', function(){println('Returning new mule');return Object.create({get_type:function(){return 'mule'},add:function(a,b){return a + b + this.get_i();}, get_i:function(){return 1;},echo:function(s){return 'js-mule-echo: ' + s;}});})");
         c->run("add_animal('horse', function(prototype){return function(){return Object.create(prototype)};}(new Animal()));");
-        animal_factories.insert(pair<string, std::unique_ptr< FactoryBase<Animal> >>("zebra", make_unique< Factory<Zebra, Animal> >()));
+        animal_factories.insert(pair<string, std::unique_ptr< Factory<Animal> >>("zebra", make_unique< CppFactory<Zebra, Animal> >()));
         
         // create subclass of Animal in javascript and test that methods still work
         c->run("a=new Animal();a.get_i();");

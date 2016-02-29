@@ -27,14 +27,14 @@ public:
 
 
 template<class T, class... ConstructorArgs>
-class FactoryBase {
+class Factory {
 public:
     virtual T * operator()(ConstructorArgs... constructor_args) = 0;
 };
 
 // Creates an instance of a class and returns a pointer to it
 template<class Child, class Base, class ... ConstructorArgs>
-class Factory : public FactoryBase<Base, ConstructorArgs...>{
+class CppFactory : public Factory<Base, ConstructorArgs...>{
 public:
     virtual Base * operator()(ConstructorArgs... constructor_args) override {return new Child(constructor_args...);}
 };
@@ -43,7 +43,7 @@ public:
 // The first two parameters of the constructor for JSWrapperClass must be
 //   a context and javascript object, then any other constructor parameters
 template<class RealClass, class JSWrapperClass>
-class JSFactory : public Factory<RealClass, RealClass> {
+class JSFactory : public Factory<RealClass> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
