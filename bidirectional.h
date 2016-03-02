@@ -42,8 +42,8 @@ public:
 
 // The first two parameters of the constructor for JSWrapperClass must be
 //   a context and javascript object, then any other constructor parameters
-template<class RealClass, class JSWrapperClass>
-class JSFactory : public Factory<RealClass> {
+template<class RealClass, class JSWrapperClass, class... ConstructorParameters>
+class JSFactory : public Factory<RealClass, ConstructorParameters...> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
@@ -59,11 +59,13 @@ public:
             assert(this->isolate->InContext());
         }
     
-    RealClass * operator()(){
-        return scoped_run(isolate, global_context, [&](auto isolate, auto context){
+    RealClass * operator()(ConstructorParameters... constructor_parameters) {
+        return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             v8::Local<v8::Value> result;
-            (void) call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global());
-            return new JSWrapperClass(context, v8::Local<v8::Object>::Cast(result));
+            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
+            assert(success);
+            assert(result->IsObject());
+            return new JSWrapperClass(context, v8::Local<v8::Object>::Cast(result), constructor_parameters...);
         });
     }
 };
@@ -73,8 +75,8 @@ public:
 // Takes the return type of the function, the name of the function, and a list of input variable names, if any
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
     auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\
-    CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
-    return scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
+    v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
+    return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
         v8::TryCatch tc(isolate); \
         auto js_object = global_js_object.Get(isolate); \
         auto maybe_function_value = js_object->Get(context, v8::String::NewFromUtf8(isolate, #name)); \
@@ -86,7 +88,7 @@ public:
                 if(!jsfunction.IsEmpty()) { \
                     /*printf("Calling the javascript function\n");*/ \
                     v8::Local<v8::Value> result; \
-                    (void) call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
+                    (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
                     return cast_to_native(isolate, result); \
         }}} \
             /*printf("Falling back to C++ implementation\n");*/ \

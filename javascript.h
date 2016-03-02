@@ -337,7 +337,7 @@ public:
 	/**
 	* Exposes a C++ variable to this context only
     * see: v8toolkit::expose_variable
-	*/ 
+	*/
 	template<class Variable>
 	void expose_variable(std::string name, Variable & variable)
 	{
@@ -603,7 +603,11 @@ public:
     void expose_variable_readonly(std::string name, Variable & variable)
     {
 		v8toolkit::expose_variable_readonly(isolate, this->get_object_template(), name.c_str(), variable);
-        
+    }
+    
+    void add_variable(const std::string & name, v8::Local<v8::ObjectTemplate> template_to_attach)
+    {
+        v8toolkit::add_variable(this->isolate, this->get_object_template(), name.c_str(), template_to_attach);
     }
 	
 	/**

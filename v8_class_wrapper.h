@@ -148,14 +148,16 @@ struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
     }
 };
 
-
+template <class, class = void>
+class V8ClassWrapper;
 
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 * Can provide a JS constructor method or wrap objects created in another c++ function
 */
 template<class T>
-class V8ClassWrapper 
+// class V8ClassWrapper<T, std::enable_if_t<!std::is_const<T>::value>>
+class V8ClassWrapper<T, void>
 {
 private:
 	
@@ -236,7 +238,7 @@ private:
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
-		
+        // printf("v8 constructor creating type %s\n", typeid(T).name());
 		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
@@ -429,7 +431,7 @@ public:
 		// create a function template even if no javascript constructor will be used so 
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
 		//   later the FunctionTemplate will be ready to go
-        auto constructor_template = make_function_template(V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());				
+        auto constructor_template = make_function_template(V8ClassWrapper<T, void>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());	
         
 				
 		// Add the constructor function to the parent object template (often the global template)
@@ -450,8 +452,10 @@ public:
 	{
 		auto isolate = this->isolate;
         
-        // if it's not finalized, try to find an existing CastToJS conversion
-        if (!this->is_finalized()) {
+        
+        // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
+        if (!this->is_finalized()) {    
+            printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object);
         }
         
@@ -517,7 +521,7 @@ public:
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
 	*/
 	template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member(MEMBER_TYPE T::* member, std::string member_name) 
+	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE T::* member) 
 	{
         assert(this->finalized == false);
         
@@ -536,7 +540,7 @@ public:
 	}
     
     template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member_readonly(MEMBER_TYPE T::* member, std::string member_name) 
+	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE T::* member) 
 	{
         assert(this->finalized == false);
         
@@ -554,11 +558,10 @@ public:
         return *this;
 	}
     
-
-
+    
 	template<class R, class... Args>
-	V8ClassWrapper<T> & add_method(R(T::*method)(Args...) const, std::string method_name) {
-		return _add_method(method, method_name);
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(T::*method)(Args...) const) {
+		return _add_method(method_name, method);
 	}
     
     
@@ -566,15 +569,33 @@ public:
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
 	template<class R, class... Args>
-	V8ClassWrapper<T> & add_method(R(T::*method)(Args...), std::string method_name)
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(T::*method)(Args...))
 	{
-		return _add_method(method, method_name);
+		return _add_method(method_name, method);
     }
+    
+    
+    /**
+    * Adds a method to the javascript object that doesn't directly call into an actual method in the wrapped type.
+    */ 
+    template<class Callable>
+    V8ClassWrapper<T> & add_method(const std::string & method_name, Callable callable) {
+        
+        
+        // prototype_template is the template used later when creating a new javascript context
+        method_adders.emplace_back([this, method_name, callable](v8::Local<v8::ObjectTemplate> & prototype_template) {
+            auto function_template = v8toolkit::make_function_template(isolate, callable);
+    		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+        });
+        
+        return *this;
+    }
+    
     
     std::vector<AttributeAdder> method_adders;
     
     template<class M>
-    V8ClassWrapper<T> & _add_method(M method, std::string method_name)
+    V8ClassWrapper<T> & _add_method(const std::string & method_name, M method)
     {
         assert(this->finalized == false);
         
@@ -680,7 +701,7 @@ struct CastToJS {
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In base cast to js struct with lvalue ref\n");
-		return CastToJS<T*>()(isolate, &cpp_object);
+		return CastToJS<typename std::add_pointer<typename std::remove_const<T>::type>::type>()(isolate, &cpp_object);
 	}
 
 	/**
@@ -719,7 +740,8 @@ struct CastToJS<T*> {
 template<typename T>
 struct CastToJS<T&> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-		return CastToJS<T*>()(isolate, &cpp_object);		
+        using NonConstPointer = typename std::add_pointer_t<typename std::remove_const_t<T>>;
+		return CastToJS<NonConstPointer>()(isolate, const_cast<NonConstPointer>(&cpp_object));
 	}
 };
 
@@ -742,7 +764,7 @@ struct CastToNative
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
         if(!value->IsObject()){
             // TODO: Don't use castexception anywhere just use V8ExecutionException
-            printf("CastToNative failed for type: %s\n", typeid(T).name());
+            printf("CastToNative failed for type: %s (%s)\n", typeid(T).name(), *v8::String::Utf8Value(value));
             throw CastException("No specialized CastToNative found and value was not a Javascript Object");
         }
 		auto object = v8::Object::Cast(*value);

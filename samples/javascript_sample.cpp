@@ -461,7 +461,7 @@ void run_inheritance_test()
         i->add_assert();
         
         // it's critical to wrap both classes and have the base class set the child as "compatible" and the child set the parent as "parent"
-        i->wrap_class<IT_A>().add_method(&IT_A::get_int, "get_int").set_compatible_types<IT_B>().finalize().add_constructor<>("IT_A", *i);
+        i->wrap_class<IT_A>().add_method("get_int", &IT_A::get_int).set_compatible_types<IT_B>().finalize().add_constructor<>("IT_A", *i);
         i->wrap_class<IT_B>().set_parent_type<IT_A>().finalize().add_constructor<>("IT_B", *i);
         
         auto c = i->create_context();

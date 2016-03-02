@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 
             // make the Point constructor function available to JS
             auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
-            wrapped_point.add_method(&Point::thing, "thing");
+            wrapped_point.add_method("thing", &Point::thing);
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
         
 
@@ -124,16 +124,16 @@ int main(int argc, char* argv[])
             //   at least not without some serious finagling of storing a mapping between a singlne name and
             //   multiple function templates as well as some sort of "closeness" function for determining
             //   which primitive type parameters most closely match the javascript values provided
-            wrapped_point.add_method<int, char*>(&Point::overloaded_method, "overloaded_method1");
-            wrapped_point.add_method<int, int>(&Point::overloaded_method, "overloaded_method2");
-            wrapped_point.add_method(&Point::make_point, "make_point");
+            wrapped_point.add_method<int, char*>("overloaded_method1", &Point::overloaded_method);
+            wrapped_point.add_method<int, int>("overloaded_method2", &Point::overloaded_method);
+            wrapped_point.add_method("make_point", &Point::make_point);
 
-            wrapped_point.add_method(&Point::stringthing, "stringthing").add_method(&Point::void_func, "void_func");
-            wrapped_point.add_member(&Point::x_, "x");
-            wrapped_point.add_member(&Point::y_, "y");
+            wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
+            wrapped_point.add_member("x", &Point::x_);
+            wrapped_point.add_member("y", &Point::y_);
         
             // if you register a function that returns an r-value, a copy will be made using the copy constsructor
-            wrapped_point.add_method(&Point::get_foo, "get_foo").finalize();
+            wrapped_point.add_method("get_foo", &Point::get_foo).finalize();
             
             // objects created from constructors won't have members/methods added after the constructor is added
             wrapped_point.add_constructor("Point", global_templ);
@@ -142,17 +142,16 @@ int main(int argc, char* argv[])
             
         
             auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
-            wrapped_line.add_method(&Line::get_point, "get_point");
-            wrapped_line.add_method(&Line::get_rvalue_point, "get_rvalue_point");
-            wrapped_line.add_member(&Line::p, "p");
-            wrapped_line.add_method(&Line::some_method, "some_method").add_method(&Line::throw_exception, "throw_exception").finalize();
+            wrapped_line.add_method("get_point", &Line::get_point);
+            wrapped_line.add_method("get_rvalue_point", &Line::get_rvalue_point);
+            wrapped_line.add_member("p", &Line::p);
+            wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception).finalize();
             
             wrapped_line.add_constructor("Line", global_templ);
             
         
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
-            wrapped_foo.add_member(&Foo::i, "i").finalize()
-                ;
+            wrapped_foo.add_member("i", &Foo::i).finalize();
         
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);

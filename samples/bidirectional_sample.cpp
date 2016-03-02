@@ -59,9 +59,9 @@ int main(int argc, char ** argv)
         i->add_assert();
 
         auto & animal = i->wrap_class<Animal>();
-        animal.add_method(&Animal::get_type, "get_type");
-        animal.add_method(&Animal::get_i, "get_i");
-        animal.add_member(&Animal::i, "i");
+        animal.add_method("get_type", &Animal::get_type);
+        animal.add_method("get_i", &Animal::get_i);
+        animal.add_member("i", &Animal::i);
         animal.finalize();
         animal.add_constructor("Animal", *i);
     
