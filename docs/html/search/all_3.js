@@ -7,7 +7,7 @@ var searchData=
   ['callcallable',['CallCallable',['../namespacev8toolkit.html#structv8toolkit_1_1CallCallable',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20r_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; R(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01R_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
   ['callcallable_3c_20std_3a_3afunction_3c_20void_28args_2e_2e_2e_29_3e_20_3e',['CallCallable&lt; std::function&lt; void(Args...)&gt; &gt;',['../structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html',1,'v8toolkit']]],
-  ['cast',['cast',['../classv8toolkit_1_1V8ClassWrapper.html#a5c409a57d01082287505ffbfd3bc3685',1,'v8toolkit::V8ClassWrapper']]],
+  ['cast',['cast',['../classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#a2a0a07d1012f07eae8f13268cfd5ecf1',1,'v8toolkit::V8ClassWrapper&lt; T, void &gt;']]],
   ['castexception',['CastException',['../classv8toolkit_1_1CastException.html#a18766ced90226a07594dbda617680de9',1,'v8toolkit::CastException']]],
   ['castexception',['CastException',['../classv8toolkit_1_1CastException.html',1,'v8toolkit']]],
   ['casts_2ehpp',['casts.hpp',['../casts_8hpp.html',1,'']]],
@@ -74,6 +74,7 @@ var searchData=
   ['casttonative_3c_20unsigned_20long_20long_20_3e',['CastToNative&lt; unsigned long long &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01long_01long_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20unsigned_20short_20_3e',['CastToNative&lt; unsigned short &gt;',['../structv8toolkit_1_1CastToNative_3_01unsigned_01short_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20v8_3a_3alocal_3c_20v8_3a_3afunction_20_3e_20_3e',['CastToNative&lt; v8::Local&lt; v8::Function &gt; &gt;',['../structv8toolkit_1_1CastToNative_3_01v8_1_1Local_3_01v8_1_1Function_01_4_01_4.html',1,'v8toolkit']]],
+  ['casttonative_3c_20void_20_3e',['CastToNative&lt; void &gt;',['../structv8toolkit_1_1CastToNative_3_01void_01_4.html',1,'v8toolkit']]],
   ['casttonative_3c_20wchar_5ft_20_3e',['CastToNative&lt; wchar_t &gt;',['../structv8toolkit_1_1CastToNative_3_01wchar__t_01_4.html',1,'v8toolkit']]],
   ['casttupletojs',['CastTupleToJS',['../namespacev8toolkit.html#structv8toolkit_1_1CastTupleToJS',1,'v8toolkit']]],
   ['casttupletojs_3c_200_2c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastTupleToJS&lt; 0, std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastTupleToJS_3_010_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
@@ -87,6 +88,7 @@ var searchData=
   ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ContextHelper.html',1,'v8toolkit']]],
   ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ScriptHelper.html#abaab236fa7108752ee8e8c8c4f64ed79',1,'v8toolkit::ScriptHelper']]],
   ['contexthelperptr',['ContextHelperPtr',['../namespacev8toolkit.html#a051119c66d87fd3a8052a8bef87bcf2b',1,'v8toolkit']]],
+  ['cppfactory',['CppFactory',['../classv8toolkit_1_1CppFactory.html',1,'v8toolkit']]],
   ['create_5fcontext',['create_context',['../classv8toolkit_1_1IsolateHelper.html#a4eb6ce7983c1540aaed41eedf9463a59',1,'v8toolkit::IsolateHelper']]],
   ['create_5fisolate',['create_isolate',['../classv8toolkit_1_1PlatformHelper.html#aa49243609abde2b77b47c19ae526b81b',1,'v8toolkit::PlatformHelper']]]
 ];

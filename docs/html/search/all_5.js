@@ -1,6 +1,7 @@
 var searchData=
 [
   ['echo',['echo',['../classAnimal.html#ac8714faaafdc521891317d7bf5d621ae',1,'Animal']]],
+  ['element',['element',['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_027b774423676bb9d49743f2b795b7229.html#ab0b923a3b260a1f5f84a41f63d7bdce6',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(HEAD *, TAIL...)&gt;, std::enable_if_t&lt; std::is_fundamental&lt; HEAD &gt;::value &gt; &gt;']]],
   ['exception_5fsample_2ecpp',['exception_sample.cpp',['../exception__sample_8cpp.html',1,'']]],
   ['expose_5fgc',['expose_gc',['../namespacev8toolkit.html#a849759dd00446ac0a4a99fcd958ce328',1,'v8toolkit']]],
   ['expose_5fvariable',['expose_variable',['../classv8toolkit_1_1ContextHelper.html#ace4ba49fae0bc8d68a2cb79c815d2088',1,'v8toolkit::ContextHelper::expose_variable()'],['../classv8toolkit_1_1IsolateHelper.html#a95d9e67161781996159366dfccccd7ae',1,'v8toolkit::IsolateHelper::expose_variable()'],['../namespacev8toolkit.html#a0cdb01f87da69f86775abfa2d2e05c5a',1,'v8toolkit::expose_variable(v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, VARIABLE_TYPE &amp;variable)'],['../namespacev8toolkit.html#a03df786cc0b87a2542bba314a9dc24ce',1,'v8toolkit::expose_variable(v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, VARIABLE_TYPE &amp;variable)']]],

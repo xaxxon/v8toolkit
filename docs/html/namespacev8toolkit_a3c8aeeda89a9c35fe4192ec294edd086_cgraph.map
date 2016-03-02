@@ -3,7 +3,7 @@
 <area shape="rect" id="node4" href="$namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d" title="v8toolkit::require" alt="" coords="205,121,314,145"/>
 <area shape="rect" id="node8" href="$namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394" title="v8toolkit::stringify\l_value" alt="" coords="203,231,316,267"/>
 <area shape="rect" id="node3" href="$namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="378,5,528,41"/>
-<area shape="rect" id="node5" href="$namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228" title="v8toolkit::add_variable" alt="" coords="383,66,524,90"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#a8347d9b6eb893fde0b33082328d97c14" title="v8toolkit::add_variable" alt="" coords="383,66,524,90"/>
 <area shape="rect" id="node6" href="$namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673" title="v8toolkit::compile\l_source" alt="" coords="397,115,510,151"/>
 <area shape="rect" id="node7" href="$namespacev8toolkit.html#ad8ebb51dd22f6ba7533ecd77e6eb58ff" title="v8toolkit::get_file\l_contents" alt="" coords="398,175,509,211"/>
 <area shape="rect" id="node9" href="$namespacev8toolkit.html#ad915ca75357d04538a9aa09a3ef5abc2" title="v8toolkit::get_array\l_length" alt="" coords="576,259,699,295"/>

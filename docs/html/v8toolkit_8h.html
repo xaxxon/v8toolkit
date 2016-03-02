@@ -150,13 +150,15 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html">v8toolkit::CallCallable&lt; std::function&lt; void(Args...)&gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:structv8toolkit_1_1ParameterBuilder"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#structv8toolkit_1_1ParameterBuilder">v8toolkit::ParameterBuilder&lt; depth, T, U &gt;</a></td></tr>
+<tr class="memitem:structv8toolkit_1_1ParameterBuilder"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#structv8toolkit_1_1ParameterBuilder">v8toolkit::ParameterBuilder&lt; depth, T, U, class &gt;</a></td></tr>
 <tr class="separator:structv8toolkit_1_1ParameterBuilder"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_07HEAD_00_01TAIL_8_8_8_08_4_01_4.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(HEAD, TAIL...)&gt; &gt;</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_03f65a1129b9c2b569dd3d34ad015431a.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(HEAD, TAIL...)&gt;,                                                                                                                                                                                   std::enable_if_t&lt;!std::is_pointer&lt; HEAD &gt;::value||!std::is_fundamental&lt; typename std::remove_pointer&lt; HEAD &gt;::type &gt;::value &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_052ef0be30fde3a80baafc68808518d21.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(char *, TAIL...)&gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_06c06b652f8532d13899e41ac42519699.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const char *, TAIL...)&gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_052ef0be30fde3a80baafc68808518d21.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(char *, TAIL...)&gt; &gt;</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_027b774423676bb9d49743f2b795b7229.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(HEAD *, TAIL...)&gt;, std::enable_if_t&lt; std::is_fundamental&lt; HEAD &gt;::value &gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01std_1_1function_3_01RET_0c586c8ac9e31e52e6ec7112756d884c3.html">v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, std::function&lt; RET(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;, TAIL...)&gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -228,8 +230,8 @@ Functions</h2></td></tr>
 <tr class="memitem:a241a9ec36f478d9373719ac5a636e836"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:a241a9ec36f478d9373719ac5a636e836"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a241a9ec36f478d9373719ac5a636e836">v8toolkit::add_function</a> (const v8::Local&lt; v8::Context &gt; &amp;context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, T callable)</td></tr>
 <tr class="separator:a241a9ec36f478d9373719ac5a636e836"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa48d55bbed31ad98f5492be6fc6c6228"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aa48d55bbed31ad98f5492be6fc6c6228">v8toolkit::add_variable</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Value &gt; value)</td></tr>
-<tr class="separator:aa48d55bbed31ad98f5492be6fc6c6228"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8347d9b6eb893fde0b33082328d97c14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a8347d9b6eb893fde0b33082328d97c14">v8toolkit::add_variable</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Data &gt; template_to_attach)</td></tr>
+<tr class="separator:a8347d9b6eb893fde0b33082328d97c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae28dc0bd9866afb77f14455c63976683"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ae28dc0bd9866afb77f14455c63976683">v8toolkit::add_variable</a> (const v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, const v8::Local&lt; v8::Value &gt; value)</td></tr>
 <tr class="separator:ae28dc0bd9866afb77f14455c63976683"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3b2ed619814469ff03ef483d4b891bb8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, void(*function)(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;))</td></tr>
@@ -319,8 +321,8 @@ struct v8toolkit::CallCallable&lt; T &gt;</h3>
         </tr>
       </table>
 </div><div class="memdoc">
-<div class="textblock"><h3>template&lt;int depth, typename T, typename U&gt;<br />
-struct v8toolkit::ParameterBuilder&lt; depth, T, U &gt;</h3>
+<div class="textblock"><h3>template&lt;int depth, typename T, typename U, class = void&gt;<br />
+struct v8toolkit::ParameterBuilder&lt; depth, T, U, class &gt;</h3>
 
 <p>Class for turning a function parameter list into a parameter pack useful for calling the function </p>
 
@@ -342,7 +344,7 @@ struct v8toolkit::Bind&lt; T, U &gt;</h3>
 
 <p>Accepts an object and a method on that object to be called later via its operator() Does not require knowledge of how many parameters the method takes or any placeholder arguments Can be wrapped with a std::function </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00731">731</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00756">756</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 </div>
 </div>
 </div>
@@ -380,7 +382,7 @@ struct v8toolkit::Bind&lt; T, U &gt;</h3>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Feb 27 2016 14:08:24 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Mar 2 2016 04:22:16 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.10
 </small></address>

@@ -1,4 +1,3 @@
 <map id="v8toolkit::bind" name="v8toolkit::bind">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1V8ClassWrapper.html#a477abf6735470ac89be6e5d80a8c2d5f" title="v8toolkit::V8ClassWrapper\l::_add_method" alt="" coords="148,5,311,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1V8ClassWrapper.html#a074b1f33d90adcc00a6d232a852f1de7" title="v8toolkit::V8ClassWrapper\l::add_method" alt="" coords="359,5,521,41"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#a6a22cd6f3454ed0fef245a3ccaf5e6a5" title="v8toolkit::V8ClassWrapper\l\&lt; T, void \&gt;::_add_method" alt="" coords="148,5,311,41"/>
 </map>
