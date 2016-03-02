@@ -100,11 +100,13 @@ class... AddParams,
 class Callable>
 struct MapperHelper<Container<Data, AddParams...>, Callable>
 {
-    auto operator()(Container<Data, AddParams...> container, Callable callable) -> Container<decltype(callable(std::declval<Data>())), AddParams...>
+    auto operator()(const Container<Data, AddParams...> & container, Callable callable) -> Container<decltype(callable(std::declval<Data>()))>
     {
         Container<decltype(callable(std::declval<Data>())), AddParams...> results;
         for (auto element : container) {
-            results.push_back(callable(element));
+            try {
+                results.push_back(callable(element));
+            }catch(...) {} // ignore exceptions, just don't copy the element
         }
         return results;
     }

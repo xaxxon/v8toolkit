@@ -223,8 +223,8 @@ struct CallCallable<std::function<void(Args...)>> {
 /**
 * Class for turning a function parameter list into a parameter pack useful for calling the function
 */
-template<int depth, typename T, typename U> 
-struct ParameterBuilder {};
+template<int depth, typename T, typename U, class = void> 
+struct ParameterBuilder;
 
 
 /**
@@ -255,7 +255,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 *   the inheritance chain ends
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> : 
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>, 
+                        std::enable_if_t<!std::is_pointer<HEAD>::value || !std::is_fundamental< typename std::remove_pointer<HEAD>::type >::value > >: 
         public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
 
     typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
@@ -263,39 +264,62 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>> 
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., CastToNative<HEAD>()(info.GetIsolate(), info[depth])); 
+        // printf("Parameter builder HEAD: %s\n", typeid(HEAD).name());
+        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth])); 
     }
 };
+    
+    
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
+					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    std::unique_ptr<char[]> buffer;
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      this->buffer = CastToNative<char *>()(info.GetIsolate(), info[depth]);
+      this->super::operator()(function, info, ts..., buffer.get());
+    }
+};
+
 
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
-        public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
-            
-    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
-    enum {DEPTH = depth, ARITY=super::ARITY+1};
-    std::unique_ptr<char[]> buffer;
-    template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
-      this->super::operator()(function, info, ts..., buffer.get()); 
-    }
-    };
-    
-    
-    template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-    struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
-						      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
     
     typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
     enum {DEPTH = depth, ARITY=super::ARITY+1};
     std::unique_ptr<char[]> buffer;
+    
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
+      this->buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
 };
 
+
+/**
+* Specialization that deals with pointers to primitive types by creating a holder that the address of can be passed along
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>, std::enable_if_t< std::is_fundamental<HEAD>::value >> :
+    public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+    
+    // This variable's address will be passed into the function to be called
+    HEAD element;
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+      this->element = CastToNative<HEAD>()(info.GetIsolate(), info[depth]);
+      this->super::operator()(function, info, ts..., &this->element);
+    }
+};
 
 
  
@@ -349,7 +373,8 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, T
 template<int depth, class T>
 struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
 {
-    enum {DEPTH = 0, ARITY=0};
+    enum {ARITY=0};
+    
     void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> function, const v8::FunctionCallbackInfo<v8::Value> & info) {
         function(info);
     }
@@ -364,24 +389,24 @@ template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
 {
     auto copy = new std::function<R(Args...)>(f);
-    return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto isolate = args.GetIsolate();
+    return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& info) {
+        auto isolate = info.GetIsolate();
 
-        auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(args.Data()))->Value();
+        auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(info.Data()))->Value();
 
         using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>;
         PB_TYPE pb;
         
         auto arity = PB_TYPE::ARITY;
-        if(args.Length() < arity) {
+        if(info.Length() < arity) {
             std::stringstream ss;
-            ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << args.Length();
+            ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
             return;
         }
         std::exception_ptr exception_pointer;
         try {
-            pb(callable, args);
+            pb(callable, info);
         } catch (...) {
             auto anyptr_t = new Any<std::exception_ptr>( std::current_exception());
             
@@ -473,7 +498,7 @@ void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Ob
 * Often used to populate the object_template used to create v8::Context objects so the variable is available from 
 *   all contexts created from that object_template
 */
-void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Value> value);
+void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Data> value);
 
 
 /**

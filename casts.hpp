@@ -24,6 +24,11 @@ struct CastToNative;
 /**
 * Casts from a boxed Javascript type to a native type
 */
+template<>
+struct CastToNative<void> {
+    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {}
+};
+
 
 // integers
 template<>
@@ -147,6 +152,8 @@ struct CastToNative<char *> {
     return std::unique_ptr<char[]>(new_string);
   }
 };
+
+
 
 
 /**

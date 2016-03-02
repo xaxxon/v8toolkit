@@ -1,3 +1,5 @@
+#pragma once
+
 #include "v8toolkit.h"
 
 namespace v8toolkit {
@@ -24,26 +26,72 @@ public:
 };
 
 
+template<class T, class... ConstructorArgs>
+class Factory {
+public:
+    virtual T * operator()(ConstructorArgs... constructor_args) = 0;
+};
+
+// Creates an instance of a class and returns a pointer to it
+template<class Child, class Base, class ... ConstructorArgs>
+class CppFactory : public Factory<Base, ConstructorArgs...>{
+public:
+    virtual Base * operator()(ConstructorArgs... constructor_args) override {return new Child(constructor_args...);}
+};
+
+
+// The first two parameters of the constructor for JSWrapperClass must be
+//   a context and javascript object, then any other constructor parameters
+template<class RealClass, class JSWrapperClass, class... ConstructorParameters>
+class JSFactory : public Factory<RealClass, ConstructorParameters...> {
+protected:
+    v8::Isolate * isolate;
+    v8::Global<v8::Context> global_context;
+    v8::Global<v8::Function> global_javascript_function;
+
+public:
+    JSFactory(v8::Isolate * isolate, v8::Local<v8::Function> javascript_function) : 
+        isolate(isolate),
+        global_context(v8::Global<v8::Context>(isolate, isolate->GetCurrentContext())),
+        global_javascript_function(v8::Global<v8::Function>(isolate, javascript_function))
+        {
+            assert(this->isolate);
+            assert(this->isolate->InContext());
+        }
+    
+    RealClass * operator()(ConstructorParameters... constructor_parameters) {
+        return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
+            v8::Local<v8::Value> result;
+            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
+            assert(success);
+            assert(result->IsObject());
+            return new JSWrapperClass(context, v8::Local<v8::Object>::Cast(result), constructor_parameters...);
+        });
+    }
+};
+
+
 // Builds the body of a JS_ACCESS function 
 // Takes the return type of the function, the name of the function, and a list of input variable names, if any
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
     auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\
-    CastToNative<ReturnType> cast_to_native;\
-    return scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
+    v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
+    return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
         v8::TryCatch tc(isolate); \
         auto js_object = global_js_object.Get(isolate); \
         auto maybe_function_value = js_object->Get(context, v8::String::NewFromUtf8(isolate, #name)); \
         if(!maybe_function_value.IsEmpty()) { \
-            printf("Got value when looking up %s\n", #name); \
+            /*printf("Got value when looking up %s\n", #name); */\
             if(!maybe_function_value.ToLocalChecked()->IsUndefined()) { \
-                printf("..and the value was defined\n"); \
+                /*printf("..and the value was defined\n");*/ \
                 auto jsfunction = v8::Local<v8::Function>::Cast(maybe_function_value.ToLocalChecked()); \
                 if(!jsfunction.IsEmpty()) { \
-                    printf("..and the value is a function, so calling the javascript function\n"); \
-                    v8::Local<v8::Value> result = call_javascript_function(context, jsfunction, js_object, parameter_tuple); \
+                    /*printf("Calling the javascript function\n");*/ \
+                    v8::Local<v8::Value> result; \
+                    (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
                     return cast_to_native(isolate, result); \
         }}} \
-            printf("Falling back to C++ implementation\n"); \
+            /*printf("Falling back to C++ implementation\n");*/ \
         return this->std::remove_pointer<decltype(this)>::type::BASE_TYPE::name( __VA_ARGS__ ); \
     });
 

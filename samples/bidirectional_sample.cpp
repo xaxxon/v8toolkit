@@ -12,59 +12,31 @@ class Animal {
 public:
     virtual ~Animal()=default;
 
-    int i = rand();
+    int i = 42;
 
-    string get_type() {return "Cow";}
-    virtual int get_name() {printf("In getname i = %d\n", i); return i;};
+    virtual string get_type() {return "cow";}
+    virtual int get_i() {return i;};
     virtual string echo(string s){return s;}
     virtual int add(int i, int j){return i + j;}
+};
+
+class Zebra : public Animal {
+    virtual string get_type() override {return "zebra";}
 };
 
 
 class JSAnimal : public Animal, public JSWrapper<Animal> {
 public:
     JSAnimal(v8::Local<v8::Context> context, v8::Local<v8::Object> object) : JSWrapper(context, object) {}
-    JS_ACCESS(int, get_name)
+    
+    // Every function you want to override in javascript must be in this list or it will ALWAYS call the C++ version
+    JS_ACCESS(int, get_i)
     JS_ACCESS_1(string, echo, string)
     JS_ACCESS_2(int, add, int, int)
+    JS_ACCESS(string, get_type)
 };
 
 
-template<class T>
-class Factory {
-public:
-    virtual T * operator()() = 0;
-};
-
-
-// The first two parameters of the constructor for JSWrapperClass must be
-//   a context and javascript object, then any other constructor parameters
-template<class RealClass, class JSWrapperClass>
-class JSFactory : public Factory<RealClass> {
-protected:
-    v8::Isolate * isolate;
-    v8::Global<v8::Context> global_context;
-    v8::Global<v8::Function> global_javascript_function;
-
-public:
-    JSFactory(v8::Isolate * isolate, v8::Local<v8::Function> javascript_function) : 
-        isolate(isolate),
-        global_context(v8::Global<v8::Context>(isolate, isolate->GetCurrentContext())),
-        global_javascript_function(v8::Global<v8::Function>(isolate, javascript_function))
-        {
-            printf("In constructor isolate set to %p\n", this->isolate);
-            assert(this->isolate);
-            assert(this->isolate->InContext());
-        }
-    
-    RealClass * operator()(){
-        printf("In operator() with isolate %p\n", isolate);
-        return scoped_run(isolate, global_context, [&](auto isolate, auto context){
-            auto result = call_javascript_function(context, global_javascript_function.Get(isolate), context->Global());
-            return new JSWrapperClass(context, v8::Local<v8::Object>::Cast(result));
-        });
-    }
-};
 
 
 map<string, std::unique_ptr<Factory<Animal>>> animal_factories;
@@ -84,35 +56,74 @@ int main(int argc, char ** argv)
     auto i = PlatformHelper::create_isolate();
     (*i)([&]{
         i->add_print();
-        printf("Created isolate %p\n", i->get_isolate());
+        i->add_assert();
+
         auto & animal = i->wrap_class<Animal>();
-        animal.add_method(&Animal::get_type, "get_type").add_method(&Animal::get_name, "get_name").add_member(&Animal::i, "i");
+        animal.add_method("get_type", &Animal::get_type);
+        animal.add_method("get_i", &Animal::get_i);
+        animal.add_member("i", &Animal::i);
+        animal.finalize();
         animal.add_constructor("Animal", *i);
     
-        // i->add_function("add_animal", &register_animal_factory);
+        i->add_function("add_animal", &register_animal_factory);
     
         auto c = i->create_context();
     
-        // c->run("add_animal('mule', function(){println('Returning new mule');return Object.create({get_name:function(){return 'jsname: foobar';},echo:function(s){return 'javascript method get_name called!' + s;}});})");
-        // c->run("add_animal('horse', function(prototype){return function(){return Object.create(prototype)};}(new Animal()));");
-        // c->run("a=new Animal();a.get_name();");
-        c->run("c = new Animal(); c.get_name(); b=Object.create(c);c.get_name(); b.get_name();");
+        // add new animal factories from javascript
+        c->run("add_animal('mule', function(){println('Returning new mule');return Object.create({get_type:function(){return 'mule'},add:function(a,b){return a + b + this.get_i();}, get_i:function(){return 1;},echo:function(s){return 'js-mule-echo: ' + s;}});})");
+        c->run("add_animal('horse', function(prototype){return function(){return Object.create(prototype)};}(new Animal()));");
+        animal_factories.insert(pair<string, std::unique_ptr< Factory<Animal> >>("zebra", make_unique< CppFactory<Zebra, Animal> >()));
+        
+        // create subclass of Animal in javascript and test that methods still work
+        c->run("a=new Animal();a.get_i();");
+        c->run("c = new Animal(); c.get_i(); b=Object.create(c);c.get_i(); b.get_i();");
 
+
+        // create animals based on the registered factories
+        animals.push_back((*animal_factories.find("mule")->second)());
+        animals.push_back((*animal_factories.find("horse")->second)());
+        animals.push_back((*animal_factories.find("zebra")->second)());
         
-    
-        // animals.push_back((*animal_factories.find("mule")->second)());
-        // animals.push_back((*animal_factories.find("horse")->second)());
+        assert(animals.size() == 3);
         
-        // animals.push_back(new Animal());
-    
-        for(auto a : animals) {
-            printf("About to run get_name\n");
-            cout << a->get_name() << endl;
-            printf("About to run echo\n");
-            cout << a->echo("test") << endl;
-            printf("About to run add\n");
-            cout << a->add(4,5)<<endl;
-        }   
+        // mule
+        printf("Checking Mule:\n");
+        auto a = animals[0];
+        assert(a->get_type() == "mule");
+        assert(a->get_i() == 1);
+        assert(a->echo("mule") == "js-mule-echo: mule");
+        assert(a->add(2,2) == 5); // mules don't add well
+        
+        // the "horse" object doesn't overload anything, so it's really a cow
+        printf("Checking Horse:\n");
+        a = animals[1];
+        assert(a->get_type() == "cow");
+        assert(a->get_i() == 42);
+        assert(a->echo("horse") == "horse");
+        assert(a->add(2,2) == 4); // cows are good at math
+        
+        // Checking Zebra
+        printf("Checking zebra\n");
+        a = animals[2];
+        assert(a->get_type() == "zebra");
+        assert(a->get_i() == 42);
+        assert(a->echo("zebra") == "zebra");
+        assert(a->add(2,2) == 4); // cows are good at math
+        printf("Barn looks good\n");
+        
+        
+
+        //
+        //
+        // // horse
+        //
+        //     printf("About to run get_i\n");
+        //
+        //     cout << a->get_i() << endl;
+        //     printf("About to run echo\n");
+        //     cout << a->echo("test") << endl;
+        //     printf("About to run add\n");
+        //     cout << a->add(4,5)<<endl;   
     });
 }
 
