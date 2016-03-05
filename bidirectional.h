@@ -4,6 +4,13 @@
 
 namespace v8toolkit {
 
+class BidirectionalException : std::exception {
+    std::string reason;
+public:
+    BidirectionalException(const std::string & reason) : reason(reason) {}
+    virtual const char * what() const noexcept {return reason.c_str();}
+};
+
 /**
 * Type to inherit from for classes wrapping javascript objects wrapping c++ interfaces
 * Example: class MyClass{};  class JSMyClass : public MyClass, public JSWrapper {};
@@ -30,6 +37,17 @@ template<class T, class... ConstructorArgs>
 class Factory {
 public:
     virtual T * operator()(ConstructorArgs... constructor_args) = 0;
+    
+    template<class U>
+    U * as(ConstructorArgs...  constructor_args){
+        auto result = this->operator()(constructor_args...);
+        if (dynamic_cast<U*>(result)) {
+            return static_cast<U*>(result);
+        } else {
+            throw BidirectionalException("Could not convert between types");
+        }
+    }
+    
 };
 
 // Creates an instance of a class and returns a pointer to it

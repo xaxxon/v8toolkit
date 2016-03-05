@@ -423,9 +423,8 @@ public:
 	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	V8ClassWrapper<T> & add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template) 
+	v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template) 
 	{				
-        
         assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
         
 		// create a function template even if no javascript constructor will be used so 
@@ -437,7 +436,7 @@ public:
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
 				
-		return *this;
+        return *this;
 	}
 	
 	/**

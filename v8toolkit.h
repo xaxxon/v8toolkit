@@ -20,6 +20,23 @@
 
 #define V8_TOOLKIT_DEBUG false
 
+
+/** TODO LIST
+*
+* Rename project to v8toolkit everywhere including github
+* All includes should be included as #include "v8toolkit/FILENAME.h" instead of just #include "FILENAME.h"
+* Rename javascript.h file to something much better
+* Rename v8toolkit.h contents to something else so it can be included directory but using a different name
+* Change *Helper classes to just their base name.  They're in a namespace, so it shouldn't be too confusing.
+* Including "v8toolkit/v8toolkit.h" should include everything, but specific includes should also work for
+*   v8helpers.h, <new name for v8toolkit.h>, <new name for javascript.h>
+*/
+
+
+
+
+
+
 namespace v8toolkit {
     
 /**
@@ -558,13 +575,12 @@ bool call_javascript_function(const v8::Local<v8::Context> context,
     
     v8::TryCatch tc(isolate);
     
-    // printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
-    // printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
+    // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         printf("error: %s or result was empty\n", *v8::String::Utf8Value(tc.Exception()));
         return false;
-    }                            
+    }
     result = maybe_result.ToLocalChecked();
     return true;
 }

@@ -154,7 +154,7 @@ typename Key,
 auto reducer(const Container<Key, Value, AddParams...> & container, Callable callable) -> std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))>
 {
     std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))> results;
-    for(auto pair : container) {
+    for(auto & pair : container) {
         results.push_back(callable(pair));
     }
     return results;
