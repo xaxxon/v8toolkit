@@ -286,7 +286,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
     }
 };
     
-    
+/**
+* Specialization for function taking a char *
+*/
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
 					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
@@ -301,7 +303,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)
     }
 };
 
-
+/**
+* Specialization for function taking a const char *
+*/
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
 					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
@@ -358,7 +362,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., info); 
+        this->super::operator()(function, info, ts..., info);
     }
 };
 
@@ -379,6 +383,41 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, T
         this->super::operator()(function, info, ts..., info.GetIsolate()); 
     }
 };
+
+
+/**
+* Specialization for a function that wants the context
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Context>, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+		auto context = info.GetIsolate()->GetCurrentContext();
+        this->super::operator()(function, info, ts..., context);
+    }
+};
+
+
+/**
+* Specialization for function wanting the receiver JS object (object being created for constructors)
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Object>, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info.This());
+    }
+};
+
+
 
 
 

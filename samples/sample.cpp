@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-
+#include <assert.h>
 #include <stdio.h>
 
 #define USE_BOOST
@@ -13,18 +13,21 @@ using namespace std;
 
 struct Foo {
     Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
-    Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n");}
+    Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n"); assert(allow_copy_constructor);}
     ~Foo(){if (SAMPLE_DEBUG) printf("deleted Foo %p\n", this);}
     int i = 42;
+	static bool allow_copy_constructor;
 };
+
+bool Foo::allow_copy_constructor = true;
 
 // random sample class for wrapping - not actually a part of the library
 class Point {
 public:
-    Point() : x_(69), y_(69) {instance_count++; if (SAMPLE_DEBUG) printf("created Point (default constructor) at %p with x %d y %d\n", this, x_, y_);}
+    Point() : x_(69), y_(69) {instance_count++;}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
     Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
-    ~Point(){instance_count--; if (SAMPLE_DEBUG) printf("Point destructor called on %p\n", this);}
+    ~Point(){instance_count--;}
     int x_, y_;
     int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
     int overloaded_method(char * foo){return 0;}
@@ -40,10 +43,7 @@ public:
     // Leave this as an r-value return for testing purposes Foo f;
     Foo get_foo() {return Foo();}
     
-    static int get_instance_count(){
-        printf("Point::get_instance_count: %d\n", Point::instance_count);
-        return instance_count;
-    }
+    static int get_instance_count(){ return instance_count; }
     static int instance_count;
 };
 
@@ -107,7 +107,8 @@ int main(int argc, char* argv[])
             v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
         
             add_print(isolate, global_templ);
-            
+            add_assert(isolate, global_templ);
+			
             add_function(isolate, global_templ, "some_function", some_function);
             add_function(isolate, global_templ, "throw_exception", [](){throw std::exception();});
 
@@ -160,6 +161,7 @@ int main(int argc, char* argv[])
             if(!get_file_contents("code.js", js_code)) {
                 assert(false);
             }
+			
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),
                                     v8::NewStringType::kNormal).ToLocalChecked();
@@ -167,68 +169,34 @@ int main(int argc, char* argv[])
             // Compile the source code.
             v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
 
-            printf("About to start running script\n");
             auto result = script->Run(context);
             print_maybe_value(result);
 
             
 
+			// calling a function with too few parameters throws
+            v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
+            v8::TryCatch tc(isolate);
+            (void)script3->Run(context);
+            assert(tc.HasCaught());
 
-            // // throwing a c++ exception here immediately terminates the process
-            // printf("Checking that calling a normal function with too few parameters throws\n");
-            // v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
-            // v8::TryCatch tc(isolate);
-            // try{
-            //     (void)script3->Run(context);
-            //     if(tc.HasCaught()){
-            //     } else {
-            //         printf("TC has not caught\n");
-            //     }
-            // } catch(...) {
-            //     printf("This should be impossible\n");
-            // }
-            //
-            // printf("Checking that calling a class method with too few parameters throws\n");
-            // v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
-            // v8::TryCatch tc2(isolate);
-            // try{
-            //     (void)script4->Run(context);
-            //     if(tc2.HasCaught()){
-            //     } else {
-            //         printf("tc2 has not caught\n");
-            //     }
-            // } catch(...) {
-            //     printf("This should be impossible\n");
-            // }
-            //
-            // printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
-            // v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
-            // v8::TryCatch tc3(isolate);
-            // try{
-            //     (void)script5->Run(context);
-            //     if(tc3.HasCaught()){
-            //     } else {
-            //         printf("tc3 has not caught\n");
-            //     }
-            // } catch(...) {
-            //     printf("This should be impossible\n");
-            // }
-            //
-            // printf("Checking that calling a function that throws a c++ exception has its exception wrapped for V8\n");
-            // v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
-            // v8::TryCatch tc4(isolate);
-            // try{
-            //     (void)script6->Run(context);
-            //     if(tc4.HasCaught()){
-            //     } else {
-            //         printf("tc4 has not caught\n");
-            //     }
-            // } catch(...) {
-            //     printf("This should be impossible\n");
-            // }
-            //
-            //
-                        
+			// calling a method with too few parameters throws
+            v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
+            v8::TryCatch tc2(isolate);
+            (void)script4->Run(context);
+            assert(tc2.HasCaught());
+
+            v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
+            v8::TryCatch tc3(isolate);
+            (void)script5->Run(context);
+            assert(tc3.HasCaught());
+
+            // printf("Checking that calling a method that throws a c++ exception has its exception wrapped for V8\n");
+            v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
+            v8::TryCatch tc4(isolate);
+            (void)script6->Run(context);
+            assert(tc4.HasCaught());
+
         });
         
     }
@@ -240,33 +208,4 @@ int main(int argc, char* argv[])
     delete platform;
     return 0;
 }
-
-
-    // an Isolate is a V8 instance where multiple applications can run at the same time, but only 
-    //   on thread can be running an Isolate at a time.  
-
-    // an context represents the resources needed to run a javascript program
-    //   if a program monkey patches core javascript functionality in one context it won't be 
-    //   visible to another context
-    //   Local<Context> context = Context::New(isolate);
-    //   A context has a global object template, but function templates can be added to it
-
-    // A handle is a reference to a javascript object and while active will stop the object from being 
-    //   garbage collected
-    //   handles exist within a stack-only allocated handle scope. (cannot new() a handle scope) 
-    //   UniquePersistent handle is like a unique_ptr
-    //   Persistent handle is must be released manually with ::Reset() method
-
-    // EscapableHandleScope lets you return a handle scope created inside a function, otherwise
-    //   all handles created in that function will be destroyed before a value is returned
-    //   Return with: return handle_scope.Escape(array);
-
-    // Templates allow c++ functions and objects to be made visible in javascript.
-    //   templates are created within a context and must be created in each context they are to be used in
-    //   Templates have accessors and interceptors
-    //      accessors are tied to specific field names
-    //      interceptors are called on ALL field name gets/sets (either by name foo.bar or by index as in foo[2])
-
-    // Templates can have prototype templates to simulate prototypical inheritance
-
 

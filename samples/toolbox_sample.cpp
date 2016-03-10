@@ -7,15 +7,14 @@
 using namespace v8toolkit;
 
 
-void print_maybe_value(v8::MaybeLocal<v8::Value> maybe_value) 
+void check_maybe_value(v8::MaybeLocal<v8::Value> maybe_value) 
 {
-    if (maybe_value.IsEmpty()) {
-        printf("Maybe value was empty\n");
-    } else {
-        auto local = maybe_value.ToLocalChecked();
-        v8::String::Utf8Value utf8(local);
-        printf("Maybe value: '%s'\n", *utf8);
-    }
+    assert(!maybe_value.IsEmpty());
+		
+    auto local = maybe_value.ToLocalChecked();
+    v8::String::Utf8Value utf8(local);
+	assert(!strcmp(*utf8, "yay"));
+
 }
 
 class Point {
@@ -24,7 +23,6 @@ public:
     ~Point(){instance_count--;}
     
     static int get_instance_count(){
-        printf("Point::get_instance_count: %d\n", Point::instance_count);
         return instance_count;
     }
     static int instance_count;
@@ -61,6 +59,7 @@ int main(int argc, char* argv[])
     // runs the following code in an isolate and handle scope (no context created yet)
     scoped_run(isolate, [isolate](){
         v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
+		v8toolkit::add_assert(isolate, global_templ);
         add_print(isolate, global_templ);
         std::vector<std::string> paths = {"./"};
         add_require(isolate, global_templ, paths);
@@ -98,7 +97,7 @@ int main(int argc, char* argv[])
 
 
             auto result = script->Run(context);
-            print_maybe_value(result);
+            check_maybe_value(result);
         });
     });
 

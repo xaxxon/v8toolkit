@@ -228,6 +228,7 @@ private:
     // Calls the C++ constructor with javascript-provided arguments
 	template <typename... Fs, size_t... ns> 
 	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<ns...>){
+		
 		auto cpp_object = new T(CastToNative<typename std::remove_reference<Fs>::type>()(info.GetIsolate(), info[ns])...);
         if (V8_CLASS_WRAPPER_DEBUG) printf("Created new c++ object at %p for type %s\n", cpp_object, typeid(T).name());
         return cpp_object;
@@ -239,14 +240,18 @@ private:
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
         // printf("v8 constructor creating type %s\n", typeid(T).name());
-		T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+		T * new_cpp_object = nullptr;
+		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
+		ParameterBuilder<0, decltype(constructor), decltype(constructor)>()(constructor, args);
+		// T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
+
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
 		//   GC's the javascript object, there should be no c++ references to it
 		_initialize_new_js_object<DestructorBehaviorDelete<T>>(isolate, args.This(), new_cpp_object);
 		
-		// return the object to the javascript caller
+		// // return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
 	}
 	

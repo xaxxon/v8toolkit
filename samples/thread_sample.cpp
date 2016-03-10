@@ -1,12 +1,11 @@
 #include "javascript.h"
 using namespace v8toolkit;
-using namespace v8;
 
 #define THREAD_COUNT 3
 #define SLEEP_TIME 1
 
 
-void print_future(ContextHelper & context, 	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<ScriptHelper>>>  & future)
+void print_future(Context & context, 	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>  & future)
 {
     static bool first_time = true;
     if(first_time) {
@@ -22,8 +21,8 @@ void print_future(ContextHelper & context, 	std::future<std::pair<v8::Global<v8:
     //    context::operator() must acquire the isolate lock that the second
     //    async on isoalte3 may still be using
     context([&](auto isolate){
-        Global<Value> global_value = future.get().first;
-        Local<Value> local_value = global_value.Get(context.get_isolate());
+        v8::Global<v8::Value> global_value = future.get().first;
+        v8::Local<v8::Value> local_value = global_value.Get(context.get_isolate());
         v8::String::Utf8Value utf8value(local_value);
         printf("run async result: '%s'\n", *utf8value); 
     });
@@ -34,19 +33,19 @@ void print_future(ContextHelper & context, 	std::future<std::pair<v8::Global<v8:
 int main(int argc, char ** argv)
 {
         
-    PlatformHelper::init(argc, argv);
-    auto isolate = PlatformHelper::create_isolate();
+    Platform::init(argc, argv);
+    auto isolate = Platform::create_isolate();
     isolate->add_function("sleep", [](int i){sleep(i);});
     isolate->add_print();
     auto c1 = isolate->create_context();
     
-    auto isolate2 = PlatformHelper::create_isolate();
+    auto isolate2 = Platform::create_isolate();
     isolate2->add_function("sleep", [](int i){sleep(i);});
     
     isolate2->add_print();
     auto c2 = isolate2->create_context();
     //
-    auto isolate3 = PlatformHelper::create_isolate();
+    auto isolate3 = Platform::create_isolate();
     isolate3->add_function("sleep", [](int i){sleep(i);});
     
     isolate3->add_print();

@@ -1,7 +1,7 @@
 
-# V8_TARGET = native
+V8_TARGET = native
 #V8_TARGET = x64.release
-V8_TARGET = x64.debug
+# V8_TARGET = x64.debug
 # DEBUG = -g
 
 ifdef LINUX

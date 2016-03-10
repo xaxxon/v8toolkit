@@ -89,10 +89,10 @@ Here is the simplest program you can write to execute some javascript using the 
     
     int main(int argc, char ** argv) {
         // any v8-specific command-line arguments will be stripped out
-        PlatformHelper::init(argc, argv); 
+        Platform::init(argc, argv); 
         
         // creates an isolate helper which can manage some number of contexts
-        auto isolate_helper = PlatformHelper::create_isolate();
+        auto isolate_helper = Platform::create_isolate();
         
         // javascript doesn't have any way to print to stdout, so this exposes some handy functions to javascript
         isolate_helper->add_print(); 
@@ -109,7 +109,9 @@ and will be seen any other JavaScript run within that same context.
 
 An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling isolate_helper->create_context() a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
 
-PlatformHelper manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
+Platform manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
+
+##### v8toolkit provides classes wrapping native V8 classes with the same names.  This means you cannot `use namespace` both the v8 and v8toolkit namespaces at the same time or you will get ambiguity errors.
 
 #### Compiler options to build your program
 
@@ -151,7 +153,7 @@ Skipping some of the boilerplate in the previous example, here's how to call a c
         return x + y; 
     }
     
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     i->add_print();
     
     // adds a function named "js_add_numbers" to each context created from this isolate that calls 
@@ -265,10 +267,10 @@ The same limitation exists for overloaded plain functions and methods.  They can
 After wrapping your class, you can use your class just as any other primitive type.   On its own, as a paramter to a function, as a return type from
 a function, or in an STL container.   
 
-#### Introducing the ScriptHelper
+#### Introducing the Script
 
 There's one more "helper" type we haven't talked about, since it's not needed for simple examples shown so far.  It's likely in a real-world project
-the same code will be run multiple times and compiling it each time is a huge waste.   That's where the ScriptHelper type comes in.
+the same code will be run multiple times and compiling it each time is a huge waste.   That's where the Script type comes in.
 
     // returns a compiled script that can be run multiple times without re-compiling
     auto script = context->compile("println('Hello Javascript World!');");
@@ -279,28 +281,28 @@ the same code will be run multiple times and compiling it each time is a huge wa
 That compiled script always runs in the context it was created in.   If you need to run the same code in another context, you will need to recompile it.
 
 
-#### *Helper object lifetimes
+#### v8toolkit object lifetimes
 
-In the following sections, *Helper refers to all of IsolateHelper, ContextHelper, and ScriptHelper
+In the following sections, v8toolkit object refers to all of v8toolkit Isolate, Context, and Script
 
 In V8, a context is invalid if the isolate it was created in has been cleaned up.   Similarly, a compiled script isn't valid if its context is
-destroyed or invalid.  To help manage these object dependencies, each IsolateHelper, ContextHelper, and ScriptHelper track their dependencies and make
+destroyed or invalid.  To help manage these object dependencies, each v8toolkit object tracks their dependencies and makes
 sure those dependencies are not destroyed until they are no longer needed.
 
-If you've noticed in all the examples, the variable storing all the *Helper objects is always set as "auto".  The actual type
-returned when creating these types is a std::shared_ptr\<>.  In addition, when a ContextHelper is created from an IsolateHelper or a ScriptHelper from a 
-ContextHelper, the newly created object has a shared_ptr to it's parent object.  This ensures an IsolateHelper will not be destroyed while a ContextHelper 
-is depending on it or a ContextHelper destroyed while a ScriptHelper is depending on it.  This means that even if your variable storing your IsolateHelper 
-goes out of scope, if you've created a ContextHelper from it and still have that object around, the associated IsolateHelper will stick around.  This 
+If you've noticed in all the examples, the variable storing all the toolkit objects are always set as "auto".  The actual type
+returned when creating these types is a std::shared_ptr\<> of type IsolatePtr, ContextPtr, ScriptPtr.  In addition, when a v8toolkit Context is created from a v8toolkit Isolate or a v8toolkit Script from a 
+v8toolkit Context, the newly created object has a shared_ptr to it's parent object.  This ensures an Isolate will not be destroyed while a Context 
+is depending on it or a Context destroyed while a Script is depending on it.  This means that even if your variable storing your Isolate 
+goes out of scope, if you've created a Context from it and still have that object around, the associated Isolate will stick around.  This 
 guarantees that as long as you can make the call to run some JavaScript code, the necessary state information will be available for it to succeed.   
 
 To illustrate this:
 
     {
-        std::shared_ptr<ScriptHelper> s;
+        std::shared_ptr<Script> s;
         {
-            // PlatformHelper is a singleton and never goes away
-            auto i = PlatformHelper::create_context(); // i reference count is 1
+            // Platform is a singleton and never goes away
+            auto i = Platform::create_context(); // i reference count is 1
             auto c = i->create_context(); // c reference count is 1, i reference count is now 2
         
             s = c->compile("4;"); // s reference count is 1, c reference count is now 2, i is still 2
@@ -312,22 +314,22 @@ To illustrate this:
     // destroys it's shared_ptr to c, dropping c's reference count to 0 causing c to be destroyed.  Destroying
     // c destroys its shared_ptr to i, dropping i's reference count to 0 causing i to be destroyed  
 
-This behavior means you never have to worry about having your *Helper objects being cleaned up too soon and leaving your compiled scripts unrunnable or
-making sure you manually clean up the *Helpers in order to not have a memory leak.   If you can possibly use a *Helper again, it will be there for you
+This behavior means you never have to worry about having your v8toolkit objects being cleaned up too soon and leaving your compiled scripts unrunnable or
+making sure you manually clean up the v8toolkit objects in order to not have a memory leak.   If you can possibly use a v8toolkit object again, it will be there for you
 and if you can't, it is destroyed automatically.
 
 
 #### Running JavaScript in a separate thread
 
-This section is intentionally after the Helper Object Lifetime section because it's important to understand how the *Helper objects maintain their
-dependencies.  The description of the dependency mechanism is expanded on in this section, so if you didn't read Helper Object Lifetime (or it didn't 
+This section is intentionally after the v8toolkit Object Lifetime section because it's important to understand how the v8toolkit objects maintain their
+dependencies.  The description of the dependency mechanism is expanded on in this section, so if you didn't read v8toolkit Object Lifetime (or it didn't 
 make sense the first time), go back and read it (again) before continuing with this section.
 
 In all our examples so far, the JavaScript has been executed on the current thread: context->run() or script->run() is called, the JavaScript executes immediately
 and when it's done, execution resumes in your code.   However, it's quite easy to run javascript in a separate thread.  There are 3 options provided for running background
-Javascript, std::async/std::future, std::thread (joinable), and std::thread(detached) and each of maintains a shared_ptr to the ScriptHelper they are run from
-so nothing you do while it is running can cause the objects it depends on to be destroyed.  Note that even if you don't explicitly create a ScriptHelper 
-and simply call context->run(some_code), a ScriptHelper is created behind the scenes for you.
+Javascript, std::async/std::future, std::thread (joinable), and std::thread(detached) and each of maintains a shared_ptr to the Script they are run from
+so nothing you do while it is running can cause the objects it depends on to be destroyed.  Note that even if you don't explicitly create a Script 
+and simply call context->run(some_code), a Script is created behind the scenes for you.
 
 
 
@@ -348,7 +350,7 @@ immediately.   This is part of the C++ standard, so be careful.
 
 Calling run_detached() is completely fire and forget.   It kicks off your javascript on a new thread and returns.   You don't get
 anything back.   You cannot  find out if the thread has finished.  The code you're executing could potentially set variables to note its progress or completion, but run_detached() 
-doesn't provide anything for you directly.  The detached thread will hold open the *Helpers it needs until it completes.   
+doesn't provide anything for you directly.  The detached thread will hold open the v8toolkit objects it needs until it completes.   
 
 The implementation of run_detached literally calls run_threaded(), then thread.detach(); and returns void to the caller. 
 
@@ -360,7 +362,7 @@ The implementation of run_detached literally calls run_threaded(), then thread.d
 Running javascript in a std::async behaves exactly like running any other code in a std::async.   The work is put in the async, and
 a std::future object is returned.   At any later time, the execution path calls future.get() and the result of the completed
 async is returned.  If the async has not completed, get() will block until it has completed.  Note, future.get() does not directly return the result
-of your JavaScript, it returns a `std::pair<v8::Global<v8::Value>`, `std::shared_ptr<ScriptHelper>>`.  This means that even if you lost all your handles
+of your JavaScript, it returns a `std::pair\<v8::Global<v8::Value>, ScriptPtr>`.  This means that even if you lost all your handles
 to your isolate, context, and script, you can still use the results in the future, since the shared_ptr in the future is keeping everything alive
 for you.
 
@@ -371,7 +373,7 @@ for you.
         auto result = future.get(); // if the async hasn't completed, this call blocks until the async completes
         // do something with result->first (if you aren't going to use the result, you should use run_threaded instead of async)
     } 
-    // the future goes out of scope, so it's no longer keeping your ScriptHelper so if you use the result after here
+    // the future goes out of scope, so it's no longer keeping your Script so if you use the result after here
     //   you have to be careful that it's still valid (ensure neither the associated context or isolate have been destroyed)
 
 
@@ -446,7 +448,7 @@ as it creates an object with vectors for values.
 Exceptions work just like you'd expect.  Exceptions thrown in a C++ function called from JavaScript will immediately stop
 JavaScript execution and bubble up to your script->run() call where you should catch and handle them.   There are also a few exception types 
 thrown by the system: V8CompilationException and V8ExecutionException.   These override std::exception and provide the what() method which returns 
-a const char * string description of what happened.  If you are going to be using the *Helper objects for all your V8 interactions, you can stop 
+a const char * string description of what happened.  If you are going to be using the v8toolkit objects for all your V8 interactions, you can stop 
 here and be happy.  No need to read any more of this section.
 
 ##### The long version:
@@ -454,10 +456,10 @@ here and be happy.  No need to read any more of this section.
 The V8 JavaScript engine is not exception safe (and is compiled with -fno-exceptions).  Any exception making it into actual V8 library code will 
 cause your application to immediately exit.  To add to the confusion, V8 has "exceptions" but they are not related, in any way, to C++ exceptions.
 
-Knowing this, then, how can "the short version" be true?  Well, exceptions thrown in C++ code called from ScriptHelper->run() (remember, a ScriptHelper
+Knowing this, then, how can "the short version" be true?  Well, exceptions thrown in C++ code called from Script->run() (remember, a Script
 is created behind the scenes if you call context->run()) are wrapped in a V8 
 Exception before re-entering V8 code and then re-thrown once execution leaves the V8 library stack.  This re-thrown exception is the same exception 
-as the one thrown inside the callbacks (using std::current_exception and std::exception_ptr to accomplish this).  Code not using *Helper objects, must 
+as the one thrown inside the callbacks (using std::current_exception and std::exception_ptr to accomplish this).  Code not using v8toolkit objects, must 
 deal with any thrown C++ exceptions on their own to make sure they don't reach any V8 code.  To throw a V8 exception, use v8::Isolate::ThrowException 
 and to catch a V8 exception, declare a v8::TryCatch object on the stack where you want to catch V8 exceptions and you can test TryCatch::HasCaught() 
 to see if it "has caught" and exception.  Also, often the return value of the V8 call in which the V8 exception was thrown will be a Maybe or a 

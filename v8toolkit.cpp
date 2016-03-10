@@ -13,13 +13,11 @@
 #include <mutex>
 #include <set>
 #include <map>
+#include <vector>
 
 #include "./v8toolkit.h"
 
 namespace v8toolkit {
-
-
-
 
 void process_v8_flags(int & argc, char ** argv)
 {
@@ -645,59 +643,62 @@ AnyBase::~AnyBase() {}
 
 
 
-
-
-#include <vector>
+#define STRINGIFY_VALUE_DEBUG false
 
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level)
 {
     static std::vector<v8::Local<v8::Value>> processed_values;
-    
+
+	
     if (top_level) {
-       processed_values.clear(); 
+       processed_values.clear();
     };
-    
+
     auto context = isolate->GetCurrentContext();
     
-    std::string output = "";
+    std::stringstream output;
 
-    // TODO: This is "slow" but I'm not sure a faster way to work with the types involved
-    for(auto processed_value : processed_values) {
-        if(processed_value == value) {
-            printf("stringify_value already processed '%s', skipping because of cycle\n", *v8::String::Utf8Value(value));
-            return "";
-        }
-    }
-    // printf("Processing %p as unseen\n", *value);
-    
-    
+	// Only protect against cycles on container types - otherwise a numeric value with
+	//   the same number won't get shown twice
+	if (value->IsObject() || value->IsArray()) {
+	    for(auto processed_value : processed_values) {
+	        if(processed_value == value) {
+				if (STRINGIFY_VALUE_DEBUG) print_v8_value_details(value);
+				if (STRINGIFY_VALUE_DEBUG) printf("Skipping previously processed value\n");
+	            return "";
+	        }
+	    }
+	}
+
     processed_values.push_back(value);
-    
+
     if(value.IsEmpty()) {
-        // printf("Value IsEmpty\n");
+        if (STRINGIFY_VALUE_DEBUG) printf("Value IsEmpty\n");
         return "Value specified as an empty v8::Local";
     }
-    
+
     // if the left is a bool, return true if right is a bool and they match, otherwise false
-    if (value->IsBoolean() || value->IsNumber() || value->IsString() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
-        // printf("Stringify: treating value as 'normal'\n");
-        output += *v8::String::Utf8Value(value);
+    if (value->IsBoolean() || value->IsNumber() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
+        if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
+        output << *v8::String::Utf8Value(value);
+	} else if (value->IsString()) {
+        output << "\"" << *v8::String::Utf8Value(value) << "\"";
     } else if (value->IsArray()) {
         // printf("Stringify: treating value as array\n");
         auto array = v8::Local<v8::Array>::Cast(value);
         auto array_length = get_array_length(isolate, array);
-        
-        output += "[";
+
+        output << "[";
         auto first_element = true;
         for (int i = 0; i < array_length; i++) {
             if (!first_element) {
-                output += ", ";
+                output << ", ";
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output += stringify_value(isolate, value.ToLocalChecked(), false);
+            output << stringify_value(isolate, value.ToLocalChecked(), false);
         }        
-        output += "]";
+        output << "]";
     } else {
         // printf("Stringify: treating value as object\n");
         // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)
@@ -706,26 +707,25 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
         // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
         if(value->IsObject() && !object.IsEmpty()) {
-            // printf("Stringify: in object\n");
-            // printf("Stringifying object\n");
-            output += "{";
+            if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
+            output << "{";
             auto keys = make_set_from_object_keys(isolate, object);
             auto first_key = true;
             for(auto key : keys) {
-                // printf("Stringify: object key %s\n", key.c_str());
+                if (STRINGIFY_VALUE_DEBUG) printf("Stringify: object key %s\n", key.c_str());
                 if (!first_key) {
-                    output += ", ";
+                    output << ", ";
                 }
                 first_key = false;
-                output += key;
-                output += ": ";
+                output << key;
+                output << ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output += stringify_value(isolate, value.ToLocalChecked(), false);
+                output << stringify_value(isolate, value.ToLocalChecked(), false);
             }
-            output += "}";
+            output << "}";
         }
     }    
-    return output;
+    return output.str();
 }
 
 

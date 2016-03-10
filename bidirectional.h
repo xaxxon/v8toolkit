@@ -37,7 +37,7 @@ template<class T, class... ConstructorArgs>
 class Factory {
 public:
     virtual T * operator()(ConstructorArgs... constructor_args) = 0;
-    
+
     template<class U>
     U * as(ConstructorArgs...  constructor_args){
         auto result = this->operator()(constructor_args...);
@@ -47,7 +47,6 @@ public:
             throw BidirectionalException("Could not convert between types");
         }
     }
-    
 };
 
 // Creates an instance of a class and returns a pointer to it
@@ -68,7 +67,7 @@ protected:
     v8::Global<v8::Function> global_javascript_function;
 
 public:
-    JSFactory(v8::Isolate * isolate, v8::Local<v8::Function> javascript_function) : 
+    JSFactory(v8::Isolate * isolate, v8::Local<v8::Function> javascript_function) :
         isolate(isolate),
         global_context(v8::Global<v8::Context>(isolate, isolate->GetCurrentContext())),
         global_javascript_function(v8::Global<v8::Function>(isolate, javascript_function))
@@ -76,7 +75,7 @@ public:
             assert(this->isolate);
             assert(this->isolate->InContext());
         }
-    
+
     RealClass * operator()(ConstructorParameters... constructor_parameters) {
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             v8::Local<v8::Value> result;
@@ -89,7 +88,7 @@ public:
 };
 
 
-// Builds the body of a JS_ACCESS function 
+// Builds the body of a JS_ACCESS function
 // Takes the return type of the function, the name of the function, and a list of input variable names, if any
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
     auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\

@@ -44,18 +44,16 @@ vector<Animal*> animals;
 
 
 void register_animal_factory(v8::Isolate * isolate, string type, v8::Local<v8::Function> factory_method) {
-    printf("In registere animal factory got isolate: %p\n", isolate);
     animal_factories.emplace(type, make_unique<JSFactory<Animal, JSAnimal>>(isolate, v8::Local<v8::Function>::Cast(factory_method)));
 }
 
 
 int main(int argc, char ** argv)
 {
-    PlatformHelper::init(argc, argv);
+    Platform::init(argc, argv);
        
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     (*i)([&]{
-        i->add_print();
         i->add_assert();
 
         auto & animal = i->wrap_class<Animal>();
@@ -70,7 +68,7 @@ int main(int argc, char ** argv)
         auto c = i->create_context();
     
         // add new animal factories from javascript
-        c->run("add_animal('mule', function(){println('Returning new mule');return Object.create({get_type:function(){return 'mule'},add:function(a,b){return a + b + this.get_i();}, get_i:function(){return 1;},echo:function(s){return 'js-mule-echo: ' + s;}});})");
+        c->run("add_animal('mule', function(){return Object.create({get_type:function(){return 'mule'},add:function(a,b){return a + b + this.get_i();}, get_i:function(){return 1;},echo:function(s){return 'js-mule-echo: ' + s;}});})");
         c->run("add_animal('horse', function(prototype){return function(){return Object.create(prototype)};}(new Animal()));");
         animal_factories.insert(pair<string, std::unique_ptr< Factory<Animal> >>("zebra", make_unique< CppFactory<Zebra, Animal> >()));
         
@@ -87,7 +85,6 @@ int main(int argc, char ** argv)
         assert(animals.size() == 3);
         
         // mule
-        printf("Checking Mule:\n");
         auto a = animals[0];
         assert(a->get_type() == "mule");
         assert(a->get_i() == 1);
@@ -95,7 +92,6 @@ int main(int argc, char ** argv)
         assert(a->add(2,2) == 5); // mules don't add well
         
         // the "horse" object doesn't overload anything, so it's really a cow
-        printf("Checking Horse:\n");
         a = animals[1];
         assert(a->get_type() == "cow");
         assert(a->get_i() == 42);
@@ -103,13 +99,11 @@ int main(int argc, char ** argv)
         assert(a->add(2,2) == 4); // cows are good at math
         
         // Checking Zebra
-        printf("Checking zebra\n");
         a = animals[2];
         assert(a->get_type() == "zebra");
         assert(a->get_i() == 42);
         assert(a->echo("zebra") == "zebra");
         assert(a->add(2,2) == 4); // cows are good at math
-        printf("Barn looks good\n");
         
         
 
@@ -125,5 +119,7 @@ int main(int argc, char ** argv)
         //     printf("About to run add\n");
         //     cout << a->add(4,5)<<endl;   
     });
+	
+	printf("Bidirectional tests successful\n");
 }
 
