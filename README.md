@@ -37,8 +37,10 @@ Again, the above lines are ONLY for OS X builds.  Type `echo $CPP` to verify the
 the code written to use it will not link and spew errors about std::string being an undefined symbol.
 
 
-Start the build by going into the v8 directory and running `make native`.   This will build V8 for the platform of the computer.   Running `make all` will
+Start the build by going into the v8 directory and running `make native`.   This will build V8 static libraries for the platform of the computer.   Running `make all` will
 attempt to build for x86, x64, as well as ARM and can lead to errors if the environment isn't set up for cross compiling and takes much longer.
+
+(more options, such as building a shared library are here: https://github.com/v8/v8/wiki/Building%20with%20Gyp)
 
 Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
 
