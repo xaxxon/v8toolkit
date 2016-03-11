@@ -3,6 +3,15 @@
 #include "v8toolkit.h"
 
 
+/**
+* This file contains things needed to create "types" and objects in both C++ and javascript
+*   and use them in either environment regardless of where they were created.  Since C++ 
+*   types must exist at compile time, types created with these tools cannot create
+*   actual C++ types, but instead allow behavior to be overridden on virtual functions
+*
+* See samples/bidirectional_sample.cpp for examples on how to use this library.
+*/
+
 
 namespace v8toolkit {
 
@@ -14,12 +23,12 @@ public:
 };
 
 /**
-* Type to inherit from for classes wrapping javascript objects wrapping c++ interfaces
+* C++ types to be extended in javascript must inherit from this class.
 * Example: class MyClass{};  class JSMyClass : public MyClass, public JSWrapper {};
 *   Now, JSMyClass can be used as a MyClass, but will intercept calls to its methods
 *   and attempt to use the javascript object to fulfill them, falling back to the
-*   base class methods when necessary
-* Any class inheriting from this must have the first two parameters of its constructor
+*   C++ class methods of MyClass when necessary
+* Any class inheriting from this (e.g. JSMyClass) must have the first two parameters of its constructor
 *   be a v8::Local<v8::Context>, v8::Local<v8::Object>
 */
 template<class T>
@@ -30,6 +39,12 @@ protected:
     v8::Global<v8::Object> global_js_object;
 	v8::Global<v8::FunctionTemplate> global_created_by;
     using BASE_TYPE = T;
+    
+    /**
+    * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
+    *   to call instead of calling the native C++ implementation, but finds its own JS_ACCESS function that its already in
+    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   
+    */ 
     bool called_from_javascript = false;
 public:
     JSWrapper(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> created_by) :
@@ -41,12 +56,19 @@ public:
 };
 
 
-
-template<class T, class... ConstructorArgs>
+/**
+* Base class for a Factory that creates a bidirectional "type" by name.  The object
+*   returned can be used as a class T regardless of whether it is a pure C++ type 
+*   or if it has been extended in javascript
+*/
+template<class Base, class... ConstructorArgs>
 class Factory {
 public:
-    virtual T * operator()(ConstructorArgs... constructor_args) = 0;
+    virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
 
+    /**
+    * Helper to quickly turn a Base type into another type if allowed
+    */
     template<class U>
     U * as(ConstructorArgs...  constructor_args){
         auto result = this->operator()(constructor_args...);
@@ -59,7 +81,11 @@ public:
 	
 };
 
-// Creates an instance of a class and returns a pointer to it
+
+/**
+* Returns a pure-C++ object of type Child which inherits from type Base.  It's Base type and ConstructorArgs... 
+*   must match with the Factory it is associated with.
+*/
 template<class Base, class Child, class ... ConstructorArgs>
 class CppFactory : public Factory<Base, ConstructorArgs...>{
 public:
@@ -67,35 +93,47 @@ public:
 };
 
 
-// The first two parameters of the constructor for JSWrapperClass must be
-//   a context and javascript object, then any other constructor parameters
-template<class RealClass, class JSWrapperClass, class... ConstructorParameters>
-class JSFactory : public Factory<RealClass, ConstructorParameters...> {
+/**
+* Returns a JavaScript-extended object inheriting from Base.  It's Base type and
+*   ConstructorParameters must match up with the Factory class it is associated with
+*/
+template<class Base, class JSWrapperClass, class... ConstructorParameters>
+class JSFactory : public Factory<Base, ConstructorParameters...> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
     v8::Global<v8::Function> global_javascript_function;
 
 public:
-    JSFactory(v8::Isolate * isolate, v8::Local<v8::Function> javascript_function) :
-        isolate(isolate),
-        global_context(v8::Global<v8::Context>(isolate, isolate->GetCurrentContext())),
+    /**
+    * Takes a context to use while calling a javascript_function that returns an object
+    *   inheriting frmo JSWrapper
+    */
+    JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Function> javascript_function) :
+        isolate(context->GetIsolate()),
+        global_context(v8::Global<v8::Context>(isolate, context)),
         global_javascript_function(v8::Global<v8::Function>(isolate, javascript_function))
-        {
-            assert(this->isolate);
-            assert(this->isolate->InContext());
-        }
+    {}
 
-    RealClass * operator()(ConstructorParameters... constructor_parameters) {
+    /**
+    * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
+    *   extends the C++ functionality in javascript
+    */
+    Base * operator()(ConstructorParameters... constructor_parameters) {
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             v8::Local<v8::Value> result;
             bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
 			assert(success);
-			return V8ClassWrapper<RealClass>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
+			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
 	
-	
+	/**
+    * Creates a JavaScript helper function which is similar to Object.create() in that it creates an object implmenting templated type Base 
+    *   which is ready to be extended in javascript and the prototype object containing the overrides.  See samples/bidirectional_sample.cpp for
+    *   how to use it.  This function must be used when creating all "javascript subclassed objects" or they will not function properly.  
+    *   Common use for this is to put it in your JSFactory JavaScript callback function.
+    */
 	static void add_subclass_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, const std::string & js_function_name)
 	{
 		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), [](const v8::FunctionCallbackInfo<v8::Value>& info)->void {
@@ -138,13 +176,29 @@ public:
 
 
 
+// turn on/off print statements for helping debug JS_ACCESS functionality
+#define JS_ACCESS_CORE_DEBUG false
 
-#define JS_ACCESS_CORE_DEBUG true
-
-// Builds the body of a JS_ACCESS function
-// Takes the return type of the function, the name of the function, and a list of input variable names, if any
+/**
+* This code looks for a javascript method on the JavaScript object contained
+*   in the "this" JSWrapper object and call the "name"d method on it.  It must work
+*   when this method is called directly to start the method call (using a bidirectional 
+*   object from C++) as well as when the method call is started from javascript (where the
+*   javascript interpreter checks the prototype chain initially and might find this function)
+*   If not careful, this function can find itself while looking for a javascript version to call
+*   because even though its methods aren't mapped into javascript, the parent type's are and 
+*   dynamic dispatch will call the derived class's version instead of the base class.
+*   That is why static dispatch is specifically used for the C++ fallback case:
+*   `this->BASE_TYPE::name( __VA_ARGS__ );`
+*/ 
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
     bool call_native = this->called_from_javascript; \
+    \
+    /* If there is infinite recursion happening here, it is likely                      */ \
+    /*   that when this function looks for a JavaScript function to call                */ \
+    /*   it actually finds this function and calls itself.  This flag is supposed       */ \
+    /*   to protect against that but the situations are complicated and this may not be */ \
+    /*   sufficient. */ \
     this->called_from_javascript = false; \
     if (call_native) { \
         if(JS_ACCESS_CORE_DEBUG) printf("Calling native version of %s\n", #name); \
@@ -165,12 +219,14 @@ public:
     });
 
 // defines a JS_ACCESS function for a method taking no parameters
-//TODO: add const versions
 #define JS_ACCESS(return_type, name)\
 virtual return_type name() override {\
     JS_ACCESS_CORE(return_type, name)\
 }
 
+/**
+* I don't know how to this any other way.
+*/ 
 #define JS_ACCESS_1(return_type, name, t1)\
 virtual return_type name(t1 p1) override {\
     JS_ACCESS_CORE(return_type, name, p1)\
@@ -223,18 +279,20 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8,
    
 
 
-/*
-Inheritance looks like:
+/**
+Bidirectioal inheritance prototype chain looks like:
 
 jswrapper instance 
 jswrapper prototype
 --- INSERT JAVASCRIPT CREATED PROTOTYPE HERE
-base object prototype
+base object prototype (**)
 empty object
 null
 
-When called from JS this just works. 
 
+(**) This is where the `Base`-class implementations are found, but since they are virtual
+   when called with a JSWrapper receiver object, the dynamic dispatch will actually call
+   the JSWrapper JS_ACCESS function unless explicit static dispatch is used.
 
 */
 
