@@ -3,7 +3,6 @@
     
 #include "javascript.h"
 
-
 namespace v8toolkit {
 
 Context::Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context) : 
