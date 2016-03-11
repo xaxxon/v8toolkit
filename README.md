@@ -17,7 +17,7 @@ Building V8 is not a simple process.
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
-Next, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the source for V8 in a directory called v8.
+Next, run `fetch v8`. This will put the source for V8 in a directory called v8.  (`fetch` is in the depot-tools you created in the step above)
 
 For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
 They can either be set on the command line or put in your `~/.bash_profile`.  If you put them in your `.bash_profile`, you must either start a new
@@ -33,8 +33,8 @@ shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment varia
     export LINK_host="`which clang++`"
     export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
 
-Again, the above lines are ONLY for OS X builds.  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++, 
-the code written to use it will not link and spew errors about std::string being an undefined symbol.
+Again, the above lines are ONLY for OS X builds (as far as I understand).  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++ in OS X, 
+the code we write later in this guide will spew errors about `std::string` being an undefined symbol.
 
 
 Start the build by going into the v8 directory and running `make native`.   This will build V8 static libraries for the platform of the computer.   Running `make all` will
@@ -47,7 +47,9 @@ Once this finishes, from the v8 directory, type `cd out/native` and then run `./
 
 #### Building/installing Boost
 
-V8 doesn't use Boost, but v8toolkit has additional, desirable features when boost is present. 
+v8toolkit uses `boost::format` to provide printf-style functions for console output and string generation.
+
+##### Simple but long Boost install
 
 With apt-get:  `sudo apt-get install libboost-all-dev`
 
@@ -66,6 +68,9 @@ More detailed install information: http://www.boost.org/doc/libs/1_60_0/more/get
 NOTE: If you plan on using the boost libraries that have to be compiled (as opposed to header-only ones), you'll need to build boost with libc++.  Here is an example
 on how to do that: https://gist.github.com/jimporter/10442880
 
+##### Quick Boost "install"
+`boost::format` is a header-only library, so you can just use the -I flag to point the compiler at the headers in the untar'd source.
+
 
 
 #### Build v8toolkit
@@ -76,7 +81,7 @@ go into the v8toolkit directory
 
 edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
-To build the libray, on OS X, type `make`, on Linux, type "make LINUX=1"
+To build the libray, on OS X, type `make tests`, on Linux, type "make tests LINUX=1"
 
 The library and some sample programs should build.   To confirm everything is working, `make run` will run the sample programs.
 
