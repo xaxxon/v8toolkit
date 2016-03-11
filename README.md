@@ -1,5 +1,5 @@
 
-## Doxygen docs available here: http://xaxxon.github.io/v8-class-wrapper/docs/html/index.html
+## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
 
 ## Tutorial for using this library
 
