@@ -1,12 +1,17 @@
 var searchData=
 [
-  ['scoped_5frun',['scoped_run',['../namespacev8toolkit.html#a7badaa73751f15a3e3324edd94b34e7a',1,'v8toolkit::scoped_run(v8::Isolate *isolate, T callable)'],['../namespacev8toolkit.html#a47064d5bc0cc07a2fc0c70bca786f6f1',1,'v8toolkit::scoped_run(v8::Isolate *isolate, v8::Local&lt; v8::Context &gt; context, T callable)'],['../namespacev8toolkit.html#ada8a7994e6267f03b7f54d582a42c90e',1,'v8toolkit::scoped_run(v8::Isolate *isolate, const v8::Global&lt; v8::Context &gt; &amp;context, T callable)']]],
-  ['scripthelper',['ScriptHelper',['../classv8toolkit_1_1ScriptHelper.html#a5a711d977225f41b54b3712b877612b9',1,'v8toolkit::ScriptHelper::ScriptHelper()=delete'],['../classv8toolkit_1_1ScriptHelper.html#ab304eea874daf905b91786f182a4b250',1,'v8toolkit::ScriptHelper::ScriptHelper(const ScriptHelper &amp;)=delete'],['../classv8toolkit_1_1ScriptHelper.html#a62bfbf20f39e6c5fb5fce60adabda87e',1,'v8toolkit::ScriptHelper::ScriptHelper(ScriptHelper &amp;&amp;)=default']]],
-  ['set_5fcompatible_5ftypes',['set_compatible_types',['../classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#a1843cbac142f369eee6193738998c81d',1,'v8toolkit::V8ClassWrapper&lt; T, void &gt;']]],
-  ['set_5fglobal_5fobject_5falias',['set_global_object_alias',['../namespacev8toolkit.html#a3186ba9791dfe15390af63c7646fd17c',1,'v8toolkit']]],
-  ['set_5fparent_5ftype',['set_parent_type',['../classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#aa0ce04e088f631f9a722dafd9bdfc94e',1,'v8toolkit::V8ClassWrapper&lt; T, void &gt;']]],
-  ['some_5ffunction',['some_function',['../sample_8cpp.html#aaad9604e972dfde4acc45312eb98862d',1,'sample.cpp']]],
-  ['some_5fmethod',['some_method',['../structLine.html#a95c7789676947d8f13631064c652b99d',1,'Line']]],
-  ['stringify_5fvalue',['stringify_value',['../namespacev8toolkit.html#a7a116068d0acb71b768bba8b33315394',1,'v8toolkit']]],
-  ['stringthing',['stringthing',['../classPoint.html#a6c0b0e10b6ebfdaacd2cfb6e58c8f9c3',1,'Point']]]
+  ['reducer',['reducer',['../namespacev8toolkit.html#aff15814da969722c638d65dabf1c8059',1,'v8toolkit']]],
+  ['register_5fanimal_5ffactory',['register_animal_factory',['../bidirectional__sample_8cpp.html#a0cf59d79420c5149b008b8ecf700301d',1,'bidirectional_sample.cpp']]],
+  ['require',['require',['../namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d',1,'v8toolkit']]],
+  ['require_5fdirectory',['require_directory',['../namespacev8toolkit.html#acff8a379e70819196b119e240d620575',1,'v8toolkit']]],
+  ['require_5fdirectory_5ftest',['require_directory_test',['../javascript__sample_8cpp.html#a874295064db0d73d98339d5630776239',1,'javascript_sample.cpp']]],
+  ['run',['run',['../classv8toolkit_1_1Context.html#a306ff6ee67ebb4dcbff392ae1192d205',1,'v8toolkit::Context::run(const v8::Global&lt; v8::Script &gt; &amp;script)'],['../classv8toolkit_1_1Context.html#a27126b862ed6ae5f18644ae5efe31576',1,'v8toolkit::Context::run(const std::string &amp;source)'],['../classv8toolkit_1_1Context.html#a0095a058bd14d6ea1a32b44cb12750ca',1,'v8toolkit::Context::run(const v8::Local&lt; v8::Value &gt; script)'],['../classv8toolkit_1_1Script.html#a5412e622aaba9ebe6940d1f4532f1a9b',1,'v8toolkit::Script::run()']]],
+  ['run_5fasync',['run_async',['../classv8toolkit_1_1Context.html#a559b092286339742d9e32e48d7247326',1,'v8toolkit::Context::run_async()'],['../classv8toolkit_1_1Script.html#a4c286228ac4fb7b37b7929271699e53e',1,'v8toolkit::Script::run_async()']]],
+  ['run_5fcomparison_5ftests',['run_comparison_tests',['../javascript__sample_8cpp.html#af7748b53d4fb77b275a29b808936fd4e',1,'javascript_sample.cpp']]],
+  ['run_5fdetached',['run_detached',['../classv8toolkit_1_1Context.html#a03536932a5279eda1f761a0dfb1937ba',1,'v8toolkit::Context::run_detached(const v8::Global&lt; v8::Script &gt; &amp;script)'],['../classv8toolkit_1_1Context.html#af887fd94d3bc1a7873b2e4d239616fd8',1,'v8toolkit::Context::run_detached(const std::string &amp;source)'],['../classv8toolkit_1_1Context.html#ac8ed81e0afc8f33be09b39a59a9d0dac',1,'v8toolkit::Context::run_detached(const v8::Local&lt; v8::Value &gt; script)'],['../classv8toolkit_1_1Script.html#a336fc06b3133fa1ff1a36b7a4abe3c54',1,'v8toolkit::Script::run_detached()']]],
+  ['run_5ffrom_5ffile',['run_from_file',['../classv8toolkit_1_1Context.html#a64f76992a1affa96ac7a0b23e77c0b1e',1,'v8toolkit::Context']]],
+  ['run_5finheritance_5ftest',['run_inheritance_test',['../javascript__sample_8cpp.html#ad47ef0993bebec5e0d15b31b4dda387b',1,'javascript_sample.cpp']]],
+  ['run_5ftests',['run_tests',['../javascript__sample_8cpp.html#a1aa9c8cf37ce0df43f20ebaa98a58159',1,'javascript_sample.cpp']]],
+  ['run_5fthread',['run_thread',['../classv8toolkit_1_1Context.html#afd7974c2d691d94034668b12b4306ed1',1,'v8toolkit::Context::run_thread(const v8::Global&lt; v8::Script &gt; &amp;script)'],['../classv8toolkit_1_1Context.html#ae19a126f83bf60b5848e9a2586c657c0',1,'v8toolkit::Context::run_thread(const std::string &amp;source)'],['../classv8toolkit_1_1Context.html#a773c01a68c324ee0799a0e3b4323cc52',1,'v8toolkit::Context::run_thread(const v8::Local&lt; v8::Value &gt; script)'],['../classv8toolkit_1_1Script.html#a8c23e25b392b683ee7f80e2fc44785ea',1,'v8toolkit::Script::run_thread()']]],
+  ['run_5ftype_5fconversion_5ftest',['run_type_conversion_test',['../javascript__sample_8cpp.html#ab40fe1216151ffc10a48ebfafc8790e1',1,'javascript_sample.cpp']]]
 ];

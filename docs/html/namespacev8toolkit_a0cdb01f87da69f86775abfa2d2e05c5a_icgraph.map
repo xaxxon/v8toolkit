@@ -1,5 +1,5 @@
 <map id="v8toolkit::expose_variable" name="v8toolkit::expose_variable">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#ace4ba49fae0bc8d68a2cb79c815d2088" title="v8toolkit::ContextHelper\l::expose_variable" alt="" coords="213,5,361,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1IsolateHelper.html#a95d9e67161781996159366dfccccd7ae" title="v8toolkit::IsolateHelper\l::expose_variable" alt="" coords="216,65,358,101"/>
-<area shape="rect" id="node4" href="$toolbox__sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="263,126,311,150"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1Context.html#a29313f33e8fe3a83c453b7eaf98bfb4a" title="v8toolkit::Context\l::expose_variable" alt="" coords="213,5,328,41"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Isolate.html#acca517c6b4b3062ded1a4ff80fb314ab" title="v8toolkit::Isolate\l::expose_variable" alt="" coords="213,65,328,101"/>
+<area shape="rect" id="node4" href="$toolbox__sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="247,126,294,150"/>
 </map>

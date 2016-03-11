@@ -73,6 +73,6 @@ var searchData=
   ['casttupletojs',['CastTupleToJS',['../namespacev8toolkit.html#structv8toolkit_1_1CastTupleToJS',1,'v8toolkit']]],
   ['casttupletojs_3c_200_2c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastTupleToJS&lt; 0, std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastTupleToJS_3_010_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
   ['casttupletojs_3c_20position_2c_20std_3a_3atuple_3c_20args_2e_2e_2e_20_3e_20_3e',['CastTupleToJS&lt; position, std::tuple&lt; Args... &gt; &gt;',['../structv8toolkit_1_1CastTupleToJS_3_01position_00_01std_1_1tuple_3_01Args_8_8_8_01_4_01_4.html',1,'v8toolkit']]],
-  ['contexthelper',['ContextHelper',['../classv8toolkit_1_1ContextHelper.html',1,'v8toolkit']]],
+  ['context',['Context',['../classv8toolkit_1_1Context.html',1,'v8toolkit']]],
   ['cppfactory',['CppFactory',['../classv8toolkit_1_1CppFactory.html',1,'v8toolkit']]]
 ];

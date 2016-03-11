@@ -1,4 +1,6 @@
 <map id="v8toolkit::process_v8_flags" name="v8toolkit::process_v8_flags">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1PlatformHelper.html#a4b1a1afa013e30baedc7c440f9a44c14" title="v8toolkit::PlatformHelper\l::init" alt="" coords="167,5,319,41"/>
-<area shape="rect" id="node3" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="220,66,267,90"/>
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a32da88429bc851279514d78314256fe6" title="v8toolkit::for_each\l_value" alt="" coords="167,5,286,41"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Platform.html#a1a1169bfe2907e86c3c8360098db976c" title="v8toolkit::Platform\l::init" alt="" coords="168,65,285,101"/>
+<area shape="rect" id="node5" href="$sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="203,126,250,150"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90" title="v8toolkit::for_each\l_own_property" alt="" coords="334,5,453,41"/>
 </map>

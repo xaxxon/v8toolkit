@@ -5,6 +5,8 @@ var searchData=
   ['base_5ftype',['BASE_TYPE',['../classv8toolkit_1_1JSWrapper.html#a29b1c740f4341f63225bc2b709931635',1,'v8toolkit::JSWrapper']]],
   ['bidirectional_2eh',['bidirectional.h',['../bidirectional_8h.html',1,'']]],
   ['bidirectional_5fsample_2ecpp',['bidirectional_sample.cpp',['../bidirectional__sample_8cpp.html',1,'']]],
+  ['bidirectionalexception',['BidirectionalException',['../classv8toolkit_1_1BidirectionalException.html',1,'v8toolkit']]],
+  ['bidirectionalexception',['BidirectionalException',['../classv8toolkit_1_1BidirectionalException.html#a52dceb8539467fe8abb8d32ac38fb876',1,'v8toolkit::BidirectionalException']]],
   ['bind',['Bind',['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_4.html#a7f4e5b5c79c937f6a0cf8e7a3bd97d64',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...)&gt;::Bind()'],['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_01const_01_01_4.html#ab662dd6952f013a2327f7d7047e4f2db',1,'v8toolkit::Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const  &gt;::Bind()'],['../namespacev8toolkit.html#a5fdcf0b54dd96a42e5e3c73a5762719c',1,'v8toolkit::bind()']]],
   ['bind',['Bind',['../namespacev8toolkit.html#structv8toolkit_1_1Bind',1,'v8toolkit']]],
   ['bind_3c_20class_5ftype_2c_20r_28class_5ftype_3a_3a_2a_29_28args_2e_2e_2e_29_20const_20_20_3e',['Bind&lt; CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const  &gt;',['../structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_01const_01_01_4.html',1,'v8toolkit']]],

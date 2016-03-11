@@ -1,3 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structv8toolkit_1_1Bind_3_01CLASS__TYPE_00_01R_07CLASS__TYPE_1_1_5_08_07Args_8_8_8_08_01const_01_01_4.html" title="v8toolkit::Bind\&lt; CLASS\l_TYPE, R(CLASS_TYPE::*)\l(Args...) const &#160;\&gt;" alt="" coords="5,5,177,53"/>
+<area shape="rect" id="node1" href="$classv8toolkit_1_1JSWrapper.html" title="v8toolkit::JSWrapper\l\&lt; Thing \&gt;" alt="" coords="5,5,137,41"/>
+<area shape="rect" id="node2" href="$structJSThing.html" title="JSThing" alt="" coords="185,39,251,63"/>
+<area shape="rect" id="node3" href="$structThing.html" title="Thing" alt="" coords="46,66,97,90"/>
 </map>
