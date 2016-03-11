@@ -2,19 +2,20 @@
 bar();
 foo(5);
 foo(2);
-point_instance_count();
+assert(point_instance_count() === 1);
 
-println("should be 42: ", exposed_variable);
+assert(exposed_variable === 42);
 exposed_variable = 420;
-println("Should be 420: ", exposed_variable);
+assert(exposed_variable === 420);
 
 // This line should be ignored
 exposed_variable_readonly=4;
-printfln("This should still be 420: %d", exposed_variable_readonly);
+assert(exposed_variable === 420);
 
 
-printfln("This should be 101: %d",lambda_function(100));
+assert(lambda_function(100) == 101);
 
+println("Testing print functions:")
 printfln("This should print out '1 a 2 b 3 c': %d a %d b %d c", [1,2,3]);
 println("This should print out '1 2 3': ", [1,2,3]);
 
@@ -27,25 +28,21 @@ var caught_expected_exception = false;
 try {
     require("this-module-does-not-exist.js");
 } catch (e) {
-    println("Caught expected exception for module that doesn't exist");
     caught_expected_exception = true;
 }
+assert(caught_expected_exception);
 
-
-printfln("Attempting to include module that does exist: module.js");
 var require_result = require("module.js");
-println("Running contents of module");
-printobj(require_result);
-require_result.function();
+assert(require_result.a === "a");
+assert(require_result.five === 5);
+assert(require_result.function !== undefined);
+assert(require_result.bogus === undefined);
+assert(require_result.function() === "module.js function output");
 
-println("Rerunning same require, shouldn't print anything from inside the module");
 var require_result = require("module.js");
-println("Running the cached return value from requiring the same module");
-require_result.function();
+assert(require_result.function() === "module.js function output");
 
-println();
-println("Dumping module list");
-printobj(module_list());
+// printobj(module_list());
 
-
-'yay'
+// must return "yay" for this test
+"yay"

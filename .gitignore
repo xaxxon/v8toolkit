@@ -44,4 +44,5 @@ toolbox
 samples/exception_sample
 samples/javascript_sample
 samples/toolbox_sample
+samples/bidirectional_sample
 

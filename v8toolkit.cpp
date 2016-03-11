@@ -13,13 +13,14 @@
 #include <mutex>
 #include <set>
 #include <map>
+#include <vector>
+
+#include <boost/format.hpp>
 
 #include "./v8toolkit.h"
 
+
 namespace v8toolkit {
-
-
-
 
 void process_v8_flags(int & argc, char ** argv)
 {
@@ -52,7 +53,6 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 }
 
 
-#ifdef USE_BOOST
 
 std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline)
 {
@@ -90,7 +90,6 @@ std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
     return _format_helper(args, append_newline);
 }
 
-#endif // USE_BOOST
 
 // Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
 //   contained values (but not subsequent arrays for no particular reason)
@@ -137,19 +136,22 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 
 
 void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> callback) {
-#ifdef USE_BOOST
     add_function(isolate, object_template, "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(isolate, object_template, "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
     
-#endif
     add_function(isolate, object_template, "print",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, false));});
     add_function(isolate, object_template, "println",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, true));});
 
     add_function(isolate, object_template, "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]));
+        callback(stringify_value(isolate, info[0]) + "\n");
     });
+    add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
+        auto isolate = info.GetIsolate();
+        callback(stringify_value(isolate, info[0], true, true) + "\n");
+    });
+	
 }
 
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template)
@@ -520,10 +522,15 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
     std::cout << "generator object: " << value->IsGeneratorObject() << std::endl;
 }
 
-std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local<v8::Object> & object) 
+std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local<v8::Object> & object, bool own_properties_only = true) 
 {
     auto context = isolate->GetCurrentContext();
-    auto properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+	v8::Local<v8::Array> properties;
+	if (own_properties_only) {
+		properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+	} else {
+		properties = object->GetPropertyNames(context).ToLocalChecked();
+	}
     auto array_length = get_array_length(isolate, properties);
     
     std::set<std::string> keys;
@@ -535,6 +542,18 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local
     return keys;
 }
 
+
+void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
+{
+	printf("Looking at prototype chain\n");
+	while (!object->IsNull()) {
+	    printf("%s:\n", *v8::String::Utf8Value(object));
+	    // print_v8_value_details(foo);
+	    printf("%s\n", stringify_value(isolate, object).c_str());
+	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());
+	}
+	printf("Done looking at prototype chain\n");
+}
 
 
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right)
@@ -645,59 +664,62 @@ AnyBase::~AnyBase() {}
 
 
 
+#define STRINGIFY_VALUE_DEBUG false
 
-
-#include <vector>
-
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level)
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level, bool show_all_properties)
 {
     static std::vector<v8::Local<v8::Value>> processed_values;
-    
+
+	
     if (top_level) {
-       processed_values.clear(); 
+       processed_values.clear();
     };
-    
+
     auto context = isolate->GetCurrentContext();
     
-    std::string output = "";
+    std::stringstream output;
 
-    // TODO: This is "slow" but I'm not sure a faster way to work with the types involved
-    for(auto processed_value : processed_values) {
-        if(processed_value == value) {
-            printf("stringify_value already processed '%s', skipping because of cycle\n", *v8::String::Utf8Value(value));
-            return "";
-        }
-    }
-    // printf("Processing %p as unseen\n", *value);
-    
-    
+	// Only protect against cycles on container types - otherwise a numeric value with
+	//   the same number won't get shown twice
+	if (value->IsObject() || value->IsArray()) {
+	    for(auto processed_value : processed_values) {
+	        if(processed_value == value) {
+				if (STRINGIFY_VALUE_DEBUG) print_v8_value_details(value);
+				if (STRINGIFY_VALUE_DEBUG) printf("Skipping previously processed value\n");
+	            return "";
+	        }
+	    }
+	}
+
     processed_values.push_back(value);
-    
+
     if(value.IsEmpty()) {
-        // printf("Value IsEmpty\n");
+        if (STRINGIFY_VALUE_DEBUG) printf("Value IsEmpty\n");
         return "Value specified as an empty v8::Local";
     }
-    
+
     // if the left is a bool, return true if right is a bool and they match, otherwise false
-    if (value->IsBoolean() || value->IsNumber() || value->IsString() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
-        // printf("Stringify: treating value as 'normal'\n");
-        output += *v8::String::Utf8Value(value);
+    if (value->IsBoolean() || value->IsNumber() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
+        if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
+        output << *v8::String::Utf8Value(value);
+	} else if (value->IsString()) {
+        output << "\"" << *v8::String::Utf8Value(value) << "\"";
     } else if (value->IsArray()) {
         // printf("Stringify: treating value as array\n");
         auto array = v8::Local<v8::Array>::Cast(value);
         auto array_length = get_array_length(isolate, array);
-        
-        output += "[";
+
+        output << "[";
         auto first_element = true;
         for (int i = 0; i < array_length; i++) {
             if (!first_element) {
-                output += ", ";
+                output << ", ";
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output += stringify_value(isolate, value.ToLocalChecked(), false);
+            output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
         }        
-        output += "]";
+        output << "]";
     } else {
         // printf("Stringify: treating value as object\n");
         // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)
@@ -706,26 +728,25 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
         // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
         if(value->IsObject() && !object.IsEmpty()) {
-            // printf("Stringify: in object\n");
-            // printf("Stringifying object\n");
-            output += "{";
-            auto keys = make_set_from_object_keys(isolate, object);
+            if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
+            output << "{";
+            auto keys = make_set_from_object_keys(isolate, object, !show_all_properties);
             auto first_key = true;
             for(auto key : keys) {
-                // printf("Stringify: object key %s\n", key.c_str());
+                if (STRINGIFY_VALUE_DEBUG) printf("Stringify: object key %s\n", key.c_str());
                 if (!first_key) {
-                    output += ", ";
+                    output << ", ";
                 }
                 first_key = false;
-                output += key;
-                output += ": ";
+                output << key;
+                output << ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output += stringify_value(isolate, value.ToLocalChecked(), false);
+                output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
             }
-            output += "}";
+            output << "}";
         }
     }    
-    return output;
+    return output.str();
 }
 
 

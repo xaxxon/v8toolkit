@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
+#include "libplatform/libplatform.h"
+#include "v8.h"
 
 using namespace v8;
 

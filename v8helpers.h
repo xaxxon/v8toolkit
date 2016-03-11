@@ -4,9 +4,8 @@
 
 
 // Everything in here is standalone and does not require any other v8toolkit files
-
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
+#include "libplatform/libplatform.h"
+#include "v8.h"
 
 namespace v8toolkit {
 
@@ -154,7 +153,7 @@ typename Key,
 auto reducer(const Container<Key, Value, AddParams...> & container, Callable callable) -> std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))>
 {
     std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))> results;
-    for(auto pair : container) {
+    for(auto & pair : container) {
         results.push_back(callable(pair));
     }
     return results;

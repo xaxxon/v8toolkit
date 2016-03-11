@@ -8,17 +8,30 @@
 
 #include <string.h>
 
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
-
 #include "v8helpers.h"
 #include "casts.hpp"
 
 #include <dirent.h>
 
-#define USE_BOOST
 
 #define V8_TOOLKIT_DEBUG false
+
+
+/** TODO LIST
+*
+* Rename project to v8toolkit everywhere including github
+* All includes should be included as #include "v8toolkit/FILENAME.h" instead of just #include "FILENAME.h"
+* Rename javascript.h file to something much better
+* Rename v8toolkit.h contents to something else so it can be included directory but using a different name
+* Change *Helper classes to just their base name.  They're in a namespace, so it shouldn't be too confusing.
+* Including "v8toolkit/v8toolkit.h" should include everything, but specific includes should also work for
+*   v8helpers.h, <new name for v8toolkit.h>, <new name for javascript.h>
+*/
+
+
+
+
+
 
 namespace v8toolkit {
     
@@ -27,7 +40,7 @@ namespace v8toolkit {
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true);
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
 
 /**
@@ -269,7 +282,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
     }
 };
     
-    
+/**
+* Specialization for function taking a char *
+*/
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
 					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
@@ -284,7 +299,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)
     }
 };
 
-
+/**
+* Specialization for function taking a const char *
+*/
 template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
 struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
 					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
@@ -341,7 +358,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-        this->super::operator()(function, info, ts..., info); 
+        this->super::operator()(function, info, ts..., info);
     }
 };
 
@@ -362,6 +379,41 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, T
         this->super::operator()(function, info, ts..., info.GetIsolate()); 
     }
 };
+
+
+/**
+* Specialization for a function that wants the context
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Context>, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+		auto context = info.GetIsolate()->GetCurrentContext();
+        this->super::operator()(function, info, ts..., context);
+    }
+};
+
+
+/**
+* Specialization for function wanting the receiver JS object (object being created for constructors)
+*/
+template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Object>, TAIL...)>> : 
+        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    enum {DEPTH = depth, ARITY=super::ARITY};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+        this->super::operator()(function, info, ts..., info.This());
+    }
+};
+
+
 
 
 
@@ -558,13 +610,12 @@ bool call_javascript_function(const v8::Local<v8::Context> context,
     
     v8::TryCatch tc(isolate);
     
-    // printf("Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
-    // printf("Call_javascript_function with context global: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(context->Global())).c_str());
+    // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         printf("error: %s or result was empty\n", *v8::String::Utf8Value(tc.Exception()));
         return false;
-    }                            
+    }
     result = maybe_result.ToLocalChecked();
     return true;
 }
@@ -689,20 +740,13 @@ void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javasc
 }
 
 
-#ifdef USE_BOOST
 
-} // end the v8toolkit namespace temporarily to import boost::format
-#include <boost/format.hpp> // only include this if USE_BOOST is defined
-namespace v8toolkit { // re-start the namespace
-    
-    
 
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
 std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
-#endif // USE_BOOST
 
 /**
 * Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
@@ -724,7 +768,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 *
 * println same as print but automatically appends a newlines
 *
-* printf - only available if USE_BOOST is defined and treats the first parameter as a format string.  
+* printf - Treats the first parameter as a format string.  
 *          any additional values will be used to fill the format string.  If there are insufficient parameters
 *          to fill the format, the empty string "" will be used.   Any extra parameters will be printed after
 *          the filled format string separated by spaces
@@ -883,6 +927,7 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 void require_directory(v8::Local<v8::Context> context, std::string directory_name);
 
 
+void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 
 
 

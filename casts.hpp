@@ -12,8 +12,7 @@
 #include <array>
 #include <memory>
 
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
+#include "v8.h"
 
 namespace v8toolkit {
 

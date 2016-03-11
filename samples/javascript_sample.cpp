@@ -15,8 +15,8 @@ int y2 = 3;
 auto run_tests()
 {
     
-    auto ih1 = PlatformHelper::create_isolate();
-    auto ih2 = PlatformHelper::create_isolate();
+    auto ih1 = Platform::create_isolate();
+    auto ih2 = Platform::create_isolate();
     
     return (*ih1)([&](){
         ih1->add_print();
@@ -91,7 +91,7 @@ auto run_tests()
         got_expected_failure = false;
         
         
-        // returning context to demonstrate how having a context alive keeps an IsolateHelper alive even though the
+        // returning context to demonstrate how having a context alive keeps an Isolate alive even though the
         //   direct shared_ptr to it is destroyed at the end of this function
         return c;
     });
@@ -100,11 +100,11 @@ auto run_tests()
 
 auto test_lifetimes()
 {
-    std::shared_ptr<ScriptHelper> s;
+    std::shared_ptr<Script> s;
     {
-        std::shared_ptr<ContextHelper> c;
+        std::shared_ptr<Context> c;
         {
-            auto i = PlatformHelper::create_isolate();
+            auto i = Platform::create_isolate();
             c = i->create_context();
         }
         // c is keeping i alive
@@ -132,7 +132,7 @@ class NotWrapped {};
 
 void run_type_conversion_test()
 {
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     (*i)([&]{
         i->wrap_class<C>().finalize().add_constructor("C", i->get_object_template());
         i->wrap_class<A>().set_compatible_types<C>().finalize().add_constructor("A", i->get_object_template());
@@ -178,7 +178,7 @@ void run_type_conversion_test()
 
 void run_comparison_tests()
 {
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     i->add_assert();
     auto c = i->create_context();
     
@@ -271,7 +271,7 @@ void run_comparison_tests()
 
 void test_casts()
 {
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     i->add_assert();
     auto c = i->create_context();
 
@@ -280,7 +280,7 @@ void test_casts()
         try {
             auto isolate = i->get_isolate();
             auto context = c->get_context();
-            printf("***** Testing STL container casts\n");
+            // printf("***** Testing STL container casts\n");
 
             std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
             c->add_variable("v", CastToJS<decltype(v)>()(isolate, v));
@@ -319,7 +319,7 @@ void test_casts()
             c->expose_variable("tuple", tuple);
             c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
 
-            printf("Done testing STL container casts\n");
+            // printf("Done testing STL container casts\n");
 
 
             auto unique = std::make_unique<std::vector<int>>(4, 1);
@@ -353,7 +353,7 @@ void test_casts()
 
 void test_asserts()
 {
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     i->add_assert();
     i->add_print();
     auto c = i->create_context();
@@ -424,7 +424,7 @@ void test_asserts()
 void require_directory_test()
 {
     printf("In require directory test\n");
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     i->add_assert();
     (*i)([&](){
         i->add_require();
@@ -455,7 +455,7 @@ struct IT_B : public IT_A {
 
 void run_inheritance_test()
 {
-    auto i = PlatformHelper::create_isolate();
+    auto i = Platform::create_isolate();
     (*i)([&]{
         i->add_print();
         i->add_assert();
@@ -470,8 +470,7 @@ void run_inheritance_test()
         c->run("assert('Object.create(new IT_A()).get_int() == 5')");
         
         (*c)([&]{
-        
-        auto json = c->json("[1,2,3]");
+            auto json = c->json("[1,2,3]");
             (void)get_value_as<v8::Array>(json);
             bool got_expected_exception = false;
             try{
@@ -489,7 +488,7 @@ void run_inheritance_test()
 
 int main(int argc, char ** argv) {
     
-    PlatformHelper::init(argc, argv);
+    Platform::init(argc, argv);
 
     run_type_conversion_test();
 
