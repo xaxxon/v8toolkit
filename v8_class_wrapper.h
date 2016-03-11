@@ -296,10 +296,12 @@ public:
 		
         function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
         
+        // printf("Making function template for type %s\n", typeid(T).name());
+        
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
-			// printf("FOUND PARENT TYPE, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n");
+            // printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
         
@@ -615,7 +617,7 @@ public:
         assert(this->finalized == false);
         
         method_adders.emplace_back([this, method, method_name](v8::Local<v8::ObjectTemplate> & prototype_template) {
-    		// this is leaked if this ever isn't used anymore
+
     		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method](const v8::FunctionCallbackInfo<v8::Value>& info) 
     		{
                 if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
@@ -625,43 +627,30 @@ public:
 
                 auto isolate = info.GetIsolate();
 
-            
     			// get the behind-the-scenes c++ object
                 // However, Holder() refers to the most-derived object, so the prototype chain must be 
                 //   inspected to find the appropriate v8::Object with the T* in its internal field
     			auto holder = info.Holder();
                 v8::Local<v8::Object> self;
-                
-#ifdef V8_CLASS_WRAPPER_DEBUG
-                // debug helper block to see prototype chain
-                // auto foo = info.Holder();
-                // printf("Looking at prototype chain\n");
-                // while (!foo->IsNull()) {
-                //     printf("%s:\n", *v8::String::Utf8Value(foo));
-                //     // print_v8_value_details(foo);
-                //     // printf("%s\n", stringify_value(isolate, foo).c_str());
-                //     foo = v8::Local<v8::Object>::Cast(foo->GetPrototype());
-                // }
-                // printf("Done looking at prototype chain\n");
-#endif
-                
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+                                
+                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
                 for(auto & function_template : this->this_class_function_templates) {
                     self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
                     if(!self.IsEmpty() && !self->IsNull()) {
-                        if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain, breaking\n");
+                        if (V8_CLASS_WRAPPER_DEBUG || true) printf("Found instance match in prototype chain\n");
                         break;
                     }
                 }
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
-                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
-                
-                
+                //
+                // if(!compare_contents(isolate, holder, self)) {
+                //     printf("FOUND DIFFERENT OBJECT");
+                // }
+                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Done looking for instance match in prototype chain\n");
+                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Match: %s:\n", *v8::String::Utf8Value(self));
+                if (V8_CLASS_WRAPPER_DEBUG || true) printf("%s\n", stringify_value(isolate, self).c_str());
                 assert(!self.IsEmpty());
 
-                
-//                void* pointer = instance->GetAlignedPointerFromInternalField(0);
+                // void* pointer = instance->GetAlignedPointerFromInternalField(0);
     			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
                 if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
@@ -686,6 +675,9 @@ public:
                 // V8 does not support C++ exceptions, so all exceptions must be caught before control
                 //   is returned to V8 or the program will instantly terminate
                 try {
+                    // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
+                    //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
+                    // }
         			pb(bound_method, info);
                 } catch(std::exception & e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));

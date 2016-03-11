@@ -1,6 +1,6 @@
 
 V8_TARGET = native
-#V8_TARGET = x64.release
+# V8_TARGET = x64.release
 # V8_TARGET = x64.debug
 # DEBUG = -g
 
@@ -36,12 +36,10 @@ else
 V8_LIBS = -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n 
 endif
 
-CPPFLAGS = -I${V8_INCLUDE_DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
+CPPFLAGS = -I${V8_INCLUDE_DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror -MMD
 
 # LDFLAGS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
 LDFLAGS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_LIBS}
-
-
 
 
 all: warning libv8toolkit.a

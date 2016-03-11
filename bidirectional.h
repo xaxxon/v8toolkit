@@ -4,7 +4,6 @@
 
 
 
-
 namespace v8toolkit {
 
 class BidirectionalException : std::exception {
@@ -31,6 +30,7 @@ protected:
     v8::Global<v8::Object> global_js_object;
 	v8::Global<v8::FunctionTemplate> global_created_by;
     using BASE_TYPE = T;
+    bool called_from_javascript = false;
 public:
     JSWrapper(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> created_by) :
         isolate(context->GetIsolate()), 
@@ -39,7 +39,6 @@ public:
 		global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by))
 		{}
 };
-
 
 
 
@@ -108,15 +107,14 @@ public:
 				isolate->ThrowException(v8::String::NewFromUtf8(isolate, "First parameter must be the subclass prototype object"));
 				return;
 			}
-			auto subclass_prototype = v8::Local<v8::Object>::Cast(info[0]);
+            auto subclass_prototype = v8::Local<v8::Object>::Cast(info[0]);
 
 			// Create a new JavaScript object
 			JSWrapperClass * new_cpp_object;
 			auto & class_wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
 			auto function_template = class_wrapper.get_function_template();
             auto new_js_object = function_template->GetFunction()->NewInstance();
-            // auto new_js_object = constructor_function_template->InstanceTemplate()->NewInstance();
-			
+                        			
 			// Create the new C++ object - initialized with the JavaScript object
 			// depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
 			std::function<void(ConstructorParameters...)> constructor = [&](auto... args)->void{
@@ -127,10 +125,11 @@ public:
 			// now initialize the JavaScript object with the C++ object (circularly)
 			// TODO: This circular reference may cause the GC to never destroy these objects
 			class_wrapper.template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, new_cpp_object);
-						
+
 			// Set the prototypes appropriately  object -> subclass prototype (passed in) -> JSWrapper prototype -> base type prototype (via set_parent_type)
-			(void)subclass_prototype->SetPrototype(context, new_js_object->GetPrototype());
-			(void)new_js_object->SetPrototype(context, subclass_prototype);
+            (void)subclass_prototype->SetPrototype(context, new_js_object->GetPrototype());
+            (void)new_js_object->SetPrototype(context, subclass_prototype);
+            
 			info.GetReturnValue().Set(new_js_object);
 		});
 	}
@@ -145,39 +144,25 @@ public:
 // Builds the body of a JS_ACCESS function
 // Takes the return type of the function, the name of the function, and a list of input variable names, if any
 #define JS_ACCESS_CORE(ReturnType, name, ...) \
+    bool call_native = this->called_from_javascript; \
+    this->called_from_javascript = false; \
+    if (call_native) { \
+        if(JS_ACCESS_CORE_DEBUG) printf("Calling native version of %s\n", #name); \
+        return this->BASE_TYPE::name( __VA_ARGS__ ); \
+    } \
 	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE\n");\
     auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\
     v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
     return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
+      auto js_object = global_js_object.Get(isolate); \
         v8::TryCatch tc(isolate); \
-        auto js_object = global_js_object.Get(isolate); \
-		/* auto has_own_property = js_object->HasOwnProperty(context, v8::String::NewFromUtf8(isolate, #name)); */ \
-        /* if(has_own_property.FromMaybe(false)) { */ \
-		/* if there is a non-null prototype that isn't the jswrapper that has the function, then call it, otherwise call the C++ version */ \
-		if (!js_object->GetPrototype()->IsNull()) { \
-			dump_prototypes(isolate, js_object); \
-			printf("found instance (anywhere): %s\n", js_object->FindInstanceInPrototypeChain(this->global_created_by.Get(isolate)).IsEmpty() ? "not found" : "found"); \
-			bool found_deep_instance = !v8::Local<v8::Object>::Cast(js_object->GetPrototype())->FindInstanceInPrototypeChain(this->global_created_by.Get(isolate)).IsEmpty(); \
-			dump_prototypes(isolate, js_object->FindInstanceInPrototypeChain(this->global_created_by.Get(isolate))); \
-			printf("found_deep_instance %s\n", found_deep_instance ? "true" : "false"); \
-	        auto maybe_function_value = js_object->Get(context, v8::String::NewFromUtf8(isolate, #name)); \
-			if (found_deep_instance && !maybe_function_value.IsEmpty() ) { \
-	            if(JS_ACCESS_CORE_DEBUG) printf("Got value when looking up %s\n", #name); \
-	            if(!maybe_function_value.ToLocalChecked()->IsUndefined()) { \
-	                if(JS_ACCESS_CORE_DEBUG) printf("..and the value was defined\n"); \
-					if(JS_ACCESS_CORE_DEBUG) print_v8_value_details(maybe_function_value.ToLocalChecked()); \
-					if(JS_ACCESS_CORE_DEBUG) printf("%s\n", *v8::String::Utf8Value(maybe_function_value.ToLocalChecked())); \
-	                auto jsfunction = v8::Local<v8::Function>::Cast(maybe_function_value.ToLocalChecked()); \
-	                if(!jsfunction.IsEmpty()) { \
-	                    if(JS_ACCESS_CORE_DEBUG) printf("Calling the javascript function\n"); \
-	                    v8::Local<v8::Value> result; \
-	                    (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
-	                    return cast_to_native(isolate, result); \
-        }}}} \
-		if(JS_ACCESS_CORE_DEBUG) printf("Falling back to C++ implementation\n"); \
-        return this->std::remove_pointer<decltype(this)>::type::BASE_TYPE::name( __VA_ARGS__ ); \
+        auto jsfunction = get_key_as<v8::Function>(context, js_object, #name); \
+        v8::Local<v8::Value> result; \
+        this->called_from_javascript = true; \
+        (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
+        this->called_from_javascript = false; \
+        return cast_to_native(isolate, result); \
     });
-
 
 // defines a JS_ACCESS function for a method taking no parameters
 //TODO: add const versions
@@ -236,3 +221,20 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8,
 };
 
    
+
+
+/*
+Inheritance looks like:
+
+jswrapper instance 
+jswrapper prototype
+--- INSERT JAVASCRIPT CREATED PROTOTYPE HERE
+base object prototype
+empty object
+null
+
+When called from JS this just works. 
+
+
+*/
+

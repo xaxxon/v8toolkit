@@ -10,13 +10,13 @@ using namespace v8toolkit;
 
 
 struct Thing {
-	Thing(){}
+	Thing(){printf("Creating Thing\n");}
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
 };
 
 struct JSThing : public Thing, public JSWrapper<Thing> {
-	JSThing(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> function_template) : JSWrapper(context, object, function_template) {}
+	JSThing(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> function_template) : JSWrapper(context, object, function_template) {printf("Creating JSThing\n");}
 	JS_ACCESS(std::string, get_string);
 };
 
@@ -88,6 +88,7 @@ public:
     JS_ACCESS_1(string, echo, string)
     JS_ACCESS_2(int, add, int, int)
     JS_ACCESS(string, get_type)
+        void crap(){}
 };
 
 
@@ -113,8 +114,8 @@ int main(int argc, char ** argv)
     Platform::init(argc, argv);
 	
 	printf("Calling TCBFJ\n");
-	// test_calling_bidirectional_from_javascript();
-       
+    test_calling_bidirectional_from_javascript();
+    // exit(0);
     auto i = Platform::create_isolate();
     (*i)([&]{
 		printf("Running 'main' tests\n");
@@ -126,12 +127,13 @@ int main(int argc, char ** argv)
         animal.add_method("get_i", &Animal::get_i);
 		animal.add_method("echo", &Animal::echo);
 		animal.add_method("add", &Animal::add);
-        animal.add_member("i", &Animal::i);
+        // animal.add_member("i", &Animal::i);
 		animal.set_compatible_types<JSAnimal>();
         animal.finalize();
         animal.add_constructor<const std::string &>("Animal", *i);
 		
 		auto & jsanimal = i->wrap_class<JSAnimal>();
+        jsanimal.add_method("crap", &JSAnimal::crap);
 		jsanimal.set_parent_type<Animal>();
 		jsanimal.finalize();
 
@@ -155,18 +157,18 @@ int main(int argc, char ** argv)
         animals.push_back((*animal_factories.find("mule")->second)("Mandy the Mule"));
         animals.push_back((*animal_factories.find("horse")->second)("Henry the Horse"));
         animals.push_back((*animal_factories.find("zebra")->second)("Zany Zebra"));
-        
+
         assert(animals.size() == 3);
         
         // mule
         auto a = animals[0];
 		printf("About to print a->get_type\n");
-		printf("a->get_type: %s\n", a->get_type().c_str());
+        printf("a->get_type: %s\n", a->get_type().c_str());
         assert(a->get_type() == "mule");
         assert(a->get_i() == 1);
         assert(a->echo("mule") == "js-mule-echo: mule");
         assert(a->add(2,2) == 5); // mules don't add well
-        
+
         // the "horse" object doesn't overload anything, so it's really a cow
         a = animals[1];
         assert(a->get_type() == "cow");

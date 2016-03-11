@@ -470,8 +470,7 @@ void run_inheritance_test()
         c->run("assert('Object.create(new IT_A()).get_int() == 5')");
         
         (*c)([&]{
-        
-        auto json = c->json("[1,2,3]");
+            auto json = c->json("[1,2,3]");
             (void)get_value_as<v8::Array>(json);
             bool got_expected_exception = false;
             try{
