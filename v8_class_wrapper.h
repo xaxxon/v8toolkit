@@ -84,7 +84,7 @@ struct DestructorBehavior
 * Helper to delete a C++ object when the corresponding javascript object is garbage collected
 */
 template<class T>
-struct DestructorBehaviorDelete : DestructorBehavior<T> 
+struct DestructorBehavior_Delete : DestructorBehavior<T> 
 {
 	void operator()(v8::Isolate * isolate, T* object) const 
 	{
@@ -99,7 +99,7 @@ struct DestructorBehaviorDelete : DestructorBehavior<T>
 *   is garbage collected
 */
 template<class T>
-struct DestructorBehaviorLeaveAlone : DestructorBehavior<T> 
+struct DestructorBehavior_LeaveAlone : DestructorBehavior<T> 
 {
 	void operator()(v8::Isolate * isolate, T* object) const 
 	{
@@ -168,28 +168,9 @@ private:
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &) = delete;
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &&) = delete;
 	
-	// Common tasks to do for any new js object regardless of how it is created
-	template<class BEHAVIOR>
-	static void _initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
-	{
-        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
-        auto any = new AnyPtr<T>(cpp_object);
-        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
-	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
-		
-		// tell V8 about the memory we allocated so it knows when to do garbage collection
-		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
-		
-		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object]() {
-				BEHAVIOR()(isolate, cpp_object);
-			}
-		);
-	}
 	
 	// users of the library should call get_instance, not the constructor directly
-	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate)
-	{
-	}
+	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {}
 	
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
@@ -216,7 +197,7 @@ private:
 	               const v8::PropertyCallbackInfo<void>& info) 
 	{
         auto isolate = info.GetIsolate();
-		v8::Local<v8::Object> self = info.Holder();				   
+		v8::Local<v8::Object> self = info.Holder();		   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
 
@@ -225,16 +206,8 @@ private:
 	  	member_ref = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
 	}
     
-    // Calls the C++ constructor with javascript-provided arguments
-	template <typename... Fs, size_t... ns> 
-	static T * call_cpp_constructor(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<ns...>){
-		
-		auto cpp_object = new T(CastToNative<typename std::remove_reference<Fs>::type>()(info.GetIsolate(), info[ns])...);
-        if (V8_CLASS_WRAPPER_DEBUG) printf("Created new c++ object at %p for type %s\n", cpp_object, typeid(T).name());
-        return cpp_object;
-	}
-    
-	
+
+
 	// Helper for creating objects when "new MyClass" is called from javascript
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -243,13 +216,12 @@ private:
 		T * new_cpp_object = nullptr;
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
 		ParameterBuilder<0, decltype(constructor), decltype(constructor)>()(constructor, args);
-		// T * new_cpp_object = call_cpp_constructor<CONSTRUCTOR_PARAMETER_TYPES...>(args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>());
 
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
 		//   GC's the javascript object, there should be no c++ references to it
-		_initialize_new_js_object<DestructorBehaviorDelete<T>>(isolate, args.This(), new_cpp_object);
+		initialize_new_js_object<DestructorBehavior_Delete<T>>(isolate, args.This(), new_cpp_object);
 		
 		// // return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
@@ -269,10 +241,10 @@ private:
     // Stores a functor capable of converting compatible types into a <T> object
     std::unique_ptr<TypeCheckerBase<T>> type_checker;
         
-    /**
-    * Creates a function template with all the currently registered member and method adders
-    */
-    
+	/**
+	* Stores a function template with any methods from the parent already in place.
+	* Used as the prototype for any new object
+	*/
     v8::Global<v8::FunctionTemplate> global_parent_function_template;
 
     /**
@@ -290,6 +262,27 @@ private:
 	
 public:
 	
+	
+	// Common tasks to do for any new js object regardless of how it is created
+	template<class DestructorBehavior>
+	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
+	{
+        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
+        auto any = new AnyPtr<T>(cpp_object);
+        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
+		assert(js_object->InternalFieldCount() >= 1);
+	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
+		
+		// tell V8 about the memory we allocated so it knows when to do garbage collection
+		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
+		
+		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object]() {
+				DestructorBehavior()(isolate, cpp_object);
+			}
+		);
+	}
+	
+	
     /**
     * Creates a new v8::FunctionTemplate capabale of creating wrapped T objects based on previously added methods and members.
     * TODO: This needs to track all FunctionTemplates ever created so it can try to use them in GetInstanceByPrototypeChain
@@ -300,14 +293,17 @@ public:
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
+		
         function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
         
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
+			// printf("FOUND PARENT TYPE, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n");
             function_template->Inherit(parent_function_template);
         }
         
+		// printf("Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
     }
@@ -321,15 +317,27 @@ public:
     v8::Local<v8::FunctionTemplate> get_function_template()
     {
         if (this_class_function_templates.empty()){
+			// printf("Making function template because there isn't one %s\n", typeid(T).name());
             // this will store it for later use automatically
             return make_function_template();
         } else {
+			// printf("Not making function template because there is already one %s\n", typeid(T).name());
             // return an arbitrary one, since they're all the same when used to call .NewInstance()
             return this_class_function_templates[0].Get(isolate);
         }
     }
 
+
+	T * get_cpp_object(v8::Local<v8::Object> object) {
+		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+
+	    if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
+	    return this->cast(static_cast<AnyBase *>(wrap->Value()));
     
+	}
+	
+	
+	
     T * cast(AnyBase * any_base)
     {
         if (V8_CLASS_WRAPPER_DEBUG) printf("In ClassWrapper::cast for type %s\n", typeid(T).name());
@@ -396,6 +404,10 @@ public:
         return *this;
     }
 	
+	
+	/**
+	* This wrapped class will inherit all the methods from the parent type (and its parent...)
+	*/
     template<class ParentType>
     std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
     set_parent_type()
@@ -403,12 +415,11 @@ public:
         assert(!is_finalized());
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
         scoped_run(isolate, [this]{
-            global_parent_function_template = 
+            global_parent_function_template =
                 v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
         });
         return *this;
     }
-    
     
     
 	/**
@@ -428,7 +439,7 @@ public:
 	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template) 
+	v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
 	{				
         assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
         
@@ -459,13 +470,10 @@ public:
         
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
         if (!this->is_finalized()) {    
-            printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
+            // printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object);
         }
-        
-        
-        // assert(((void)"Type must be finalized before calling wrap_existing_cpp_object", this->finalized) == true);
-        
+                
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
@@ -479,14 +487,15 @@ public:
 		
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
 		
+			// TODO: Remove these?
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
-            auto constructor_function_template = get_function_template();
-            javascript_object = constructor_function_template->InstanceTemplate()->NewInstance();
-            javascript_object->SetPrototype(constructor_function_template->PrototypeTemplate()->NewInstance());
+            javascript_object = get_function_template()->GetFunction()->NewInstance();
+            // javascript_object = constructor_function_template->InstanceTemplate()->NewInstance();
+            // javascript_object->SetPrototype(constructor_function_template->PrototypeTemplate()->NewInstance());
             
-			_initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
+			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
             this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());			
@@ -529,7 +538,8 @@ public:
 	{
         assert(this->finalized == false);
         
-         member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+		// store a function for adding the member on to an object template in the future
+		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
     		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
     			return cpp_object->*member;
@@ -589,6 +599,7 @@ public:
         // prototype_template is the template used later when creating a new javascript context
         method_adders.emplace_back([this, method_name, callable](v8::Local<v8::ObjectTemplate> & prototype_template) {
             auto function_template = v8toolkit::make_function_template(isolate, callable);
+			printf("Adding %s to object template\n", method_name.c_str());
     		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
         });
         
@@ -719,7 +730,7 @@ struct CastToJS {
 		auto copy = new T(cpp_object);
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorDelete<T>>(context, copy);
+		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context, copy);
         if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
         
         return result;
@@ -737,7 +748,7 @@ struct CastToJS<T*> {
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
         if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object\n");
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehaviorLeaveAlone<T>>(context, cpp_object);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(context, cpp_object);
 	}
 };
 

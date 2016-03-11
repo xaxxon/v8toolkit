@@ -27,7 +27,7 @@ std::shared_ptr<Isolate> Context::get_isolate_helper()
     return this->isolate_helper;
 }
 
-v8::Local<v8::Value> Context::json(std::string json) {
+v8::Local<v8::Value> Context::json(const std::string & json) {
     return this->isolate_helper->json(json);
 }
 
@@ -39,7 +39,7 @@ Context::~Context() {
 }
 
 
-std::shared_ptr<Script> Context::compile_from_file(const std::string filename)
+std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
 {
     std::string contents;
     time_t modification_time = 0;
@@ -52,7 +52,7 @@ std::shared_ptr<Script> Context::compile_from_file(const std::string filename)
 }
 
 
-std::shared_ptr<Script> Context::compile(const std::string javascript_source)
+std::shared_ptr<Script> Context::compile(const std::string & javascript_source)
 {
     return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
     
@@ -108,10 +108,10 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
 }
 
 
-v8::Global<v8::Value> Context::run(const std::string code)
+v8::Global<v8::Value> Context::run(const std::string & source)
 {
-    return (*this)([this, code]{
-        auto compiled_code = compile(code);
+    return (*this)([this, source]{
+        auto compiled_code = compile(source);
         return compiled_code->run();
     });
 }
@@ -126,29 +126,34 @@ v8::Global<v8::Value> Context::run(const v8::Local<v8::Value> value)
 }
 
 
+v8::Global<v8::Value> Context::run_from_file(const std::string & filename)
+{
+	return compile_from_file(filename)->run();
+}
+
 std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>> 
- Context::run_async(const std::string code, std::launch launch_policy)
+Context::run_async(const std::string & source, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
     //   right after creating the async
-    return (*this)([this, code, launch_policy]{
-        return this->compile(code)->run_async(launch_policy);
+    return (*this)([this, source, launch_policy]{
+        return this->compile(source)->run_async(launch_policy);
     });
 }
 
 
-void Context::run_detached(const std::string code)
+void Context::run_detached(const std::string & source)
 {
-    (*this)([this, code]{
-        this->compile(code)->run_detached();
+    (*this)([this, source]{
+        this->compile(source)->run_detached();
     });
 }
 
 
-std::thread Context::run_thread(const std::string code)
+std::thread Context::run_thread(const std::string & source)
 {
-    return (*this)([this, code]{
-        return this->compile(code)->run_thread();
+    return (*this)([this, source]{
+        return this->compile(source)->run_thread();
     });
 }
 

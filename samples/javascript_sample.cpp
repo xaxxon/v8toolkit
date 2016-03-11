@@ -280,7 +280,7 @@ void test_casts()
         try {
             auto isolate = i->get_isolate();
             auto context = c->get_context();
-            printf("***** Testing STL container casts\n");
+            // printf("***** Testing STL container casts\n");
 
             std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
             c->add_variable("v", CastToJS<decltype(v)>()(isolate, v));
@@ -319,7 +319,7 @@ void test_casts()
             c->expose_variable("tuple", tuple);
             c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
 
-            printf("Done testing STL container casts\n");
+            // printf("Done testing STL container casts\n");
 
 
             auto unique = std::make_unique<std::vector<int>>(4, 1);

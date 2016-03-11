@@ -44,7 +44,7 @@ namespace v8toolkit {
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true);
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
 
 /**
@@ -938,6 +938,7 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 void require_directory(v8::Local<v8::Context> context, std::string directory_name);
 
 
+void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 
 
 

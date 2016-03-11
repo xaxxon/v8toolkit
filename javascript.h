@@ -146,7 +146,7 @@ public:
     * Compiles the contents of the passed in string as javascripts
     * Throws v8toolkit::CompilationError on compilation error
     */
-	std::shared_ptr<Script> compile(const std::string);
+	std::shared_ptr<Script> compile(const std::string & source);
     
 	/**
     * Compiles the contents of the passed in v8::String as javascript
@@ -159,7 +159,7 @@ public:
     * Throws v8toolkit::CompilationError on compilation error
     * TODO: what if the file can't be opened?
     */
-	std::shared_ptr<Script> compile_from_file(const std::string);
+	std::shared_ptr<Script> compile_from_file(const std::string & filename);
 	
     /**
     * Runs the previously compiled v8::Script.
@@ -172,9 +172,10 @@ public:
     * Throws v8toolkit::CompilationError on compilation error
     * Throws v8toolkit::ExecutionError on execution error
     */
-	v8::Global<v8::Value> run(const std::string);
+	v8::Global<v8::Value> run(const std::string & source);
 	v8::Global<v8::Value> run(const v8::Local<v8::Value> script);
 	
+	v8::Global<v8::Value> run_from_file(const std::string & filename);
     
 	/**
     * Compiles and runs the contents of the passed in string in a std::async and returns
@@ -189,7 +190,7 @@ public:
     * TODO: what happens if there are errors in execution?
     */
 	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>> 
-        run_async(const std::string,
+        run_async(const std::string & source,
                   std::launch launch_policy = 
                      std::launch::async | std::launch::deferred);
         
@@ -217,7 +218,7 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::thread run_thread(const std::string);
+	std::thread run_thread(const std::string & source);
     
 	/**
     * Executes the previously compiled v8::script in a std::thread and returns
@@ -250,7 +251,7 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	void run_detached(const std::string);
+	void run_detached(const std::string & source);
     
 	/**
     * Executes the previously compiled v8::script in a detached std::thread.
@@ -342,7 +343,7 @@ public:
         
     }
     
-    v8::Local<v8::Value> json(std::string json);   
+    v8::Local<v8::Value> json(const std::string & json);   
     
     
 	

@@ -146,8 +146,13 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 
     add_function(isolate, object_template, "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]));
+        callback(stringify_value(isolate, info[0]) + "\n");
     });
+    add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
+        auto isolate = info.GetIsolate();
+        callback(stringify_value(isolate, info[0], true, true) + "\n");
+    });
+	
 }
 
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template)
@@ -518,10 +523,15 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
     std::cout << "generator object: " << value->IsGeneratorObject() << std::endl;
 }
 
-std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local<v8::Object> & object) 
+std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local<v8::Object> & object, bool own_properties_only = true) 
 {
     auto context = isolate->GetCurrentContext();
-    auto properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+	v8::Local<v8::Array> properties;
+	if (own_properties_only) {
+		properties = object->GetOwnPropertyNames(context).ToLocalChecked();
+	} else {
+		properties = object->GetPropertyNames(context).ToLocalChecked();
+	}
     auto array_length = get_array_length(isolate, properties);
     
     std::set<std::string> keys;
@@ -533,6 +543,18 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local
     return keys;
 }
 
+
+void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
+{
+	printf("Looking at prototype chain\n");
+	while (!object->IsNull()) {
+	    printf("%s:\n", *v8::String::Utf8Value(object));
+	    // print_v8_value_details(foo);
+	    printf("%s\n", stringify_value(isolate, object).c_str());
+	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());
+	}
+	printf("Done looking at prototype chain\n");
+}
 
 
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right)
@@ -645,7 +667,7 @@ AnyBase::~AnyBase() {}
 
 #define STRINGIFY_VALUE_DEBUG false
 
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level)
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level, bool show_all_properties)
 {
     static std::vector<v8::Local<v8::Value>> processed_values;
 
@@ -696,7 +718,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output << stringify_value(isolate, value.ToLocalChecked(), false);
+            output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
         }        
         output << "]";
     } else {
@@ -709,7 +731,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
         if(value->IsObject() && !object.IsEmpty()) {
             if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
             output << "{";
-            auto keys = make_set_from_object_keys(isolate, object);
+            auto keys = make_set_from_object_keys(isolate, object, !show_all_properties);
             auto first_key = true;
             for(auto key : keys) {
                 if (STRINGIFY_VALUE_DEBUG) printf("Stringify: object key %s\n", key.c_str());
@@ -720,7 +742,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
                 output << key;
                 output << ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output << stringify_value(isolate, value.ToLocalChecked(), false);
+                output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
             }
             output << "}";
         }
