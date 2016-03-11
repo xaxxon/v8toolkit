@@ -633,11 +633,11 @@ public:
     			auto holder = info.Holder();
                 v8::Local<v8::Object> self;
                                 
-                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
                 for(auto & function_template : this->this_class_function_templates) {
                     self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
                     if(!self.IsEmpty() && !self->IsNull()) {
-                        if (V8_CLASS_WRAPPER_DEBUG || true) printf("Found instance match in prototype chain\n");
+                        if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain\n");
                         break;
                     }
                 }
@@ -645,9 +645,9 @@ public:
                 // if(!compare_contents(isolate, holder, self)) {
                 //     printf("FOUND DIFFERENT OBJECT");
                 // }
-                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Done looking for instance match in prototype chain\n");
-                if (V8_CLASS_WRAPPER_DEBUG || true) printf("Match: %s:\n", *v8::String::Utf8Value(self));
-                if (V8_CLASS_WRAPPER_DEBUG || true) printf("%s\n", stringify_value(isolate, self).c_str());
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
+                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
+                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
                 assert(!self.IsEmpty());
 
                 // void* pointer = instance->GetAlignedPointerFromInternalField(0);

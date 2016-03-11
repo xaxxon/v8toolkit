@@ -104,8 +104,8 @@ map<string, std::unique_ptr<AnimalFactory>> animal_factories;
 vector<Animal*> animals;
 
 
-void register_animal_factory(v8::Isolate * isolate, string type, v8::Local<v8::Function> factory_method) {
-    animal_factories.emplace(type, make_unique<JSAnimalFactory>(isolate, factory_method));
+void register_animal_factory(v8::Local<v8::Context> context, string type, v8::Local<v8::Function> factory_method) {
+    animal_factories.emplace(type, make_unique<JSAnimalFactory>(context, factory_method));
 }
 
 

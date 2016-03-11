@@ -1,5 +1,5 @@
 
-## Doxygen docs available here: http://xaxxon.github.io/v8-class-wrapper/docs/html/index.html
+## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
 
 ## Tutorial for using this library
 
@@ -70,9 +70,9 @@ on how to do that: https://gist.github.com/jimporter/10442880
 
 #### Build v8toolkit
 
-git clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git 
+git clone v8toolkit:  git clone https://github.com/xaxxon/v8toolkit.git 
 
-go into the v8-class-wrapper directory (this name will be changed soon)
+go into the v8toolkit directory
 
 edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
@@ -93,23 +93,23 @@ Here is the simplest program you can write to execute some javascript using the 
         // any v8-specific command-line arguments will be stripped out
         Platform::init(argc, argv); 
         
-        // creates an isolate helper which can manage some number of contexts
-        auto isolate_helper = Platform::create_isolate();
+        // creates a v8toolkit::Isolate which can manage some number of contexts
+        auto isolate = Platform::create_isolate();
         
         // javascript doesn't have any way to print to stdout, so this exposes some handy functions to javascript
-        isolate_helper->add_print(); 
+        isolate->add_print(); 
         
         // a context represents an actual javascript environment in which code is executed
-        auto context_helper = isolate_helper->create_context(); 
+        auto context = isolate->create_context(); 
         
         // Prints to the screen using the print helper function we added above
-        context_helper->run("println('Hello JavaScript World!');"); 
+        context->run("println('Hello JavaScript World!');"); 
     }
 
 Working backwards, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects in a context persist 
 and will be seen any other JavaScript run within that same context.
 
-An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling isolate_helper->create_context() a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
+An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling `isolate->create_context()` a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
 
 Platform manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
 
@@ -271,8 +271,8 @@ a function, or in an STL container.
 
 #### Introducing the Script
 
-There's one more "helper" type we haven't talked about, since it's not needed for simple examples shown so far.  It's likely in a real-world project
-the same code will be run multiple times and compiling it each time is a huge waste.   That's where the Script type comes in.
+There's one more v8toolkit type we haven't talked about, since it's not needed for simple examples shown so far.  In a real-world project
+the same code will be run multiple times and compiling it each time wouuld be a huge waste.   That's where the v8toolkit::Script type comes in.
 
     // returns a compiled script that can be run multiple times without re-compiling
     auto script = context->compile("println('Hello Javascript World!');");
