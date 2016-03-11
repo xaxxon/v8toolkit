@@ -70,9 +70,9 @@ on how to do that: https://gist.github.com/jimporter/10442880
 
 #### Build v8toolkit
 
-git clone v8toolkit:  git clone https://github.com/xaxxon/v8-class-wrapper.git 
+git clone v8toolkit:  git clone https://github.com/xaxxon/v8toolkit.git 
 
-go into the v8-class-wrapper directory (this name will be changed soon)
+go into the v8toolkit directory
 
 edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
