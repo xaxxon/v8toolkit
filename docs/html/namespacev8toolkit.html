@@ -513,7 +513,9 @@ Variables</h2></td></tr>
 <tr class="separator:ae11990eff5d6debfc42e18bda75335eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>TODO LIST</p>
+<div class="textblock"><p>This file contains things needed to create "types" and objects in both C++ and javascript and use them in either environment regardless of where they were created. Since C++ types must exist at compile time, types created with these tools cannot create actual C++ types, but instead allow behavior to be overridden on virtual functions</p>
+<p>See <a class="el" href="bidirectional__sample_8cpp.html">samples/bidirectional_sample.cpp</a> for examples on how to use this library.</p>
+<p>TODO LIST</p>
 <p>Rename project to <a class="el" href="namespacev8toolkit.html">v8toolkit</a> everywhere including github All includes should be included as #include "v8toolkit/FILENAME.h" instead of just #include "FILENAME.h" Rename <a class="el" href="javascript_8h.html">javascript.h</a> file to something much better Rename <a class="el" href="v8toolkit_8h.html">v8toolkit.h</a> contents to something else so it can be included directory but using a different name Change *Helper classes to just their base name. They're in a namespace, so it shouldn't be too confusing. Including "v8toolkit/v8toolkit.h" should include everything, but specific includes should also work for <a class="el" href="v8helpers_8h.html">v8helpers.h</a>, &lt;new name for <a class="el" href="v8toolkit_8h.html">v8toolkit.h</a>&gt;, &lt;new name for <a class="el" href="javascript_8h.html">javascript.h</a>&gt; </p>
 </div><hr/><h2 class="groupheader">Class Documentation</h2>
 <a name="structv8toolkit_1_1Bind" id="structv8toolkit_1_1Bind"></a>
@@ -1435,7 +1437,7 @@ Here is the caller graph for this function:</div>
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00441">make_function_template()</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00157">add_assert()</a>, <a class="el" href="javascript_8cpp_source.html#l00236">v8toolkit::Isolate::add_assert()</a>, <a class="el" href="javascript_8h_source.html#l00313">v8toolkit::Context::add_function()</a>, <a class="el" href="v8toolkit_8h_source.html#l00538">add_function()</a>, <a class="el" href="javascript_8h_source.html#l00578">v8toolkit::Isolate::add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00423">add_module_list()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00138">add_print()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00433">add_require()</a>, <a class="el" href="bidirectional_8h_source.html#l00099">v8toolkit::JSFactory&lt; RealClass, JSWrapperClass, ConstructorParameters &gt;::add_subclass_function()</a>, and <a class="el" href="sample_8cpp_source.html#l00077">main()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00157">add_assert()</a>, <a class="el" href="javascript_8cpp_source.html#l00236">v8toolkit::Isolate::add_assert()</a>, <a class="el" href="javascript_8h_source.html#l00313">v8toolkit::Context::add_function()</a>, <a class="el" href="v8toolkit_8h_source.html#l00538">add_function()</a>, <a class="el" href="javascript_8h_source.html#l00578">v8toolkit::Isolate::add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00423">add_module_list()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00138">add_print()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00433">add_require()</a>, <a class="el" href="bidirectional_8h_source.html#l00137">v8toolkit::JSFactory&lt; Base, JSWrapperClass, ConstructorParameters &gt;::add_subclass_function()</a>, and <a class="el" href="sample_8cpp_source.html#l00077">main()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -1461,7 +1463,7 @@ Here is the caller graph for this function:</div>
 <area shape="rect" id="node10" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="194,374,353,398"/>
 <area shape="rect" id="node16" href="namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168" title="v8toolkit::add_print" alt="" coords="213,95,335,119"/>
 <area shape="rect" id="node18" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="206,425,342,449"/>
-<area shape="rect" id="node20" href="classv8toolkit_1_1JSFactory.html#a93a71ed5605e24100aba97d6fd93c5f1" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="199,500,349,536"/>
+<area shape="rect" id="node20" href="classv8toolkit_1_1JSFactory.html#a8312ab6514c22904c8314c59146e904c" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="199,500,349,536"/>
 <area shape="rect" id="node4" href="namespacev8toolkit.html#ababa4b24207ba91bf1b898aa524ea7bb" title="v8toolkit::global_set_weak" alt="" coords="410,71,572,95"/>
 <area shape="rect" id="node5" href="classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#add0f4386268debedf4f168f10cdae41b" title="v8toolkit::V8ClassWrapper\l\&lt; T, void \&gt;::initialize\l_new_js_object" alt="" coords="629,59,791,107"/>
 <area shape="rect" id="node11" href="classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="433,305,549,341"/>
@@ -2640,7 +2642,7 @@ template&lt;class T , class R  = decltype(std::declval&lt;T&gt;()()), decltype(s
 
 <p>References <a class="el" href="v8toolkit_8h_source.html#l00054">v8toolkit::InvalidCallException::InvalidCallException()</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00538">add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00423">add_module_list()</a>, <a class="el" href="javascript_8cpp_source.html#l00054">v8toolkit::Context::compile()</a>, <a class="el" href="sample_8cpp_source.html#l00077">main()</a>, <a class="el" href="bidirectional_8h_source.html#l00089">v8toolkit::JSFactory&lt; RealClass, JSWrapperClass, ConstructorParameters &gt;::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00273">v8toolkit::Context::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00542">v8toolkit::Isolate::operator()()</a>, <a class="el" href="javascript_8cpp_source.html#l00075">v8toolkit::Context::run()</a>, <a class="el" href="javascript_8cpp_source.html#l00152">v8toolkit::Context::run_thread()</a>, <a class="el" href="v8toolkit_8h_source.html#l00138">scoped_run()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00415">v8toolkit::V8ClassWrapper&lt; T, void &gt;::set_parent_type()</a>, and <a class="el" href="javascript_8h_source.html#l00031">v8toolkit::V8Exception::what()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00538">add_function()</a>, <a class="el" href="v8toolkit_8cpp_source.html#l00423">add_module_list()</a>, <a class="el" href="javascript_8cpp_source.html#l00054">v8toolkit::Context::compile()</a>, <a class="el" href="sample_8cpp_source.html#l00077">main()</a>, <a class="el" href="bidirectional_8h_source.html#l00122">v8toolkit::JSFactory&lt; Base, JSWrapperClass, ConstructorParameters &gt;::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00273">v8toolkit::Context::operator()()</a>, <a class="el" href="javascript_8h_source.html#l00542">v8toolkit::Isolate::operator()()</a>, <a class="el" href="javascript_8cpp_source.html#l00075">v8toolkit::Context::run()</a>, <a class="el" href="javascript_8cpp_source.html#l00152">v8toolkit::Context::run_thread()</a>, <a class="el" href="v8toolkit_8h_source.html#l00138">scoped_run()</a>, <a class="el" href="v8__class__wrapper_8h_source.html#l00415">v8toolkit::V8ClassWrapper&lt; T, void &gt;::set_parent_type()</a>, and <a class="el" href="javascript_8h_source.html#l00031">v8toolkit::V8Exception::what()</a>.</p>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -2661,7 +2663,7 @@ Here is the caller graph for this function:</div>
 <area shape="rect" id="node3" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="193,71,352,95"/>
 <area shape="rect" id="node9" href="classv8toolkit_1_1Context.html#ac55b123b519e53a5156c90dc0ad9e374" title="v8toolkit::Context\l::compile" alt="" coords="216,120,329,156"/>
 <area shape="rect" id="node10" href="sample_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="249,181,296,205"/>
-<area shape="rect" id="node11" href="classv8toolkit_1_1JSFactory.html#ae246f04d5656e2e663fdce101f84ecc5" title="v8toolkit::JSFactory\l::operator()" alt="" coords="210,229,336,265"/>
+<area shape="rect" id="node11" href="classv8toolkit_1_1JSFactory.html#a3eaf183be2f38e1e7b6b7168342d5770" title="v8toolkit::JSFactory\l::operator()" alt="" coords="210,229,336,265"/>
 <area shape="rect" id="node12" href="classv8toolkit_1_1Context.html#af3285099ac1c88c2d5a11babcbf3ff25" title="v8toolkit::Context\l::operator()" alt="" coords="216,289,329,325"/>
 <area shape="rect" id="node13" href="classv8toolkit_1_1Isolate.html#a235f8e98b332e80c308fd7b9b8e73614" title="v8toolkit::Isolate\l::operator()" alt="" coords="219,349,326,385"/>
 <area shape="rect" id="node14" href="classv8toolkit_1_1Context.html#a306ff6ee67ebb4dcbff392ae1192d205" title="v8toolkit::Context::run" alt="" coords="204,410,341,434"/>
@@ -2832,7 +2834,7 @@ Here is the caller graph for this function:</div>
 <area shape="rect" id="node12" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="421,419,580,443"/>
 <area shape="rect" id="node18" href="namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168" title="v8toolkit::add_print" alt="" coords="439,42,561,66"/>
 <area shape="rect" id="node20" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="432,470,568,494"/>
-<area shape="rect" id="node22" href="classv8toolkit_1_1JSFactory.html#a93a71ed5605e24100aba97d6fd93c5f1" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="425,545,575,581"/>
+<area shape="rect" id="node22" href="classv8toolkit_1_1JSFactory.html#a8312ab6514c22904c8314c59146e904c" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="425,545,575,581"/>
 <area shape="rect" id="node5" href="namespacev8toolkit.html#ababa4b24207ba91bf1b898aa524ea7bb" title="v8toolkit::global_set_weak" alt="" coords="637,66,798,90"/>
 <area shape="rect" id="node6" href="classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#add0f4386268debedf4f168f10cdae41b" title="v8toolkit::V8ClassWrapper\l\&lt; T, void \&gt;::initialize\l_new_js_object" alt="" coords="855,54,1018,102"/>
 <area shape="rect" id="node13" href="classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="660,351,775,387"/>
@@ -3247,7 +3249,7 @@ template&lt;class TupleType  = std::tuple&lt;&gt;&gt; </div>
 
 <p>Definition at line <a class="el" href="v8toolkit_8h_source.html#l00600">600</a> of file <a class="el" href="v8toolkit_8h_source.html">v8toolkit.h</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00627">call_javascript_function()</a>, and <a class="el" href="bidirectional_8h_source.html#l00089">v8toolkit::JSFactory&lt; RealClass, JSWrapperClass, ConstructorParameters &gt;::operator()()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8h_source.html#l00627">call_javascript_function()</a>, and <a class="el" href="bidirectional_8h_source.html#l00122">v8toolkit::JSFactory&lt; Base, JSWrapperClass, ConstructorParameters &gt;::operator()()</a>.</p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -3255,7 +3257,7 @@ Here is the caller graph for this function:</div>
 <div class="center"><img src="namespacev8toolkit_a3f12566f9db04373bbf319d330158423_icgraph.png" border="0" usemap="#namespacev8toolkit_a3f12566f9db04373bbf319d330158423_icgraph" alt=""/></div>
 <map name="namespacev8toolkit_a3f12566f9db04373bbf319d330158423_icgraph" id="namespacev8toolkit_a3f12566f9db04373bbf319d330158423_icgraph">
 <area shape="rect" id="node2" href="namespacev8toolkit.html#aa80b4190174b3682746dbf13e5584eb5" title="v8toolkit::call_javascript\l_function" alt="" coords="201,5,348,41"/>
-<area shape="rect" id="node3" href="classv8toolkit_1_1JSFactory.html#ae246f04d5656e2e663fdce101f84ecc5" title="v8toolkit::JSFactory\l::operator()" alt="" coords="211,65,337,101"/>
+<area shape="rect" id="node3" href="classv8toolkit_1_1JSFactory.html#a3eaf183be2f38e1e7b6b7168342d5770" title="v8toolkit::JSFactory\l::operator()" alt="" coords="211,65,337,101"/>
 </map>
 </div>
 </p>
@@ -3746,7 +3748,7 @@ Here is the caller graph for this function:</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Mar 11 2016 09:42:29 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 11 2016 14:58:01 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>

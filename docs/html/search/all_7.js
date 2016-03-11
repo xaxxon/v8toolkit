@@ -25,9 +25,9 @@ var searchData=
   ['get_5ftype',['get_type',['../classAnimal.html#a0f75f9d52039085e23b2262a223f006e',1,'Animal::get_type()'],['../classZebra.html#ae76539e8619eddd95d9a1573f73bbd3d',1,'Zebra::get_type()']]],
   ['get_5fvalue',['get_value',['../classv8toolkit_1_1V8Exception.html#a8d5930235d3ee2b5717ae9171acc5bc5',1,'v8toolkit::V8Exception']]],
   ['get_5fvalue_5fas',['get_value_as',['../namespacev8toolkit.html#a41238bac9ca4b3df97895899bf6aa78c',1,'v8toolkit::get_value_as(v8::Local&lt; v8::Value &gt; value)'],['../namespacev8toolkit.html#a732480a07274e9118d392691538bd668',1,'v8toolkit::get_value_as(v8::Isolate *isolate, v8::Global&lt; v8::Value &gt; &amp;value)']]],
-  ['global_5fcontext',['global_context',['../classv8toolkit_1_1JSWrapper.html#a71c72599d853c2b33edd67f74ed11ed7',1,'v8toolkit::JSWrapper::global_context()'],['../classv8toolkit_1_1JSFactory.html#a395ac09e20c60a34ea62587dbae61544',1,'v8toolkit::JSFactory::global_context()']]],
+  ['global_5fcontext',['global_context',['../classv8toolkit_1_1JSWrapper.html#a71c72599d853c2b33edd67f74ed11ed7',1,'v8toolkit::JSWrapper::global_context()'],['../classv8toolkit_1_1JSFactory.html#af9abf32e5feb2bd6774d2136941f43e5',1,'v8toolkit::JSFactory::global_context()']]],
   ['global_5fcreated_5fby',['global_created_by',['../classv8toolkit_1_1JSWrapper.html#aaaca2de37758a0cbc5de55112009dc31',1,'v8toolkit::JSWrapper']]],
-  ['global_5fjavascript_5ffunction',['global_javascript_function',['../classv8toolkit_1_1JSFactory.html#abd445f0c019deb748afbb4dc9974d6d1',1,'v8toolkit::JSFactory']]],
+  ['global_5fjavascript_5ffunction',['global_javascript_function',['../classv8toolkit_1_1JSFactory.html#a0151676773a1ae01374f18a5377299ee',1,'v8toolkit::JSFactory']]],
   ['global_5fjs_5fobject',['global_js_object',['../classv8toolkit_1_1JSWrapper.html#a1f5df78cadc3271ab4bd82413afd99e7',1,'v8toolkit::JSWrapper']]],
   ['global_5fset_5fweak',['global_set_weak',['../namespacev8toolkit.html#ababa4b24207ba91bf1b898aa524ea7bb',1,'v8toolkit']]]
 ];

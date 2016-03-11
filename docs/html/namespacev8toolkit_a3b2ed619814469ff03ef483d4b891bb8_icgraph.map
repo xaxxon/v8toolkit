@@ -8,7 +8,7 @@
 <area shape="rect" id="node10" href="$namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="194,374,353,398"/>
 <area shape="rect" id="node16" href="$namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168" title="v8toolkit::add_print" alt="" coords="213,95,335,119"/>
 <area shape="rect" id="node18" href="$namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086" title="v8toolkit::add_require" alt="" coords="206,425,342,449"/>
-<area shape="rect" id="node20" href="$classv8toolkit_1_1JSFactory.html#a93a71ed5605e24100aba97d6fd93c5f1" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="199,500,349,536"/>
+<area shape="rect" id="node20" href="$classv8toolkit_1_1JSFactory.html#a8312ab6514c22904c8314c59146e904c" title="v8toolkit::JSFactory\l::add_subclass_function" alt="" coords="199,500,349,536"/>
 <area shape="rect" id="node4" href="$namespacev8toolkit.html#ababa4b24207ba91bf1b898aa524ea7bb" title="v8toolkit::global_set_weak" alt="" coords="410,71,572,95"/>
 <area shape="rect" id="node5" href="$classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#add0f4386268debedf4f168f10cdae41b" title="v8toolkit::V8ClassWrapper\l\&lt; T, void \&gt;::initialize\l_new_js_object" alt="" coords="629,59,791,107"/>
 <area shape="rect" id="node11" href="$classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="433,305,549,341"/>

@@ -10,7 +10,7 @@ var searchData=
   ['invalidcallexception',['InvalidCallException',['../classv8toolkit_1_1InvalidCallException.html#aa09957325429d764eea9b8cb60aa273f',1,'v8toolkit::InvalidCallException']]],
   ['is_5ffinalized',['is_finalized',['../classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#a6f3fb93055d11a06fa74c40957fa5ded',1,'v8toolkit::V8ClassWrapper&lt; T, void &gt;']]],
   ['isolate',['Isolate',['../classv8toolkit_1_1Isolate.html',1,'v8toolkit']]],
-  ['isolate',['isolate',['../classv8toolkit_1_1JSWrapper.html#a5417e9f47e4f28a910f66ba8bfb6c40a',1,'v8toolkit::JSWrapper::isolate()'],['../classv8toolkit_1_1JSFactory.html#ae99d5fa36622bfbadcc261680cbd6bf8',1,'v8toolkit::JSFactory::isolate()'],['../classv8toolkit_1_1Context.html#aba4f0964bdacf2bbf62cf876e5d28d0a',1,'v8toolkit::Context::Isolate()']]],
+  ['isolate',['isolate',['../classv8toolkit_1_1JSWrapper.html#a5417e9f47e4f28a910f66ba8bfb6c40a',1,'v8toolkit::JSWrapper::isolate()'],['../classv8toolkit_1_1JSFactory.html#add869536519a17684fa213452563afb4',1,'v8toolkit::JSFactory::isolate()'],['../classv8toolkit_1_1Context.html#aba4f0964bdacf2bbf62cf876e5d28d0a',1,'v8toolkit::Context::Isolate()']]],
   ['isolateptr',['IsolatePtr',['../namespacev8toolkit.html#ae083462b1973cf2983ee6f775728c8e2',1,'v8toolkit']]],
   ['it_5fa',['IT_A',['../structIT__A.html',1,'']]],
   ['it_5fb',['IT_B',['../structIT__B.html',1,'']]],

@@ -18,7 +18,7 @@ var searchData=
   ['jsanimal',['JSAnimal',['../classJSAnimal.html',1,'JSAnimal'],['../classJSAnimal.html#a82378d1ead09445b0fb9b4970c3aa572',1,'JSAnimal::JSAnimal()']]],
   ['jsanimalfactory',['JSAnimalFactory',['../bidirectional__sample_8cpp.html#a8c1df7b820a5ec5591d6746cbdc9828c',1,'bidirectional_sample.cpp']]],
   ['jsfactory',['JSFactory',['../classv8toolkit_1_1JSFactory.html',1,'v8toolkit']]],
-  ['jsfactory',['JSFactory',['../classv8toolkit_1_1JSFactory.html#a47241cd91c045d22eeaaa41b440d5ec1',1,'v8toolkit::JSFactory']]],
+  ['jsfactory',['JSFactory',['../classv8toolkit_1_1JSFactory.html#a50e3b6eca0135a99dfc428fcbdc81f37',1,'v8toolkit::JSFactory']]],
   ['json',['json',['../classv8toolkit_1_1Context.html#a82d199b74a8f0dad20cc7c8efd9b9032',1,'v8toolkit::Context::json()'],['../classv8toolkit_1_1Isolate.html#ae1bac176b04679a1c1896b53987cdbb7',1,'v8toolkit::Isolate::json()']]],
   ['jsthing',['JSThing',['../structJSThing.html',1,'JSThing'],['../structJSThing.html#a75aeda4144c320c4e1df02dde95e870b',1,'JSThing::JSThing()']]],
   ['jswrapper',['JSWrapper',['../classv8toolkit_1_1JSWrapper.html#a29200c33f3bcacf38974dab3b08cfe82',1,'v8toolkit::JSWrapper']]],
