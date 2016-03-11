@@ -38,13 +38,13 @@ endif
 
 CPPFLAGS = -I${V8_INCLUDE_DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
 
-# LIBS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
-LIBS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_LIBS}
+# LDFLAGS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
+LDFLAGS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_LIBS}
 
 
 
 
-all: warning thread_sample javascript sample toolbox_sample exception_sample bidirectional_sample
+all: warning libv8toolkit.a
 
 SRCS=v8toolkit.cpp javascript.cpp v8helpers.cpp
 
@@ -60,34 +60,34 @@ warning:
 	$(info )
 
 
-thread_sample: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample  ${LIBS}
-
-javascript: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LIBS}
-
-sample: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LIBS}
-
-toolbox_sample: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LIBS}
-
-exception_sample: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LIBS}
-
-bidirectional_sample: lib
-	${CPP} -I./ ${CPPFLAGS}  samples/bidirectional_sample.cpp -o samples/bidirectional_sample ${LIBS}
-
-
-lib: ${OBJS}
+libv8toolkit.a: ${OBJS}
 	ar cr libv8toolkit.a $(OBJS)
+
+samples/thread_sample: libv8toolkit.a samples/thread_sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/thread_sample.cpp -o samples/thread_sample ${LDFLAGS}
+
+samples/javascript_sample: libv8toolkit.a samples/javascript_sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/javascript_sample.cpp -o samples/javascript_sample ${LDFLAGS}
+
+samples/sample: libv8toolkit.a samples/sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/sample.cpp -o samples/sample ${LDFLAGS}
+
+samples/toolbox_sample: libv8toolkit.a samples/toolbox_sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/toolbox_sample.cpp -o samples/toolbox_sample ${LDFLAGS}
+
+samples/exception_sample: libv8toolkit.a samples/exception_sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/exception_sample.cpp -o samples/exception_sample ${LDFLAGS}
+
+samples/bidirectional_sample: libv8toolkit.a samples/bidirectional_sample.cpp
+	${CPP} -I./ ${CPPFLAGS}  samples/bidirectional_sample.cpp -o samples/bidirectional_sample ${LDFLAGS}
 
 clean:
 	rm -f *.o *.a samples/*sample
 	rm -rf samples/*.dSYM
 
+tests: samples/thread_sample samples/javascript_sample samples/sample samples/toolbox_sample samples/exception_sample samples/bidirectional_sample
 
-run:
+run: 
 	(cd samples && ./thread_sample && ./javascript_sample && ./sample && ./toolbox_sample && ./bidirectional_sample)
 
 clean_docs:
