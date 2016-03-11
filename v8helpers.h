@@ -4,9 +4,8 @@
 
 
 // Everything in here is standalone and does not require any other v8toolkit files
-
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
+#include "libplatform/libplatform.h"
+#include "v8.h"
 
 namespace v8toolkit {
 

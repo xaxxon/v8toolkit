@@ -15,7 +15,10 @@
 #include <map>
 #include <vector>
 
+#include <boost/format.hpp>
+
 #include "./v8toolkit.h"
+
 
 namespace v8toolkit {
 
@@ -50,7 +53,6 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 }
 
 
-#ifdef USE_BOOST
 
 std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline)
 {
@@ -88,7 +90,6 @@ std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
     return _format_helper(args, append_newline);
 }
 
-#endif // USE_BOOST
 
 // Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
 //   contained values (but not subsequent arrays for no particular reason)
@@ -135,12 +136,10 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 
 
 void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> callback) {
-#ifdef USE_BOOST
     add_function(isolate, object_template, "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(isolate, object_template, "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
     
-#endif
     add_function(isolate, object_template, "print",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, false));});
     add_function(isolate, object_template, "println",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, true));});
 

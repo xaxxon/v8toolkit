@@ -2,7 +2,6 @@
 #include <fstream>
 
 
-#define USE_BOOST
 #include "v8toolkit.h"
 using namespace v8toolkit;
 

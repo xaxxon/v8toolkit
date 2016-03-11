@@ -8,15 +8,11 @@
 
 #include <string.h>
 
-#include "include/libplatform/libplatform.h"
-#include "include/v8.h"
-
 #include "v8helpers.h"
 #include "casts.hpp"
 
 #include <dirent.h>
 
-#define USE_BOOST
 
 #define V8_TOOLKIT_DEBUG false
 
@@ -744,20 +740,13 @@ void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javasc
 }
 
 
-#ifdef USE_BOOST
 
-} // end the v8toolkit namespace temporarily to import boost::format
-#include <boost/format.hpp> // only include this if USE_BOOST is defined
-namespace v8toolkit { // re-start the namespace
-    
-    
 
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
 // fills missing parameters with empty strings and prints any extra parameters with spaces between them
 std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
 
-#endif // USE_BOOST
 
 /**
 * Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
@@ -779,7 +768,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 *
 * println same as print but automatically appends a newlines
 *
-* printf - only available if USE_BOOST is defined and treats the first parameter as a format string.  
+* printf - Treats the first parameter as a format string.  
 *          any additional values will be used to fill the format string.  If there are insufficient parameters
 *          to fill the format, the empty string "" will be used.   Any extra parameters will be printed after
 *          the filled format string separated by spaces

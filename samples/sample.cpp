@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define USE_BOOST
 #include "v8_class_wrapper.h"
 
 using namespace v8toolkit;

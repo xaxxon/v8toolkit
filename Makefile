@@ -25,7 +25,7 @@ V8_LIB_DIR_FLAGS = -L${V8_LIB_DIR}
 endif
 
 
-V8_INCLUDE_DIR = ${V8_DIR}
+V8_INCLUDE_DIR = ${V8_DIR}/include
 
 # Whether you want to use snapshot files, but easier not to use them.  I see a .05s decrease in startup speed by not using them
 ifdef USE_SNAPSHOTS
