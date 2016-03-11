@@ -81,7 +81,7 @@ go into the v8toolkit directory
 
 edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
-To build the libray, on OS X, type `make tests`, on Linux, type "make tests LINUX=1"
+To build the libray, on OS X, type `make tests`, on Linux, type `make tests LINUX=1`
 
 The library and some sample programs should build.   To confirm everything is working, `make run` will run the sample programs.
 
