@@ -503,11 +503,9 @@ public:
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
-            auto js_constructor = get_function_template()->GetFunction();
-            printf("js_constructor is %s, empty? %s\n", typeid(js_constructor).name(), js_constructor.IsEmpty()?"yes":"no");
-            javascript_object = js_constructor->NewInstance();
-            printf("New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
-            printf("Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
+            javascript_object = get_function_template()->GetFunction()->NewInstance();
+            // printf("New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
+            // printf("Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
             
 			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
