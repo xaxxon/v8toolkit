@@ -612,7 +612,7 @@ public:
         // prototype_template is the template used later when creating a new javascript context
         method_adders.emplace_back([this, method_name, callable](v8::Local<v8::ObjectTemplate> & prototype_template) {
             auto function_template = v8toolkit::make_function_template(isolate, callable);
-			printf("Adding %s to object template\n", method_name.c_str());
+            // printf("Adding %s to object template\n", method_name.c_str());
     		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
         });
         
