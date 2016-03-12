@@ -618,7 +618,7 @@ public:
         
         method_adders.emplace_back([this, method, method_name](v8::Local<v8::ObjectTemplate> & prototype_template) {
 
-    		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method](const v8::FunctionCallbackInfo<v8::Value>& info) 
+    		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) 
     		{
                 if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
                 // print_v8_value_details(info.Holder());
@@ -667,7 +667,7 @@ public:
                 auto arity = PB_TYPE::ARITY;
                 if(info.Length() < arity) {
                     std::stringstream ss;
-                    ss << "Function called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+                    ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
                     return; // return now so the exception can be thrown inside the javascript
                 }

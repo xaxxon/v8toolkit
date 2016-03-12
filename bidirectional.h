@@ -134,7 +134,7 @@ public:
     *   how to use it.  This function must be used when creating all "javascript subclassed objects" or they will not function properly.  
     *   Common use for this is to put it in your JSFactory JavaScript callback function.
     */
-	static void s
+	static void add_subclass_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, const std::string & js_function_name)
 	{
 		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), [](const v8::FunctionCallbackInfo<v8::Value>& info)->void {
 			auto isolate = info.GetIsolate();
