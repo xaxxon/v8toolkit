@@ -220,7 +220,7 @@ private:
         
         using PB_TYPE = ParameterBuilder<0, decltype(constructor), decltype(constructor)>;
         if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
-            assert(false);
+            // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
             return;
         }

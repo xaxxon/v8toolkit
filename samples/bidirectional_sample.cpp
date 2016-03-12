@@ -143,57 +143,36 @@ int main(int argc, char ** argv)
         auto c = i->create_context();
     
         // add new animal factories from javascript
-		c->run("add_animal_factory('mule', function(){var foo = subclass_animal({get_type:function(){return 'mule'},\
+		c->run("add_animal_factory('mule', function(name){var foo = subclass_animal({get_type:function(){return 'mule'},\
 																				add:function(a,b){return a + b + this.get_i()}, \
 																				get_i:function(){return 1}, \
-																				echo:function(s){return 'js-mule-echo: ' + s;}} \
+																				echo:function(s){return 'js-mule-echo: ' + s;}}, name \
 																			 ); println('inline test', foo.get_type()); return foo;})");
 		
-        c->run("add_animal_factory('horse', function(prototype){return function(){return subclass_animal(prototype)}}(new Animal()))");
         animal_factories.insert(pair<string, std::unique_ptr< AnimalFactory >>("zebra", make_unique< CppAnimalFactory<Zebra> >()));
         
 
         // create animals based on the registered factories
         animals.push_back((*animal_factories.find("mule")->second)("Mandy the Mule"));
-        animals.push_back((*animal_factories.find("horse")->second)("Henry the Horse"));
         animals.push_back((*animal_factories.find("zebra")->second)("Zany Zebra"));
 
-        assert(animals.size() == 3);
+        assert(animals.size() == 2);
         
         // mule
         auto a = animals[0];
-		printf("About to print a->get_type\n");
-        printf("a->get_type: %s\n", a->get_type().c_str());
         assert(a->get_type() == "mule");
         assert(a->get_i() == 1);
         assert(a->echo("mule") == "js-mule-echo: mule");
         assert(a->add(2,2) == 5); // mules don't add well
 
-        // the "horse" object doesn't overload anything, so it's really a cow
-        a = animals[1];
-        assert(a->get_type() == "cow");
-        assert(a->get_i() == 42);
-        assert(a->echo("horse") == "horse");
-        assert(a->add(2,2) == 4); // cows are good at math
         
         // Checking Zebra
-        a = animals[2];
+        a = animals[1];
         assert(a->get_type() == "zebra");
         assert(a->get_i() == 42);
         assert(a->echo("zebra") == "zebra");
         assert(a->add(2,2) == 4); // cows are good at math
         
-        //
-        //
-        // // horse
-        //
-        //     printf("About to run get_i\n");
-        //
-        //     cout << a->get_i() << endl;
-        //     printf("About to run echo\n");
-        //     cout << a->echo("test") << endl;
-        //     printf("About to run add\n");
-        //     cout << a->add(4,5)<<endl;   
     });
 	
 	printf("Bidirectional tests successful\n");
