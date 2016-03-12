@@ -71,6 +71,7 @@ public:
     */
     template<class U>
     U * as(ConstructorArgs...  constructor_args){
+        // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
         auto result = this->operator()(constructor_args...);
         if (dynamic_cast<U*>(result)) {
             return static_cast<U*>(result);
@@ -89,7 +90,11 @@ public:
 template<class Base, class Child, class ... ConstructorArgs>
 class CppFactory : public Factory<Base, ConstructorArgs...>{
 public:
-    virtual Base * operator()(ConstructorArgs... constructor_args) override {return new Child(constructor_args...);}
+    virtual Base * operator()(ConstructorArgs... constructor_args) override 
+    {
+        // printf("CppFactory making a %s\n", typeid(Child).name());
+        return new Child(constructor_args...);
+    }
 };
 
 
@@ -120,6 +125,8 @@ public:
     *   extends the C++ functionality in javascript
     */
     Base * operator()(ConstructorParameters... constructor_parameters) {
+        // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
+        
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             v8::Local<v8::Value> result;
             bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
@@ -158,7 +165,15 @@ public:
 			std::function<void(ConstructorParameters...)> constructor = [&](auto... args)->void{
 				new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
 			};
-			ParameterBuilder<1, decltype(constructor), decltype(constructor)>()(constructor, info);
+            
+            using PB_TYPE = ParameterBuilder<1, decltype(constructor), decltype(constructor)>;
+            if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
+                isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
+                return;
+            }
+            
+            
+			PB_TYPE()(constructor, info);
 			
 			// now initialize the JavaScript object with the C++ object (circularly)
 			// TODO: This circular reference may cause the GC to never destroy these objects

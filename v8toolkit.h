@@ -14,7 +14,7 @@
 #include <dirent.h>
 
 
-#define V8_TOOLKIT_DEBUG false
+#define V8_TOOLKIT_DEBUG true
 
 
 /** TODO LIST
@@ -232,6 +232,12 @@ struct CallCallable<std::function<void(Args...)>> {
 };
 
 
+template <class ParameterBuilder, int depth>
+bool check_parameter_builder_parameter_count(const v8::FunctionCallbackInfo<v8::Value> & info)
+{
+    auto arity = ParameterBuilder::ARITY;
+    return info.Length() - depth == arity;
+}
 
 /**
 * Class for turning a function parameter list into a parameter pack useful for calling the function

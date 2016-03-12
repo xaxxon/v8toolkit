@@ -212,10 +212,20 @@ private:
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
+        
+        
         // printf("v8 constructor creating type %s\n", typeid(T).name());
 		T * new_cpp_object = nullptr;
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
-		ParameterBuilder<0, decltype(constructor), decltype(constructor)>()(constructor, args);
+        
+        using PB_TYPE = ParameterBuilder<0, decltype(constructor), decltype(constructor)>;
+        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
+            assert(false);
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
+            return;
+        }
+        
+		PB_TYPE()(constructor, args);
 
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
@@ -493,9 +503,11 @@ public:
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
-            javascript_object = get_function_template()->GetFunction()->NewInstance();
-            // javascript_object = constructor_function_template->InstanceTemplate()->NewInstance();
-            // javascript_object->SetPrototype(constructor_function_template->PrototypeTemplate()->NewInstance());
+            auto js_constructor = get_function_template()->GetFunction();
+            printf("js_constructor is %s, empty? %s\n", typeid(js_constructor).name(), js_constructor.IsEmpty()?"yes":"no");
+            javascript_object = js_constructor->NewInstance();
+            printf("New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
+            printf("Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
             
 			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
@@ -520,6 +532,7 @@ public:
     V8ClassWrapper<T> & finalize() {
         assert(this->finalized == false);
         this->finalized = true;
+        get_function_template(); // force creation of a function template that doesn't call v8_constructo
         return *this;
     }
     
@@ -665,7 +678,7 @@ public:
             
                 PB_TYPE pb;
                 auto arity = PB_TYPE::ARITY;
-                if(info.Length() < arity) {
+                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
                     std::stringstream ss;
                     ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
