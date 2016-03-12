@@ -88,6 +88,11 @@ struct CastToNative<char32_t> {
 	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
 };
 
+template<class Return, class... Params>
+struct CastToNative<std::function<Return(Params...)>> {
+    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
+};
+
 
 // TODO: Make sure this is tested
 template<class ElementType, class... Rest>

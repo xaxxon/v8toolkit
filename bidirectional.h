@@ -1,6 +1,6 @@
 #pragma once
 
-#include "v8toolkit.h"
+#include "v8_class_wrapper.h"
 
 
 /**
@@ -134,7 +134,7 @@ public:
     *   how to use it.  This function must be used when creating all "javascript subclassed objects" or they will not function properly.  
     *   Common use for this is to put it in your JSFactory JavaScript callback function.
     */
-	static void add_subclass_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, const std::string & js_function_name)
+	static void s
 	{
 		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), [](const v8::FunctionCallbackInfo<v8::Value>& info)->void {
 			auto isolate = info.GetIsolate();
@@ -210,7 +210,7 @@ public:
     return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
       auto js_object = global_js_object.Get(isolate); \
         v8::TryCatch tc(isolate); \
-        auto jsfunction = get_key_as<v8::Function>(context, js_object, #name); \
+        auto jsfunction = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
         v8::Local<v8::Value> result; \
         this->called_from_javascript = true; \
         (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \

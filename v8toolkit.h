@@ -977,3 +977,4 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 * as an example usage files (any .cpp file with "sample" in its name). 
 */
 
+#include "casts_impl.hpp"
