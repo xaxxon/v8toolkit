@@ -14,7 +14,7 @@
 #include <dirent.h>
 
 
-#define V8_TOOLKIT_DEBUG true
+#define V8_TOOLKIT_DEBUG false
 
 
 /** TODO LIST
