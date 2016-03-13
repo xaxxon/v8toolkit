@@ -689,9 +689,9 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
 	            return "";
 	        }
 	    }
+        processed_values.push_back(value);
 	}
 
-    processed_values.push_back(value);
 
     if(value.IsEmpty()) {
         if (STRINGIFY_VALUE_DEBUG) printf("Value IsEmpty\n");
@@ -748,6 +748,21 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
     }    
     return output.str();
 }
+
+
+
+/*
+* "interesting" means things not a part of Object - or at least pretty close to that
+*/
+std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> context, v8::Local<v8::Object> object)
+{
+    auto isolate = context->GetIsolate();
+    auto names = object->GetPropertyNames(context).ToLocalChecked();
+    return CastToNative<std::vector<std::string>>()(isolate, names);
+}
+
+
+
 
 
 

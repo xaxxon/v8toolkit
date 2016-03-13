@@ -1,6 +1,4 @@
-#ifndef V8_CLASS_WRAPPER_H
-#define V8_CLASS_WRAPPER_H
-
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +11,8 @@
 #include <vector>
 #include <utility>
 #include <assert.h>
+
+#include <boost/format.hpp>
 
 #include "v8toolkit.h"
 #include "casts.hpp"
@@ -299,7 +299,7 @@ public:
     */
     v8::Local<v8::FunctionTemplate> make_function_template(v8::FunctionCallback callback = nullptr, const v8::Local<v8::Value> & data = v8::Local<v8::Value>()) {
         assert(this->finalized == true);
-        
+
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
@@ -390,7 +390,7 @@ public:
 			isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
 		}
-		if (V8_CLASS_WRAPPER_DEBUG) printf("(after) isoate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+		if (V8_CLASS_WRAPPER_DEBUG) printf("(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
 		
 		auto object = isolate_to_wrapper_map[isolate];
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Returning v8 wrapper: %p\n", object);
@@ -405,7 +405,8 @@ public:
     * Not calling this means that only T objects will be accepted for things that want a T.
     * There is no automatic determination of inherited types by this library because I cannot
     *   figure out how.
-    *
+    * It's VERY important that any type marked as having this type as a parent be marked as
+    *   being a compatible type.
     */
     template<class... CompatibleTypes>
     std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value, V8ClassWrapper<T>&>
@@ -419,6 +420,9 @@ public:
 	
 	/**
 	* This wrapped class will inherit all the methods from the parent type (and its parent...)
+    *
+    * It is VERY important that the type being marked as the parent type has this type set with
+    *   set_compatible_types<>()
 	*/
     template<class ParentType>
     std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
@@ -770,7 +774,7 @@ template<typename T>
 struct CastToNative<T*>
 {
 	T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-        return & CastToNative<T>()(isolate, value);
+        return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
     }
 };
 
@@ -787,7 +791,7 @@ struct CastToNative
         }
 		auto object = v8::Object::Cast(*value);
 		if (object->InternalFieldCount() <= 0) {
-            throw CastException("No specialization CastToNative found and provided Object is not a wrapped C++ object.  It is a native Javascript Object");
+            throw CastException((boost::format("No specialization CastToNative<%s> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object") % typeid(T).name()).str());
         }
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         
@@ -805,4 +809,3 @@ struct CastToNative
 
 }
 
-#endif // #ifdef V8_CLASS_WRAPPER_H

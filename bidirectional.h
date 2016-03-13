@@ -43,9 +43,10 @@ protected:
     /**
     * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
     *   to call instead of calling the native C++ implementation, but finds its own JS_ACCESS function that its already in
-    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   
+    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   Marked as 
+    *   mutable because it needs to be changed even from within const methods
     */ 
-    bool called_from_javascript = false;
+    mutable bool called_from_javascript = false;
 public:
     JSWrapper(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> created_by) :
         isolate(context->GetIsolate()), 
@@ -240,9 +241,6 @@ virtual return_type name() override {\
     JS_ACCESS_CORE(return_type, name)\
 }
 
-/**
-* I don't know how to this any other way.
-*/ 
 #define JS_ACCESS_1(return_type, name, t1)\
 virtual return_type name(t1 p1) override {\
     JS_ACCESS_CORE(return_type, name, p1)\
@@ -285,6 +283,56 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8)
 
 #define JS_ACCESS_9(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
+}
+
+#define JS_ACCESS_CONST(return_type, name)\
+virtual return_type name() const override {\
+    JS_ACCESS_CORE(return_type, name)\
+}
+
+#define JS_ACCESS_1_CONST(return_type, name, t1)\
+virtual return_type name(t1 p1) const override {\
+    JS_ACCESS_CORE(return_type, name, p1)\
+}
+
+#define JS_ACCESS_2_CONST(return_type, name, t1, t2)\
+virtual return_type name(t1 p1, t2 p2) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2)\
+}
+
+#define JS_ACCESS_3_CONST(return_type, name, t1, t2, t3)\
+virtual return_type name(t1 p1, t2 p2, t3 p3) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3)\
+}
+
+#define JS_ACCESS_4_CONST(return_type, name, t1, t2, t3, t4)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4)\
+}
+
+#define JS_ACCESS_5_CONST(return_type, name, t1, t2, t3, t4, t5)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5)\
+}
+
+#define JS_ACCESS_6_CONST(return_type, name, t1, t2, t3, t4, t5, t6)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6)\
+}
+
+#define JS_ACCESS_7_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7)\
+}
+
+#define JS_ACCESS_8_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8)\
+}
+
+#define JS_ACCESS_9_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) const override {\
     JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 

@@ -284,7 +284,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
         // printf("Parameter builder HEAD: %s\n", typeid(HEAD).name());
-        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth])); 
+        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<typename std::remove_reference<HEAD>::type>::type>()(info.GetIsolate(), info[depth])); 
     }
 };
     
@@ -339,7 +339,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
-      this->element = CastToNative<HEAD>()(info.GetIsolate(), info[depth]);
+      this->element = CastToNative<typename std::remove_const<HEAD>::type>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., &this->element);
     }
 };
@@ -666,7 +666,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 {
     // using ResultType = decltype(CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value));
     // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
-    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
+    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<typename std::remove_const<VARIABLE_TYPE>::type>()(info.GetIsolate(), value);
 }
 
 
@@ -967,6 +967,9 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 //
 // }
 
+std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
+
+
 
 } // end v8toolkit namespace
 
@@ -982,5 +985,7 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 * Each of these libraries has internal documentation of its types and functions as well
 * as an example usage files (any .cpp file with "sample" in its name). 
 */
+
+
 
 #include "casts_impl.hpp"
