@@ -186,7 +186,6 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 
     return callable(isolate, context);
 }
-    
 
 // Same as the ones above, but this one takes a global context for convenience
 // Isolate is required since a Local<Context> cannot be created without creating a locker
@@ -258,7 +257,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
         // use CallCallable to differentiate between void and non-void return types
         CallCallable<FUNCTION_TYPE>()(function, info, ts...);
     }
@@ -282,7 +281,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
     enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
         // printf("Parameter builder HEAD: %s\n", typeid(HEAD).name());
         this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<typename std::remove_reference<HEAD>::type>::type>()(info.GetIsolate(), info[depth])); 
     }
@@ -299,7 +298,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)
     enum {DEPTH = depth, ARITY=super::ARITY+1};
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
       this->buffer = CastToNative<char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get());
     }
@@ -317,7 +316,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
     std::unique_ptr<char[]> buffer;
     
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
       this->buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., buffer.get()); 
     }
@@ -338,7 +337,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>
     HEAD element;
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
       this->element = CastToNative<typename std::remove_const<HEAD>::type>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., &this->element);
     }
@@ -363,7 +362,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
         this->super::operator()(function, info, ts..., info);
     }
 };
@@ -381,7 +380,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, T
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
         this->super::operator()(function, info, ts..., info.GetIsolate()); 
     }
 };
@@ -397,7 +396,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Co
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
 		auto context = info.GetIsolate()->GetCurrentContext();
         this->super::operator()(function, info, ts..., context);
     }
@@ -414,13 +413,10 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Ob
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts... ts) {
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
         this->super::operator()(function, info, ts..., info.This());
     }
 };
-
-
-
 
 
 /**
@@ -806,8 +802,8 @@ template<class T, class U>
 struct Bind{};
 
 /** 
-* Bind specialization for handling non-const class methods
-*/
+ * Non-const object to non-const method
+ */
 template<class CLASS_TYPE, class R, class... Args>  
 struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     
@@ -825,21 +821,39 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
 
 
 /** 
-* Bind specialization for handling const class methods
-*/
-template<class CLASS_TYPE, class R, class... Args>  
-struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...) const> {
+ * Non-const object to const method
+ */
+template<class Class, class R, class... Args>
+struct Bind<Class, R(Class::*)(Args...) const> {
     
-    Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) const) :
+    Bind(Class & object, R(Class::*method)(Args...) const) :
       object(object), method(method){}
-    
-    CLASS_TYPE & object;
-    R(CLASS_TYPE::*method)(Args...) const;
+
+    Class & object;
+    R(Class::*method)(Args...) const;
     
     R operator()(Args... params){
         return (object.*method)(params...); 
     }
 };
+
+
+/**
+ * Const object to const method
+ */
+template<class Class, class R, class... Args>
+struct Bind<const Class, R(Class::*)(Args...) const> {
+    Bind(const Class & object, R(Class::*method)(Args...) const) :
+            object(object), method(method){}
+
+    const Class & object;
+    R(Class::*method)(Args...) const;
+
+    R operator()(Args... params){
+        return (object.*method)(params...);
+    }
+};
+
 
 
 
@@ -854,18 +868,18 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
     return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
 }
 
-/**
-* Helper function to create a Bind object using type deduction and wrap it in a
-* std::function object.
-* This specialization is for handling const class methods
-*/
+
 template <class CLASS, class R, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
 {
     return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...) const>(object, method));
 }
 
-
+template <class CLASS, class R, class... Args>
+std::function<R(Args...)> bind(const CLASS & object, R(CLASS::*method)(Args...) const)
+{
+    return std::function<R(Args...)>(Bind<const CLASS, R(CLASS::*)(Args...) const>(object, method));
+}
 
 
 /**
@@ -922,10 +936,6 @@ bool require(v8::Local<v8::Context> context,
                              const std::vector<std::string> & paths,
                              bool track_modification_times = false, bool use_cache = true);
 
-/**
-* prints out a ton of info about a v8::Value
-*/
-void print_v8_value_details(v8::Local<v8::Value> local_value);
 
 /**
 * requires all the files in a directory

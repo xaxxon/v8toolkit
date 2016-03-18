@@ -1,13 +1,18 @@
 #include <string>
 #include <map>
 #include <vector>
-
+#include <iostream>
 
 // Everything in here is standalone and does not require any other v8toolkit files
 #include "libplatform/libplatform.h"
 #include "v8.h"
 
 namespace v8toolkit {
+
+/**
+* prints out a ton of info about a v8::Value
+*/
+void print_v8_value_details(v8::Local<v8::Value> local_value);
 
 
 /**
@@ -219,6 +224,9 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
+        printf("Tried to get value as %s\n", typeid(T).name());
+        print_v8_value_details(value);
+        printf("Throwing exception\n");
         throw "Bad Cast";
     }
 }

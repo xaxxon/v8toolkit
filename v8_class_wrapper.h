@@ -219,7 +219,7 @@ private:
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
         
         using PB_TYPE = ParameterBuilder<0, decltype(constructor), decltype(constructor)>;
-        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
+        if (!check_parameter_builder_parameter_count<ParameterBuilder<0, decltype(constructor), decltype(constructor)>, 0>(args)) {
             // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
             return;
@@ -577,12 +577,12 @@ public:
         
          member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
-    		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
+    		auto get_member_reference = new std::function<const MEMBER_TYPE&(T*)>([member](T * cpp_object)->const MEMBER_TYPE&{
     			return cpp_object->*member;
     		});
             
 			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
-				_getter_helper<MEMBER_TYPE>, 
+				_getter_helper<const MEMBER_TYPE>,
                 0,
 				v8::External::New(isolate, get_member_reference));
         });
@@ -680,7 +680,7 @@ public:
             
                 PB_TYPE pb;
                 auto arity = PB_TYPE::ARITY;
-                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
+                if (!check_parameter_builder_parameter_count<v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>, 0>(info)) {
                     std::stringstream ss;
                     ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
@@ -723,7 +723,7 @@ struct CastToJS {
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In base cast to js struct with lvalue ref\n");
-		return CastToJS<typename std::add_pointer<typename std::remove_const<T>::type>::type>()(isolate, &cpp_object);
+		return CastToJS<typename std::add_pointer<T>::type>()(isolate, &cpp_object);
 	}
 
 	/**

@@ -31,4 +31,36 @@ void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context>
 
 
 
+void print_v8_value_details(v8::Local<v8::Value> local_value) {
+    
+    auto value = *local_value;
+    
+    std::cout << "undefined: " << value->IsUndefined() << std::endl;
+    std::cout << "null: " << value->IsNull() << std::endl;
+    std::cout << "true: " << value->IsTrue() << std::endl;
+    std::cout << "false: " << value->IsFalse() << std::endl;
+    std::cout << "name: " << value->IsName() << std::endl;
+    std::cout << "string: " << value->IsString() << std::endl;
+    std::cout << "symbol: " << value->IsSymbol() << std::endl;
+    std::cout << "function: " << value->IsFunction() << std::endl;
+    std::cout << "array: " << value->IsArray() << std::endl;
+    std::cout << "object: " << value->IsObject() << std::endl;
+    std::cout << "boolean: " << value->IsBoolean() << std::endl;
+    std::cout << "number: " << value->IsNumber() << std::endl;
+    std::cout << "external: " << value->IsExternal() << std::endl;
+    std::cout << "isint32: " << value->IsInt32() << std::endl;
+    std::cout << "isuint32: " << value->IsUint32() << std::endl;
+    std::cout << "date: " << value->IsDate() << std::endl;
+    std::cout << "argument object: " << value->IsArgumentsObject() << std::endl;
+    std::cout << "boolean object: " << value->IsBooleanObject() << std::endl;
+    std::cout << "number object: " << value->IsNumberObject() << std::endl;
+    std::cout << "string object: " << value->IsStringObject() << std::endl;
+    std::cout << "symbol object: " << value->IsSymbolObject() << std::endl;
+    std::cout << "native error: " << value->IsNativeError() << std::endl;
+    std::cout << "regexp: " << value->IsRegExp() << std::endl;
+    std::cout << "generator function: " << value->IsGeneratorFunction() << std::endl;
+    std::cout << "generator object: " << value->IsGeneratorObject() << std::endl;
+}
+
+
 }

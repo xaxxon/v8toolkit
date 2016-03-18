@@ -15,7 +15,7 @@
 
 namespace v8toolkit {
 
-class BidirectionalException : std::exception {
+class BidirectionalException : public std::exception {
     std::string reason;
 public:
     BidirectionalException(const std::string & reason) : reason(reason) {}
@@ -67,6 +67,11 @@ class Factory {
 public:
     virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
 
+    template <class U = Base>
+    std::unique_ptr<U> get_unique(ConstructorArgs... constructor_args) {
+        return std::unique_ptr<U>(this->operator()(constructor_args...));
+    }
+
     /**
     * Helper to quickly turn a Base type into another type if allowed
     */
@@ -80,7 +85,6 @@ public:
             throw BidirectionalException("Could not convert between types");
         }
     }
-	
 };
 
 
@@ -113,7 +117,7 @@ protected:
 public:
     /**
     * Takes a context to use while calling a javascript_function that returns an object
-    *   inheriting frmo JSWrapper
+    *   inheriting from JSWrapper
     */
     JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Function> javascript_function) :
         isolate(context->GetIsolate()),
@@ -130,7 +134,9 @@ public:
         
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             v8::Local<v8::Value> result;
-            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
+            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate),
+                                                    context->Global(),
+                                                    std::tuple<ConstructorParameters...>(constructor_parameters...));
 			assert(success);
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
@@ -226,11 +232,14 @@ public:
     v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
     return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
       auto js_object = global_js_object.Get(isolate); \
+        v8::Local<v8::Function> js_function; \
         v8::TryCatch tc(isolate); \
-        auto jsfunction = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
+        try { \
+            js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
+        } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true);} \
         v8::Local<v8::Value> result; \
         this->called_from_javascript = true; \
-        (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
+        (void) v8toolkit::call_javascript_function(context, result, js_function, js_object, parameter_tuple); \
         this->called_from_javascript = false; \
         return cast_to_native(isolate, result); \
     });

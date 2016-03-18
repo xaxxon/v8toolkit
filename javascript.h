@@ -615,9 +615,10 @@ public:
     * Returns a value representing the JSON string specified or throws on bad JSON
     */
     v8::Local<v8::Value> json(std::string json) {
+        v8::TryCatch tc(this->isolate);
         auto maybe = v8::JSON::Parse(this->isolate, v8::String::NewFromUtf8(this->isolate, json.c_str()));
-        if (maybe.IsEmpty()) {
-            throw "bad json";
+        if (tc.HasCaught()) {
+            throw V8ExecutionException(this->isolate, tc.Exception());
         }
         return maybe.ToLocalChecked();
     }

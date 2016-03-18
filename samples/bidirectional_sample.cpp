@@ -11,6 +11,10 @@ using namespace v8toolkit;
 
 struct Thing {
 	Thing(){printf("Creating Thing\n");}
+	Thing(const Thing &) = delete;
+	Thing& operator=(const Thing &) = delete;
+	Thing(Thing &&) = delete;
+	Thing & operator=(const Thing&&) = delete;
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
 };
@@ -54,7 +58,12 @@ class Animal {
 	std::string name;
 public:
 	Animal(const std::string & name) : name(name) {}
-    virtual ~Animal()=default;
+	Animal(const Animal&) = delete;
+	Animal(Animal&&) = delete;
+	Animal& operator=(const Animal&) = delete;
+	Animal& operator=(Animal&&) = delete;
+
+	virtual ~Animal()=default;
 
     int i = 42;
 
