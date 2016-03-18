@@ -551,7 +551,7 @@ public:
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
 	*/
 	template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE T::* member) 
+	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE T::* member)
 	{
         assert(this->finalized == false);
         
@@ -569,20 +569,24 @@ public:
         });
         return *this;
 	}
-    
+
     template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE T::* member) 
+	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE T::* member)
 	{
+        using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
+                                                 const MEMBER_TYPE &,
+                                                 MEMBER_TYPE &>::type;
+
         assert(this->finalized == false);
         
          member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
-    		auto get_member_reference = new std::function<const MEMBER_TYPE&(T*)>([member](T * cpp_object)->const MEMBER_TYPE&{
+    		auto get_member_reference = new std::function<RESULT_REF_TYPE(T*)>([member](T * cpp_object)->RESULT_REF_TYPE{
     			return cpp_object->*member;
     		});
             
 			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
-				_getter_helper<const MEMBER_TYPE>,
+				_getter_helper<MEMBER_TYPE>,
                 0,
 				v8::External::New(isolate, get_member_reference));
         });
