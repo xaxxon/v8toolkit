@@ -12,7 +12,7 @@
 #include <utility>
 #include <assert.h>
 
-#include <boost/format.hpp>
+#include <cppformat/format.h>
 
 #include "v8toolkit.h"
 #include "casts.hpp"
@@ -795,10 +795,10 @@ struct CastToNative
         }
 		auto object = v8::Object::Cast(*value);
 		if (object->InternalFieldCount() <= 0) {
-            throw CastException((boost::format("No specialization CastToNative<%s> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object") % typeid(T).name()).str());
+            throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", typeid(T).name()));
         }
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-        
+
         // I don't know any way to determine if a type is
         auto any_base = (v8toolkit::AnyBase *)wrap->Value();
         T * t = nullptr;
