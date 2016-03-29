@@ -234,7 +234,13 @@ template<>
 struct CastToJS<long> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Number::New(isolate, value);}
 };
+
 template<>
+struct CastToJS<const long> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const long value){return v8::Number::New(isolate, value);}
+};
+
+    template<>
 struct CastToJS<unsigned long> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Number::New(isolate, value);}
 };

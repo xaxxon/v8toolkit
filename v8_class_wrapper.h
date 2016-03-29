@@ -550,8 +550,9 @@ public:
 	* Adds a getter and setter method for the specified class member
 	* add_member(&ClassName::member_name, "javascript_attribute_name");
 	*/
-	template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE T::* member)
+    // allow members from parent types of T
+    template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
+	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
         assert(this->finalized == false);
         
@@ -570,8 +571,10 @@ public:
         return *this;
 	}
 
-    template<typename MEMBER_TYPE>
-	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE T::* member)
+
+	// allow members from parent types of T
+    template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
+	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
         using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
                                                  const MEMBER_TYPE &,
