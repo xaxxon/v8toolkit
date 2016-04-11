@@ -35,12 +35,6 @@
 
 namespace v8toolkit {
     
-/**
-* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
-*
-* Good for looking at the contents of a value and also used for printobj() method added by add_print
-*/
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
 
 /**
@@ -283,7 +277,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
         // printf("Parameter builder HEAD: %s\n", typeid(HEAD).name());
-        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<typename std::remove_reference<HEAD>::type>::type>()(info.GetIsolate(), info[depth])); 
+        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
     }
 };
     
@@ -338,7 +332,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
-      this->element = CastToNative<typename std::remove_const<HEAD>::type>()(info.GetIsolate(), info[depth]);
+      this->element = CastToNative<HEAD>()(info.GetIsolate(), info[depth]);
       this->super::operator()(function, info, ts..., &this->element);
     }
 };
@@ -615,7 +609,15 @@ bool call_javascript_function(const v8::Local<v8::Context> context,
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
-        printf("error: %s or result was empty\n", *v8::String::Utf8Value(tc.Exception()));
+        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        auto stacktrace = tc.StackTrace(context);
+        if (stacktrace.IsEmpty()) {
+
+        } else {
+            printf("tc stacktrace return value: %s\n", stringify_value(isolate, stacktrace.ToLocalChecked()).c_str());
+        }
+
+
         return false;
     }
     result = maybe_result.ToLocalChecked();
@@ -662,7 +664,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 {
     // using ResultType = decltype(CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value));
     // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
-    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<typename std::remove_const<VARIABLE_TYPE>::type>()(info.GetIsolate(), value);
+    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
 }
 
 
@@ -672,9 +674,9 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 */
 template<class VARIABLE_TYPE>
 void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
-    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
-                                 _variable_getter<VARIABLE_TYPE>, 
-                                 _variable_setter<VARIABLE_TYPE>, 
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
+                                 _variable_getter<VARIABLE_TYPE>,
+                                 _variable_setter<VARIABLE_TYPE>,
                                  v8::External::New(isolate, &variable));
 }
 /**
@@ -862,8 +864,8 @@ struct Bind<const Class, R(Class::*)(Args...) const> {
 * std::function object.
 * This specialization is for handling non-const class methods
 */
-template <class CLASS, class R, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...))
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
 {
     return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
 }
@@ -874,6 +876,7 @@ std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
 {
     return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...) const>(object, method));
 }
+
 
 template <class CLASS, class R, class... Args>
 std::function<R(Args...)> bind(const CLASS & object, R(CLASS::*method)(Args...) const)

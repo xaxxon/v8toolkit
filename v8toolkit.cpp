@@ -270,6 +270,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
     if (try_catch.HasCaught()) {
         // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
         error = try_catch.Exception();
+        printf("%s\n", stringify_value(isolate, try_catch.Exception()).c_str());
         if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
         return false;
     }
@@ -303,7 +304,7 @@ bool require(
     auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
-        if (V8_TOOLKIT_DEBUG) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
+        if (true) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
         isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Cannot specify a file containing .."));
         return false;
     }
@@ -316,7 +317,7 @@ bool require(
                 std::string file_contents;
                 time_t file_modification_time = 0;
                 if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
-                    if (V8_TOOLKIT_DEBUG) printf("Module not found at %s\n", complete_filename.c_str());
+                    if (true) printf("Module not found at %s\n", complete_filename.c_str());
                     continue;
                 }
                 
@@ -328,19 +329,19 @@ bool require(
         
                     auto cached_require_results = isolate_require_results.find(complete_filename);
                     if (cached_require_results != isolate_require_results.end()) {
-                        if (V8_TOOLKIT_DEBUG) printf("Found cached results, using cache instead of re-running module\n");
+                        if (true) printf("Found cached results, using cache instead of re-running module\n");
                         
                         // if we don't care about file modifications or the file modification time is the same as before,
                         //   return the cached result
                         if (!track_file_modification_times || file_modification_time == cached_require_results->second.first) {
-                            if (V8_TOOLKIT_DEBUG) printf("Returning cached results\n");
+                            if (true) printf("Returning cached results\n");
                             result = cached_require_results->second.second.Get(isolate);
                             return true;
                         } else {
-                            if (V8_TOOLKIT_DEBUG) printf("Not returning cached results because modification time was no good\n");
+                            if (true) printf("Not returning cached results because modification time was no good\n");
                         }
                     } else {
-                        if (V8_TOOLKIT_DEBUG) printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
+                        if (true) printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
                     }
                 }
 
@@ -352,11 +353,11 @@ bool require(
                     v8::Local<v8::Value> error;
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
-                    if (V8_TOOLKIT_DEBUG) printf("About to try to parse json: %s\n", file_contents.c_str());
+                    if (true) printf("About to try to parse json: %s\n", file_contents.c_str());
                     maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate,file_contents.c_str()));
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
-                        if (V8_TOOLKIT_DEBUG) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
+                        if (true) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
                         return false;
                     }
                 } else {
@@ -364,7 +365,7 @@ bool require(
                     v8::Local<v8::Value> error;
                     if (!compile_source(context, file_contents, script, error)) {
                         isolate->ThrowException(error);
-                        if (V8_TOOLKIT_DEBUG) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
+                        if (true) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
                         return false;
                     }
                         
@@ -391,7 +392,7 @@ bool require(
                     
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
-                        if (V8_TOOLKIT_DEBUG) printf("Couldn't run .js for %s\n", complete_filename.c_str());
+                        if (true) printf("Couldn't run .js for %s\n", complete_filename.c_str());
                         return false;
                     }
                     
@@ -413,7 +414,7 @@ bool require(
             // if any failures, try the next path if it exists
         }
     }
-    // printf("Couldn't find any matches for %s\n", filename.c_str());
+    printf("Couldn't find any matches for %s\n", filename.c_str());
     isolate->ThrowException(v8::String::NewFromUtf8(isolate, "No such module found in any search path"));
     return false;
 
@@ -491,25 +492,6 @@ void require_directory(v8::Local<v8::Context> context, std::string directory_nam
 }
 
 
-std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate, v8::Local<v8::Object> & object, bool own_properties_only = true) 
-{
-    auto context = isolate->GetCurrentContext();
-	v8::Local<v8::Array> properties;
-	if (own_properties_only) {
-		properties = object->GetOwnPropertyNames(context).ToLocalChecked();
-	} else {
-		properties = object->GetPropertyNames(context).ToLocalChecked();
-	}
-    auto array_length = get_array_length(isolate, properties);
-    
-    std::set<std::string> keys;
-    
-    for (int i = 0; i < array_length; i++) {
-        keys.insert(*v8::String::Utf8Value(properties->Get(context, i).ToLocalChecked()));
-    }
-
-    return keys;
-}
 
 
 void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
@@ -630,94 +612,6 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
 
 
 AnyBase::~AnyBase() {}
-
-
-
-#define STRINGIFY_VALUE_DEBUG false
-
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level, bool show_all_properties)
-{
-    static std::vector<v8::Local<v8::Value>> processed_values;
-
-	
-    if (top_level) {
-       processed_values.clear();
-    };
-
-    auto context = isolate->GetCurrentContext();
-    
-    std::stringstream output;
-
-	// Only protect against cycles on container types - otherwise a numeric value with
-	//   the same number won't get shown twice
-	if (value->IsObject() || value->IsArray()) {
-	    for(auto processed_value : processed_values) {
-	        if(processed_value == value) {
-				if (STRINGIFY_VALUE_DEBUG) print_v8_value_details(value);
-				if (STRINGIFY_VALUE_DEBUG) printf("Skipping previously processed value\n");
-	            return "";
-	        }
-	    }
-        processed_values.push_back(value);
-	}
-
-
-    if(value.IsEmpty()) {
-        if (STRINGIFY_VALUE_DEBUG) printf("Value IsEmpty\n");
-        return "Value specified as an empty v8::Local";
-    }
-
-    // if the left is a bool, return true if right is a bool and they match, otherwise false
-    if (value->IsBoolean() || value->IsNumber() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
-        if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
-        output << *v8::String::Utf8Value(value);
-	} else if (value->IsString()) {
-        output << "\"" << *v8::String::Utf8Value(value) << "\"";
-    } else if (value->IsArray()) {
-        // printf("Stringify: treating value as array\n");
-        auto array = v8::Local<v8::Array>::Cast(value);
-        auto array_length = get_array_length(isolate, array);
-
-        output << "[";
-        auto first_element = true;
-        for (int i = 0; i < array_length; i++) {
-            if (!first_element) {
-                output << ", ";
-            }
-            first_element = false;
-            auto value = array->Get(context, i);
-            output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
-        }        
-        output << "]";
-    } else {
-        // printf("Stringify: treating value as object\n");
-        // check this last in case it's some other type of more specialized object we will test the specialization instead (like an array)
-        // objects must have all the same keys and each key must have the same as determined by calling this function on each value
-        // printf("About to see if we can stringify this as an object\n");
-        // print_v8_value_details(value);
-        auto object = v8::Local<v8::Object>::Cast(value);
-        if(value->IsObject() && !object.IsEmpty()) {
-            if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
-            output << "{";
-            auto keys = make_set_from_object_keys(isolate, object, !show_all_properties);
-            auto first_key = true;
-            for(auto key : keys) {
-                if (STRINGIFY_VALUE_DEBUG) printf("Stringify: object key %s\n", key.c_str());
-                if (!first_key) {
-                    output << ", ";
-                }
-                first_key = false;
-                output << key;
-                output << ": ";
-                auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
-            }
-            output << "}";
-        }
-    }    
-    return output.str();
-}
-
 
 
 /*

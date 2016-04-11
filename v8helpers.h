@@ -2,14 +2,33 @@
 #include <map>
 #include <vector>
 #include <iostream>
+#include <set>
+
+#include <cppformat/format.h>
+
 
 // Everything in here is standalone and does not require any other v8toolkit files
 #include "libplatform/libplatform.h"
 #include "v8.h"
 
+
+
 namespace v8toolkit {
 
-/**
+#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, typeid(thing).name()).c_str()
+
+// thrown when data cannot be converted properly
+class CastException : public std::exception {
+private:
+    std::string reason;
+
+public:
+    CastException(const std::string & reason) : reason(reason) {}
+    virtual const char * what() const noexcept override {return reason.c_str();}
+};
+
+
+    /**
 * prints out a ton of info about a v8::Value
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
@@ -18,11 +37,15 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 /**
 * Returns the length of an array
 */
-int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array);
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value);
 
 
-/**
+std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
+                                                v8::Local<v8::Object> & object,
+                                                bool own_properties_only = true);
+
+
+    /**
 * When passed a value representing an array, runs callable with each element of that array (but not on arrays 
 *   contained within the outer array)
 * On any other object type, runs callable with that element
@@ -257,6 +280,12 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
     return get_key_as<T>(context, get_value_as<v8::Object>(object), key);
 }
 
+/**
+* Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)
+*
+* Good for looking at the contents of a value and also used for printobj() method added by add_print
+*/
+std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
 
 

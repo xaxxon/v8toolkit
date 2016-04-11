@@ -12,23 +12,24 @@
 #include <utility>
 #include <assert.h>
 
-#include <cppformat/format.h>
-
 #include "v8toolkit.h"
 #include "casts.hpp"
 
 namespace v8toolkit {
 
-#define V8_CLASS_WRAPPER_DEBUG false
+template<class T>
+struct is_const_member_function{enum {value = 0};};
 
-class CastException : public std::exception {
-private:
-  std::string reason;
-  
-public:
-    CastException(const std::string & reason) : reason(reason) {}
-    virtual const char * what() const noexcept override {return reason.c_str();}
+template<class R, class T, class...Args>
+struct is_const_member_function<R(T::*)(Args...)const> {
+        enum {value = 1};
 };
+
+template<bool> struct const_type_method_adder;
+
+
+
+#define V8_CLASS_WRAPPER_DEBUG false
 
 /**
 * Design Questions:
@@ -360,6 +361,10 @@ public:
             if (V8_CLASS_WRAPPER_DEBUG) printf("No explicit compatible types, but successfully cast to self-type\n");
             return static_cast<AnyPtr<T>*>(any_base)->get();
         }
+        // if it's already not const, it's ok to run it again
+        else if (dynamic_cast<AnyPtr<typename std::remove_const<T>::type>*>(any_base)) {
+            return static_cast<AnyPtr<typename std::remove_const<T>::type>*>(any_base)->get();
+        }
         if (V8_CLASS_WRAPPER_DEBUG) printf("Cast was sad :( returning nullptr\n");
         return nullptr;
     }
@@ -413,7 +418,7 @@ public:
     set_compatible_types()
     {
         assert(!is_finalized());
-        type_checker.reset(new TypeChecker<T, T, CompatibleTypes...>());
+        type_checker.reset(new TypeChecker<T, T, typename std::remove_const<T>::type, CompatibleTypes...>());
         return *this;
     }
 	
@@ -532,7 +537,11 @@ public:
     * Must be called before adding any constructors or using wrap_existing_object()
     */
     V8ClassWrapper<T> & finalize() {
-        assert(this->finalized == false);
+
+        if (!std::is_const<T>::value) {
+            V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).finalize();
+        }
+
         this->finalized = true;
         get_function_template(); // force creation of a function template that doesn't call v8_constructo
         return *this;
@@ -545,16 +554,32 @@ public:
     {
         return this->finalized;
     }
-    
-	/**
-	* Adds a getter and setter method for the specified class member
-	* add_member(&ClassName::member_name, "javascript_attribute_name");
-	*/
+
+//    template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
+//    void add_member_for_const_type(const std::string & method_name, Method method) {
+//        V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
+//        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+//    };
+//
+//    template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
+//    void add_member_for_const_type(const std::string & method_name, Method method) {
+//        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+//    };
+
+
+    /**
+    * Adds a getter and setter method for the specified class member
+    * add_member(&ClassName::member_name, "javascript_attribute_name");
+    */
     // allow members from parent types of T
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
         assert(this->finalized == false);
+
+        if (!std::is_const<T>::value) {
+            V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
+        }
         
 		// store a function for adding the member on to an object template in the future
 		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
@@ -576,7 +601,13 @@ public:
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
-        using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
+		// the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
+		if (!std::is_const<T>::value) {
+			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
+		}
+
+
+		using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
                                                  const MEMBER_TYPE &,
                                                  MEMBER_TYPE &>::type;
 
@@ -595,13 +626,13 @@ public:
         });
         return *this;
 	}
-    
-    
+
+
 	template<class R, class... Args>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(T::*method)(Args...) const) {
 		return _add_method(method_name, method);
 	}
-    
+
     
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
@@ -629,15 +660,31 @@ public:
         
         return *this;
     }
-    
-    
+
+    template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
+    void add_method_for_const_type(const std::string & method_name, Method method) {
+        V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
+        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+    };
+
+    template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
+    void add_method_for_const_type(const std::string & method_name, Method method) {
+        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+    };
+
+
     std::vector<AttributeAdder> method_adders;
-    
+
+
     template<class M>
     V8ClassWrapper<T> & _add_method(const std::string & method_name, M method)
     {
         assert(this->finalized == false);
-        
+
+        add_method_for_const_type(method_name, method);
+
+
+
         method_adders.emplace_back([this, method, method_name](v8::Local<v8::ObjectTemplate> & prototype_template) {
 
     		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) 
@@ -769,8 +816,8 @@ struct CastToJS<T*> {
 template<typename T>
 struct CastToJS<T&> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-        using NonConstPointer = typename std::add_pointer_t<typename std::remove_const_t<T>>;
-		return CastToJS<NonConstPointer>()(isolate, const_cast<NonConstPointer>(&cpp_object));
+        using Pointer = typename std::add_pointer_t<T>;
+		return CastToJS<Pointer>()(isolate, &cpp_object);
 	}
 };
 
@@ -805,9 +852,10 @@ struct CastToNative
         // I don't know any way to determine if a type is
         auto any_base = (v8toolkit::AnyBase *)wrap->Value();
         T * t = nullptr;
-        if ((t = V8ClassWrapper<typename std::remove_const<T>::type>::get_instance(isolate).cast(any_base)) == nullptr) {
-            printf("Failed to convert types: want %s\n", typeid(T).name());
-            throw CastException("Wrapped class isn't an exact match for the parameter type and using inherited types isn't supported");
+        if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+            printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+            throw CastException(fmt::format("Cannot convert {} to {} {}",
+											TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
         }
 		return *t;
 	}

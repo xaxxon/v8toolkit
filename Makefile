@@ -39,7 +39,7 @@ endif
 CPPFLAGS = -I${V8_INCLUDE_DIR} ${DEBUG} -std=c++14 -I/usr/local/include ${DEFINES} -Wall -Werror
 
 # LDFLAGS = -L/usr/local/lib -L${V8_LIB_DIR}  libv8toolkit.a ${V8_LIBS} -lboost_system -lboost_filesystem
-LDFLAGS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_LIBS}
+LDFLAGS = -L/usr/local/lib ${V8_LIB_DIR_FLAGS}  libv8toolkit.a ${V8_LIBS} ${LINUX_LIBS} -lcppformat
 
 
 all: warning libv8toolkit.a

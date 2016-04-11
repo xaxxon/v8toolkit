@@ -11,10 +11,29 @@
 #include <deque>
 #include <array>
 #include <memory>
-
+#include <utility>
 #include "v8.h"
 
 namespace v8toolkit {
+
+
+#define V8_TOOLKIT_COMMA ,
+
+#define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
+template<TEMPLATE> \
+struct CastToNative<TYPE>{ \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+        return CastToNative<const TYPE>()(isolate, value); \
+    } \
+}; \
+\
+template<TEMPLATE> \
+struct CastToNative<const TYPE> { \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
+
+
+
+
 
 template<typename T>
 struct CastToNative;
@@ -94,6 +113,34 @@ struct CastToNative<std::function<Return(Params...)>> {
 };
 
 
+CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT) {
+    if (value->IsArray()) {
+        auto length = get_array_length(isolate, value);
+        if (length != 2) {
+            auto error = fmt::format("Array to std::pair must be length 2, but was {}", length);
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, error.c_str()));
+            throw v8toolkit::CastException(error);
+        }
+        auto context = isolate->GetCurrentContext();
+        auto array = get_value_as<v8::Array>(value);
+        auto first = array->Get(context, 0).ToLocalChecked();
+        auto second = array->Get(context, 1).ToLocalChecked();
+        const auto &native_first = v8toolkit::CastToNative<FirstT>()(isolate, first);
+        const auto &native_second = v8toolkit::CastToNative<SecondT>()(isolate, second);
+        return std::pair<FirstT, SecondT>(native_first, native_second);
+
+    } else {
+        printf("cast to native std::pair got %s\n", stringify_value(isolate, value).c_str());
+        auto error = "CastToNative<std::pair<>> requires an array, but another type was provided";
+        isolate->ThrowException(v8::String::NewFromUtf8(isolate, error));
+        throw v8toolkit::CastException(error);
+    }
+}
+};
+
+
+
+
 // TODO: Make sure this is tested
 template<class ElementType, class... Rest>
 struct CastToNative<std::vector<ElementType, Rest...>> {
@@ -102,13 +149,13 @@ struct CastToNative<std::vector<ElementType, Rest...>> {
         std::vector<ElementType, Rest...> v;
         if(value->IsArray()) {
             auto array = v8::Local<v8::Object>::Cast(value);
-            auto array_length = array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value();
+            auto array_length = get_array_length(isolate, array);
             for(int i = 0; i < array_length; i++) {
                 auto value = array->Get(context, i).ToLocalChecked();
                 v.push_back(CastToNative<ElementType>()(isolate, value));
             }
         } else {
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires an array, but another type was provided"));
         }
         return v;
     }

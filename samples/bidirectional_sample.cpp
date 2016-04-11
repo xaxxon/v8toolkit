@@ -17,11 +17,13 @@ struct Thing {
 	Thing & operator=(const Thing&&) = delete;
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
+	virtual std::string get_string_const()const{return "const C++ string";}
 };
 
 struct JSThing : public Thing, public JSWrapper<Thing> {
 	JSThing(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> function_template) : JSWrapper(context, object, function_template) {printf("Creating JSThing\n");}
 	JS_ACCESS(std::string, get_string);
+	JS_ACCESS_CONST(std::string, get_string_const);
 };
 
 void test_calling_bidirectional_from_javascript()
@@ -33,6 +35,7 @@ void test_calling_bidirectional_from_javascript()
 		isolate->add_print();
 		auto & thing = isolate->wrap_class<Thing>();
 		thing.add_method("get_string", &Thing::get_string);
+		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.set_compatible_types<JSThing>();
 		thing.finalize();
 		thing.add_constructor("Thing", *isolate);
