@@ -44,7 +44,7 @@ attempt to build for x86, x64, as well as ARM and can lead to errors if the envi
 
 Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
 
-`Note: You can massively decrease the build time by editing build/all.gyp and commenting out (with #'s) the lines about cctest.gyp and unittests.gyp`
+`Note: You can decrease the build time by around 50% by editing build/all.gyp and commenting out (with #'s) the lines about cctest.gyp and unittests.gyp`
 
 
 #### Building/installing Boost
