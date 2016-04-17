@@ -46,6 +46,27 @@ Once this finishes, from the v8 directory, type `cd out/native` and then run `./
 
 `Note: You can decrease the build time by around 50% by editing build/all.gyp and commenting out (with #'s) the lines about cctest.gyp and unittests.gyp`
 
+##### Building in Windows (incomplete)
+
+git clone depot tools as above. - $ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+
+Put the new directory in your path - http://www.computerhope.com/issues/ch000549.htm
+
+install python (2) from python.org - I used 2.7.11 -  https://www.python.org/downloads/
+
+put python in your permanent path - it must be in your path environment variable for visual studio to use later or you will get errors in the output window in visual studio
+
+start the bash included with depot_tools:  depot_tools\git-2.7.4-64_bin\bin/bash.exe
+
+This next line shouldn't be needed and I don't know what it does, but if you don't use it and get errors in landmines.py, use it
+> export DEPOT_TOOLS_WIN_TOOLCHAIN=0 
+
+type >fetch v8
+
+in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".   
+
+In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
+
 
 #### Building/installing Boost
 
