@@ -282,8 +282,7 @@ public:
     * Passes the v8::Isolate * into the callback
     */
 	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
+		class R = std::result_of<T(v8::Isolate*)>::type>
 	R operator()(T callable)
 	{
         v8::Locker l(isolate);
@@ -295,10 +294,8 @@ public:
     * Calls v8toolkit::scoped_run with the assciated isolate and context data
     * Passes the v8::Isolate * and context into the callback
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-	R operator()(T callable)
+	template<class T>
+	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -363,6 +360,8 @@ using ContextPtr = std::shared_ptr<Context>;
 * Helper class for a v8::Script object.  As long as a Script shared_ptr is around,
 *   the associated Context will be maintined (which keeps the Isolate around, too)
 */
+class Script;
+using ScriptPtr = std::shared_ptr<Script>;
 class Script : public std::enable_shared_from_this<Script> 
 {
     friend class Context;
@@ -417,12 +416,16 @@ public:
     *   cannot be destroyed until after the async has finished and the caller has had a chance 
     *   to use the results contained in the future
     */ 
-	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
-        return std::async(launch_policy, [this](auto script_helper){
-            return (*this->context_helper)([this, script_helper](){
-                return std::make_pair(this->run(), script_helper);
+	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
+
+        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
+        
+			return (*this->context_helper)([this, script](){
+				return std::make_pair(this->run(), script);
             });
-        }, shared_from_this());
+        
+		}, shared_from_this());
+
     }
 
     /**
@@ -431,10 +434,13 @@ public:
     *   until after the thread completes.
     * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
     */
-	std::thread run_thread(){
+	std::thread run_thread()
+	{
         // Holds on to a shared_ptr to the Script inside the thread object to make sure
         //   it isn't destroyed until the thread completes
-        return std::thread([this](auto script_helper){
+		// return type must be specified for Visual Studio 2015.2
+		// https://connect.microsoft.com/VisualStudio/feedback/details/1557383/nested-generic-lambdas-fails-to-compile-c
+        return std::thread([this](auto script_helper)->void{ 
             (*this)([this]{
                 this->run();
             });
@@ -450,7 +456,6 @@ public:
     }    
 }; 
 
-using ScriptPtr = std::shared_ptr<Script>;
 
 
 /**
@@ -548,10 +553,8 @@ public:
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
     * Passes the v8::Isolate * to the callable function
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
-	R operator()(T callable)
+	template<class T>
+	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*)>::type
 	{
 		return v8toolkit::scoped_run(isolate, callable);
 	}
@@ -564,7 +567,7 @@ public:
 	template<class T, 
 			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
 			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-	R operator()(T callable)
+	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
 		return v8toolkit::scoped_run(isolate, callable);
 	}

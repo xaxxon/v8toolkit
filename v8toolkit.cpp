@@ -13,7 +13,6 @@
 #include <mutex>
 #include <set>
 #include <map>
-#include <vector>
 
 #include <boost/format.hpp>
 
@@ -186,9 +185,33 @@ bool get_file_contents(std::string filename, std::string & file_contents)
     return get_file_contents(filename, file_contents, ignored_time);
 }
 
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 bool get_file_contents(std::string filename, std::string & file_contents, time_t & file_modification_time)
 {
+#ifdef _MSC_VER
+	auto file_handle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file_handle == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	FILETIME creationTime,
+		lpLastAccessTime,
+		lastWriteTime;
+	bool err = GetFileTime(file_handle, &creationTime, &lpLastAccessTime, &lastWriteTime);
+
+	auto file_size = GetFileSize(file_handle, nullptr);
+	file_contents.resize(file_size);
+
+	ReadFile(file_handle, &file_contents[0], file_size, nullptr, nullptr);
+
+
+#elif
+
+
+
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
         return false;
@@ -211,11 +234,28 @@ bool get_file_contents(std::string filename, std::string & file_contents, time_t
     }
     
     return true;
-    
+#endif
 }
 
 bool _get_modification_time_of_filename(std::string filename, time_t & modification_time)
 {
+
+#if defined _MSC_VER
+	auto file_handle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file_handle == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	FILETIME creationTime,
+		lpLastAccessTime,
+		lastWriteTime;
+	bool err = GetFileTime(file_handle, &creationTime, &lpLastAccessTime, &lastWriteTime);
+
+	modification_time = *(time_t*)&lastWriteTime;
+
+	return true;
+
+#elif
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
         return false;
@@ -225,7 +265,9 @@ bool _get_modification_time_of_filename(std::string filename, time_t & modificat
         return false;
     }
     
-    return file_stat.st_mtime;
+     modification_time = file_stat.st_mtime;
+	 return true;
+#endif
 }
 
 
@@ -424,11 +466,16 @@ bool require(
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
     add_function(isolate, object_template, "module_list", 
-        [isolate]{return scoped_run(isolate,[isolate]{return mapper(require_results[isolate],[](auto module_info){
-            // don't return the modification time
-            return std::pair<std::string, v8::Global<v8::Value>&>(module_info.first, module_info.second.second);
-        });});}
-    );
+
+        [isolate]{return scoped_run(isolate,[isolate]()->std::vector<std::pair<std::string, v8::Global<v8::Value>&>>{
+			std::vector<std::pair<std::string, v8::Global<v8::Value>&>> results;
+			std::transform(require_results[isolate].begin(), require_results[isolate].end(), std::back_inserter(results), [](auto module_info)->std::pair<std::string, v8::Global<v8::Value>&> {
+				// don't return the modification time
+				return std::pair<std::string, v8::Global<v8::Value>&>(module_info.first, module_info.second.second);
+			});
+			return results;
+		});
+	});
 }
 
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {

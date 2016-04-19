@@ -159,7 +159,7 @@ std::thread Context::run_thread(const std::string & source)
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
 {   
-    v8toolkit::scoped_run(isolate, [this](auto isolate){
+    v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void{
         this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
     });
 }

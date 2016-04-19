@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <set>
+#include <typeinfo>
 
 #include <cppformat/format.h>
 

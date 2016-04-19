@@ -11,7 +11,9 @@
 #include "v8helpers.h"
 #include "casts.hpp"
 
+#ifndef _MSC_VER
 #include <dirent.h>
+#endif
 
 
 #define V8_TOOLKIT_DEBUG false
@@ -56,10 +58,8 @@ public:
 * If the isolate is currently inside a context, it will use that context automatically
 *   otherwise no context::scope will be created
 */
-template<class T, 
-    class R = decltype(std::declval<T>()()),
-    decltype(std::declval<T>()(), 1) = 1>
-R scoped_run(v8::Isolate * isolate, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T()>::type
 {
     v8::Locker locker(isolate);
     v8::Isolate::Scope isolate_scope(isolate);
@@ -81,10 +81,8 @@ R scoped_run(v8::Isolate * isolate, T callable)
 *   otherwise no context::scope will be created
 * The isolate will be passed to the callable
 */
-template<class T, 
-         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
-R scoped_run(v8::Isolate * isolate, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T(v8::Isolate*)>::type
 {   
     v8::Locker locker(isolate);
     v8::Isolate::Scope isolate_scope(isolate);
@@ -100,10 +98,8 @@ R scoped_run(v8::Isolate * isolate, T callable)
 * This version requires the isolate is currently in a context
 * The isolate and context will be passed to the callable
 */
-template<class T, 
-         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-R scoped_run(v8::Isolate * isolate, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
 {   
     v8::Locker locker(isolate);
     v8::Isolate::Scope isolate_scope(isolate);
@@ -126,10 +122,8 @@ R scoped_run(v8::Isolate * isolate, T callable)
 * This version is good when the isolate isn't currently within a context but a context
 *   has been created to be used
 */
-template<class T, 
-         class R = decltype(std::declval<T>()()),
-         decltype(std::declval<T>()(), 1) = 1>
-R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) -> typename std::result_of<T()>::type
 {
     
     v8::Locker locker(isolate);
@@ -148,10 +142,8 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 *   has been created to be used
 * The isolate will be passed to the callable
 */
-template<class T, 
-         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
-R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) -> typename std::result_of<T(v8::Isolate*)>::type
 {   
     v8::Locker locker(isolate);
     v8::Isolate::Scope isolate_scope(isolate);
@@ -168,10 +160,9 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 *   has been created to be used
 * The isolate and context will be passed to the callable
 */
-template<class T, 
-         class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-         decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) -> 
+	typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
 {   
     v8::Locker locker(isolate);
     v8::Isolate::Scope isolate_scope(isolate);
@@ -184,9 +175,9 @@ R scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable)
 // Same as the ones above, but this one takes a global context for convenience
 // Isolate is required since a Local<Context> cannot be created without creating a locker
 //   and handlescope which require an isolate to create
-template<class T,
-class R = decltype(scoped_run(std::declval<v8::Isolate*>(), std::declval<T>()))>
-R scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T callable) {
+template<class T>
+auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T callable) 
+{
     v8::Locker l(isolate);
     v8::HandleScope hs(isolate);
     auto local_context = context.Get(isolate);
