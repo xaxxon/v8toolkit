@@ -19,7 +19,25 @@ set(SOURCE_FILES
         v8helpers.cpp
         v8toolkit.cpp)
 
+
+link_directories("../v8/out/native"
+        ../v8/out/native/obj.target/tools/gyp
+        ../v8/out/native/obj.target/third_party/icu)
+
+set(V8_LIBS
+        libv8_libplatform.a
+        libv8_base.a
+        libv8_libbase.a
+        libicui18n.a
+        libicuuc.a
+        libicudata.a
+        libv8_nosnapshot.a
+        libv8_libplatform.a)
+
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
+#target_link_libraries(v8toolkit_shared ${V8_LIBS})
+      
+
 set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
