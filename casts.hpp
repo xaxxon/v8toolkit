@@ -83,7 +83,7 @@ struct CastToNative<unsigned short> {
 };
 template<>
 struct CastToNative<char> {
-	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned char> {
@@ -165,15 +165,15 @@ struct CastToNative<std::vector<ElementType, Rest...>> {
 // floats
 template<>
 struct CastToNative<float> {
-	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<float>(value->ToNumber()->Value());}
 };
 template<>
 struct CastToNative<double> {
-	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<double>(value->ToNumber()->Value());}
 };
 template<>
 struct CastToNative<long double> {
-	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long double>(value->ToNumber()->Value());}
 };
 
 
@@ -197,10 +197,7 @@ template<>
 struct CastToNative<char *> {
   std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     char * string = *v8::String::Utf8Value(value);
-    auto string_length = strlen(string);
-    auto new_string = new char[string_length + 1];
-    strncpy(new_string, string, string_length + 1);
-    return std::unique_ptr<char[]>(new_string);
+    return std::unique_ptr<char[]>(strdup(string));
   }
 };
 
