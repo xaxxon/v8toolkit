@@ -24,14 +24,26 @@ set(SOURCE_FILES
         v8helpers.cpp
         v8toolkit.cpp)
 
+set(V8_LIBS
+        v8_libplatform
+        v8_libbase
+        icui18n
+        icuuc
+        v8_nosnapshot
+        v8_libplatforM)
+
+
 if (WIN32)
-    set(CPPFORMAT_BASE_DIR c:\\program\ files\\FORMAT)
-    set(V8_BASE_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release)
+    set(CPPFORMAT_BASE_DIR_DEFAULT c:\\program\ files\\FORMAT)
+    set(V8_BASE_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
     set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
+    set(V8_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
+
 else()
     set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)
     set(V8_BASE_LIB_DIR_DEFAULT ../v8/out/native)
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
+    set(V8_LIBS ${V8_LIBS} v8_base icudata)
 endif()
 
 set(CPPFORMAT_BASE_DIR ${CPPFORMAT_BASE_DIR_DEFAULT} CACHE PATH "path to root of cppformat that contains include and lib dirs")
@@ -44,18 +56,9 @@ include_directories(. ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT
 link_directories(${V8_BASE_LIB_DIR} ${V8_BASE_LIB_DIR}/obj.target/tools/gyp ${V8_BASE_LIB_DIR}/obj.target/third_party/icu)
 link_directories(${CPPFORMAT_BASE_DIR}\\lib)
 
-set(V8_LIBS
-        libv8_libplatform.a
-        libv8_base.a
-        libv8_libbase.a
-        libicui18n.a
-        libicuuc.a
-        libicudata.a
-        libv8_nosnapshot.a
-        libv8_libplatform.a)
 
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
-#target_link_libraries(v8toolkit_shared ${V8_LIBS})
+target_link_libraries(v8toolkit_shared ${V8_LIBS})
 target_link_libraries(v8toolkit_shared cppformat)
 
 set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
