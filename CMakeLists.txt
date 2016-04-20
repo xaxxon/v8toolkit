@@ -25,11 +25,11 @@ set(SOURCE_FILES
         v8toolkit.cpp)
 
 if (WIN32)
-    set(CPPFORMAT_BASE_DIR c:\\program\ files\\FORMAT CACHE PATH "location of cppformat include and lib dirs")
+    set(CPPFORMAT_BASE_DIR c:\\program\ files\\FORMAT)
     set(V8_BASE_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release)
     set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
 else()
-    set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/ "location of cppformat include and lib dirs")
+    set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)
     set(V8_BASE_LIB_DIR_DEFAULT ../v8/out/native)
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
 endif()
