@@ -208,7 +208,7 @@ bool get_file_contents(std::string filename, std::string & file_contents, time_t
 	ReadFile(file_handle, &file_contents[0], file_size, nullptr, nullptr);
 
 
-#elif
+#else
 
 
 
@@ -255,7 +255,7 @@ bool _get_modification_time_of_filename(std::string filename, time_t & modificat
 
 	return true;
 
-#elif
+#else
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
         return false;
