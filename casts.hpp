@@ -51,35 +51,35 @@ struct CastToNative<void> {
 // integers
 template<>
 struct CastToNative<long long> {
-	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned long long> {
-	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<long> {
-	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned long> {
-	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<int> {
-	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<int>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned int> {
-	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned int>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<short> {
-	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<short>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned short> {
-	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned short>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char> {
@@ -87,24 +87,24 @@ struct CastToNative<char> {
 };
 template<>
 struct CastToNative<unsigned char> {
-	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned char>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<bool> {
-	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToBoolean()->Value();}
+	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<bool>(value->ToBoolean()->Value());}
 };
 
 template<>
 struct CastToNative<wchar_t> {
-	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<wchar_t>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char16_t> {
-	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char16_t>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char32_t> {
-	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char32_t>(value->ToInteger()->Value());}
 };
 
 template<class Return, class... Params>
