@@ -291,11 +291,11 @@ struct CastToJS<unsigned long> {
 
 template<>
 struct CastToJS<long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
 };
 template<>
 struct CastToJS<unsigned long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
 };
 
 
