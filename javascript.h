@@ -282,7 +282,7 @@ public:
     * Passes the v8::Isolate * into the callback
     */
 	template<class T, 
-		class R = std::result_of<T(v8::Isolate*)>::type>
+		class R = typename std::result_of<T(v8::Isolate*)>::type>
 	R operator()(T callable)
 	{
         v8::Locker l(isolate);
