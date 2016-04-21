@@ -78,7 +78,7 @@ struct DestructorBehavior_Delete : DestructorBehavior<T>
 	{
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Deleting object at %p during V8 garbage collection\n", object);
 		delete object;
-		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
+		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
 };
 
