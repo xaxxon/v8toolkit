@@ -16,6 +16,22 @@
 
 namespace v8toolkit {
 
+
+template <bool... b> struct static_all_of;
+
+// If the first parameter is true, look at the rest of the list
+template <bool... tail>
+struct static_all_of<true, tail...> : static_all_of<tail...> {};
+
+// if any parameter is false, return false
+template <bool... tail>
+struct static_all_of<false, tail...> : std::false_type {};
+
+// If there are no parameters left, no false was found so return true
+template <> struct static_all_of<> : std::true_type {};
+
+
+
 #define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, typeid(thing).name()).c_str()
 
 // thrown when data cannot be converted properly
@@ -128,12 +144,13 @@ class... AddParams,
 class Callable>
 struct MapperHelper<Container<Data, AddParams...>, Callable>
 {
-    auto operator()(const Container<Data, AddParams...> & container, Callable callable) -> Container<decltype(callable(std::declval<Data>()))>
+    using Results = Container<typename std::result_of<Callable(Data)>::type>;
+    Results operator()(const Container<Data, AddParams...> & container, Callable callable)
     {
-        Container<decltype(callable(std::declval<Data>())), AddParams...> results;
-        for (auto element : container) {
+        Results results;
+        for (auto && element : container) {
             try {
-                results.push_back(callable(element));
+                results.push_back(callable(std::forward<decltype(element)>(element)));
             }catch(...) {} // ignore exceptions, just don't copy the element
         }
         return results;
@@ -145,45 +162,42 @@ struct MapperHelper<Container<Data, AddParams...>, Callable>
 * Takes a map with arbitrary key/value types and returns a new map with the types
 *   inside the std::pair returned by Callable
 */
-template<
-class Key,
-class Value,
-class... AddParams,
-class Callable>
+template<class Key,
+        class Value,
+        class... AddParams,
+        class Callable>
 struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
 {
-    auto operator()(std::map<Key, Value, AddParams...> container, Callable callable) -> std::map<decltype(callable(std::declval<std::pair<Key, Value>>()).first), decltype(callable(std::declval<std::pair<Key, Value>>()).second), AddParams...>
+    using Source = std::map<Key, Value, AddParams...>;
+    using ResultPair = typename std::result_of<Callable(typename Source::value_type)>::type;
+    using Results = std::map<typename ResultPair::T1, typename ResultPair::T2>;
+    Results operator()(std::map<Key, Value, AddParams...> container, Callable callable)
     {
-        std::map<decltype(callable(std::declval<std::pair<Key, Value>>()).first), decltype(callable(std::declval<std::pair<Key, Value>>()).second), AddParams...> results;
-        for (auto element : container) {
-            results.insert(callable(element));
+        Results results;
+        for (auto && element : container) {
+            results.insert(callable(std::forward<decltype(element)>(element)));
         }
         return results;
     }
 };
 
 
-// simple map/transform method for a container supporting push_back
-// TODO: Needs SFINAE
-template <class Callable,
-          template <typename, typename...> class Container,
-          typename... ContainerParams >
-auto mapper(const Container<ContainerParams...> & container, Callable callable) -> decltype(MapperHelper<Container<ContainerParams...>, Callable>()(container, callable))
+template <class Container, class Callable>
+auto mapper(const Container & container, Callable & callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
 {
-    return MapperHelper<Container<ContainerParams...>, Callable>()(container, callable);
+    return MapperHelper<Container, Callable>()(container, callable);
 }
 
 
 template <class Callable,
-          template <typename, typename...> class Container,
-typename Key,
-          typename Value,
-          typename... AddParams >
-auto reducer(const Container<Key, Value, AddParams...> & container, Callable callable) -> std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))>
+        class Container>
+auto reducer(const Container & container, Callable callable) ->
+    std::vector<typename std::result_of<Callable(typename Container::value_type)>::type>
 {
-    std::vector<decltype(callable(std::declval<std::pair<Key, Value>>()))> results;
-    for(auto & pair : container) {
-        results.push_back(callable(pair));
+    using ResultType = typename std::result_of<Callable(typename Container::value_type)>::type;
+    std::vector<ResultType> results;
+    for(auto && pair : container) {
+        results.push_back(callable(std::forward<decltype(pair)>(pair)));
     }
     return results;
 }

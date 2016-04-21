@@ -265,12 +265,10 @@ public:
 
 	
     /**
-    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Calls v8toolkit::scoped_run with the associated isolate and context data
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()()),
-			 decltype(std::declval<T>()(), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable()>::type
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -278,12 +276,11 @@ public:
 	}
 
     /**
-    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Calls v8toolkit::scoped_run with the associated isolate and context data
     * Passes the v8::Isolate * into the callback
     */
-	template<class T, 
-		class R = typename std::result_of<T(v8::Isolate*)>::type>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*)>
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -294,8 +291,8 @@ public:
     * Calls v8toolkit::scoped_run with the assciated isolate and context data
     * Passes the v8::Isolate * and context into the callback
     */
-	template<class T>
-	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -541,22 +538,20 @@ public:
 	/**
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()()),
-			 decltype(std::declval<T>()(), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 
 	/**
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
     * Passes the v8::Isolate * to the callable function
     */
-	template<class T>
-	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*)>::type
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*)>::type
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 
 	/**
@@ -564,12 +559,10 @@ public:
     * Passes the v8::Isolate * and v8::Local<v8::Context> to the callable function.
     * Throws v8toolkit::InvalidCallException if the isolate is not currently in a context
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-	auto operator()(T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of_t<Callable(v8::Isolate*, v8::Local<v8::Context>)>
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 	
     /**
@@ -578,10 +571,13 @@ public:
     *   being called with operator()
     */
 	template<class Callable>
-	void add_function(std::string name, Callable callable) 
+	void add_function(std::string name, Callable && callable)
 	{		
 		(*this)([&](){
-			v8toolkit::add_function(isolate, this->get_object_template(), name.c_str(), callable);
+			v8toolkit::add_function(isolate,
+									this->get_object_template(),
+									name.c_str(),
+									std::forward<Callable>(callable));
 		});
 	}
 	
@@ -599,7 +595,8 @@ public:
     {
 		v8toolkit::expose_variable_readonly(isolate, this->get_object_template(), name.c_str(), variable);
     }
-    
+
+	/// Not sure what this is used for
     void add_variable(const std::string & name, v8::Local<v8::ObjectTemplate> template_to_attach)
     {
         v8toolkit::add_variable(this->isolate, this->get_object_template(), name.c_str(), template_to_attach);
@@ -661,12 +658,9 @@ public:
 	
 	
 	/**
-    * Creates a new Isolate wrapping a new v8::Isolate instance.  Each isolate is completely separate from all the others
-    *   and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time)
+    * Creates a new Isolate wrapping a new v8::Isolate instance.
     * An Isolate will remain as long as the caller has a shared_ptr to the Isolate or any Contexts created from
-    *   the Isolate still exist.   Once neither of those things is the case, the Isolate will be automatically destroyed.
-    * If any threads are still running when this happens, the results are undefined.
-    * TODO: Can active threads maintain links to their Contexts to stop this from happening?
+    *   the Isolate still exist.
     */
 	static std::shared_ptr<Isolate> create_isolate();
 };

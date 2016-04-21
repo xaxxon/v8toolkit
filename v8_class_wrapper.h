@@ -55,19 +55,6 @@ template<bool> struct const_type_method_adder;
     of the type gets the method, too
 */
 
-template <bool... b> struct static_all_of;
-
-// If the first parameter is true, look at the rest of the list
-template <bool... tail>
-struct static_all_of<true, tail...> : static_all_of<tail...> {};
-
-// if any parameter is false, return false
-template <bool... tail>
-struct static_all_of<false, tail...> : std::false_type {};
-
-// If there are no parameters left, no false was found so return true
-template <> struct static_all_of<> : std::true_type {};
-
 
 
 /***

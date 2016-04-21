@@ -21,17 +21,11 @@
 
 /** TODO LIST
 *
-* Rename project to v8toolkit everywhere including github
 * All includes should be included as #include "v8toolkit/FILENAME.h" instead of just #include "FILENAME.h"
 * Rename javascript.h file to something much better
-* Rename v8toolkit.h contents to something else so it can be included directory but using a different name
-* Change *Helper classes to just their base name.  They're in a namespace, so it shouldn't be too confusing.
 * Including "v8toolkit/v8toolkit.h" should include everything, but specific includes should also work for
 *   v8helpers.h, <new name for v8toolkit.h>, <new name for javascript.h>
 */
-
-
-
 
 
 
@@ -233,8 +227,8 @@ struct ParameterBuilder;
 /**
 * Specialization for when there are no parameters left to process, so call the function now
 */  
-template<int depth, typename FUNCTION_TYPE, typename RET>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
+template<int depth, class Function, class Return>
+struct ParameterBuilder<depth, Function, std::function<Return()>> {
     // the final class in the call chain stores the actual method to be called
 
     enum {DEPTH=depth, ARITY=0};
@@ -242,9 +236,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
+    void operator()(Function & function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
         // use CallCallable to differentiate between void and non-void return types
-        CallCallable<FUNCTION_TYPE>()(function, info, ts...);
+        CallCallable<Function>()(function, info, std::forward<Ts>(ts)...);
     }
 };
 
@@ -258,16 +252,16 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET()>> {
 *   the inheritance chain ends
 */
 template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>, 
-                        std::enable_if_t<!std::is_pointer<HEAD>::value || !std::is_fundamental< typename std::remove_pointer<HEAD>::type >::value > >: 
+struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
+        // if it's not a pointer or it is a pointer but it's a pointer to a user-defined (non-fundamental) type
+                        std::enable_if_t<!std::is_pointer<HEAD>::value || !std::is_fundamental< typename std::remove_pointer<HEAD>::type >::value > >:
         public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
 
-    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    using super = ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
     enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        // printf("Parameter builder HEAD: %s\n", typeid(HEAD).name());
         this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
     }
 };
@@ -544,7 +538,10 @@ void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 * Makes the given javascript value available in the given object as name.
 * Often used to add a variable to a specific context's global object
 */
-void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, const v8::Local<v8::Value> value);
+void add_variable(const v8::Local<v8::Context> context,
+                  const v8::Local<v8::Object> & object,
+                  const char * name,
+                  const v8::Local<v8::Value> value);
 
 
 
@@ -579,7 +576,6 @@ struct TupleForEach<0, Tuple> {
 };
 
 
-
 /**
 * Returns true on success with the result in the "result" parameter
 */
@@ -591,14 +587,14 @@ bool call_javascript_function(const v8::Local<v8::Context> context,
                               const TupleType & tuple = {})
 {
     constexpr int tuple_size = std::tuple_size<TupleType>::value;
-    v8::Local<v8::Value> parameters[tuple_size];
+    std::array<v8::Local<v8::Value>, tuple_size> parameters;
     auto isolate = context->GetIsolate();
-    TupleForEach<tuple_size, TupleType>()(isolate, parameters, tuple);
+    TupleForEach<tuple_size, TupleType>()(isolate, parameters.data(), tuple);
     
     v8::TryCatch tc(isolate);
     
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
-    auto maybe_result = function->Call(context, receiver, tuple_size, parameters);
+    auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
         auto stacktrace = tc.StackTrace(context);

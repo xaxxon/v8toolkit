@@ -31,11 +31,7 @@ v8::Local<v8::Value> Context::json(const std::string & json) {
 }
 
 
-Context::~Context() {    
-#ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
-    printf("Deleting Context\n");  
-#endif
-}
+Context::~Context() { }
 
 
 std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
@@ -238,9 +234,6 @@ void Isolate::add_assert()
     add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
-        // printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
-        
-        // printf("AKA: %s\n",  *v8::String::Utf8Value(info[0]->ToString()));
 
         v8::TryCatch tc(isolate);
         auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
@@ -257,15 +250,13 @@ void Isolate::add_assert()
             return;
         }
         auto result = result_maybe.ToLocalChecked();
-        // print_v8_value_details(result);
-        
+
         bool default_value = false;
         bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
         if (!assert_result) {
             throw V8AssertionException(isolate, std::string("Expression returned false: ") + *v8::String::Utf8Value(info[0]));
         }
         
-        // printf("Done in assert\n");
     });
     
     add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
@@ -287,7 +278,6 @@ void Platform::init(int argc, char ** argv)
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
-    // TODO: testing how this interacts with lib_nosnapshot.o
     
     // if being built for snapshot use, must call this, otherwise must not call this
 #ifdef USE_SNAPSHOTS
@@ -329,34 +319,3 @@ v8toolkit::ArrayBufferAllocator Platform::allocator;
 
 
 } // end v8toolkit namespace
-
-
-//
-// Isolate::init(argc, argv);
-// auto javascript_engine = std::make_unique<JavascriptEngine>();
-//
-// v8::HandleScope hs(javascript_engine->get_isolate());
-// v8::Isolate::Scope is(javascript_engine->get_isolate());
-// auto context =   javascript_engine->get_local(javascript_engine->get_context());
-// auto isolate = javascript_engine->get_isolate();
-//
-// javascript_engine->compile("var foo=4;\r\n--2-32");
-//
-//
-// javascript_engine->add_require(); // adds the require function to the global javascript object
-// auto coffeescript_compiler = javascript_engine->compile_from_file("/Users/xaxxon/Downloads/jashkenas-coffeescript-f26d33d/extras/coffee-script.js");
-// javascript_engine->run(coffeescript_compiler);
-// auto go = context->Global();
-// auto some_coffeescript = get_file_contents("some.coffee");
-//
-// // after the context has been created, changing the template doesn't do anything.  You set the context's global object instead
-// go->Set(context, v8::String::NewFromUtf8(isolate, "coffeescript_source"), v8::String::NewFromUtf8(isolate, some_coffeescript.c_str()));
-//
-// auto compiled_coffeescript = javascript_engine->run("CoffeeScript.compile(coffeescript_source)");
-// printf("compiled coffeescript is string? %s\n", compiled_coffeescript->IsString() ? "Yes" : "No");
-//
-// // this line apparently needs an isolate scope
-// std::cout << *v8::String::Utf8Value(compiled_coffeescript) << std::endl;
-// javascript_engine->run(compiled_coffeescript);
-//
-
