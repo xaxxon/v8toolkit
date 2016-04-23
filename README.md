@@ -11,7 +11,7 @@ Type `git` on the command line.   If you don't have it, go here: https://git-scm
 #### Building V8
 
 Building V8 is not a simple process.
-
+in
 "depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
 `git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git` this then include it in the PATH environment variable (or just type in the whole path)
 
@@ -63,7 +63,9 @@ This next line shouldn't be needed and I don't know what it does, but if you don
 
 type >fetch v8
 
-in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".   
+in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".  
+
+`NOTE: This will build with the 2013 toolchain by default.  This means you CANNOT link it with code compiled with the 2015 toolchain.  To change this, go to the Project menu, then `Properties`, `Configuration Properties`, `General`, and go to the `Platform Toolset` option and select `Visual Studio 2015 (v140)` or whatever version you want to use.  However, it probably isn't guaranteed to work in any other version of the toolset.
 
 In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
 
