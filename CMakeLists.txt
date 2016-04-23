@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.2)
 project(v8toolkit)
 set (CMAKE_CXX_STANDARD 14)
 
+SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
+include(ucm)
+ucm_set_runtime(STATIC)
+
+
+
 set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
 
 # This line unused because no compiled boost libraries are currently being used
@@ -72,3 +78,20 @@ set(INSTALL_INCLUDE_DIR "include/v8toolkit" CACHE PATH "Installation directory f
 
 install(FILES ${HEADER_FILES} DESTINATION ${INSTALL_INCLUDE_DIR})
 install(TARGETS v8toolkit_shared v8toolkit_static DESTINATION ${INSTALL_LIB_DIR})
+
+include_directories(.)
+
+add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
+target_link_libraries(bidirectional_sample ${V8_LIBS})
+add_dependencies(bidirectional_sample v8toolkit_shared)
+target_link_libraries(bidirectional_sample v8toolkit)
+#add_custom_command(bidirectional_sample)
+
+add_executable(exception_sample samples/exception_sample.cpp)
+add_executable(thread_sample samples/thread_sample.cpp)
+
+
+
+
+add_custom_target(samples)
+add_dependencies(samples bidirectional_sample exception_sample thread_sample)
