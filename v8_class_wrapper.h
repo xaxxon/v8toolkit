@@ -78,7 +78,7 @@ struct DestructorBehavior_Delete : DestructorBehavior<T>
 	{
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Deleting object at %p during V8 garbage collection\n", object);
 		delete object;
-		isolate->AdjustAmountOfExternalAllocatedMemory(-sizeof(T));
+		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
 };
 
@@ -651,12 +651,12 @@ public:
     template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
     void add_method_for_const_type(const std::string & method_name, Method method) {
         V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
-        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+//        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
     };
 
     template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
     void add_method_for_const_type(const std::string & method_name, Method method) {
-        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
+//        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
     };
 
 
