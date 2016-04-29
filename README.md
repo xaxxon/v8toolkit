@@ -20,38 +20,12 @@ in
 From here, the process diverges a bit based on what platform you're on:
 
 [Build V8 for OS X](osx_v8_build.md)
+
 [Build V8 for Windows (Visual Studio)](windows_v8_build.md)
+
 [Build V8 for Linux](linux_v8_build.md)
 
 (the following hasn't been moved into the above links yet)
-Next, run `fetch v8`. This will put the source for V8 in a directory called v8.  (`fetch` is in the depot-tools you created in the step above)
-
-For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
-They can either be set on the command line or put in your `~/.bash_profile`.  If you put them in your `.bash_profile`, you must either start a new
-shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell
-
-    export CXX="`which clang++` -std=c++11 -stdlib=libc++"
-    export CC="`which clang`"
-    export CPP="`which clang` -E"
-    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
-    export CXX_host="`which clang++`"
-    export CC_host="`which clang`"
-    export CPP_host="`which clang` -E"
-    export LINK_host="`which clang++`"
-    export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
-
-Again, the above lines are ONLY for OS X builds (as far as I understand).  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++ in OS X, 
-the code we write later in this guide will spew errors about `std::string` being an undefined symbol.
-
-
-Start the build by going into the v8 directory and running `make native`.   This will build V8 static libraries for the platform of the computer.   Running `make all` will
-attempt to build for x86, x64, as well as ARM and can lead to errors if the environment isn't set up for cross compiling and takes much longer.
-
-(more options, such as building a shared library are here: https://github.com/v8/v8/wiki/Building%20with%20Gyp)
-
-Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
-
-`Note: You can decrease the build time by around 50% by editing build/all.gyp and commenting out (with #'s) the lines about cctest.gyp and unittests.gyp`
 
 ##### Building in Windows (incomplete)
 
