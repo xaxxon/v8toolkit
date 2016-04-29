@@ -24,7 +24,7 @@ To build shared libraries, add `library=shared snapshot=off` to the make command
 
 Detailed build instructions are here: https://github.com/v8/v8/wiki/Building%20with%20Gyp
 
-Once this finishes, from the v8 directory, type `cd out/x64.debug` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)  If you built shared libraries, you'll need to set `DYLD_LIBRARY_PATH` to the directory with the dylib files.  If you are in that directory:  `export DYLD_LIBRARY_PATH=\`pwd\``
+Once this finishes, from the v8 directory, type `cd out/x64.debug` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)  If you built shared libraries, you'll need to set `DYLD_LIBRARY_PATH` to the directory with the dylib files.  If you are in that directory:  `export DYLD_LIBRARY_PATH=\\`pwd\\``
 
 You libraries will be in `v8/out/x64.debug/*.a` or `*.dylib` for a shared library build.  The specific library names will be slightly different depending on your build type.
 
