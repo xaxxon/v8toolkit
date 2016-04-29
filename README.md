@@ -17,6 +17,13 @@ in
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
+From here, the process diverges a bit based on what platform you're on:
+
+[Build V8 for OS X](osx_v8_build.md)
+[Build V8 for Windows (Visual Studio)](windows_v8_build.md)
+[Build V8 for Linux](linux_v8_build.md)
+
+(the following hasn't been moved into the above links yet)
 Next, run `fetch v8`. This will put the source for V8 in a directory called v8.  (`fetch` is in the depot-tools you created in the step above)
 
 For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
