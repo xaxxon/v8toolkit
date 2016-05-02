@@ -41,7 +41,7 @@ set(V8_LIBS
 
 if (WIN32)
     set(CPPFORMAT_BASE_DIR_DEFAULT c:\\program\ files\\FORMAT)
-    set(V8_BASE_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
+    set(V8_BASE_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Debug\\lib)
     set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
     set(V8_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
@@ -79,6 +79,9 @@ set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
 
+if (WIN32)
+	target_link_libraries(v8toolkit_static WinMM)
+endif()
 
 
 set(INSTALL_LIB_DIR     lib               CACHE PATH "Installation directory for libraries")
@@ -122,7 +125,7 @@ add_custom_command(TARGET toolbox_sample PRE_BUILD
         ${PROJECT_BINARY_DIR})
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
-add_dependency(javascript_sample v8toolkit_static)
+add_dependencies (javascript_sample v8toolkit_static)
 target_link_libraries(javascript_sample ${V8_LIBS})
 target_link_libraries(javascript_sample v8toolkit)
 

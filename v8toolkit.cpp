@@ -354,7 +354,11 @@ bool require(
     for (auto suffix : std::vector<std::string>{"", ".js", ".json", }) {
         for (auto path : paths) {
             try {
+#ifdef _MSC_VER
+				auto complete_filename = path + "\\" + filename + suffix;
+#else
                 auto complete_filename = path + "/" + filename + suffix;
+#endif
         
                 std::string file_contents;
                 time_t file_modification_time = 0;
