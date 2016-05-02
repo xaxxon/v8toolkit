@@ -17,34 +17,15 @@ in
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
-Next, run `fetch v8`. This will put the source for V8 in a directory called v8.  (`fetch` is in the depot-tools you created in the step above)
+From here, the process diverges a bit based on what platform you're on:
 
-For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
-They can either be set on the command line or put in your `~/.bash_profile`.  If you put them in your `.bash_profile`, you must either start a new
-shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell
+[Build V8 for OS X](osx_v8_build.md)
 
-    export CXX="`which clang++` -std=c++11 -stdlib=libc++"
-    export CC="`which clang`"
-    export CPP="`which clang` -E"
-    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
-    export CXX_host="`which clang++`"
-    export CC_host="`which clang`"
-    export CPP_host="`which clang` -E"
-    export LINK_host="`which clang++`"
-    export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
+[Build V8 for Windows (Visual Studio)](windows_v8_build.md)
 
-Again, the above lines are ONLY for OS X builds (as far as I understand).  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++ in OS X, 
-the code we write later in this guide will spew errors about `std::string` being an undefined symbol.
+[Build V8 for Linux](linux_v8_build.md)
 
-
-Start the build by going into the v8 directory and running `make native`.   This will build V8 static libraries for the platform of the computer.   Running `make all` will
-attempt to build for x86, x64, as well as ARM and can lead to errors if the environment isn't set up for cross compiling and takes much longer.
-
-(more options, such as building a shared library are here: https://github.com/v8/v8/wiki/Building%20with%20Gyp)
-
-Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
-
-`Note: You can decrease the build time by around 50% by editing build/all.gyp and commenting out (with #'s) the lines about cctest.gyp and unittests.gyp`
+(the following hasn't been moved into the above links yet)
 
 ##### Building in Windows (incomplete)
 
@@ -66,6 +47,8 @@ type >fetch v8
 in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".  
 
 `NOTE: This will build with the 2013 toolchain by default.  This means you CANNOT link it with code compiled with the 2015 toolchain.  To change this, go to the Project menu, then `Properties`, `Configuration Properties`, `General`, and go to the `Platform Toolset` option and select `Visual Studio 2015 (v140)` or whatever version you want to use.  However, it probably isn't guaranteed to work in any other version of the toolset.
+
+Also note this will build with the statically linked runtime.  As far as I understand, the runtimes of what you link to it must match.  I don't know if building with the dynamically linked runtime works or not.
 
 In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
 
