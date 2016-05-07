@@ -15,11 +15,9 @@ std::function<Return(Params...)> CastToNative<std::function<Return(Params...)>>:
         v8::HandleScope sc(isolate);
         auto context = shared_global_context->Get(isolate);
         return v8toolkit::scoped_run(isolate, context, [&]{
-                                        v8::Local<v8::Value> result;
                                         assert(!context.IsEmpty());
-                                        v8toolkit::call_javascript_function(context, 
-                                                                            result, 
-                                                                            shared_global_function->Get(isolate), 
+                                        auto result = v8toolkit::call_javascript_function(context,
+                                                                            shared_global_function->Get(isolate),
                                                                             context->Global(),
                                                                             std::tuple<Params...>(params...)); 
                                                                             return CastToNative<typename std::remove_reference<Return>::type>()(isolate, result);

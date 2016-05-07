@@ -30,7 +30,6 @@
 
 
 namespace v8toolkit {
-    
 
 
 /**
@@ -39,15 +38,16 @@ namespace v8toolkit {
 class InvalidCallException : public std::exception {
 private:
     std::string message;
-    
+
 public:
-  InvalidCallException(std::string message) : message(message) {}
-  virtual const char * what() const noexcept override {return message.c_str();}
+    InvalidCallException(std::string message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
 };
 
 
 
-/**
+
+    /**
 * Helper function to run the callable inside contexts.
 * If the isolate is currently inside a context, it will use that context automatically
 *   otherwise no context::scope will be created
@@ -177,7 +177,74 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
     auto local_context = context.Get(isolate);
     return scoped_run(isolate, local_context, callable);
 }
-    
+
+
+
+
+/**
+* When the V8 engine itself generates an error (or a user calls isolate->ThrowException manually with a v8::Value for some reason)
+* That exception is re-thrown as a standard C++ exception of this type.   The V8 Value thrown is available.
+* get_local_value must be called within a HandleScope
+* get_value returns a new Global handle to the value.
+*/
+    class V8Exception : public std::exception {
+    private:
+        v8::Isolate * isolate;
+        v8::Global<v8::Value> value;
+        std::string value_for_what;
+
+    public:
+        V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {
+            value_for_what = *v8::String::Utf8Value(this->value.Get(isolate));
+        }
+        V8Exception(v8::Isolate * isolate, v8::Local<v8::Value> value) : V8Exception(isolate, v8::Global<v8::Value>(isolate, value)) {}
+        V8Exception(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, v8::String::NewFromUtf8(isolate, reason.c_str())) {}
+        virtual const char * what() const noexcept override {
+            return value_for_what.c_str();
+        }
+        v8::Local<v8::Value> get_local_value(){return value.Get(isolate);}
+        v8::Isolate * get_isolate(){return isolate;}
+        v8::Global<v8::Value> get_value(){return v8::Global<v8::Value>(isolate, value);}
+    };
+
+
+    class V8AssertionException : public V8Exception {
+    public:
+        V8AssertionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+                V8Exception(isolate, value) {}
+        V8AssertionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
+                V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+        V8AssertionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+    };
+
+    class V8ExecutionException : public V8Exception {
+    public:
+
+        V8ExecutionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
+                V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+        V8ExecutionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+                V8Exception(isolate, value) {}
+        V8ExecutionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+
+    };
+
+
+/**
+* Same as a V8 exception, except if this type is thrown it indicates the exception was generated
+*   during compilation, not at runtime.
+*/
+    class V8CompilationException : public V8Exception {
+    public:
+        V8CompilationException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
+                V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
+        V8CompilationException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
+                V8Exception(isolate, value) {}
+        V8CompilationException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+
+    };
+
+
+
 
 /**
 * Functor to call a given std::function and, if it has a non-null return value, return its value back to javascript
@@ -580,8 +647,7 @@ struct TupleForEach<0, Tuple> {
 * Returns true on success with the result in the "result" parameter
 */
 template<class TupleType = std::tuple<>>
-bool call_javascript_function(const v8::Local<v8::Context> context,
-                              v8::Local<v8::Value> & result,
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
                               const v8::Local<v8::Function> function,
                               const v8::Local<v8::Object> receiver,
                               const TupleType & tuple = {})
@@ -603,36 +669,31 @@ bool call_javascript_function(const v8::Local<v8::Context> context,
         } else {
             printf("tc stacktrace return value: %s\n", stringify_value(isolate, stacktrace.ToLocalChecked()).c_str());
         }
-
-
-        return false;
+        throw V8ExecutionException(isolate, tc.Exception());
     }
-    result = maybe_result.ToLocalChecked();
-    return true;
+    return maybe_result.ToLocalChecked();
 }
 
 /**
 * Returns true on success with the result in the "result" parameter
 */
 template<class TupleType = std::tuple<>>
-bool call_javascript_function(const v8::Local<v8::Context> context,
-                              v8::Local<v8::Value> & result,
+v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> context,
                               const std::string & function_name,
                               const v8::Local<v8::Object> receiver,
                               const TupleType & tuple = {})
 {
     auto maybe_value = receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(),function_name.c_str()));
     if(maybe_value.IsEmpty()) {
-        return false;
+        throw InvalidCallException(fmt::format("Function name {} could not be found", function_name));
     }
     
     auto value = maybe_value.ToLocalChecked();
     if(!value->IsFunction()) {
-        return false;
+        throw InvalidCallException(fmt::format("{} was found but is not a function", function_name));;
     }    
     
-    bool success = call_javascript_function(context, result, v8::Local<v8::Function>::Cast(value), receiver, tuple);
-    return success;
+    return call_javascript_function(context, v8::Local<v8::Function>::Cast(value), receiver, tuple);
 }
 
 

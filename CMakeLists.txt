@@ -50,6 +50,7 @@ if (WIN32)
     set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
     set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
+
 else()
     set(V8_BASE_STATIC_LIB_DIR_DEFAULT ../v8/out/native)
     set(V8_BASE_SHARED_LIB_DIR_DEFAULT ../v8/out/native)
@@ -85,6 +86,9 @@ set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
 
+if (WIN32)
+	target_link_libraries(v8toolkit_static WinMM)
+endif()
 
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(INSTALL_INCLUDE_DIR "include/v8toolkit" CACHE PATH "Installation directory for header files")

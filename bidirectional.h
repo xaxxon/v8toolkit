@@ -62,14 +62,17 @@ public:
 *   returned can be used as a class T regardless of whether it is a pure C++ type 
 *   or if it has been extended in javascript
 */
+template<class Base, class TypeList = TypeList<>>
+class Factory;
+
 template<class Base, class... ConstructorArgs>
-class Factory {
+class Factory<Base, TypeList<ConstructorArgs...>> {
 public:
     virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
 
     template <class U = Base>
     std::unique_ptr<U> get_unique(ConstructorArgs... constructor_args) {
-        return std::unique_ptr<U>(this->operator()(constructor_args...));
+        return std::unique_ptr<U>((*this)(constructor_args...));
     }
 
     /**
@@ -78,7 +81,7 @@ public:
     template<class U>
     U * as(ConstructorArgs...  constructor_args){
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
-        auto result = this->operator()(constructor_args...);
+        auto result = this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
         if (dynamic_cast<U*>(result)) {
             return static_cast<U*>(result);
         } else {
@@ -92,23 +95,31 @@ public:
 * Returns a pure-C++ object of type Child which inherits from type Base.  It's Base type and ConstructorArgs... 
 *   must match with the Factory it is associated with.
 */
-template<class Base, class Child, class ... ConstructorArgs>
-class CppFactory : public Factory<Base, ConstructorArgs...>{
+template<class Base, class Child, class ExternalTypeList = TypeList<>>
+class CppFactory;
+
+template<class Base, class Child, class... ExternalConstructorParams>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>>{
 public:
-    virtual Base * operator()(ConstructorArgs... constructor_args) override 
+    virtual Base * operator()(ExternalConstructorParams... constructor_args) override
     {
         // printf("CppFactory making a %s\n", typeid(Child).name());
-        return new Child(constructor_args...);
+        return new Child(std::forward<ExternalConstructorParams>(constructor_args)...);
     }
 };
 
-
 /**
 * Returns a JavaScript-extended object inheriting from Base.  It's Base type and
-*   ConstructorParameters must match up with the Factory class it is associated with
+*   *ConstructorParams must match up with the Factory class it is associated
+* InternalConstructorParams are ones that will be specified in the javascript code declaring the new type while
+* ExternalConstructorParams will be specified by the user creating an instnace of that type
 */
-template<class Base, class JSWrapperClass, class... ConstructorParameters>
-class JSFactory : public Factory<Base, ConstructorParameters...> {
+template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>>
+class JSFactory;
+
+
+template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams>
+class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
@@ -129,15 +140,13 @@ public:
     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
     *   extends the C++ functionality in javascript
     */
-    Base * operator()(ConstructorParameters... constructor_parameters) {
+    Base * operator()(ExternalConstructorParams... constructor_parameters) {
         // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
         
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
-            v8::Local<v8::Value> result;
-            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate),
+            auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
                                                     context->Global(),
-                                                    std::tuple<ConstructorParameters...>(constructor_parameters...));
-			assert(success);
+                                                    std::tuple<ExternalConstructorParams...>(constructor_parameters...));
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
@@ -169,7 +178,7 @@ public:
                         			
 			// Create the new C++ object - initialized with the JavaScript object
 			// depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
-			std::function<void(ConstructorParameters...)> constructor = [&](auto... args)->void{
+			std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
 				new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
 			};
             
@@ -237,9 +246,8 @@ public:
         try { \
             js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
         } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true);} \
-        v8::Local<v8::Value> result; \
         this->called_from_javascript = true; \
-        (void) v8toolkit::call_javascript_function(context, result, js_function, js_object, parameter_tuple); \
+        auto result = v8toolkit::call_javascript_function(context, js_function, js_object, parameter_tuple); \
         this->called_from_javascript = false; \
         return cast_to_native(isolate, result); \
     });

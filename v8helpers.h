@@ -13,8 +13,10 @@
 #include "v8.h"
 
 
-
 namespace v8toolkit {
+
+template <class... > struct TypeList {};
+
 
 
 template <bool... b> struct static_all_of;
