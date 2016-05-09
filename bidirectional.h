@@ -65,23 +65,24 @@ public:
 template<class Base, class TypeList = TypeList<>>
 class Factory;
 
+
 template<class Base, class... ConstructorArgs>
 class Factory<Base, TypeList<ConstructorArgs...>> {
 public:
-    virtual Base * operator()(ConstructorArgs&&... constructor_args) = 0;
+    virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
 
-    template <class U = Base>
-    std::unique_ptr<U> get_unique(ConstructorArgs&&... constructor_args) {
-        return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(constructor_args)...));
+    template <class U = Base, class... Args>
+    std::unique_ptr<U> get_unique(Args&&... args) {
+        return std::unique_ptr<U>((*this)(std::forward<Args>(args)...));
     }
 
     /**
     * Helper to quickly turn a Base type into another type if allowed
     */
-    template<class U>
-    U * as(ConstructorArgs&&...  constructor_args){
+    template<class U, class... Args>
+    U * as(Args&&...  args){
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
-        auto result = this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
+        auto result = this->operator()(std::forward<Args>(args)...);
         if (dynamic_cast<U*>(result)) {
             return static_cast<U*>(result);
         } else {
@@ -101,10 +102,10 @@ class CppFactory;
 template<class Base, class Child, class... ExternalConstructorParams>
 class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>>{
 public:
-    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) override
+    virtual Base * operator()(ExternalConstructorParams... constructor_args) override
     {
         // printf("CppFactory making a %s\n", typeid(Child).name());
-        return new Child(std::forward<ExternalConstructorParams>(constructor_args)...);
+        return new Child(constructor_args...);
     }
 };
 
@@ -147,13 +148,13 @@ public:
     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
     *   extends the C++ functionality in javascript
     */
-    Base * operator()(ExternalConstructorParams&&... constructor_parameters) {
+    Base * operator()(ExternalConstructorParams... constructor_parameters) {
         // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
         
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
                                                     context->Global(),
-						   std::tuple<ExternalConstructorParams...>(std::forward<ExternalConstructorParams>(constructor_parameters)...));
+						   std::tuple<ExternalConstructorParams...>(constructor_parameters...));
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }

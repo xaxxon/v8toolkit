@@ -134,6 +134,7 @@ add_executable(javascript_sample samples/javascript_sample.cpp)
 add_dependencies(javascript_sample v8toolkit_static)
 target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample v8toolkit)
+target_link_libraries(javascript_sample cppformat)
 
 add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_static)
