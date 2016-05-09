@@ -105,11 +105,11 @@ public:
 
 
 #define ANIMAL_CONSTRUCTOR_ARGS const std::string &
-using AnimalFactory = Factory<Animal, ANIMAL_CONSTRUCTOR_ARGS>;
-using JSAnimalFactory = JSFactory<Animal, JSAnimal, ANIMAL_CONSTRUCTOR_ARGS>;
+using AnimalFactory = Factory<Animal, TypeList<ANIMAL_CONSTRUCTOR_ARGS>>;
+using JSAnimalFactory = JSFactory<Animal, JSAnimal, TypeList<>, TypeList<ANIMAL_CONSTRUCTOR_ARGS>>;
 
 template <class T>
-using CppAnimalFactory = CppFactory<Animal, T, ANIMAL_CONSTRUCTOR_ARGS>;
+using CppAnimalFactory = CppFactory<Animal, T, TypeList<ANIMAL_CONSTRUCTOR_ARGS>>;
 
 
 map<string, std::unique_ptr<AnimalFactory>> animal_factories;

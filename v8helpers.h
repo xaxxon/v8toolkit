@@ -17,6 +17,9 @@ namespace v8toolkit {
 
 template <class... > struct TypeList {};
 
+// This function is not defined and can only be called inside decltype()
+template <class R, class... Ts>
+auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
 
 
 template <bool... b> struct static_all_of;

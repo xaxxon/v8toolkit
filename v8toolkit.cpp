@@ -336,6 +336,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
 * The goal of this function is to be as close to node.js require as possible, so patches or descriptions of how it differs are appreciated.
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
+#define REQUIRE_DEBUG_PRINTS false
 bool require(
     v8::Local<v8::Context> context,
     std::string filename,
@@ -346,7 +347,7 @@ bool require(
     auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
-        if (true) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
+        if (REQUIRE_DEBUG_PRINTS) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
         isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Cannot specify a file containing .."));
         return false;
     }
@@ -363,7 +364,7 @@ bool require(
                 std::string file_contents;
                 time_t file_modification_time = 0;
                 if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
-                    if (true) printf("Module not found at %s\n", complete_filename.c_str());
+                    if (REQUIRE_DEBUG_PRINTS) printf("Module not found at %s\n", complete_filename.c_str());
                     continue;
                 }
                 
@@ -375,19 +376,19 @@ bool require(
         
                     auto cached_require_results = isolate_require_results.find(complete_filename);
                     if (cached_require_results != isolate_require_results.end()) {
-                        if (true) printf("Found cached results, using cache instead of re-running module\n");
+                        if (REQUIRE_DEBUG_PRINTS) printf("Found cached results, using cache instead of re-running module\n");
                         
                         // if we don't care about file modifications or the file modification time is the same as before,
                         //   return the cached result
                         if (!track_file_modification_times || file_modification_time == cached_require_results->second.first) {
-                            if (true) printf("Returning cached results\n");
+                            if (REQUIRE_DEBUG_PRINTS) printf("Returning cached results\n");
                             result = cached_require_results->second.second.Get(isolate);
                             return true;
                         } else {
-                            if (true) printf("Not returning cached results because modification time was no good\n");
+                            if (REQUIRE_DEBUG_PRINTS) printf("Not returning cached results because modification time was no good\n");
                         }
                     } else {
-                        if (true) printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
+                        if (REQUIRE_DEBUG_PRINTS) printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
                     }
                 }
 
@@ -399,11 +400,11 @@ bool require(
                     v8::Local<v8::Value> error;
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
-                    if (true) printf("About to try to parse json: %s\n", file_contents.c_str());
+                    if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents.c_str());
                     maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate,file_contents.c_str()));
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
-                        if (true) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
+                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
                         return false;
                     }
                 } else {
@@ -411,7 +412,7 @@ bool require(
                     v8::Local<v8::Value> error;
                     if (!compile_source(context, file_contents, script, error)) {
                         isolate->ThrowException(error);
-                        if (true) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
+                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
                         return false;
                     }
                         
@@ -438,7 +439,7 @@ bool require(
                     
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
-                        if (true) printf("Couldn't run .js for %s\n", complete_filename.c_str());
+                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run .js for %s\n", complete_filename.c_str());
                         return false;
                     }
                     
@@ -460,10 +461,9 @@ bool require(
             // if any failures, try the next path if it exists
         }
     }
-    printf("Couldn't find any matches for %s\n", filename.c_str());
+    if (REQUIRE_DEBUG_PRINTS) printf("Couldn't find any matches for %s\n", filename.c_str());
     isolate->ThrowException(v8::String::NewFromUtf8(isolate, "No such module found in any search path"));
     return false;
-
 }
 
 

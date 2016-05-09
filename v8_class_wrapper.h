@@ -206,8 +206,8 @@ private:
 		T * new_cpp_object = nullptr;
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
         
-        using PB_TYPE = ParameterBuilder<0, decltype(constructor), decltype(constructor)>;
-        if (!check_parameter_builder_parameter_count<ParameterBuilder<0, decltype(constructor), decltype(constructor)>, 0>(args)) {
+        using PB_TYPE = ParameterBuilder<0, decltype(constructor), TypeList<CONSTRUCTOR_PARAMETER_TYPES...>>;
+        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
             // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
             return;
@@ -716,12 +716,13 @@ public:
     			// bind the object and method into a std::function then build the parameters for it and call it
                 if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
     			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
-            
-                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>;
+
+
+                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
             
                 PB_TYPE pb;
                 auto arity = PB_TYPE::ARITY;
-                if (!check_parameter_builder_parameter_count<v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(bound_method)>, 0>(info)) {
+                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
                     std::stringstream ss;
                     ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));

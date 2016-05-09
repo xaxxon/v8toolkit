@@ -56,7 +56,7 @@ else()
     set(V8_BASE_SHARED_LIB_DIR_DEFAULT ../v8/out/native)
     set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
-    set(V8_STATIC_LIBS ${V8_LIBS} v8_base icudata)
+    set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
 endif()
 
 set(CPPFORMAT_BASE_DIR ${CPPFORMAT_BASE_DIR_DEFAULT} CACHE PATH "path to root of cppformat that contains include and lib dirs")
@@ -69,7 +69,7 @@ set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8.h inclu
 if (UNIX AND NOT APPLE)
     link_directories(${V8_BASE_LIB_DIR}/obj.target/tools/gyp ${V8_BASE_STATIC_LIB_DIR}/obj.target/third_party/icu)
 endif()
-link_directories(${V8_BASE_SHARED_LIB_DIR} ${V8_BASE_STATIC_LIB_DIR})
+link_directories(${V8_BASE_STATIC_LIB_DIR})
 link_directories(${CPPFORMAT_BASE_DIR}\\lib)
 
 include_directories(. ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT_BASE_DIR}/include)
@@ -135,7 +135,19 @@ add_dependencies(javascript_sample v8toolkit_static)
 target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample v8toolkit)
 
-
+add_executable(sample samples/sample.cpp)
+add_dependencies(sample v8toolkit_static)
+target_link_libraries(sample ${V8_STATIC_LIBS})
+target_link_libraries(sample v8toolkit)
+target_link_libraries(sample cppformat)
+add_custom_command(TARGET sample PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/code.js
+        ${PROJECT_BINARY_DIR})
 
 add_custom_target(samples)
 add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample)
+
+add_custom_target(run_samples)
+add_dependencies(run_samples samples)
+add_custom_command(TARGET run_samples POST_BUILD
+        COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)

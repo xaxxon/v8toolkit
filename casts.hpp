@@ -196,8 +196,7 @@ struct CastToNative<v8::Local<v8::Function>> {
 template<>
 struct CastToNative<char *> {
   std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-    char * string = *v8::String::Utf8Value(value);
-    return std::unique_ptr<char[]>(strdup(string));
+    return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
   }
 };
 

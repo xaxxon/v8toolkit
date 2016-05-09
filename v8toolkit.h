@@ -294,8 +294,8 @@ struct ParameterBuilder;
 /**
 * Specialization for when there are no parameters left to process, so call the function now
 */  
-template<int depth, class Function, class Return>
-struct ParameterBuilder<depth, Function, std::function<Return()>> {
+template<int depth, class Function>
+struct ParameterBuilder<depth, Function, TypeList<>> {
     // the final class in the call chain stores the actual method to be called
 
     enum {DEPTH=depth, ARITY=0};
@@ -318,13 +318,13 @@ struct ParameterBuilder<depth, Function, std::function<Return()>> {
 *   function type while the second one has its input parameter list stripped off one at a time to determine when
 *   the inheritance chain ends
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
+template<int depth, typename FUNCTION_TYPE, typename HEAD, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD,TAIL...>,
         // if it's not a pointer or it is a pointer but it's a pointer to a user-defined (non-fundamental) type
                         std::enable_if_t<!std::is_pointer<HEAD>::value || !std::is_fundamental< typename std::remove_pointer<HEAD>::type >::value > >:
-        public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+        public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
 
-    using super = ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    using super = ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>>;
     enum {DEPTH = depth, ARITY=super::ARITY + 1};
 
     template<typename ... Ts>
@@ -336,11 +336,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD,TAIL...)>,
 /**
 * Specialization for function taking a char *
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)>> : 
-					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<char *, TAIL...>> :
+					      public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
     
-    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> super;
     enum {DEPTH = depth, ARITY=super::ARITY+1};
     std::unique_ptr<char[]> buffer;
     template<typename ... Ts>
@@ -353,11 +353,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(char *, TAIL...)
 /**
 * Specialization for function taking a const char *
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TAIL...)>> : 
-					      public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<const char *, TAIL...>> :
+					      public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
     
-    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> super;
     enum {DEPTH = depth, ARITY=super::ARITY+1};
     std::unique_ptr<char[]> buffer;
     
@@ -372,11 +372,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const char *, TA
 /**
 * Specialization that deals with pointers to primitive types by creating a holder that the address of can be passed along
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>, std::enable_if_t< std::is_fundamental<HEAD>::value >> :
-    public ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+template<int depth, typename FUNCTION_TYPE, typename HEAD, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD*, TAIL...>, std::enable_if_t< std::is_fundamental<HEAD>::value >> :
+    public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
 
-    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> super;
     enum {DEPTH = depth, ARITY=super::ARITY+1};
     
     // This variable's address will be passed into the function to be called
@@ -400,11 +400,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(HEAD*, TAIL...)>
 *   done, but this parameter is injected directly, not taken from the parameter list from
 *   javascript
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::FunctionCallbackInfo<v8::Value> &,TAIL...)>> : 
-        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<const v8::FunctionCallbackInfo<v8::Value> &,TAIL...>> :
+        public ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>> {
             
-    typedef ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> super;
+    typedef ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>> super;
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
@@ -418,11 +418,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(const v8::Functi
 * Specialization for functions that want the isolate pointer (but not all the rest of the stuff
 *   in the FunctionCallbackInfo for simplicity's sake)
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, TAIL...)>> : 
-        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Isolate *, TAIL...>> :
+        public ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>> {
             
-    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>>;
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
@@ -435,10 +435,10 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Isolate *, T
 /**
 * Specialization for a function that wants the context
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Context>, TAIL...)>> : 
-        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
-    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Local<v8::Context>, TAIL...>> :
+        public ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>>;
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
@@ -452,10 +452,10 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Co
 /**
 * Specialization for function wanting the receiver JS object (object being created for constructors)
 */
-template<int depth, typename FUNCTION_TYPE, typename RET, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Object>, TAIL...)>> : 
-        public ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>> {
-    using super = ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(TAIL...)>>;
+template<int depth, typename FUNCTION_TYPE, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Local<v8::Object>, TAIL...>> :
+        public ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>> {
+    using super = ParameterBuilder<depth, FUNCTION_TYPE, TypeList<TAIL...>>;
     enum {DEPTH = depth, ARITY=super::ARITY};
 
     template<typename ... Ts>
@@ -471,7 +471,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, std::function<RET(v8::Local<v8::Ob
 * Any return value must be handled directly by the function itself by populating info parameter
 */
 template<int depth, class T>
-struct ParameterBuilder<depth, T, std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>>
+struct ParameterBuilder<depth, T, TypeList<const v8::FunctionCallbackInfo<v8::Value>&>>
 {
     enum {ARITY=0};
     
@@ -494,7 +494,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 
         auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(info.Data()))->Value();
 
-        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, std::function<R(Args...)>>;
+        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, TypeList<Args...>>;
         PB_TYPE pb;
         
         auto arity = PB_TYPE::ARITY;

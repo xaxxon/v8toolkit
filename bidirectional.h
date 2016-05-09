@@ -68,18 +68,18 @@ class Factory;
 template<class Base, class... ConstructorArgs>
 class Factory<Base, TypeList<ConstructorArgs...>> {
 public:
-    virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
+    virtual Base * operator()(ConstructorArgs&&... constructor_args) = 0;
 
     template <class U = Base>
-    std::unique_ptr<U> get_unique(ConstructorArgs... constructor_args) {
-        return std::unique_ptr<U>((*this)(constructor_args...));
+    std::unique_ptr<U> get_unique(ConstructorArgs&&... constructor_args) {
+        return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(constructor_args)...));
     }
 
     /**
     * Helper to quickly turn a Base type into another type if allowed
     */
     template<class U>
-    U * as(ConstructorArgs...  constructor_args){
+    U * as(ConstructorArgs&&...  constructor_args){
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
         auto result = this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
         if (dynamic_cast<U*>(result)) {
@@ -101,7 +101,7 @@ class CppFactory;
 template<class Base, class Child, class... ExternalConstructorParams>
 class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>>{
 public:
-    virtual Base * operator()(ExternalConstructorParams... constructor_args) override
+    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) override
     {
         // printf("CppFactory making a %s\n", typeid(Child).name());
         return new Child(std::forward<ExternalConstructorParams>(constructor_args)...);
@@ -111,8 +111,15 @@ public:
 /**
 * Returns a JavaScript-extended object inheriting from Base.  It's Base type and
 *   *ConstructorParams must match up with the Factory class it is associated
-* InternalConstructorParams are ones that will be specified in the javascript code declaring the new type while
-* ExternalConstructorParams will be specified by the user creating an instnace of that type
+* InternalConstructorParams are ones that will be specified in the javascript code declaring the new type
+* ExternalConstructorParams will be specified by the user creating an instance of that type
+*
+* Example of internal vs external parameters:  if the base type is "animal" and it takes two parameters
+*    "is_mammal" and "name".   Whether or not the derived type is a mammal is known when making the derived type
+*    so it would be an internal parameter, while the name isn't known until the object is constructed so it would
+*    be an external parameter.
+*
+*  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
 template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>>
 class JSFactory;
@@ -140,13 +147,13 @@ public:
     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
     *   extends the C++ functionality in javascript
     */
-    Base * operator()(ExternalConstructorParams... constructor_parameters) {
+    Base * operator()(ExternalConstructorParams&&... constructor_parameters) {
         // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
         
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
                                                     context->Global(),
-                                                    std::tuple<ExternalConstructorParams...>(constructor_parameters...));
+						   std::tuple<ExternalConstructorParams...>(std::forward<ExternalConstructorParams>(constructor_parameters)...));
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
@@ -179,10 +186,10 @@ public:
 			// Create the new C++ object - initialized with the JavaScript object
 			// depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
 			std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
-				new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
+			    new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
 			};
             
-            using PB_TYPE = ParameterBuilder<1, decltype(constructor), decltype(constructor)>;
+            using PB_TYPE = ParameterBuilder<1, decltype(constructor), TypeList<InternalConstructorParams..., ExternalConstructorParams...>>;
             if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
                 // printf("add_subclass_function for %s got %d parameters but needed %d parameters\n", typeid(JSWrapperClass).name(), (int)info.Length()-1, (int)PB_TYPE::ARITY);
                 isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
