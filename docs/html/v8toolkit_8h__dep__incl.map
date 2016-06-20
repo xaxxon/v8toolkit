@@ -1,13 +1,7 @@
-<map id="v8toolkit.h" name="v8toolkit.h">
-<area shape="rect" id="node2" href="$bidirectional_8h.html" title="bidirectional.h" alt="" coords="120,149,216,173"/>
-<area shape="rect" id="node4" href="$v8__class__wrapper_8h.html" title="v8_class_wrapper.h" alt="" coords="230,77,357,101"/>
-<area shape="rect" id="node11" href="$toolbox__sample_8cpp.html" title="samples/toolbox_sample.cpp" alt="" coords="381,77,557,101"/>
-<area shape="rect" id="node12" href="$v8toolkit_8cpp.html" title="v8toolkit.cpp" alt="" coords="581,77,669,101"/>
-<area shape="rect" id="node3" href="$bidirectional__sample_8cpp.html" title="samples/bidirectional\l_sample.cpp" alt="" coords="5,221,139,257"/>
-<area shape="rect" id="node5" href="$javascript_8h.html" title="javascript.h" alt="" coords="252,149,334,173"/>
-<area shape="rect" id="node10" href="$sample_8cpp.html" title="samples/sample.cpp" alt="" coords="359,149,489,173"/>
-<area shape="rect" id="node6" href="$javascript_8cpp.html" title="javascript.cpp" alt="" coords="163,227,258,251"/>
-<area shape="rect" id="node7" href="$exception__sample_8cpp.html" title="samples/exception_sample.cpp" alt="" coords="282,227,470,251"/>
-<area shape="rect" id="node8" href="$javascript__sample_8cpp.html" title="samples/javascript\l_sample.cpp" alt="" coords="495,221,615,257"/>
-<area shape="rect" id="node9" href="$thread__sample_8cpp.html" title="samples/thread_sample.cpp" alt="" coords="638,227,810,251"/>
+<map id="include/v8toolkit.h" name="include/v8toolkit.h">
+<area shape="rect" id="node2" href="$v8__class__wrapper_8h.html" title="include/v8_class_wrapper.h" alt="" coords="67,77,235,101"/>
+<area shape="rect" id="node6" href="$v8toolkit_8cpp.html" title="src/v8toolkit.cpp" alt="" coords="260,77,367,101"/>
+<area shape="rect" id="node3" href="$bidirectional_8h.html" title="include/bidirectional.h" alt="" coords="5,149,142,173"/>
+<area shape="rect" id="node4" href="$javascript_8h.html" title="include/javascript.h" alt="" coords="167,149,290,173"/>
+<area shape="rect" id="node5" href="$javascript_8cpp.html" title="src/javascript.cpp" alt="" coords="171,221,285,245"/>
 </map>

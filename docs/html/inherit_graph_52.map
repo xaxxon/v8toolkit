@@ -1,3 +1,10 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structv8toolkit_1_1CastToJS_3_01unsigned_01short_01_4.html" title="v8toolkit::CastToJS\l\&lt; unsigned short \&gt;" alt="" coords="5,5,129,41"/>
+<area shape="rect" id="node1" title="STL class. " alt="" coords="5,90,101,114"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1BidirectionalException.html" title="v8toolkit::Bidirectional\lException" alt="" coords="170,5,307,41"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1CastException.html" title="v8toolkit::CastException" alt="" coords="164,66,313,90"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1InvalidCallException.html" title="v8toolkit::InvalidCallException" alt="" coords="149,114,329,138"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1V8Exception.html" title="v8toolkit::V8Exception" alt="" coords="169,162,308,186"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1V8AssertionException.html" title="v8toolkit::V8AssertionException" alt="" coords="378,107,568,131"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1V8CompilationException.html" title="v8toolkit::V8Compilation\lException" alt="" coords="398,156,548,192"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1V8ExecutionException.html" title="v8toolkit::V8ExecutionException" alt="" coords="377,217,569,241"/>
 </map>

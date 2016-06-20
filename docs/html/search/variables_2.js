@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['called_5ffrom_5fjavascript',['called_from_javascript',['../classv8toolkit_1_1JSWrapper.html#aee8566564cec2dddab1125d173c2a6b4',1,'v8toolkit::JSWrapper']]]
+  ['data',['data',['../structv8toolkit_1_1AnyPtr.html#a25a2cc4fb6faa90513253134c7962bba',1,'v8toolkit::AnyPtr::data()'],['../structv8toolkit_1_1Any.html#a4a987d78c09ae982150f88de4e99bcfd',1,'v8toolkit::Any::data()']]]
 ];

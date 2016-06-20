@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['_5fadd_5fmethod',['_add_method',['../classv8toolkit_1_1V8ClassWrapper_3_01T_00_01void_01_4.html#a6a22cd6f3454ed0fef245a3ccaf5e6a5',1,'v8toolkit::V8ClassWrapper&lt; T, void &gt;']]],
+  ['_5fadd_5fmethod',['_add_method',['../classv8toolkit_1_1V8ClassWrapper.html#ac27e1133841f2cf87fac3ccc5e9ed0c5',1,'v8toolkit::V8ClassWrapper']]],
   ['_5fformat_5fhelper',['_format_helper',['../namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7',1,'v8toolkit']]],
   ['_5fget_5fmodification_5ftime_5fof_5ffilename',['_get_modification_time_of_filename',['../namespacev8toolkit.html#a98c8fc8c126e396be89c145152337f78',1,'v8toolkit']]],
   ['_5fprint_5fhelper',['_print_helper',['../namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c',1,'v8toolkit']]],

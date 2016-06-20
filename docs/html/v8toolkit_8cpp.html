@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.11"/>
-<title>v8toolkit: v8toolkit.cpp File Reference</title>
+<title>v8toolkit: src/v8toolkit.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -87,6 +87,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
@@ -117,11 +121,12 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for v8toolkit.cpp:</div>
 <div class="dyncontent">
-<div class="center"><img src="v8toolkit_8cpp__incl.png" border="0" usemap="#v8toolkit_8cpp" alt=""/></div>
-<map name="v8toolkit_8cpp" id="v8toolkit_8cpp">
-<area shape="rect" id="node16" href="v8toolkit_8h.html" title="./v8toolkit.h" alt="" coords="746,77,828,101"/>
-<area shape="rect" id="node20" href="v8helpers_8h.html" title="v8helpers.h" alt="" coords="794,149,877,173"/>
-<area shape="rect" id="node23" href="casts_8hpp.html" title="casts.hpp" alt="" coords="902,149,974,173"/>
+<div class="center"><img src="v8toolkit_8cpp__incl.png" border="0" usemap="#src_2v8toolkit_8cpp" alt=""/></div>
+<map name="src_2v8toolkit_8cpp" id="src_2v8toolkit_8cpp">
+<area shape="rect" id="node16" href="v8toolkit_8h.html" title="./v8toolkit.h" alt="" coords="762,77,844,101"/>
+<area shape="rect" id="node20" href="v8helpers_8h.html" title="v8helpers.h" alt="" coords="762,149,845,173"/>
+<area shape="rect" id="node25" href="casts_8hpp.html" title="casts.hpp" alt="" coords="1362,149,1434,173"/>
+<area shape="rect" id="node32" href="casts__impl_8hpp.html" title="casts_impl.hpp" alt="" coords="954,149,1055,173"/>
 </map>
 </div>
 </div>
@@ -134,8 +139,8 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a04f269fcdf4dd7e9971bbfc03c5b0e30"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="v8toolkit_8cpp.html#a04f269fcdf4dd7e9971bbfc03c5b0e30">STRINGIFY_VALUE_DEBUG</a>&#160;&#160;&#160;false</td></tr>
-<tr class="separator:a04f269fcdf4dd7e9971bbfc03c5b0e30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a537b0d962ee216fa550261a9abfab1ee"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="v8toolkit_8cpp.html#a537b0d962ee216fa550261a9abfab1ee">REQUIRE_DEBUG_PRINTS</a>&#160;&#160;&#160;false</td></tr>
+<tr class="separator:a537b0d962ee216fa550261a9abfab1ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -150,52 +155,48 @@ Functions</h2></td></tr>
 <tr class="separator:af61c605180d6163dcf8c93f24929316c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a849759dd00446ac0a4a99fcd958ce328"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a849759dd00446ac0a4a99fcd958ce328">v8toolkit::expose_gc</a> ()</td></tr>
 <tr class="separator:a849759dd00446ac0a4a99fcd958ce328"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8347d9b6eb893fde0b33082328d97c14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a8347d9b6eb893fde0b33082328d97c14">v8toolkit::add_variable</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Data &gt; template_to_attach)</td></tr>
-<tr class="separator:a8347d9b6eb893fde0b33082328d97c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a829aa66a75ba942369e710b2493be837"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a829aa66a75ba942369e710b2493be837">v8toolkit::add_variable</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, const v8::Local&lt; v8::Data &gt; value)</td></tr>
+<tr class="separator:a829aa66a75ba942369e710b2493be837"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae28dc0bd9866afb77f14455c63976683"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ae28dc0bd9866afb77f14455c63976683">v8toolkit::add_variable</a> (const v8::Local&lt; v8::Context &gt; context, const v8::Local&lt; v8::Object &gt; &amp;object, const char *name, const v8::Local&lt; v8::Value &gt; value)</td></tr>
 <tr class="separator:ae28dc0bd9866afb77f14455c63976683"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3b2ed619814469ff03ef483d4b891bb8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3b2ed619814469ff03ef483d4b891bb8">v8toolkit::add_function</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const char *name, void(*function)(const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;))</td></tr>
 <tr class="separator:a3b2ed619814469ff03ef483d4b891bb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abec4c1293f78feb6211c6bc235b674a7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7">v8toolkit::_format_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> append_newline)</td></tr>
+<tr class="memitem:abec4c1293f78feb6211c6bc235b674a7"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#abec4c1293f78feb6211c6bc235b674a7">v8toolkit::_format_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</td></tr>
 <tr class="separator:abec4c1293f78feb6211c6bc235b674a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3252ee5d46eb483c1a71fce86a2cc197"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3252ee5d46eb483c1a71fce86a2cc197">v8toolkit::_printf_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> append_newline)</td></tr>
+<tr class="memitem:a3252ee5d46eb483c1a71fce86a2cc197"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3252ee5d46eb483c1a71fce86a2cc197">v8toolkit::_printf_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</td></tr>
 <tr class="separator:a3252ee5d46eb483c1a71fce86a2cc197"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0994334c3bc7fc7cc14ca39cd887fd41"><td class="memItemLeft" align="right" valign="top">std::vector&lt; v8::Local&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a0994334c3bc7fc7cc14ca39cd887fd41">v8toolkit::get_all_values</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, int depth)</td></tr>
-<tr class="separator:a0994334c3bc7fc7cc14ca39cd887fd41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7452f3e7b7a199276599f1ac8a504a7c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c">v8toolkit::_print_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> append_newline)</td></tr>
+<tr class="memitem:a9cb631d6b0ea7b89c00e1c1eb53c57fb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; v8::Local&lt; v8::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a9cb631d6b0ea7b89c00e1c1eb53c57fb">v8toolkit::get_all_values</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, int depth=1)</td></tr>
+<tr class="separator:a9cb631d6b0ea7b89c00e1c1eb53c57fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7452f3e7b7a199276599f1ac8a504a7c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a7452f3e7b7a199276599f1ac8a504a7c">v8toolkit::_print_helper</a> (const v8::FunctionCallbackInfo&lt; v8::Value &gt; &amp;args, bool append_newline)</td></tr>
 <tr class="separator:a7452f3e7b7a199276599f1ac8a504a7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad087f0196c90da36648caa2201fa4168"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ad087f0196c90da36648caa2201fa4168">v8toolkit::add_print</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; object_template, std::function&lt; void(const std::string &amp;)&gt; callback)</td></tr>
-<tr class="separator:ad087f0196c90da36648caa2201fa4168"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a737c54a1a3d717f801fdb40390d71c6b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a737c54a1a3d717f801fdb40390d71c6b">v8toolkit::add_print</a> (v8::Isolate *isolate, v8::Local&lt; v8::ObjectTemplate &gt; object_template, std::function&lt; void(const std::string &amp;)&gt;=[](const std::string &amp;s){printf(&quot;%s&quot;, s.c_str());})</td></tr>
+<tr class="separator:a737c54a1a3d717f801fdb40390d71c6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c259af106d29be6f28d19a838cd9ad2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2c259af106d29be6f28d19a838cd9ad2">v8toolkit::add_assert</a> (v8::Isolate *isolate, v8::Local&lt; v8::ObjectTemplate &gt; object_template)</td></tr>
 <tr class="separator:a2c259af106d29be6f28d19a838cd9ad2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8ebb51dd22f6ba7533ecd77e6eb58ff"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ad8ebb51dd22f6ba7533ecd77e6eb58ff">v8toolkit::get_file_contents</a> (std::string filename, std::string &amp;file_contents)</td></tr>
+<tr class="memitem:ad8ebb51dd22f6ba7533ecd77e6eb58ff"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#ad8ebb51dd22f6ba7533ecd77e6eb58ff">v8toolkit::get_file_contents</a> (std::string filename, std::string &amp;file_contents)</td></tr>
 <tr class="separator:ad8ebb51dd22f6ba7533ecd77e6eb58ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa5be1ed8fc478de03af12711e8866602"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aa5be1ed8fc478de03af12711e8866602">v8toolkit::get_file_contents</a> (std::string filename, std::string &amp;file_contents, time_t &amp;file_modification_time)</td></tr>
+<tr class="memitem:aa5be1ed8fc478de03af12711e8866602"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aa5be1ed8fc478de03af12711e8866602">v8toolkit::get_file_contents</a> (std::string filename, std::string &amp;file_contents, time_t &amp;file_modification_time)</td></tr>
 <tr class="separator:aa5be1ed8fc478de03af12711e8866602"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a98c8fc8c126e396be89c145152337f78"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a98c8fc8c126e396be89c145152337f78">v8toolkit::_get_modification_time_of_filename</a> (std::string filename, time_t &amp;modification_time)</td></tr>
+<tr class="memitem:a98c8fc8c126e396be89c145152337f78"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a98c8fc8c126e396be89c145152337f78">v8toolkit::_get_modification_time_of_filename</a> (std::string filename, time_t &amp;modification_time)</td></tr>
 <tr class="separator:a98c8fc8c126e396be89c145152337f78"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afb095162ccafdf29bacabbe3598183d1"><td class="memItemLeft" align="right" valign="top">cached_isolate_modules_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#afb095162ccafdf29bacabbe3598183d1">v8toolkit::get_loaded_modules</a> (v8::Isolate *isolate)</td></tr>
 <tr class="separator:afb095162ccafdf29bacabbe3598183d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2b41c2ee3a693286069560197d02b673"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673">v8toolkit::compile_source</a> (v8::Local&lt; v8::Context &gt; &amp;context, std::string source, v8::Local&lt; v8::Script &gt; &amp;script, v8::Local&lt; v8::Value &gt; &amp;error)</td></tr>
+<tr class="memitem:a2b41c2ee3a693286069560197d02b673"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2b41c2ee3a693286069560197d02b673">v8toolkit::compile_source</a> (v8::Local&lt; v8::Context &gt; &amp;context, std::string source, v8::Local&lt; v8::Script &gt; &amp;script, v8::Local&lt; v8::Value &gt; &amp;error)</td></tr>
 <tr class="separator:a2b41c2ee3a693286069560197d02b673"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2228d8f651377a86bb80a2f2caf1270d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a2228d8f651377a86bb80a2f2caf1270d">v8toolkit::require</a> (v8::Local&lt; v8::Context &gt; context, std::string filename, v8::Local&lt; v8::Value &gt; &amp;result, const std::vector&lt; std::string &gt; &amp;paths, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> track_file_modification_times, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> use_cache)</td></tr>
-<tr class="separator:a2228d8f651377a86bb80a2f2caf1270d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88aedce7b7d5b72dc25a2ca93c832f49"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a88aedce7b7d5b72dc25a2ca93c832f49">v8toolkit::require</a> (v8::Local&lt; v8::Context &gt; context, std::string filename, v8::Local&lt; v8::Value &gt; &amp;result, const std::vector&lt; std::string &gt; &amp;paths, bool track_modification_times=false, bool use_cache=true)</td></tr>
+<tr class="separator:a88aedce7b7d5b72dc25a2ca93c832f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7eff9a25386faa32c87137a24fc6703a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a">v8toolkit::add_module_list</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template)</td></tr>
 <tr class="separator:a7eff9a25386faa32c87137a24fc6703a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3c8aeeda89a9c35fe4192ec294edd086"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3c8aeeda89a9c35fe4192ec294edd086">v8toolkit::add_require</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;object_template, const std::vector&lt; std::string &gt; &amp;paths)</td></tr>
-<tr class="separator:a3c8aeeda89a9c35fe4192ec294edd086"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6639e33e5019d03d3555f72af8938ed3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a6639e33e5019d03d3555f72af8938ed3">v8toolkit::add_require</a> (v8::Isolate *isolate, const v8::Local&lt; v8::ObjectTemplate &gt; &amp;context, const std::vector&lt; std::string &gt; &amp;paths)</td></tr>
+<tr class="separator:a6639e33e5019d03d3555f72af8938ed3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acff8a379e70819196b119e240d620575"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#acff8a379e70819196b119e240d620575">v8toolkit::require_directory</a> (v8::Local&lt; v8::Context &gt; context, std::string directory_name)</td></tr>
 <tr class="separator:acff8a379e70819196b119e240d620575"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d">v8toolkit::print_v8_value_details</a> (v8::Local&lt; v8::Value &gt; local_value)</td></tr>
-<tr class="separator:a29444df591cd5d038ed1f9466ccd4f1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3beb80bc72e134e99360b13feea7d293"><td class="memItemLeft" align="right" valign="top">std::set&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a3beb80bc72e134e99360b13feea7d293">v8toolkit::make_set_from_object_keys</a> (v8::Isolate *isolate, v8::Local&lt; v8::Object &gt; &amp;object, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> own_properties_only=true)</td></tr>
-<tr class="separator:a3beb80bc72e134e99360b13feea7d293"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a75d2e0ef0a60e19a3e27b4164ec46933"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a75d2e0ef0a60e19a3e27b4164ec46933">v8toolkit::dump_prototypes</a> (v8::Isolate *isolate, v8::Local&lt; v8::Object &gt; object)</td></tr>
 <tr class="separator:a75d2e0ef0a60e19a3e27b4164ec46933"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeccaa5d6f46d147cc03f023ca9ccbd67"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespace_3globalScope_4.html#classbool">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aeccaa5d6f46d147cc03f023ca9ccbd67">v8toolkit::compare_contents</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Value &gt; &amp;left, const v8::Local&lt; v8::Value &gt; &amp;right)</td></tr>
+<tr class="memitem:aeccaa5d6f46d147cc03f023ca9ccbd67"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#aeccaa5d6f46d147cc03f023ca9ccbd67">v8toolkit::compare_contents</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Value &gt; &amp;left, const v8::Local&lt; v8::Value &gt; &amp;right)</td></tr>
 <tr class="separator:aeccaa5d6f46d147cc03f023ca9ccbd67"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a70cb6090d261db6fccfd62b69af9b5b3"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a70cb6090d261db6fccfd62b69af9b5b3">v8toolkit::stringify_value</a> (v8::Isolate *isolate, const v8::Local&lt; v8::Value &gt; &amp;value, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> top_level, <a class="el" href="namespace_3globalScope_4.html#classbool">bool</a> show_all_properties)</td></tr>
-<tr class="separator:a70cb6090d261db6fccfd62b69af9b5b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b80a58b5f3d61818ce84e2018feebc1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacev8toolkit.html#a1b80a58b5f3d61818ce84e2018feebc1">v8toolkit::get_interesting_properties</a> (v8::Local&lt; v8::Context &gt; context, v8::Local&lt; v8::Object &gt; object)</td></tr>
+<tr class="separator:a1b80a58b5f3d61818ce84e2018feebc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -205,26 +206,29 @@ Variables</h2></td></tr>
 <tr class="separator:ae11990eff5d6debfc42e18bda75335eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
-<a class="anchor" id="a04f269fcdf4dd7e9971bbfc03c5b0e30"></a>
+<a class="anchor" id="a537b0d962ee216fa550261a9abfab1ee"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define STRINGIFY_VALUE_DEBUG&#160;&#160;&#160;false</td>
+          <td class="memname">#define REQUIRE_DEBUG_PRINTS&#160;&#160;&#160;false</td>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Attempts to load the specified external resource. Attempts to load exact match filename in each path, then &lt;filename&gt;.js in each path, then &lt;filename&gt;.json in each path</p>
+<p>Paths are attempted in vector order[0, 1, 2...]. If the matching filename ends in .js (either because it was specified as such or because it matched after the suffix was added) it will be executed as a traditional module with the exports object being returned. If the matching filename ends in .json, the last value in the file will be returned. The results of require'd files is cached and if the same module (based on the full matching value including path and any added suffix) is required again, the cached value will be returned. The module will not be re-run.</p>
+<p>The goal of this function is to be as close to node.js require as possible, so patches or descriptions of how it differs are appreciated. Not that much time was spent trying to determine the exact behavior, so there are likely significant differences </p>
 
-<p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00667">667</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
+<p>Definition at line <a class="el" href="v8toolkit_8cpp_source.html#l00339">339</a> of file <a class="el" href="v8toolkit_8cpp_source.html">v8toolkit.cpp</a>.</p>
 
-<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00669">v8toolkit::stringify_value()</a>.</p>
+<p>Referenced by <a class="el" href="v8toolkit_8cpp_source.html#l00340">v8toolkit::require()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Fri Mar 11 2016 14:58:01 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Mon Jun 20 2016 09:39:36 for v8toolkit by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.11
 </small></address>

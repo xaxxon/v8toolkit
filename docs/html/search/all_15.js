@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['y',['y',['../javascript__sample_8cpp.html#a0a2f84ed7838f07779ae24c5a9086d33',1,'javascript_sample.cpp']]],
-  ['y2',['y2',['../javascript__sample_8cpp.html#ab01055e87d61c94f71e59f1116867f60',1,'javascript_sample.cpp']]],
-  ['y_5f',['y_',['../classPoint.html#ae45effa2adb0036e4a770abb9b1160e6',1,'Point']]]
+  ['x',['x',['../javascript__sample_8cpp.html#a6150e0515f7202e2fb518f7206ed97dc',1,'javascript_sample.cpp']]],
+  ['x_5f',['x_',['../classPoint.html#acfe156c55546f7e551fb54c7ea08a6cb',1,'Point']]]
 ];

@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['allow_5fcopy_5fconstructor',['allow_copy_constructor',['../structFoo.html#aa893a484de5c5a92bf33f212a7e4483b',1,'Foo']]],
-  ['animal_5ffactories',['animal_factories',['../bidirectional__sample_8cpp.html#a7164cf7402876d3745c7763eb6089ae5',1,'bidirectional_sample.cpp']]],
-  ['animals',['animals',['../bidirectional__sample_8cpp.html#a2323f598769a7241b072aebb9239e736',1,'bidirectional_sample.cpp']]]
+  ['buffer',['buffer',['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01TypeList_3_01char_01_5_00_01TAIL_8_8_8_01_4_01_4.html#a45a9bf91b451843c8a058d15312e3ce0',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, TypeList&lt; char *, TAIL... &gt; &gt;::buffer()'],['../structv8toolkit_1_1ParameterBuilder_3_01depth_00_01FUNCTION__TYPE_00_01TypeList_3_01const_01char_01_5_00_01TAIL_8_8_8_01_4_01_4.html#a68770e01107ec44bc016d5b8ec2fcb22',1,'v8toolkit::ParameterBuilder&lt; depth, FUNCTION_TYPE, TypeList&lt; const char *, TAIL... &gt; &gt;::buffer()']]]
 ];
