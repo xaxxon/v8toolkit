@@ -13,67 +13,6 @@ class Isolate;
 class Script;
 
 
-/**
-* When the V8 engine itself generates an error (or a user calls isolate->ThrowException manually with a v8::Value for some reason)
-* That exception is re-thrown as a standard C++ exception of this type.   The V8 Value thrown is available.
-* get_local_value must be called within a HandleScope
-* get_value returns a new Global handle to the value.  
-*/
-class V8Exception : public std::exception {
-private:
-    v8::Isolate * isolate;
-    v8::Global<v8::Value> value;
-
-public:
-    V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {}
-    V8Exception(v8::Isolate * isolate, v8::Local<v8::Value> value) : V8Exception(isolate, v8::Global<v8::Value>(isolate, value)) {}
-    V8Exception(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, v8::String::NewFromUtf8(isolate, reason.c_str())) {}
-    virtual const char * what() const noexcept override {
-        return scoped_run(isolate,[&]{
-            return *v8::String::Utf8Value(value.Get(isolate));
-        });
-    }
-    v8::Local<v8::Value> get_local_value(){return value.Get(isolate);}
-    v8::Isolate * get_isolate(){return isolate;}
-    v8::Global<v8::Value> get_value(){return v8::Global<v8::Value>(isolate, value);}
-};
-
-
-class V8AssertionException : public V8Exception {
-public:
-    V8AssertionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-        V8Exception(isolate, value) {}
-    V8AssertionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
-        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-    V8AssertionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
-};
-
-class V8ExecutionException : public V8Exception {
-public:
-    
-    V8ExecutionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
-        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-    V8ExecutionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-        V8Exception(isolate, value) {}    
-    V8ExecutionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
-        
-};
-
-
-/**
-* Same as a V8 exception, except if this type is thrown it indicates the exception was generated
-*   during compilation, not at runtime.
-*/
-class V8CompilationException : public V8Exception {
-public:
-    V8CompilationException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : 
-        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-    V8CompilationException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-        V8Exception(isolate, value) {}    
-    V8CompilationException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
-    
-};
-
 
 
 /**
@@ -265,12 +204,10 @@ public:
 
 	
     /**
-    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Calls v8toolkit::scoped_run with the associated isolate and context data
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()()),
-			 decltype(std::declval<T>()(), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable()>::type
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -278,13 +215,11 @@ public:
 	}
 
     /**
-    * Calls v8toolkit::scoped_run with the assciated isolate and context data
+    * Calls v8toolkit::scoped_run with the associated isolate and context data
     * Passes the v8::Isolate * into the callback
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*)>
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -295,10 +230,8 @@ public:
     * Calls v8toolkit::scoped_run with the assciated isolate and context data
     * Passes the v8::Isolate * and context into the callback
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
         v8::Locker l(isolate);
 		v8::HandleScope hs(isolate);
@@ -363,6 +296,8 @@ using ContextPtr = std::shared_ptr<Context>;
 * Helper class for a v8::Script object.  As long as a Script shared_ptr is around,
 *   the associated Context will be maintined (which keeps the Isolate around, too)
 */
+class Script;
+using ScriptPtr = std::shared_ptr<Script>;
 class Script : public std::enable_shared_from_this<Script> 
 {
     friend class Context;
@@ -417,12 +352,16 @@ public:
     *   cannot be destroyed until after the async has finished and the caller has had a chance 
     *   to use the results contained in the future
     */ 
-	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred) {
-        return std::async(launch_policy, [this](auto script_helper){
-            return (*this->context_helper)([this, script_helper](){
-                return std::make_pair(this->run(), script_helper);
+	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
+
+        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
+        
+			return (*this->context_helper)([this, script](){
+				return std::make_pair(this->run(), script);
             });
-        }, shared_from_this());
+        
+		}, shared_from_this());
+
     }
 
     /**
@@ -431,10 +370,13 @@ public:
     *   until after the thread completes.
     * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
     */
-	std::thread run_thread(){
+	std::thread run_thread()
+	{
         // Holds on to a shared_ptr to the Script inside the thread object to make sure
         //   it isn't destroyed until the thread completes
-        return std::thread([this](auto script_helper){
+		// return type must be specified for Visual Studio 2015.2
+		// https://connect.microsoft.com/VisualStudio/feedback/details/1557383/nested-generic-lambdas-fails-to-compile-c
+        return std::thread([this](auto script_helper)->void{ 
             (*this)([this]{
                 this->run();
             });
@@ -450,7 +392,6 @@ public:
     }    
 }; 
 
-using ScriptPtr = std::shared_ptr<Script>;
 
 
 /**
@@ -536,24 +477,20 @@ public:
 	/**
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()()),
-			 decltype(std::declval<T>()(), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 
 	/**
     * wraps "callable" in appropriate thread locks, isolate, and handle scopes
     * Passes the v8::Isolate * to the callable function
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr))),
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr)), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*)>::type
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 
 	/**
@@ -561,12 +498,10 @@ public:
     * Passes the v8::Isolate * and v8::Local<v8::Context> to the callable function.
     * Throws v8toolkit::InvalidCallException if the isolate is not currently in a context
     */
-	template<class T, 
-			 class R = decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>())), 
-			 decltype(std::declval<T>()(static_cast<v8::Isolate*>(nullptr), v8::Local<v8::Context>()), 1) = 1>
-	R operator()(T callable)
+	template<class Callable>
+	auto operator()(Callable && callable) -> typename std::result_of_t<Callable(v8::Isolate*, v8::Local<v8::Context>)>
 	{
-		return v8toolkit::scoped_run(isolate, callable);
+		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
 	
     /**
@@ -575,10 +510,13 @@ public:
     *   being called with operator()
     */
 	template<class Callable>
-	void add_function(std::string name, Callable callable) 
+	void add_function(std::string name, Callable && callable)
 	{		
 		(*this)([&](){
-			v8toolkit::add_function(isolate, this->get_object_template(), name.c_str(), callable);
+			v8toolkit::add_function(isolate,
+									this->get_object_template(),
+									name.c_str(),
+									std::forward<Callable>(callable));
 		});
 	}
 	
@@ -596,7 +534,8 @@ public:
     {
 		v8toolkit::expose_variable_readonly(isolate, this->get_object_template(), name.c_str(), variable);
     }
-    
+
+	/// Not sure what this is used for
     void add_variable(const std::string & name, v8::Local<v8::ObjectTemplate> template_to_attach)
     {
         v8toolkit::add_variable(this->isolate, this->get_object_template(), name.c_str(), template_to_attach);
@@ -608,16 +547,19 @@ public:
 	*/
 	template<class T>
 	auto & wrap_class() {
-		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+	    v8toolkit::V8ClassWrapper<std::add_const_t<T>>::get_instance(this->isolate);
+	    return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+		
 	}	
     
     /**
     * Returns a value representing the JSON string specified or throws on bad JSON
     */
     v8::Local<v8::Value> json(std::string json) {
+        v8::TryCatch tc(this->isolate);
         auto maybe = v8::JSON::Parse(this->isolate, v8::String::NewFromUtf8(this->isolate, json.c_str()));
-        if (maybe.IsEmpty()) {
-            throw "bad json";
+        if (tc.HasCaught()) {
+            throw V8ExecutionException(this->isolate, tc);
         }
         return maybe.ToLocalChecked();
     }
@@ -629,40 +571,37 @@ using IsolatePtr = std::shared_ptr<Isolate>;
 * A singleton responsible for initializing the v8 platform and creating isolate helpers.
 */
 class Platform {
-	
+
 	static std::unique_ptr<v8::Platform> platform;
 	static v8toolkit::ArrayBufferAllocator allocator;
 	static bool initialized;
-	
-	
+
+
 public:
-    /** 
+    /**
     * Initializes the v8 platform with default values and tells v8 to look
     *   for its .bin files in the given directory (often argv[0])
-    */ 
+    */
     static void init(char * path_to_bin_files);
-        
+
     /**
     * Parses argv for v8-specific options, applies them, and removes them
     *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
     *    v8 .bin files
     */
 	static void init(int argc, char ** argv);
-    
+
     /**
-    * Shuts down V8.  Any subsequent V8 usage is probably undefined, so 
+    * Shuts down V8.  Any subsequent V8 usage is probably undefined, so
     *   make sure everything is done before you call this.
-    */ 
+    */
 	static void cleanup();
-	
-	
+
+
 	/**
-    * Creates a new Isolate wrapping a new v8::Isolate instance.  Each isolate is completely separate from all the others
-    *   and each isolate can be used simultaneously across threads (but only 1 thread per isolate at a time)
+    * Creates a new Isolate wrapping a new v8::Isolate instance.
     * An Isolate will remain as long as the caller has a shared_ptr to the Isolate or any Contexts created from
-    *   the Isolate still exist.   Once neither of those things is the case, the Isolate will be automatically destroyed.
-    * If any threads are still running when this happens, the results are undefined.
-    * TODO: Can active threads maintain links to their Contexts to stop this from happening?
+    *   the Isolate still exist.
     */
 	static std::shared_ptr<Isolate> create_isolate();
 };
@@ -671,7 +610,8 @@ public:
 template<class T>
 v8::Local<v8::Value> Context::wrap_object(T* object)
 {
-    return get_isolate_helper()->wrap_class<T>().wrap_existing_cpp_object(object);
+	auto & class_wrapper = V8ClassWrapper<T>::get_instance(this->get_isolate());
+	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(this->get_context(), object);
 }
 
 

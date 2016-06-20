@@ -15,15 +15,15 @@ int main(int argc, char ** argv) {
         c->run("doesnotexist.doesnotexist");
     } catch(...){
         printf("caught doesnotexist.doesnotexist exception\n");
-    }   
+    }
     try{
         c->run("throw 4;");
     } catch(...){
         printf("caught throw 4 exception\n");
-    }   
+    }
     try{
         c->run("throw {a:4, b:3}");
     } catch(...){
         printf("caught throw 4 exception\n");
-    }   
+    }
 }

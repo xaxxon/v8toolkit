@@ -343,6 +343,13 @@ void test_casts()
             c->expose_variable("vector_reference", vector_reference);
             c->run("assert_contents(vector_reference, [2,2,2,2])");
             
+            // this calls a function and tests that the function echo'd the input
+            c->add_function("call_function", [](std::function<std::string(std::string)> function){
+                auto result = function("hello");
+                assert (result == "hello");
+            });
+            c->run("call_function(function(s){return s;})");
+            
         } catch (std::exception & e) {
             printf("Cast tests unexpectedily failed: %s\n", e.what());
             assert(false);  

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "v8toolkit.h"
+#include "v8_class_wrapper.h"
 
 
 /**
@@ -15,7 +15,7 @@
 
 namespace v8toolkit {
 
-class BidirectionalException : std::exception {
+class BidirectionalException : public std::exception {
     std::string reason;
 public:
     BidirectionalException(const std::string & reason) : reason(reason) {}
@@ -43,9 +43,10 @@ protected:
     /**
     * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
     *   to call instead of calling the native C++ implementation, but finds its own JS_ACCESS function that its already in
-    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   
+    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   Marked as 
+    *   mutable because it needs to be changed even from within const methods
     */ 
-    bool called_from_javascript = false;
+    mutable bool called_from_javascript = false;
 public:
     JSWrapper(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> created_by) :
         isolate(context->GetIsolate()), 
@@ -61,24 +62,33 @@ public:
 *   returned can be used as a class T regardless of whether it is a pure C++ type 
 *   or if it has been extended in javascript
 */
+template<class Base, class TypeList = TypeList<>>
+class Factory;
+
+
 template<class Base, class... ConstructorArgs>
-class Factory {
+class Factory<Base, TypeList<ConstructorArgs...>> {
 public:
     virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
+
+    template <class U = Base, class... Args>
+    std::unique_ptr<U> get_unique(Args&&... args) {
+        return std::unique_ptr<U>((*this)(std::forward<Args>(args)...));
+    }
 
     /**
     * Helper to quickly turn a Base type into another type if allowed
     */
-    template<class U>
-    U * as(ConstructorArgs...  constructor_args){
-        auto result = this->operator()(constructor_args...);
+    template<class U, class... Args>
+    U * as(Args&&...  args){
+        // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
+        auto result = this->operator()(std::forward<Args>(args)...);
         if (dynamic_cast<U*>(result)) {
             return static_cast<U*>(result);
         } else {
             throw BidirectionalException("Could not convert between types");
         }
     }
-	
 };
 
 
@@ -86,19 +96,38 @@ public:
 * Returns a pure-C++ object of type Child which inherits from type Base.  It's Base type and ConstructorArgs... 
 *   must match with the Factory it is associated with.
 */
-template<class Base, class Child, class ... ConstructorArgs>
-class CppFactory : public Factory<Base, ConstructorArgs...>{
-public:
-    virtual Base * operator()(ConstructorArgs... constructor_args) override {return new Child(constructor_args...);}
-};
+template<class Base, class Child, class ExternalTypeList = TypeList<>>
+class CppFactory;
 
+template<class Base, class Child, class... ExternalConstructorParams>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>>{
+public:
+    virtual Base * operator()(ExternalConstructorParams... constructor_args) override
+    {
+        // printf("CppFactory making a %s\n", typeid(Child).name());
+        return new Child(constructor_args...);
+    }
+};
 
 /**
 * Returns a JavaScript-extended object inheriting from Base.  It's Base type and
-*   ConstructorParameters must match up with the Factory class it is associated with
+*   *ConstructorParams must match up with the Factory class it is associated
+* InternalConstructorParams are ones that will be specified in the javascript code declaring the new type
+* ExternalConstructorParams will be specified by the user creating an instance of that type
+*
+* Example of internal vs external parameters:  if the base type is "animal" and it takes two parameters
+*    "is_mammal" and "name".   Whether or not the derived type is a mammal is known when making the derived type
+*    so it would be an internal parameter, while the name isn't known until the object is constructed so it would
+*    be an external parameter.
+*
+*  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
-template<class Base, class JSWrapperClass, class... ConstructorParameters>
-class JSFactory : public Factory<Base, ConstructorParameters...> {
+template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>>
+class JSFactory;
+
+
+template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams>
+class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
@@ -107,7 +136,7 @@ protected:
 public:
     /**
     * Takes a context to use while calling a javascript_function that returns an object
-    *   inheriting frmo JSWrapper
+    *   inheriting from JSWrapper
     */
     JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Function> javascript_function) :
         isolate(context->GetIsolate()),
@@ -119,11 +148,13 @@ public:
     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
     *   extends the C++ functionality in javascript
     */
-    Base * operator()(ConstructorParameters... constructor_parameters) {
+    Base * operator()(ExternalConstructorParams... constructor_parameters) {
+        // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
+        
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
-            v8::Local<v8::Value> result;
-            bool success = call_javascript_function(context, result, global_javascript_function.Get(isolate), context->Global(), std::tuple<ConstructorParameters...>(constructor_parameters...));
-			assert(success);
+            auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
+                                                    context->Global(),
+						   std::tuple<ExternalConstructorParams...>(constructor_parameters...));
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
@@ -155,10 +186,19 @@ public:
                         			
 			// Create the new C++ object - initialized with the JavaScript object
 			// depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
-			std::function<void(ConstructorParameters...)> constructor = [&](auto... args)->void{
-				new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
+			std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
+			    new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
 			};
-			ParameterBuilder<1, decltype(constructor), decltype(constructor)>()(constructor, info);
+            
+            using PB_TYPE = ParameterBuilder<1, decltype(constructor), TypeList<InternalConstructorParams..., ExternalConstructorParams...>>;
+            if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
+                // printf("add_subclass_function for %s got %d parameters but needed %d parameters\n", typeid(JSWrapperClass).name(), (int)info.Length()-1, (int)PB_TYPE::ARITY);
+                isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
+                return;
+            }
+            
+            
+			PB_TYPE()(constructor, info);
 			
 			// now initialize the JavaScript object with the C++ object (circularly)
 			// TODO: This circular reference may cause the GC to never destroy these objects
@@ -209,11 +249,13 @@ public:
     v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
     return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
       auto js_object = global_js_object.Get(isolate); \
+        v8::Local<v8::Function> js_function; \
         v8::TryCatch tc(isolate); \
-        auto jsfunction = get_key_as<v8::Function>(context, js_object, #name); \
-        v8::Local<v8::Value> result; \
+        try { \
+            js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
+        } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true);} \
         this->called_from_javascript = true; \
-        (void) v8toolkit::call_javascript_function(context, result, jsfunction, js_object, parameter_tuple); \
+        auto result = v8toolkit::call_javascript_function(context, js_function, js_object, parameter_tuple); \
         this->called_from_javascript = false; \
         return cast_to_native(isolate, result); \
     });
@@ -224,9 +266,6 @@ virtual return_type name() override {\
     JS_ACCESS_CORE(return_type, name)\
 }
 
-/**
-* I don't know how to this any other way.
-*/ 
 #define JS_ACCESS_1(return_type, name, t1)\
 virtual return_type name(t1 p1) override {\
     JS_ACCESS_CORE(return_type, name, p1)\
@@ -269,6 +308,56 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8)
 
 #define JS_ACCESS_9(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
+}
+
+#define JS_ACCESS_CONST(return_type, name)\
+virtual return_type name() const override {\
+    JS_ACCESS_CORE(return_type, name)\
+}
+
+#define JS_ACCESS_1_CONST(return_type, name, t1)\
+virtual return_type name(t1 p1) const override {\
+    JS_ACCESS_CORE(return_type, name, p1)\
+}
+
+#define JS_ACCESS_2_CONST(return_type, name, t1, t2)\
+virtual return_type name(t1 p1, t2 p2) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2)\
+}
+
+#define JS_ACCESS_3_CONST(return_type, name, t1, t2, t3)\
+virtual return_type name(t1 p1, t2 p2, t3 p3) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3)\
+}
+
+#define JS_ACCESS_4_CONST(return_type, name, t1, t2, t3, t4)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4)\
+}
+
+#define JS_ACCESS_5_CONST(return_type, name, t1, t2, t3, t4, t5)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5)\
+}
+
+#define JS_ACCESS_6_CONST(return_type, name, t1, t2, t3, t4, t5, t6)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6)\
+}
+
+#define JS_ACCESS_7_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7)\
+}
+
+#define JS_ACCESS_8_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) const override {\
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8)\
+}
+
+#define JS_ACCESS_9_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
+virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) const override {\
     JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 

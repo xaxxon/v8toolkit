@@ -11,10 +11,29 @@
 #include <deque>
 #include <array>
 #include <memory>
-
+#include <utility>
 #include "v8.h"
 
 namespace v8toolkit {
+
+
+#define V8_TOOLKIT_COMMA ,
+
+#define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
+template<TEMPLATE> \
+struct CastToNative<TYPE>{ \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+        return CastToNative<const TYPE>()(isolate, value); \
+    } \
+}; \
+\
+template<TEMPLATE> \
+struct CastToNative<const TYPE> { \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
+
+
+
+
 
 template<typename T>
 struct CastToNative;
@@ -32,61 +51,94 @@ struct CastToNative<void> {
 // integers
 template<>
 struct CastToNative<long long> {
-	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned long long> {
-	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<long> {
-	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned long> {
-	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<int> {
-	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<int>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned int> {
-	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned int>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<short> {
-	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<short>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned short> {
-	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned short>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char> {
-	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<unsigned char> {
-	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned char>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<bool> {
-	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToBoolean()->Value();}
+	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<bool>(value->ToBoolean()->Value());}
 };
 
 template<>
 struct CastToNative<wchar_t> {
-	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<wchar_t>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char16_t> {
-	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char16_t>(value->ToInteger()->Value());}
 };
 template<>
 struct CastToNative<char32_t> {
-	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToInteger()->Value();}
+	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char32_t>(value->ToInteger()->Value());}
 };
+
+template<class Return, class... Params>
+struct CastToNative<std::function<Return(Params...)>> {
+    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
+};
+
+
+CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT) {
+    if (value->IsArray()) {
+        auto length = get_array_length(isolate, value);
+        if (length != 2) {
+            auto error = fmt::format("Array to std::pair must be length 2, but was {}", length);
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, error.c_str()));
+            throw v8toolkit::CastException(error);
+        }
+        auto context = isolate->GetCurrentContext();
+        auto array = get_value_as<v8::Array>(value);
+        auto first = array->Get(context, 0).ToLocalChecked();
+        auto second = array->Get(context, 1).ToLocalChecked();
+        const auto &native_first = v8toolkit::CastToNative<FirstT>()(isolate, first);
+        const auto &native_second = v8toolkit::CastToNative<SecondT>()(isolate, second);
+        return std::pair<FirstT, SecondT>(native_first, native_second);
+
+    } else {
+        printf("cast to native std::pair got %s\n", stringify_value(isolate, value).c_str());
+        auto error = "CastToNative<std::pair<>> requires an array, but another type was provided";
+        isolate->ThrowException(v8::String::NewFromUtf8(isolate, error));
+        throw v8toolkit::CastException(error);
+    }
+}
+};
+
+
 
 
 // TODO: Make sure this is tested
@@ -97,13 +149,13 @@ struct CastToNative<std::vector<ElementType, Rest...>> {
         std::vector<ElementType, Rest...> v;
         if(value->IsArray()) {
             auto array = v8::Local<v8::Object>::Cast(value);
-            auto array_length = array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value();
+            auto array_length = get_array_length(isolate, array);
             for(int i = 0; i < array_length; i++) {
                 auto value = array->Get(context, i).ToLocalChecked();
                 v.push_back(CastToNative<ElementType>()(isolate, value));
             }
         } else {
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires an array, but another type was provided"));
         }
         return v;
     }
@@ -113,15 +165,15 @@ struct CastToNative<std::vector<ElementType, Rest...>> {
 // floats
 template<>
 struct CastToNative<float> {
-	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<float>(value->ToNumber()->Value());}
 };
 template<>
 struct CastToNative<double> {
-	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<double>(value->ToNumber()->Value());}
 };
 template<>
 struct CastToNative<long double> {
-	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return value->ToNumber()->Value();}
+	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long double>(value->ToNumber()->Value());}
 };
 
 
@@ -144,11 +196,7 @@ struct CastToNative<v8::Local<v8::Function>> {
 template<>
 struct CastToNative<char *> {
   std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-    char * string = *v8::String::Utf8Value(value);
-    auto string_length = strlen(string);
-    auto new_string = new char[string_length + 1];
-    strncpy(new_string, string, string_length + 1);
-    return std::unique_ptr<char[]>(new_string);
+    return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
   }
 };
 
@@ -229,18 +277,24 @@ template<>
 struct CastToJS<long> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Number::New(isolate, value);}
 };
+
 template<>
+struct CastToJS<const long> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const long value){return v8::Number::New(isolate, value);}
+};
+
+    template<>
 struct CastToJS<unsigned long> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Number::New(isolate, value);}
 };
 
 template<>
 struct CastToJS<long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
 };
 template<>
 struct CastToJS<unsigned long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, value);}
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
 };
 
 

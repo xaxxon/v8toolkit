@@ -11,43 +11,53 @@ Type `git` on the command line.   If you don't have it, go here: https://git-scm
 #### Building V8
 
 Building V8 is not a simple process.
-
+in
 "depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
 `git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git` this then include it in the PATH environment variable (or just type in the whole path)
 
 (following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
 
-Next, run `fetch v8`.  fetch is another tool in depot-tools.  This will put the source for V8 in a directory called v8.
+From here, the process diverges a bit based on what platform you're on:
 
-For OS X, you need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
-They can either be set on the command line or put in your `~/.bash_profile`.  If you put them in your `.bash_profile`, you must either start a new
-shell or `source` your .bash_rc like `. ~/.bash_rc` to get the environment variables in your current shell
+[Build V8 for OS X](osx_v8_build.md)
 
-    export CXX="`which clang++` -std=c++11 -stdlib=libc++"
-    export CC="`which clang`"
-    export CPP="`which clang` -E"
-    export LINK="`which clang++` -std=c++11 -stdlib=libc++"
-    export CXX_host="`which clang++`"
-    export CC_host="`which clang`"
-    export CPP_host="`which clang` -E"
-    export LINK_host="`which clang++`"
-    export GYP_DEFINES="clang=1 mac_deployment_target=10.7"
+[Build V8 for Windows (Visual Studio)](windows_v8_build.md)
 
-Again, the above lines are ONLY for OS X builds.  Type `echo $CPP` to verify the environment variables are set.  If V8 is not built with libc++, 
-the code written to use it will not link and spew errors about std::string being an undefined symbol.
+[Build V8 for Linux](linux_v8_build.md)
 
+(the following hasn't been moved into the above links yet)
 
-Start the build by going into the v8 directory and running `make native`.   This will build V8 static libraries for the platform of the computer.   Running `make all` will
-attempt to build for x86, x64, as well as ARM and can lead to errors if the environment isn't set up for cross compiling and takes much longer.
+##### Building in Windows (incomplete)
 
-(more options, such as building a shared library are here: https://github.com/v8/v8/wiki/Building%20with%20Gyp)
+git clone depot tools as above. - $ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
-Once this finishes, from the v8 directory, type `cd out/native` and then run `./d8` (a javascript shell) to verify success. (ctrl-d to quit d8)
+Put the new directory in your path - http://www.computerhope.com/issues/ch000549.htm
+
+install python (2) from python.org - I used 2.7.11 -  https://www.python.org/downloads/
+
+put python in your permanent path - it must be in your path environment variable for visual studio to use later or you will get errors in the output window in visual studio
+
+start the bash included with depot_tools:  depot_tools\git-2.7.4-64_bin\bin/bash.exe
+
+This next line shouldn't be needed and I don't know what it does, but if you don't use it and get errors in landmines.py, use it
+> export DEPOT_TOOLS_WIN_TOOLCHAIN=0 
+
+type >fetch v8
+
+in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".  
+
+`NOTE: This will build with the 2013 toolchain by default.  This means you CANNOT link it with code compiled with the 2015 toolchain.  To change this, go to the Project menu, then `Properties`, `Configuration Properties`, `General`, and go to the `Platform Toolset` option and select `Visual Studio 2015 (v140)` or whatever version you want to use.  However, it probably isn't guaranteed to work in any other version of the toolset.
+
+Also note this will build with the statically linked runtime.  As far as I understand, the runtimes of what you link to it must match.  I don't know if building with the dynamically linked runtime works or not.
+
+In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
 
 
 #### Building/installing Boost
 
-V8 doesn't use Boost, but v8toolkit has additional, desirable features when boost is present. 
+v8toolkit uses `boost::format` to provide printf-style functions for console output and string generation.
+
+##### Simple but long Boost install
 
 With apt-get:  `sudo apt-get install libboost-all-dev`
 
@@ -66,6 +76,9 @@ More detailed install information: http://www.boost.org/doc/libs/1_60_0/more/get
 NOTE: If you plan on using the boost libraries that have to be compiled (as opposed to header-only ones), you'll need to build boost with libc++.  Here is an example
 on how to do that: https://gist.github.com/jimporter/10442880
 
+##### Quick Boost "install"
+`boost::format` is a header-only library, so you can just use the -I flag to point the compiler at the headers in the untar'd source.
+
 
 
 #### Build v8toolkit
@@ -76,7 +89,7 @@ go into the v8toolkit directory
 
 edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
 
-To build the libray, on OS X, type `make`, on Linux, type "make LINUX=1"
+To build the libray, on OS X, type `make tests`, on Linux, type `make tests LINUX=1`
 
 The library and some sample programs should build.   To confirm everything is working, `make run` will run the sample programs.
 
