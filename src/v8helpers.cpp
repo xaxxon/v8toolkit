@@ -175,6 +175,13 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
 }
 
 
+v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
+    return get_key_as<v8::Value>(context, object, key);
+}
+
+v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value> value, std::string key) {
+    return get_key_as<v8::Value>(context, get_value_as<v8::Object>(value), key);
+}
 
 
 

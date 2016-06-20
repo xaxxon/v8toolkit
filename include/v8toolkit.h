@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <iostream>
@@ -195,7 +196,8 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
 
     public:
         V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {
-            value_for_what = *v8::String::Utf8Value(this->value.Get(isolate));
+	    std::string str(*v8::String::Utf8Value(this->value.Get(isolate)));
+            value_for_what = str == "" ? "unknown error" : str;
         }
         V8Exception(v8::Isolate * isolate, v8::Local<v8::Value> value) : V8Exception(isolate, v8::Global<v8::Value>(isolate, value)) {}
         V8Exception(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, v8::String::NewFromUtf8(isolate, reason.c_str())) {}
@@ -218,14 +220,17 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
     };
 
     class V8ExecutionException : public V8Exception {
+        std::string stacktrace;
     public:
 
-        V8ExecutionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
-                V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-        V8ExecutionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-                V8Exception(isolate, value) {}
-        V8ExecutionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
-
+        V8ExecutionException(v8::Isolate * isolate, v8::TryCatch & tc) :
+	V8Exception(isolate, tc.Exception()) {
+	    auto stacktrace_maybe = tc.StackTrace(isolate->GetCurrentContext());
+	    if (!stacktrace_maybe.IsEmpty()) {
+		stacktrace = *v8::String::Utf8Value(stacktrace_maybe.ToLocalChecked());
+	    }
+        }
+        const std::string & get_stacktrace(){return stacktrace;}
     };
 
 
@@ -489,6 +494,8 @@ template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
 {
     auto copy = new std::function<R(Args...)>(f);
+
+    // wrap the actual call in this lambda
     return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
 
@@ -507,14 +514,18 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
         std::exception_ptr exception_pointer;
         try {
             pb(callable, info);
-        } catch (...) {
-            auto anyptr_t = new Any<std::exception_ptr>( std::current_exception());
-            
+        } catch (std::exception & e) {
+
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+
+            // OLD CODE PUSHED EXCEPTION BACK THROUGH JAVASCRIPT TO C++ BUT EXCEPTION NOT AVAILABLE IN JAVASCRIPT
+            //auto anyptr_t = new Any<std::exception_ptr>( std::current_exception());
             // always put in the base ptr so you can cast to it safely and then use dynamic_cast to try to figure
             //   out what it really is
-            isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
+            //isolate->ThrowException(v8::External::New(isolate, static_cast<AnyBase*>(anyptr_t)));
         }
-        return;
+        return; // no return value, PB sets it in the 'info' object
+
     }, v8::External::New(isolate, (void*)copy));
 }
 
@@ -663,13 +674,7 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
-        auto stacktrace = tc.StackTrace(context);
-        if (stacktrace.IsEmpty()) {
-
-        } else {
-            printf("tc stacktrace return value: %s\n", stringify_value(isolate, stacktrace.ToLocalChecked()).c_str());
-        }
-        throw V8ExecutionException(isolate, tc.Exception());
+        throw V8ExecutionException(isolate, tc);
     }
     return maybe_result.ToLocalChecked();
 }

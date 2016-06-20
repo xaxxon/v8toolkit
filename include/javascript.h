@@ -547,7 +547,9 @@ public:
 	*/
 	template<class T>
 	auto & wrap_class() {
-		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+	    v8toolkit::V8ClassWrapper<std::add_const_t<T>>::get_instance(this->isolate);
+	    return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+		
 	}	
     
     /**
@@ -557,7 +559,7 @@ public:
         v8::TryCatch tc(this->isolate);
         auto maybe = v8::JSON::Parse(this->isolate, v8::String::NewFromUtf8(this->isolate, json.c_str()));
         if (tc.HasCaught()) {
-            throw V8ExecutionException(this->isolate, tc.Exception());
+            throw V8ExecutionException(this->isolate, tc);
         }
         return maybe.ToLocalChecked();
     }
@@ -569,33 +571,33 @@ using IsolatePtr = std::shared_ptr<Isolate>;
 * A singleton responsible for initializing the v8 platform and creating isolate helpers.
 */
 class Platform {
-	
+
 	static std::unique_ptr<v8::Platform> platform;
 	static v8toolkit::ArrayBufferAllocator allocator;
 	static bool initialized;
-	
-	
+
+
 public:
-    /** 
+    /**
     * Initializes the v8 platform with default values and tells v8 to look
     *   for its .bin files in the given directory (often argv[0])
-    */ 
+    */
     static void init(char * path_to_bin_files);
-        
+
     /**
     * Parses argv for v8-specific options, applies them, and removes them
     *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
     *    v8 .bin files
     */
 	static void init(int argc, char ** argv);
-    
+
     /**
-    * Shuts down V8.  Any subsequent V8 usage is probably undefined, so 
+    * Shuts down V8.  Any subsequent V8 usage is probably undefined, so
     *   make sure everything is done before you call this.
-    */ 
+    */
 	static void cleanup();
-	
-	
+
+
 	/**
     * Creates a new Isolate wrapping a new v8::Isolate instance.
     * An Isolate will remain as long as the caller has a shared_ptr to the Isolate or any Contexts created from
@@ -608,7 +610,8 @@ public:
 template<class T>
 v8::Local<v8::Value> Context::wrap_object(T* object)
 {
-    return get_isolate_helper()->wrap_class<T>().wrap_existing_cpp_object(object);
+	auto & class_wrapper = V8ClassWrapper<T>::get_instance(this->get_isolate());
+	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(this->get_context(), object);
 }
 
 

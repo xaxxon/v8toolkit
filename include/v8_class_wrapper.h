@@ -136,16 +136,13 @@ struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
     }
 };
 
-template <class, class = void>
-class V8ClassWrapper;
 
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 * Can provide a JS constructor method or wrap objects created in another c++ function
 */
 template<class T>
-// class V8ClassWrapper<T, std::enable_if_t<!std::is_const<T>::value>>
-class V8ClassWrapper<T, void>
+class V8ClassWrapper
 {
 private:
 	
@@ -302,7 +299,10 @@ public:
             // printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
-        
+
+
+
+
 		// printf("Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
@@ -337,7 +337,9 @@ public:
 	}
 	
 	
-	
+	/**
+	 * Check to see if an object can be converted to type T, else return nullptr
+	 */
     T * cast(AnyBase * any_base)
     {
         if (V8_CLASS_WRAPPER_DEBUG) printf("In ClassWrapper::cast for type %s\n", typeid(T).name());
@@ -441,7 +443,8 @@ public:
 		//   if this line is to be added back
 		// isolate_to_wrapper_map.erase(this->isolate);
 	}
-	
+
+
 	/**
 	* Creates a javascript method with the specified name inside `parent_template` which, when called with the "new" keyword, will return
 	*   a new object of this type.
@@ -454,7 +457,7 @@ public:
 		// create a function template even if no javascript constructor will be used so 
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
 		//   later the FunctionTemplate will be ready to go
-        auto constructor_template = make_function_template(V8ClassWrapper<T, void>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());	
+        auto constructor_template = make_function_template(V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());
         
 				
 		// Add the constructor function to the parent object template (often the global template)
@@ -462,7 +465,8 @@ public:
 				
         return *this;
 	}
-	
+
+
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
     *   add_variable to give a javascript name to an existing c++ object 
@@ -533,7 +537,8 @@ public:
         get_function_template(); // force creation of a function template that doesn't call v8_constructo
         return *this;
     }
-    
+
+
     /**
     * returns whether finalize() has been called on this type for this isolate
     */
@@ -653,6 +658,7 @@ public:
         V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
 //        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
     };
+
 
     template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
     void add_method_for_const_type(const std::string & method_name, Method method) {
@@ -820,22 +826,28 @@ struct CastToNative<T*>
     }
 };
 
+template<class T>
+std::string type_details(){
+    return fmt::format("const: {} pointer: {} reference: {} typeid: {}",
+		       std::is_const<T>::value, std::is_pointer<T>::value,
+		       std::is_reference<T>::value, typeid(T).name());
+ }
+ 
 
 template<typename T>
 struct CastToNative
 {
-	T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+	if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
         if(!value->IsObject()){
-            // TODO: Don't use castexception anywhere just use V8ExecutionException
-            printf("CastToNative failed for type: %s (%s)\n", typeid(T).name(), *v8::String::Utf8Value(value));
+            printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
             throw CastException("No specialized CastToNative found and value was not a Javascript Object");
         }
-		auto object = v8::Object::Cast(*value);
-		if (object->InternalFieldCount() <= 0) {
-            throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", typeid(T).name()));
+	auto object = v8::Object::Cast(*value);
+       	if (object->InternalFieldCount() <= 0) {
+	    throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", typeid(T).name()));
         }
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+       	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 
         // I don't know any way to determine if a type is
         auto any_base = (v8toolkit::AnyBase *)wrap->Value();
@@ -843,12 +855,12 @@ struct CastToNative
         if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
             printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
             throw CastException(fmt::format("Cannot convert {} to {} {}",
-											TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
+					    TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
         }
-		return *t;
-	}
+       	return *t;
+    }
 };
-
-
+    
+    
 }
 

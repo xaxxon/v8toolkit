@@ -9,8 +9,8 @@
 
 
 // Everything in here is standalone and does not require any other v8toolkit files
-#include "libplatform/libplatform.h"
-#include "v8.h"
+#include <libplatform/libplatform.h>
+#include <v8.h>
 
 
 namespace v8toolkit {
@@ -188,7 +188,7 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
 
 
 template <class Container, class Callable>
-auto mapper(const Container & container, Callable & callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
+auto mapper(const Container & container, Callable callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
 {
     return MapperHelper<Container, Callable>()(container, callable);
 }
@@ -274,6 +274,9 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     }
 }
 
+
+
+
 template<class T>
 v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
     return get_value_as<T>(value.Get(isolate));
@@ -299,6 +302,11 @@ template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> object, std::string key) {
     return get_key_as<T>(context, get_value_as<v8::Object>(object), key);
 }
+
+ v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key);
+
+ v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value> value, std::string key);
+
 
 /**
 * Takes a v8::Value and prints it out in a json-like form (but includes non-json types like function)

@@ -14,20 +14,12 @@ set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location o
 #set(BOOST_LIB_DIR c:\\boost\\lib CACHE PATH "location of boost libraries if not in /usr/local/lib")
 
 
-set(HEADER_FILES
-        bidirectional.h
-        casts.hpp
-        casts_impl.hpp
-        javascript.h
-        v8_class_wrapper.h
-        v8helpers.h
-        v8toolkit.h)
+file(GLOB HEADER_FILES
+        include/*.h)
 
-set(SOURCE_FILES
-        casts.hpp
-        javascript.cpp
-        v8helpers.cpp
-        v8toolkit.cpp)
+file(GLOB SOURCE_FILES
+        src/*.cpp
+        )
 
 set(V8_STATIC_LIBS
         v8_libplatform
@@ -72,17 +64,17 @@ endif()
 link_directories(${V8_BASE_STATIC_LIB_DIR})
 link_directories(${CPPFORMAT_BASE_DIR}\\lib)
 
-include_directories(. ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT_BASE_DIR}/include)
+include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT_BASE_DIR}/include)
 
 
 # only use this against a shared-object-built V8
 #   library=shared snapshot=off
-add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
+#add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 # needs this one library linked statically -- apparently
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
-target_link_libraries(v8toolkit_shared cppformat)
+#target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
+#target_link_libraries(v8toolkit_shared cppformat)
 
-set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
+#set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
 
@@ -94,7 +86,7 @@ set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(INSTALL_INCLUDE_DIR "include/v8toolkit" CACHE PATH "Installation directory for header files")
 
 install(FILES ${HEADER_FILES} DESTINATION ${INSTALL_INCLUDE_DIR})
-install(TARGETS v8toolkit_shared v8toolkit_static DESTINATION ${INSTALL_LIB_DIR})
+install(TARGETS v8toolkit_static DESTINATION ${INSTALL_LIB_DIR})
 
 link_directories(${PROJECT_BINARY_DIR})
 
