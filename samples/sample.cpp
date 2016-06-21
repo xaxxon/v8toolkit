@@ -57,6 +57,7 @@ struct Line {
     Point get_rvalue_point(){return Point();}
     void some_method(int){}
     void throw_exception(){throw std::exception();}
+    static int static_method(float){return 42;}
 };
 
 
@@ -138,14 +139,18 @@ int main(int argc, char* argv[])
             // objects created from constructors won't have members/methods added after the constructor is added
             wrapped_point.add_constructor("Point", global_templ);
             wrapped_point.add_constructor<int,int>("Pii", global_templ);
-            
-            
-        
-            auto & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
+
+
+
+            V8ClassWrapper<Line> & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
             wrapped_line.add_method("get_point", &Line::get_point);
             wrapped_line.add_method("get_rvalue_point", &Line::get_rvalue_point);
             wrapped_line.add_member("p", &Line::p);
-            wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception).finalize();
+            wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
+            wrapped_line.add_static_method("static_method", &Line::static_method);
+            wrapped_line.add_static_method("static_lambda", [](){return 43;});
+
+            wrapped_line.finalize();
             
             wrapped_line.add_constructor("Line", global_templ);
             
@@ -171,9 +176,10 @@ int main(int argc, char* argv[])
             auto result = script->Run(context);
             print_maybe_value(result);
 
-            
+            v8::Local<v8::Script> script_for_static_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"println(Line.static_method(42));")).ToLocalChecked();
+            (void)script_for_static_method->Run(context);
 
-			// calling a function with too few parameters throws
+            // calling a function with too few parameters throws
             v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
             v8::TryCatch tc(isolate);
             (void)script3->Run(context);
@@ -184,6 +190,7 @@ int main(int argc, char* argv[])
             v8::TryCatch tc2(isolate);
             (void)script4->Run(context);
             assert(tc2.HasCaught());
+
 
             v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
             v8::TryCatch tc3(isolate);

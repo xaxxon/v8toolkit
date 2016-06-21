@@ -534,10 +534,17 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 * Takes an arbitrary class method and returns a std::function wrapping it
 */
 template<class R, class CLASS, class... Args>
-std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable ) 
+std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable )
 {
     return std::function<R(Args...)>(callable);
 }
+
+
+
+template<class R, class... Args>
+std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...)) {
+    return std::function<R(Args...)>(callable);
+};
 
 
 /**

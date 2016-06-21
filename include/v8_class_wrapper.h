@@ -140,22 +140,39 @@ struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 * Can provide a JS constructor method or wrap objects created in another c++ function
+*
+* Const types should not be wrapped directly.   Instead, a const version of a non-const type will
+* automatically be created and populated with read-only members and any const-qualified method added
+* to the non-const version.
+*
+* All members/methods must be added, then finalize() called, then any desired constructors may be created.
+*
+*
 */
 template<class T>
 class V8ClassWrapper
 {
 private:
-	
+
+	/**
+	 * Wrapped classes are per-isolate, so this tracks each wrapped class/isolate tuple for later retrieval
+	 */
 	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
+
+
 	V8ClassWrapper<T>() = delete;
 	V8ClassWrapper<T>(const V8ClassWrapper<T> &) = delete;
-	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;	
+	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &) = delete;
 	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &&) = delete;
 	
 	
-	// users of the library should call get_instance, not the constructor directly
-	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {}
+	/**
+	 * users of the library should call get_instance, not this constructor directly
+	 */
+	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {
+		this->isolate_to_wrapper_map.emplace(isolate, this);
+	}
 	
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
@@ -282,13 +299,15 @@ public:
     * Creates a new v8::FunctionTemplate capabale of creating wrapped T objects based on previously added methods and members.
     * TODO: This needs to track all FunctionTemplates ever created so it can try to use them in GetInstanceByPrototypeChain
     */
-    v8::Local<v8::FunctionTemplate> make_function_template(v8::FunctionCallback callback = nullptr, const v8::Local<v8::Value> & data = v8::Local<v8::Value>()) {
+    v8::Local<v8::FunctionTemplate> make_function_template(v8::FunctionCallback callback = nullptr,
+														   const v8::Local<v8::Value> & data = v8::Local<v8::Value>()) {
         assert(this->finalized == true);
 
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
-		
+		init_static_methods(function_template);
+
         function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
         
         // printf("Making function template for type %s\n", typeid(T).name());
@@ -299,9 +318,6 @@ public:
             // printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
-
-
-
 
 		// printf("Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
@@ -360,16 +376,25 @@ public:
     
     void init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 		object_template->SetInternalFieldCount(1);
-        for (auto adder : this->member_adders) {
+        for (auto & adder : this->member_adders) {
             adder(object_template);
         }
     }
 
     void init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
-        for (auto adder : this->method_adders) {
+        for (auto & adder : this->method_adders) {
             adder(object_template);
         }
     }
+
+	void init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
+
+		for (auto & adder : this->static_method_adders) {
+			adder(constructor_function_template);
+		}
+	}
+
+
     
 	
 	/**
@@ -381,7 +406,6 @@ public:
 		if (V8_CLASS_WRAPPER_DEBUG) printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
 		if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
 			auto new_object = new V8ClassWrapper<T>(isolate);
-			isolate_to_wrapper_map.insert(std::make_pair(isolate, new_object));
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
 		}
 		if (V8_CLASS_WRAPPER_DEBUG) printf("(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
@@ -458,12 +482,14 @@ public:
 		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
 		//   later the FunctionTemplate will be ready to go
         auto constructor_template = make_function_template(V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());
-        
-				
+
+
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
-				
-        return *this;
+
+
+
+		return *this;
 	}
 
 
@@ -521,6 +547,34 @@ public:
 
     using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
     std::vector<AttributeAdder> member_adders;
+
+	using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
+	std::vector<StaticMethodAdder> static_method_adders;
+
+	template<class Callable>
+	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
+
+		if (!std::is_const<T>::value) {
+			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
+		}
+
+		// must be set before finalization
+		assert(!this->finalized);
+
+		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
+
+			auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
+																					 callable);
+			constructor_function_template->Set(this->isolate,
+											   method_name.c_str(),
+											   static_method_function_template);
+		};
+
+		this->static_method_adders.emplace_back(static_method_adder);
+
+		return *this;
+	}
+
     
     /**
     * Function to force API user to declare that all members/methods have been added before any
@@ -572,7 +626,7 @@ public:
         if (!std::is_const<T>::value) {
             V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
         }
-        
+
 		// store a function for adding the member on to an object template in the future
 		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
@@ -636,23 +690,9 @@ public:
     }
     
     
-    /**
-    * Adds a method to the javascript object that doesn't directly call into an actual method in the wrapped type.
-    */ 
-    template<class Callable>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, Callable callable) {
-        
-        
-        // prototype_template is the template used later when creating a new javascript context
-        method_adders.emplace_back([this, method_name, callable](v8::Local<v8::ObjectTemplate> & prototype_template) {
-            auto function_template = v8toolkit::make_function_template(isolate, callable);
-            // printf("Adding %s to object template\n", method_name.c_str());
-    		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
-        });
-        
-        return *this;
-    }
-
+	/**
+	 * If the method is marked const, add it to the const version of the wrapped type
+	 */
     template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
     void add_method_for_const_type(const std::string & method_name, Method method) {
         V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
@@ -660,12 +700,17 @@ public:
     };
 
 
+	/**
+	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
+	 */
     template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
     void add_method_for_const_type(const std::string & method_name, Method method) {
 //        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
     };
 
-
+	/**
+	 * A list of methods to be added to each object
+	 */
     std::vector<AttributeAdder> method_adders;
 
 
@@ -677,15 +722,17 @@ public:
         add_method_for_const_type(method_name, method);
 
 
-
+		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
+		// Object template that will be passed in later when the list is traversed
         method_adders.emplace_back([this, method, method_name](v8::Local<v8::ObjectTemplate> & prototype_template) {
 
-    		StdFunctionCallbackType * f = new StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) 
+			// This is the actual code associated with "method_name" and called when javascript calls the method
+    		StdFunctionCallbackType * method_caller = new StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info)
     		{
-                if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
-                // print_v8_value_details(info.Holder());
-                // print_v8_value_details(info.This());
-                if (V8_CLASS_WRAPPER_DEBUG) printf("holder: %s This: %s\n", *v8::String::Utf8Value(info.Holder()), *v8::String::Utf8Value(info.This()));
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
+//                // print_v8_value_details(info.Holder());
+//                // print_v8_value_details(info.This());
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("holder: %s This: %s\n", *v8::String::Utf8Value(info.Holder()), *v8::String::Utf8Value(info.This()));
 
                 auto isolate = info.GetIsolate();
 
@@ -707,20 +754,20 @@ public:
                 // if(!compare_contents(isolate, holder, self)) {
                 //     printf("FOUND DIFFERENT OBJECT");
                 // }
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
-                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
-                assert(!self.IsEmpty());
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
+//                assert(!self.IsEmpty());
 
                 // void* pointer = instance->GetAlignedPointerFromInternalField(0);
     			auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
-                if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
                 auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
                 
-			    assert(backing_object_pointer != nullptr);
+//			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
-                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
+//                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
     			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
 
 
@@ -748,10 +795,10 @@ public:
                 }
                 return;
     		});
-		
+
+			// create a function template, set the lambda created above to be the handler
     		auto function_template = v8::FunctionTemplate::New(this->isolate);
-            
-            function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, f));
+            function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, method_caller));
 		
             // methods are put into the protype of the newly created javascript object
     		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
