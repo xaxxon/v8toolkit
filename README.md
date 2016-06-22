@@ -282,7 +282,27 @@ The same limitation exists for overloaded plain functions and methods.  They can
 After wrapping your class, you can use your class just as any other primitive type.   On its own, as a paramter to a function, as a return type from
 a function, or in an STL container.   
 
-#### Introducing the Script
+##### Creating "Fake" Methods
+
+You can use a specially typed lambda (or plain function) to create a "pretend" or "fake" method by
+having the first input parameter of the lambda being a pointer to the class type:
+
+    your_class_wrapper.add_method("fake_method_name", [](YourClass * your_class_object, char *){...});
+
+The lambda can have as many parameters as you want as long as the first one is a pointer to the
+wrapped class.  The first parameter is hidden from the javascript caller and it behaves exactly
+like any other method.
+
+From javascript, the caller cannot tell it's not a native class method:
+
+    var my_class = new MyClass;
+    my_class.fake_method_name("Test"); // the YourClass* parameter is sent automatically
+
+If you want the fake method to be associated with `const YourClass` as well, have the lambda
+take a `const YourClass *` instead.
+
+
+#### Introducing the Script Object
 
 There's one more v8toolkit type we haven't talked about, since it's not needed for simple examples shown so far.  In a real-world project
 the same code will be run multiple times and compiling it each time wouuld be a huge waste.   That's where the v8toolkit::Script type comes in.
