@@ -48,7 +48,7 @@ public:
 
 
 
-    /**
+/**
 * Helper function to run the callable inside contexts.
 * If the isolate is currently inside a context, it will use that context automatically
 *   otherwise no context::scope will be created
@@ -263,7 +263,7 @@ struct CallCallable{};
 */
 template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
-    void operator()(std::function<R(Args...)> callable, 
+    void operator()(std::function<R(Args...)> callable,
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
         if (V8_TOOLKIT_DEBUG) printf("Just set returnvalue in CallCallable for type %s\n", typeid(R).name());
@@ -275,7 +275,7 @@ struct CallCallable<std::function<R(Args...)>> {
 */
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
-    void operator()(std::function<void(Args...)> callable, 
+    void operator()(std::function<void(Args...)> callable,
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
         callable(args...);
     }
@@ -286,13 +286,17 @@ template <class ParameterBuilder, int depth>
 bool check_parameter_builder_parameter_count(const v8::FunctionCallbackInfo<v8::Value> & info)
 {
     auto arity = ParameterBuilder::ARITY;
+    printf("Comparing %d - %d == %d\n", info.Length(), depth, arity);
     return info.Length() - depth == arity;
 }
 
 /**
 * Class for turning a function parameter list into a parameter pack useful for calling the function
+ * depth is the current index into the FunctionCallbackInfo object's parameter list
+ * Function is the complete type of the function to call
+ * TypeList is the types of the remaining parameterse to parse - whe this is empty the function can be called
 */
-template<int depth, typename T, typename U, class = void> 
+template<int depth, typename Function, typename TypeList, class = void>
 struct ParameterBuilder;
 
 
@@ -308,7 +312,7 @@ struct ParameterBuilder<depth, Function, TypeList<>> {
     // This call method actually calls the function with the specified object and the
     //   parameter pack that was built up via the chain of calls between templated types
     template<typename ... Ts>
-    void operator()(Function & function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
+    void operator()(Function function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
         // use CallCallable to differentiate between void and non-void return types
         CallCallable<Function>()(function, info, std::forward<Ts>(ts)...);
     }

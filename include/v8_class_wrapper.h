@@ -385,6 +385,9 @@ public:
         for (auto & adder : this->method_adders) {
             adder(object_template);
         }
+		for (auto & adder : this->fake_method_adders) {
+			adder(object_template);
+		}
     }
 
 	void init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
@@ -551,6 +554,12 @@ public:
 	using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
 	std::vector<StaticMethodAdder> static_method_adders;
 
+	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
+	//   the "this" pointer before any javascript parameters are passed in
+	using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
+	std::vector<FakeMethodAdder> fake_method_adders;
+
+
 	template<class Callable>
 	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
 
@@ -707,6 +716,107 @@ public:
     void add_method_for_const_type(const std::string & method_name, Method method) {
 //        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
     };
+
+
+
+
+	/**
+	* If the method is marked const, add it to the const version of the wrapped type
+	*/
+	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, std::function<R(Head, Tail...)> method) {
+		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_fake_method(method_name, method);
+	};
+
+
+	/**
+	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
+	 */
+	template<class R, class Head, class... Tail, std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, std::function<R(Head, Tail...)> method) {
+		// nothing to do here
+	};
+
+
+
+
+		template<class R, class... Args>
+	void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
+		_add_fake_method(method_name, method);
+	}
+
+	template<class Callback>
+	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
+		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
+		this->_add_fake_method(method_name, f);
+
+		return *this;
+	}
+
+
+	template<class R, class Head, class... Tail>
+	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, std::function<R(Head, Tail...)> method)
+	{
+		assert(this->finalized == false);
+
+		add_fake_method_for_const_type(method_name, method);
+
+		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
+		// Object template that will be passed in later when the list is traversed
+		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
+
+			auto copy = new std::function<R(Head, Tail...)>(method);
+
+
+			// This is the actual code associated with "method_name" and called when javascript calls the method
+			StdFunctionCallbackType * method_caller =
+					new StdFunctionCallbackType([method_name, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
+
+
+				auto fake_method = *(std::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
+				auto isolate = info.GetIsolate();
+
+				auto holder = info.Holder();
+
+
+				v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(holder->GetInternalField(0));
+				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+
+
+				// the typelist and std::function parameters don't match because the first parameter doesn't come
+				// from the javascript value array in 'info', it is passed in from this function as the 'this' pointer
+				using PB_TYPE = v8toolkit::ParameterBuilder<0, std::function<R(Head, Tail...)>, TypeList<Tail...>>;
+
+				PB_TYPE pb;
+				auto arity = PB_TYPE::ARITY;
+				// 1  because the first parameter doesn't count because it's reserved for "this"
+				if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
+				  std::stringstream ss;
+				  ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+				  isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+				  return; // return now so the exception can be thrown inside the javascript
+				}
+
+				// V8 does not support C++ exceptions, so all exceptions must be caught before control
+				//   is returned to V8 or the program will instantly terminate
+				try {
+					pb(*copy, info, cpp_object);
+				} catch(std::exception & e) {
+					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+					return;
+				}
+				return;
+			});
+
+			// create a function template, set the lambda created above to be the handler
+			auto function_template = v8::FunctionTemplate::New(this->isolate);
+			function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, method_caller));
+
+			// methods are put into the protype of the newly created javascript object
+			prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+		});
+		return *this;
+	}
 
 	/**
 	 * A list of methods to be added to each object

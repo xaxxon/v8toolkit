@@ -56,6 +56,7 @@ struct Line {
     Point & get_point(){return this->p;}
     Point get_rvalue_point(){return Point();}
     void some_method(int){}
+    std::string echo(const std::string & input){printf("In echo"); return input;}
     void throw_exception(){throw std::exception();}
     static int static_method(float){return 42;}
 };
@@ -149,6 +150,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
+            wrapped_line.add_method("fake_method", [](Line * line){printf("HI");return line->echo("line echo called from fake_method").c_str();});
 
             wrapped_line.finalize();
             
@@ -179,6 +181,10 @@ int main(int argc, char* argv[])
             v8::Local<v8::Script> script_for_static_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"println(Line.static_method(42));")).ToLocalChecked();
             (void)script_for_static_method->Run(context);
 
+            v8::Local<v8::Script> script_for_fake_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l = new Line(); println(l.fake_method());")).ToLocalChecked();
+            (void)script_for_fake_method->Run(context);
+
+
             // calling a function with too few parameters throws
             v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
             v8::TryCatch tc(isolate);
@@ -202,7 +208,6 @@ int main(int argc, char* argv[])
             v8::TryCatch tc4(isolate);
             (void)script6->Run(context);
             assert(tc4.HasCaught());
-
         });
         
     }

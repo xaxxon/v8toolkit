@@ -15,11 +15,28 @@
 
 namespace v8toolkit {
 
+/**
+ * Returns a std::function type compatible with the lambda passed in
+ */
+template<class T>
+struct LTG {
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+
+    // this version might not be necessary
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+};
+
+
 template <class... > struct TypeList {};
 
 // This function is not defined and can only be called inside decltype()
 template <class R, class... Ts>
 auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
+
+template <class R, class Head, class... Tail>
+auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
 
 template <bool... b> struct static_all_of;
