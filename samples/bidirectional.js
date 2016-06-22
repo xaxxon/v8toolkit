@@ -4,7 +4,7 @@ var js_method_result = "JS string";
 // var thing = new Thing();
 // assert(thing.get_string() ===cpp_method_result);
 //
-var subclassed_thing = subclass_thing({});
+var subclassed_thing = Thing.subclass({});
 assert(subclassed_thing.get_string() === cpp_method_result);
 //
 // var subclassed_thing2 = subclass_thing({get_string: function(){return js_method_result}});

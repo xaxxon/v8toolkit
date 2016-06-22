@@ -150,7 +150,7 @@ public:
     */
     Base * operator()(ExternalConstructorParams... constructor_parameters) {
         // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
-        
+
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
             auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
                                                     context->Global(),
@@ -158,6 +158,52 @@ public:
 			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
+
+    static void subclass_helper(const v8::FunctionCallbackInfo<v8::Value>& info) {
+        auto isolate = info.GetIsolate();
+        auto context = isolate->GetCurrentContext();
+
+        // Grab the prototype for the subclass
+        if (!info[0]->IsObject()) {
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "First parameter must be the subclass prototype object"));
+            return;
+        }
+        auto subclass_prototype = v8::Local<v8::Object>::Cast(info[0]);
+
+        // Create a new JavaScript object
+        JSWrapperClass * new_cpp_object;
+        auto & class_wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
+        auto function_template = class_wrapper.get_function_template();
+        auto new_js_object = function_template->GetFunction()->NewInstance();
+
+        // Create the new C++ object - initialized with the JavaScript object
+        // depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
+        std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
+            new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
+        };
+
+        using PB_TYPE = ParameterBuilder<1, decltype(constructor), TypeList<InternalConstructorParams..., ExternalConstructorParams...>>;
+        if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
+            // printf("add_subclass_function for %s got %d parameters but needed %d parameters\n", typeid(JSWrapperClass).name(), (int)info.Length()-1, (int)PB_TYPE::ARITY);
+            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
+            return;
+        }
+
+
+        PB_TYPE()(constructor, info);
+
+        // now initialize the JavaScript object with the C++ object (circularly)
+        // TODO: This circular reference may cause the GC to never destroy these objects
+        class_wrapper.template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, new_cpp_object);
+
+        // Set the prototypes appropriately  object -> subclass prototype (passed in) -> JSWrapper prototype -> base type prototype (via set_parent_type)
+        (void)subclass_prototype->SetPrototype(context, new_js_object->GetPrototype());
+        (void)new_js_object->SetPrototype(context, subclass_prototype);
+
+        info.GetReturnValue().Set(new_js_object);
+    }
+
+
 	
 	/**
     * Creates a JavaScript helper function which is similar to Object.create() in that it creates an object implmenting templated type Base 
@@ -167,50 +213,21 @@ public:
     */
 	static void add_subclass_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, const std::string & js_function_name)
 	{
-		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), [](const v8::FunctionCallbackInfo<v8::Value>& info)->void {
-			auto isolate = info.GetIsolate();
-			auto context = isolate->GetCurrentContext();
-
-			// Grab the prototype for the subclass
-			if (!info[0]->IsObject()) {
-				isolate->ThrowException(v8::String::NewFromUtf8(isolate, "First parameter must be the subclass prototype object"));
-				return;
-			}
-            auto subclass_prototype = v8::Local<v8::Object>::Cast(info[0]);
-
-			// Create a new JavaScript object
-			JSWrapperClass * new_cpp_object;
-			auto & class_wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
-			auto function_template = class_wrapper.get_function_template();
-            auto new_js_object = function_template->GetFunction()->NewInstance();
-                        			
-			// Create the new C++ object - initialized with the JavaScript object
-			// depth=1 to ParameterBuilder because the first parameter was already used (as the prototype)
-			std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
-			    new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
-			};
-            
-            using PB_TYPE = ParameterBuilder<1, decltype(constructor), TypeList<InternalConstructorParams..., ExternalConstructorParams...>>;
-            if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
-                // printf("add_subclass_function for %s got %d parameters but needed %d parameters\n", typeid(JSWrapperClass).name(), (int)info.Length()-1, (int)PB_TYPE::ARITY);
-                isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
-                return;
-            }
-            
-            
-			PB_TYPE()(constructor, info);
-			
-			// now initialize the JavaScript object with the C++ object (circularly)
-			// TODO: This circular reference may cause the GC to never destroy these objects
-			class_wrapper.template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, new_cpp_object);
-
-			// Set the prototypes appropriately  object -> subclass prototype (passed in) -> JSWrapper prototype -> base type prototype (via set_parent_type)
-            (void)subclass_prototype->SetPrototype(context, new_js_object->GetPrototype());
-            (void)new_js_object->SetPrototype(context, subclass_prototype);
-            
-			info.GetReturnValue().Set(new_js_object);
-		});
+		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), &subclass_helper);
 	}
+
+    /**
+     * Pass in an un-finalized V8ClassWrapper object to have a static method added to the constructor function
+     * to create a subclass.  This is identical functionality to add_subclass_function() but puts it in a more
+     * intuitive location.
+     * 
+     * auto & my_class_wrapper = Isolate.wrap_class<MyClass>();
+     * JSFactory<MyClass, JSMyClass>::add_subclass_static_method(my_class_wrapper);
+     */
+    template<class T>
+    static void add_subclass_static_method(V8ClassWrapper<T> & wrapper, const std::string & method_name = "subclass") {
+        wrapper.add_static_method(method_name, &subclass_helper);
+    }
 };
 
 

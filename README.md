@@ -301,6 +301,11 @@ From javascript, the caller cannot tell it's not a native class method:
 If you want the fake method to be associated with `const YourClass` as well, have the lambda
 take a `const YourClass *` instead.
 
+Since these methods aren't true C++ methods, you can't access private or protected
+methods and members, but they are still useful when you need to adjust the
+javascript values a little bit before they're ready to be sent to the actual
+object methods.
+
 
 #### Introducing the Script Object
 

@@ -37,6 +37,7 @@ void test_calling_bidirectional_from_javascript()
 		thing.add_method("get_string", &Thing::get_string);
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.set_compatible_types<JSThing>();
+		JSFactory<Thing, JSThing>::add_subclass_static_method(thing);
 		thing.finalize();
 		thing.add_constructor("Thing", *isolate);
 		
