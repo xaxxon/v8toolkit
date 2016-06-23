@@ -989,32 +989,41 @@ std::string type_details(){
 		       std::is_const<T>::value, std::is_pointer<T>::value,
 		       std::is_reference<T>::value, typeid(T).name());
  }
- 
+
+/**
+ * This can be used from CastToNative<UserType> calls to fall back to if other conversions aren't appropriate
+ */
+template<class T>
+T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+	if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+	if(!value->IsObject()){
+		printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+		throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+	}
+	auto object = v8::Object::Cast(*value);
+	if (object->InternalFieldCount() <= 0) {
+		throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
+	}
+	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+
+	// I don't know any way to determine if a type is
+	auto any_base = (v8toolkit::AnyBase *)wrap->Value();
+	T * t = nullptr;
+	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+		printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+		throw CastException(fmt::format("Cannot convert {} to {} {}",
+										TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
+	}
+	return *t;
+
+}
+
 
 template<typename T>
 struct CastToNative
 {
     T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-	if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
-        if(!value->IsObject()){
-            printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
-            throw CastException("No specialized CastToNative found and value was not a Javascript Object");
-        }
-	auto object = v8::Object::Cast(*value);
-       	if (object->InternalFieldCount() <= 0) {
-	    throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", typeid(T).name()));
-        }
-       	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-
-        // I don't know any way to determine if a type is
-        auto any_base = (v8toolkit::AnyBase *)wrap->Value();
-        T * t = nullptr;
-        if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
-            printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
-            throw CastException(fmt::format("Cannot convert {} to {} {}",
-					    TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
-        }
-       	return *t;
+		return get_object_from_embedded_cpp_object<T>(isolate, value);
     }
 };
     

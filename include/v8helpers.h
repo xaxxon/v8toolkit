@@ -12,10 +12,29 @@
 #include <libplatform/libplatform.h>
 #include <v8.h>
 
+// if it can be determined safely that cxxabi.h is available, include it for name demangling
+#if defined __has_include
+#if __has_include(<cxxabi.h>)
+#  define V8TOOLKIT_DEMANGLE_NAMES
+#  include <cxxabi.h>
+#endif
+#endif
+
 
 namespace v8toolkit {
 
+
 /**
+ * Returns a demangled version of the typeid(T).name() passed in if it knows how,
+ *   otherwise returns the mangled name exactly as passed in
+ */
+std::string demangle_typeid_name(const std::string & manged_name);
+
+template<class T>
+std::string demangle(){return demangle_typeid_name(typeid(T).name());}
+
+
+    /**
  * Returns a std::function type compatible with the lambda passed in
  */
 template<class T>

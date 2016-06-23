@@ -220,7 +220,7 @@ public:
      * Pass in an un-finalized V8ClassWrapper object to have a static method added to the constructor function
      * to create a subclass.  This is identical functionality to add_subclass_function() but puts it in a more
      * intuitive location.
-     * 
+     *
      * auto & my_class_wrapper = Isolate.wrap_class<MyClass>();
      * JSFactory<MyClass, JSMyClass>::add_subclass_static_method(my_class_wrapper);
      */
