@@ -1,6 +1,0 @@
-<map id="v8toolkit::ContextHelper::get_context" name="v8toolkit::ContextHelper::get_context">
-<area shape="rect" id="node2" href="$classv8toolkit_1_1ContextHelper.html#aca18b2b39ccb379491c57c1b194b37af" title="v8toolkit::ContextHelper\l::add_function" alt="" coords="212,5,360,41"/>
-<area shape="rect" id="node3" href="$classv8toolkit_1_1ContextHelper.html#ae924d066e1a28fd720324330e791717a" title="v8toolkit::ContextHelper\l::add_variable" alt="" coords="212,65,360,101"/>
-<area shape="rect" id="node4" href="$classv8toolkit_1_1ContextHelper.html#ace4ba49fae0bc8d68a2cb79c815d2088" title="v8toolkit::ContextHelper\l::expose_variable" alt="" coords="212,125,360,161"/>
-<area shape="rect" id="node5" href="$classv8toolkit_1_1ContextHelper.html#a8cdd2ea93a50ec64984376439539aef3" title="v8toolkit::ContextHelper\l::expose_variable_readonly" alt="" coords="202,185,370,221"/>
-</map>
