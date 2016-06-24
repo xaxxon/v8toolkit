@@ -15,6 +15,15 @@
 #include "v8toolkit.h"
 #include "casts.hpp"
 
+// If this is defined, additional information will be made available during clang compilation
+//   to allow for auto-generation of class method/member bindings.  This only can work with clang
+#ifdef V8TOOLKIT_ENABLE_GENERATE_BINDINGS
+#define V8TOOLKIT_GENERATE_BINDINGS __attribute__((annotate("v8toolkit_generate_bindings")))
+#else
+#define V8TOOLKIT_GENERATE_BINDINGS
+#endif
+
+
 namespace v8toolkit {
 
 template<class T>
@@ -47,14 +56,6 @@ template<bool> struct const_type_method_adder;
 *   - Maybe allow some type of optional class customization to help give hints to V8ClassWrapper to have better behavior
 *
 */
-
-
-/*
-    How to add static methods to every object as it is created?  You can add them by hand afterwards
-    with v8toolkit::add_function, but there should be a way in v8classwrapper to say every object
-    of the type gets the method, too
-*/
-
 
 
 /***
