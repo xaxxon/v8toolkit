@@ -109,17 +109,19 @@ Here is the simplest program you can write to execute some javascript using the 
         // creates a v8toolkit::Isolate which can manage some number of contexts
         auto isolate = Platform::create_isolate();
         
-        // javascript doesn't have any way to print to stdout, so this exposes some handy functions to javascript
+        // javascript doesn't have any way to print to stdout,
+        //   so this exposes some handy functions to javascript
         isolate->add_print(); 
         
         // a context represents an actual javascript environment in which code is executed
         auto context = isolate->create_context(); 
-        
-        // Prints to the screen using the print helper function we added above
+
+        // This actually runs the javascript inside the quotes and
+        //   prints to the screen using the print helper function we added above
         context->run("println('Hello JavaScript World!');"); 
     }
 
-Working backwards, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects in a context persist 
+Working backwards through the code, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects in a context persist
 and will be seen any other JavaScript run within that same context.
 
 An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling `isolate->create_context()` a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
@@ -197,14 +199,17 @@ Global variables (as well as class public static variables) can be exposed to ja
     c->run("x = 4; println(x);"); // prints 4
     printf("%d\n", x); // also prints 4
 
-This works very similarly to the add_function method above.  Give it a name and the variable to expose and JavaScript now has access to it.
+This works very similarly to the add_function method above.  Give it a name and the variable to expose and
+JavaScript now has access to it.  If the variable is const, the setter will (check the code - it will either no-op
+or throw an exception.  I haven't decided).
+
 
 
 #### Using STL containers 
 
 Many common STL containers are supported and behave in a fairly intuitive manner.   If the container acts mostly like an array, it is turned into
-an array when passed back to JavaScript.   If the container acts more like an associatie array (key/value pairs), it is turned into a javascript 
-object.
+an array when passed back to JavaScript.   If the container acts more like an associatie array/hash/dictionary
+(key/value pairs), it is turned into a plain javascript object.
 
     std::vector<int> make_three_element_vector(int i, int j, int k) {
         return std::vector{i,j,k};
@@ -221,14 +226,15 @@ containers of containers of containers...  The add_function() method does not su
 willing to learn more about the V8 API, you can write a function taking a variable number of arguments without too much additional work and there's 
 an example on this later.
 
-Currently there is no support for passing a JavaScript array or object to a C++ function and having it turned into a STL container as an input
-parameter.   This is not believed to be a technical limitation, just a missing featuer.
-
+You can see which STL containers are supported by looking in
+https://github.com/xaxxon/v8toolkit/blob/master/include/casts.hpp   You can also use this as a foundation
+for adding your own conversions for either missing STL containers or your own types.   Make sure any new
+conversions you make are in the `v8toolkit` namespace - but they can be in your own files.
 
 #### Exposing your C++ class to javascript
 
-Now things really start to get interesting: user-defined types.   Most of the commonly-used features of a C++ class are supported, though there are some limitations, and other
-concepts don't map directly, but are still accessible.
+Now things really start to get interesting: user-defined types.   Most of the commonly-used features of a C++ class are
+supported, though there are some limitations, and other concepts don't map directly, but are still accessible.
 
 Let's first define a type to work with:
 
@@ -239,26 +245,24 @@ Let's first define a type to work with:
         
     public:
         Animal(std::string name, int age) : name(name), age(age) {}
-        virtual speak() {printf("Hi.");}
+        virtual speak() const {printf("Hi.");}
         
         // people are very impressionable on what their favorite color is.
         std::string favorite_color = "purple";
         
         std::string get_name(){return name;}
-        int get_age(){return age;}
+
+        int set_age(int new_age) {this->age = new_age;}
+        int get_age() const {return age;}
     }
 
-To make Person available in javascript, first tell the library it's a class it should know about.  Then tell it what parts of that class it should make 
-available to javascript.  There's no requirement to make everything available, and unfortunately there's no introspection in C++ to look at the class
-and make everything available automatically.
-
-###NOTE: the following code is out of date, add_constructor must go AFTER adding members and methods and a call to finalize() stating that all members and methods are added.
+To make Person available in javascript, first tell the library it's a class it should know about.
+Then tell it what parts of that class it should make available to javascript.  There's no requirement to
+make everything available, and unfortunately there's no introspection in C++ to look at the class and make
+everything available automatically.
 
     auto person_wrapper = i->wrap_class<Person>;
-    
-    // adds a constructor function in JavaScript called "Person"
-    person_wrapper.add_constructor<std::string, int>("Person");
-    
+
     // If you weren't familiar with the syntax for getting a method pointer, now you are.
     person_wrapper.add_method("speak", &Person::speak);
     
@@ -266,21 +270,39 @@ and make everything available automatically.
     person_wrapper.add_member("favorite_color", &Person::favorite_color);
     
     // you can chain calls while wrapping your class
-    person_wrapper.add_method("get_name", &Person::get_name).add_method("get_age", &Person::get_age);
-    
-    // It's very important to make the context AFTER wrapping the class.  Only contexts made from the same isolate
-    //   after the class is wrapped will see your class.
+    person_wrapper.add_method("get_name", &Person::get_name);
+
+    person_wrapper.add_method("set_age", &Person::set_age);
+    person_wrapper.add_method("get_age", &Person::get_age);
+
+
+    person_wrapper.finalize(); // no more attributes can be added after this point
+
+    // adds a constructor function in JavaScript called "Person"
+    person_wrapper.add_constructor<std::string, int>("Person");
+
+    // It's very important to make the context AFTER finalizing the class.  Only contexts made from the same
+    //   isolate after the class is wrapped will see your class.
     c = i->create_context();
     c->run("p = new Person();  p.speak(); println(p.get_name(), ' is ', p.get_age(), ' years old'); println('Favorite color: ', p.favorite_color);  ");
 
-If there was also a default constructor for Person that made "John Smith" age 18, that could be added with an additional call to add_constructor(), 
-but a different JavaScript function name would have to be used, like "PersonDefault".   This is a limitation of the C++ type system and how constructors 
-must be called.   `add_constructor<>("PersonNoParams");` would be the syntax to add a default Person constructor if it were present.
+
+If there was also a default constructor for Person that made "John Smith" age 18, that could be added with an
+additional call to add_constructor(), but a different JavaScript function name would have to be used,
+like "PersonDefault".   This is a limitation of the C++ type system and how constructors must be called.
+`add_constructor<>("PersonNoParams");` would be the syntax to add a default Person constructor if it were present.
 
 The same limitation exists for overloaded plain functions and methods.  They can each be exposed to JavaScript, but they must have different names.
 
 After wrapping your class, you can use your class just as any other primitive type.   On its own, as a paramter to a function, as a return type from
-a function, or in an STL container.   
+a function, or in an STL container.
+
+##### Const User-Defined Types
+
+Const types are automatically handled when wrapping the non-const version.   Each non-static class member
+function (method) and non-static class member variable (data member) is checked to see whether it is
+const-qualified when being added and if it is const, it will automatically be added to the const version
+of the class being wrapped.
 
 ##### Creating "Fake" Methods
 
@@ -307,10 +329,19 @@ javascript values a little bit before they're ready to be sent to the actual
 object methods.
 
 
+###### Const "Fake" Methods
+
+To have a fake method attached to the const-qualified wrapped class as well, it must accept a const pointer
+as its first parameter instead.
+
+    your_class_wrapper.add_method("fake_method_name", [](const YourClass * your_class_object, char *){...});
+
+
+
 #### Introducing the Script Object
 
 There's one more v8toolkit type we haven't talked about, since it's not needed for simple examples shown so far.  In a real-world project
-the same code will be run multiple times and compiling it each time wouuld be a huge waste.   That's where the v8toolkit::Script type comes in.
+the same code will be run multiple times and compiling it each time wouuld be wasteful.   That's where the v8toolkit::Script type comes in.
 
     // returns a compiled script that can be run multiple times without re-compiling
     auto script = context->compile("println('Hello Javascript World!');");
@@ -510,6 +541,7 @@ passed to v8::Isolate::ThrowException().
 
 #### Lifetime rules for wrapped objects
 DO NOT READ THIS SECTION
+
 In the process of JavaScript creating, using, and destroying JavaScript objects backed by C++ objects (like custom-wrapped user-defined classes),
 it's not always clear when the underlying C++ object should be destroyed versus when it should remain.   Take object creation, for example: There
 are many situations in which a user-class C++ object may be instantiated.   JavaScript calls the registered constructor (new Person()), a registered
@@ -517,7 +549,8 @@ C++ function returns a newly created object with C++'s new (a factory method, fo
 function returning an r-value.  What about a user-defined class containing another user-defined object with an accessor to return that contained type.
 
 How to determine the correct behavior is an ongoing process for this library.  The rest of this section is a bit of a brain-dump.   Usually the time
-when it's known best what the right thing to do 
+when it's known best what the right thing to do
+
 OK TO START READING AGAIN
 
 

@@ -738,12 +738,11 @@ public:
 	};
 
 
-
-
-		template<class R, class... Args>
+    template<class R, class... Args>
 	void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
 		_add_fake_method(method_name, method);
 	}
+
 
 	template<class Callback>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {

@@ -714,21 +714,29 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
 
 
 // helper for getting exposed variables
-template<class VARIABLE_TYPE>
+template<class T>
 void _variable_getter(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     auto isolate = info.GetIsolate();
-    VARIABLE_TYPE * variable = (VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value();
-    info.GetReturnValue().Set(CastToJS<VARIABLE_TYPE>()(isolate, *variable));
+    T * variable = (T*)v8::External::Cast(*(info.Data()))->Value();
+    info.GetReturnValue().Set(CastToJS<T>()(isolate, *variable));
 }
 
-// helper for setting exposed variables
-template<class VARIABLE_TYPE>
+
+// setter is a no-op if the type is const
+template<class T, std::enable_if_t<std::is_const<T>::value, int> = 0>
+void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info)
+{
+    // should this throw a V8 exception?
+}
+
+
+// if the type is not const, then set the value as requested
+template<class T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
 void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) 
 {
-    // using ResultType = decltype(CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value));
     // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
-    *(VARIABLE_TYPE*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<VARIABLE_TYPE>()(info.GetIsolate(), value);
+    *(T*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<T>()(info.GetIsolate(), value);
 }
 
 
@@ -736,11 +744,11 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
 * Allows reads and writes to the variable
 */
-template<class VARIABLE_TYPE>
-void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+template<class T>
+void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T & variable) {
     object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
-                                 _variable_getter<VARIABLE_TYPE>,
-                                 _variable_setter<VARIABLE_TYPE>,
+                                 _variable_getter<T>,
+                                 _variable_setter<T>,
                                  v8::External::New(isolate, &variable));
 }
 /**
@@ -748,10 +756,10 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 * Allows reads to the variable.  Writes are ignored.
 * TODO: consider making writes errors (throw?)
 */
-template<class VARIABLE_TYPE>
-void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, VARIABLE_TYPE & variable) {
+template<class T>
+void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T & variable) {
     object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
-                                 _variable_getter<VARIABLE_TYPE>, 
+                                 _variable_getter<T>, 
                                  0, 
                                  v8::External::New(isolate, &variable));
 }
@@ -760,12 +768,12 @@ void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectT
 * Exposes the C++ variable 'variable' to a specific javascript object as a read/write variable
 * Often used to add the variable to a context's global object
 */
-template<class VARIABLE_TYPE>
-void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, VARIABLE_TYPE & variable) {
+template<class T>
+void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, T & variable) {
     auto isolate = context->GetIsolate();
     object->SetAccessor(v8::String::NewFromUtf8(isolate, name), 
-                        _variable_getter<VARIABLE_TYPE>, 
-                        _variable_setter<VARIABLE_TYPE>, 
+                        _variable_getter<T>, 
+                        _variable_setter<T>, 
                         v8::External::New(isolate, &variable));
 }
 
@@ -774,10 +782,10 @@ void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object>
 * TODO: consider making them errors (throw?)
 * Often used to add the variable to a context's global object
 */
-template<class VARIABLE_TYPE>
-void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, VARIABLE_TYPE & variable) {
+template<class T>
+void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, T & variable) {
     auto isolate = context->GetIsolate();
-    object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<VARIABLE_TYPE>, 0, v8::External::New(isolate, &variable));
+    object->SetAccessor(v8::String::NewFromUtf8(isolate, name), _variable_getter<T>, 0, v8::External::New(isolate, &variable));
 }
 
 
