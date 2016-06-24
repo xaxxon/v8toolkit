@@ -490,8 +490,6 @@ public:
 		// Add the constructor function to the parent object template (often the global template)
 		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
 
-
-
 		return *this;
 	}
 
@@ -1014,7 +1012,6 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 										TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
 	}
 	return *t;
-
 }
 
 
