@@ -120,7 +120,16 @@ namespace {
                     printf("\n");
                 }
 
+//                auto first_data_member = klass.findFirstNamedDataMember();
+
                 printf("\n");
+
+                for (FieldDecl * field : klass->fields()) {
+                    printf("Data member %s, type: %s\n",
+                           field->getNameAsString().c_str(),
+                           field->getType().getAsString().c_str());
+                }
+
             }
         }
     };
