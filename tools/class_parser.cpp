@@ -5,6 +5,21 @@
 // This program will only work with clang but the output should be useable on any platform.
 
 
+
+/**
+ * How to run over complete code base using cmake + cotire
+add_library(api-gen-template OBJECT ${YOUR_SOURCE_FILES})
+target_compile_options(api-gen-template
+        PRIVATE -Xclang -ast-dump -fdiagnostics-color=never <== this isn't right yet, this just dumps the ast
+        )
+set_target_properties(api-gen-template PROPERTIES COTIRE_UNITY_TARGET_NAME "api-gen")
+cotire(api-gen-template)
+ *
+ */
+
+
+
+
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
