@@ -23,6 +23,10 @@ using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
 
+//#define PRINT_SKIPPED_EXPORT_REASONS true
+#define PRINT_SKIPPED_EXPORT_REASONS false
+
+
 
 namespace {
 
@@ -36,100 +40,177 @@ namespace {
 
 
 
-
     class ClassHandler : public MatchFinder::MatchCallback {
     private:
-        CompilerInstance &CI;
-    public:
-        ClassHandler(CompilerInstance &CI) : CI(CI) {}
-        virtual void run(const MatchFinder::MatchResult &Result) {
-            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
-                if (dyn_cast<NamedDecl>(klass)) {
-                    auto named_class = dyn_cast<NamedDecl>(klass);
+        enum EXPORT_TYPE {
+            EXPORT_UNSPECIFIED = 0,
+            EXPORT_NONE, // export nothing
+            EXPORT_SOME, // only exports specifically marked entities
+            EXPORT_EXCEPT, // exports everything except specifically marked entities
+            EXPORT_ALL}; // exports everything
 
-                    printf("Class/struct: %s has an annotation\n", named_class->getQualifiedNameAsString().c_str());
-                }
-                bool found_v8toolkit_generate_bindings = false;
-                auto & attrs = klass->getAttrs();
-                for (auto attr : attrs) {
-                    if (dyn_cast<AnnotateAttr>(attr)) {
-                        auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                        auto string_ref = attribute_attr->getAnnotation();
-                        printf("annotation value: %s\n", string_ref.str().c_str());
-                        if (string_ref.str() == "v8toolkit_generate_bindings") {
-                            found_v8toolkit_generate_bindings = true;
-                            break;
-                        }
+//        CompilerInstance &CI;
+
+        SourceManager & source_manager;
+    public:
+
+        EXPORT_TYPE get_export_type(const Decl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED) {
+            auto &attrs = decl->getAttrs();
+            EXPORT_TYPE export_type = previous;
+
+            for (auto attr : attrs) {
+                if (dyn_cast<AnnotateAttr>(attr)) {
+                    auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+                    auto string_ref = attribute_attr->getAnnotation();
+//                        printf("annotation value: %s\n", string_ref.str().c_str());
+                    if (string_ref.str() == "v8toolkit_generate_bindings_all") {
+                        export_type = EXPORT_ALL;
+                    } else if (string_ref.str() == "v8toolkit_generate_bindings_some") {
+                        export_type = EXPORT_SOME;
+                    } else if (string_ref.str() == "v8toolkit_generate_bindings_except") {
+                        export_type = EXPORT_EXCEPT;
+                    } else if (string_ref.str() == "v8toolkit_generate_bindings_none") {
+                        export_type = EXPORT_NONE; // just for completeness
                     }
                 }
+            }
+//            printf("Returning export type: %d\n", export_type);
+            return export_type;
+        }
 
-                // if the specific annotation wasn't found, nothing to do here
-                if (!found_v8toolkit_generate_bindings) {
-                    printf("didn't find special binding name\n\n");
-                    return;
+
+        ClassHandler(CompilerInstance &CI) : source_manager(CI.getSourceManager())
+        {}
+
+        void handle_data_member(FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
+            auto export_type = get_export_type(field, parent_export_type);
+            auto field_name = field->getNameAsString();
+
+            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping data member %s because not supposed to be exported %d\n",
+                       indentation.c_str(),
+                       field_name.c_str(), export_type);
+                return;
+            }
+
+            if (field->getAccess() != AS_public) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), field_name.c_str());
+                return;
+            }
+
+            printf("%sData member %s, type: %s\n",
+                   indentation.c_str(),
+                   field->getNameAsString().c_str(),
+                   field->getType().getAsString().c_str());
+
+        }
+
+        void handle_method(CXXMethodDecl * method, EXPORT_TYPE parent_export_type, const std::string & indentation) {
+
+            std::string method_name(method->getQualifiedNameAsString().c_str());
+            auto export_type = get_export_type(method, parent_export_type);
+
+            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping method %s because not supposed to be exported %d\n",
+                       indentation.c_str(), method_name.c_str(), export_type);
+                return;
+            }
+
+
+
+
+            // only deal with public methods
+            if (method->getAccess() != AS_public) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), method_name.c_str());
+                return;
+            }
+            if (method->isOverloadedOperator()) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping overloaded operator %s\n", indentation.c_str(), method_name.c_str());
+                return;
+            }
+            if (dyn_cast<CXXConstructorDecl>(method)) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping constructor %s\n", indentation.c_str(), method_name.c_str());
+                return;
+            }
+            if (dyn_cast<CXXDestructorDecl>(method)) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping destructor %s\n", indentation.c_str(), method_name.c_str());
+                return;
+            }
+            if (method->isPure()) {
+                assert(method->isVirtual());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), method_name.c_str());
+                return;
+            }
+
+            printf("%s", indentation.c_str());
+
+
+            if (method->isStatic()) {
+                printf("static ");
+            }
+            printf("%s %s(", method->getReturnType().getAsString().c_str(), method_name.c_str());
+
+//            printf("static: %d instance: %d const: %d volatile: %d virtual: %d\n",
+//                   method->isStatic(), method->isInstance(), method->isConst(), method->isVolatile(), method->isVirtual());
+
+
+//            printf("Number input params: %d\n", method->getNumParams());
+            bool first_param = true;
+            for (unsigned int i = 0; i < method->getNumParams(); i++) {
+                if (!first_param) {
+                    printf(", ");
                 }
+                first_param = false;
+                auto param = method->getParamDecl(i);
+                printf("%s", param->getOriginalType().getAsString().c_str());
+            }
 
-//                auto location = klass->getLocation();
+            printf(")\n");
+        }
 
-                auto & source_manager = CI.getSourceManager();
+        void handle_class(const CXXRecordDecl * klass,
+                          EXPORT_TYPE parent_export_type = EXPORT_UNSPECIFIED,
+                          const std::string & indentation = "") {
+            auto class_name = klass->getQualifiedNameAsString();
+            auto export_type = get_export_type(klass, parent_export_type);
+            if (export_type == EXPORT_NONE) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping class %s marked EXPORT_NONE\n", indentation.c_str(), class_name.c_str());
+                return;
+            }
 
-                // prints out source for decl
-                //printf("class at %s", decl2str(klass,  source_manager).c_str());
+            // prints out source for decl
+            //printf("class at %s", decl2str(klass,  source_manager).c_str());
 
-                auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
-                printf("Decl at line %d, file id: %d\n", full_source_loc.getExpansionLineNumber(),
-                       full_source_loc.getFileID().getHashValue());
+//            auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
+            printf("%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
+
+//            printf("%s Decl at line %d, file id: %d\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
+//                   full_source_loc.getFileID().getHashValue());
 
 //                auto type_decl = dyn_cast<TypeDecl>(klass);
 //                assert(type_decl);
 //                auto type = type_decl->getTypeForDecl();
 //
-                for(CXXMethodDecl * method : klass->methods()) {
-                    auto named_decl = dyn_cast<NamedDecl>(method);
-                    if (named_decl == nullptr) {
-                        continue;
-                    }
-                    printf("Method: %s\n", named_decl->getQualifiedNameAsString().c_str());
-                    printf("static: %d instance: %d const: %d volatile: %d virtual: %d\n",
-                        method->isStatic(), method->isInstance(), method->isConst(), method->isVolatile(), method->isVirtual());
+            for(CXXMethodDecl * method : klass->methods()) {
+                handle_method(method, export_type, indentation + "  ");
+            }
 
-                    std::string access;
-                    switch(method->getAccess()) {
-                        case AS_public:
-                            access = "public";
-                            break;
-                        case AS_private:
-                            access = "private";
-                            break;
-                        case AS_protected:
-                            access = "protected";
-                            break;
-                        case AS_none:
-                            access = "none";
-                            break;
-                    }
-                    printf("Access specifier: %s\n", access.c_str());
-                    auto return_type = method->getReturnType();
-                    printf("Return type: %s\n", return_type.getAsString().c_str());
+            for (FieldDecl * field : klass->fields()) {
+                handle_data_member(field, export_type, indentation + "  ");
+            }
 
-                    printf("Number input params: %d\n", method->getNumParams());
-                    for (unsigned int i = 0; i < method->getNumParams(); i++) {
-                        auto param = method->getParamDecl(i);
-                        printf("Parameter %d: %s\n", i, param->getOriginalType().getAsString().c_str());
-                    }
-                    printf("\n");
-                }
 
-//                auto first_data_member = klass.findFirstNamedDataMember();
+            for (auto base_class : klass->bases()) {
+                auto qual_type = base_class.getType();
+                auto record_decl = qual_type->getAsCXXRecordDecl();
+                handle_class(record_decl, export_type, indentation + "  ");
+            }
+        }
 
-                printf("\n");
 
-                for (FieldDecl * field : klass->fields()) {
-                    printf("Data member %s, type: %s\n",
-                           field->getNameAsString().c_str(),
-                           field->getType().getAsString().c_str());
-                }
-
+        virtual void run(const MatchFinder::MatchResult &Result) {
+            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
+                handle_class(klass);
             }
         }
     };
