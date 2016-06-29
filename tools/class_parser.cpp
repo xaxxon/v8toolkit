@@ -18,7 +18,12 @@ cotire(api-gen-template)
  */
 
 
+/**
+ * THIS IS HIGHLY EXPERIMENTAL - IT PROBABLY DOESN'T WORK WELL AT ALL
+ */
 
+#include <iostream>
+#include <sstream>
 
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/AST/AST.h"
@@ -37,6 +42,8 @@ using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
+
+using namespace std;
 
 //#define PRINT_SKIPPED_EXPORT_REASONS true
 #define PRINT_SKIPPED_EXPORT_REASONS false
@@ -99,61 +106,78 @@ namespace {
 
         void handle_data_member(FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
             auto export_type = get_export_type(field, parent_export_type);
-            auto field_name = field->getNameAsString();
+            auto short_field_name = field->getNameAsString();
+            auto full_field_name = field->getQualifiedNameAsString();
+
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping data member %s because not supposed to be exported %d\n",
                        indentation.c_str(),
-                       field_name.c_str(), export_type);
+                       short_field_name.c_str(), export_type);
                 return;
             }
 
             if (field->getAccess() != AS_public) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), field_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), short_field_name.c_str());
                 return;
             }
 
-            printf("%sData member %s, type: %s\n",
-                   indentation.c_str(),
-                   field->getNameAsString().c_str(),
-                   field->getType().getAsString().c_str());
+            printf("%sclass_wrapper.add_member(\"%s\", &%s);\n", indentation.c_str(),
+                   short_field_name.c_str(), full_field_name.c_str());
+//            printf("%sData member %s, type: %s\n",
+//                   indentation.c_str(),
+//                   field->getNameAsString().c_str(),
+//                   field->getType().getAsString().c_str());
+
+        }
+
+        std::string get_method_parameters(CXXMethodDecl * method) {
+            std::stringstream result;
+            bool first_param = true;
+            for (unsigned int i = 0; i < method->getNumParams(); i++) {
+                if (!first_param) {
+                    result << ", ";
+                }
+                first_param = false;
+                auto param = method->getParamDecl(i);
+                result << param->getOriginalType().getAsString();
+            }
+            return result.str();
 
         }
 
         void handle_method(CXXMethodDecl * method, EXPORT_TYPE parent_export_type, const std::string & indentation) {
 
-            std::string method_name(method->getQualifiedNameAsString().c_str());
+            std::string full_method_name(method->getQualifiedNameAsString());
+            std::string short_method_name(method->getNameAsString());
             auto export_type = get_export_type(method, parent_export_type);
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping method %s because not supposed to be exported %d\n",
-                       indentation.c_str(), method_name.c_str(), export_type);
+                       indentation.c_str(), full_method_name.c_str(), export_type);
                 return;
             }
-
-
-
 
             // only deal with public methods
             if (method->getAccess() != AS_public) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), method_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), full_method_name.c_str());
                 return;
             }
             if (method->isOverloadedOperator()) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping overloaded operator %s\n", indentation.c_str(), method_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping overloaded operator %s\n", indentation.c_str(), full_method_name.c_str());
                 return;
             }
             if (dyn_cast<CXXConstructorDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping constructor %s\n", indentation.c_str(), method_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping constructor %s\n", indentation.c_str(), full_method_name.c_str());
                 return;
             }
             if (dyn_cast<CXXDestructorDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping destructor %s\n", indentation.c_str(), method_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping destructor %s\n", indentation.c_str(), full_method_name.c_str());
                 return;
             }
             if (method->isPure()) {
                 assert(method->isVirtual());
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), method_name.c_str());
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
                 return;
             }
 
@@ -161,30 +185,20 @@ namespace {
 
 
             if (method->isStatic()) {
-                printf("static ");
+                printf("class_wrapper.add_static_method<%s>(\"%s\", &%s);\n",
+                       get_method_parameters(method).c_str(),
+                       short_method_name.c_str(), full_method_name.c_str());
+            } else {
+                printf("class_wrapper.add_method<%s>(\"%s\", &%s);\n",
+                       get_method_parameters(method).c_str(),
+                       short_method_name.c_str(), full_method_name.c_str());
+
             }
-            printf("%s %s(", method->getReturnType().getAsString().c_str(), method_name.c_str());
-
-//            printf("static: %d instance: %d const: %d volatile: %d virtual: %d\n",
-//                   method->isStatic(), method->isInstance(), method->isConst(), method->isVolatile(), method->isVirtual());
-
-
-//            printf("Number input params: %d\n", method->getNumParams());
-            bool first_param = true;
-            for (unsigned int i = 0; i < method->getNumParams(); i++) {
-                if (!first_param) {
-                    printf(", ");
-                }
-                first_param = false;
-                auto param = method->getParamDecl(i);
-                printf("%s", param->getOriginalType().getAsString().c_str());
-            }
-
-            printf(")\n");
         }
 
         void handle_class(const CXXRecordDecl * klass,
                           EXPORT_TYPE parent_export_type = EXPORT_UNSPECIFIED,
+                          bool top_level = true,
                           const std::string & indentation = "") {
             auto class_name = klass->getQualifiedNameAsString();
             auto export_type = get_export_type(klass, parent_export_type);
@@ -197,7 +211,10 @@ namespace {
             //printf("class at %s", decl2str(klass,  source_manager).c_str());
 
 //            auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
-            printf("%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
+//            printf("%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
+            if (top_level) printf("{\n");
+            if (top_level) printf("v8toolkit::V8ClassWrapper<%s> class_wrapper = isolate.wrap_class<%s>(isolate);\n",
+                class_name.c_str(), class_name.c_str());
 
 //            printf("%s Decl at line %d, file id: %d\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
 //                   full_source_loc.getFileID().getHashValue());
@@ -218,8 +235,9 @@ namespace {
             for (auto base_class : klass->bases()) {
                 auto qual_type = base_class.getType();
                 auto record_decl = qual_type->getAsCXXRecordDecl();
-                handle_class(record_decl, export_type, indentation + "  ");
+                handle_class(record_decl, export_type, false, indentation + "  ");
             }
+            if (top_level) printf("}\n");
         }
 
 
@@ -292,4 +310,4 @@ namespace {
 }
 
 static FrontendPluginRegistry::Add<PrintFunctionNamesAction>
-        X("print-fns", "print function names");
+        X("v8toolkit-generate-bindings", "generate v8toolkit bindings");

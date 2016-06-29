@@ -9,7 +9,7 @@ public:
     FooParent();
     virtual void fooparent_purevirtual() = 0;
     virtual void fooparent_purevirtual_tobeoverridden() = 0;
-    virtual void fooparent_virtual();
+    virtual void fooparent_virtual(char * a, int b, const volatile short & c);
 
     char fooparent_char();
     int fp_i;
