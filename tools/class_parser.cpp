@@ -97,9 +97,9 @@ namespace {
 
 
             if (method->isConst()) {
-                result << "JS_ACCESS_CONST_";
+                result << "  JS_ACCESS_CONST_";
             } else {
-                result << "JS_ACCESS_";
+                result << "  JS_ACCESS_";
             }
             auto num_params = method->getNumParams();
             result << num_params << "(";
@@ -125,6 +125,7 @@ namespace {
 
             for (auto base_class : klass->bases()) {
                 auto base_decl = base_class.getType()->getAsCXXRecordDecl();
+                handle_class(base_decl);
             }
 
         }
@@ -132,9 +133,12 @@ namespace {
         void print_bindings() {
             auto annotations = get_annotations(starting_class);
             if (has_annotation(starting_class, "v8toolkit_generate_bidirectional")) {
+                printf("class JS%s : public %s, public v8toolkit::JSWrapper<%s> {\n",
+                    short_name().c_str(), short_name().c_str(), short_name().c_str());
                 handle_class(starting_class);
+                printf("};\n");
             } else {
-                printf("Class %s not marked bidirectional\n", short_name().c_str());
+//                printf("Class %s not marked bidirectional\n", short_name().c_str());
             }
         }
     };

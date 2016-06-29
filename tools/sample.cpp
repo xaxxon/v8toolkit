@@ -11,6 +11,8 @@ public:
     virtual void fooparent_purevirtual_tobeoverridden() = 0;
     virtual void fooparent_virtual(char * a, int b, const volatile short & c);
 
+    virtual int const_virtual_not_overwritten(int, int, int) const;
+
     char fooparent_char();
     int fp_i;
 };
