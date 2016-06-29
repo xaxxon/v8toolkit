@@ -7,19 +7,29 @@
 
 
 /**
- * How to run over complete code base using cmake + cotire
+How to run over complete code base using cmake + cotire
 add_library(api-gen-template OBJECT ${YOUR_SOURCE_FILES})
 target_compile_options(api-gen-template
         PRIVATE -Xclang -ast-dump -fdiagnostics-color=never <== this isn't right yet, this just dumps the ast
         )
 set_target_properties(api-gen-template PROPERTIES COTIRE_UNITY_TARGET_NAME "api-gen")
 cotire(api-gen-template)
- *
  */
 
 
 /**
- * THIS IS HIGHLY EXPERIMENTAL - IT PROBABLY DOESN'T WORK WELL AT ALL
+ * THIS IS HIGHLY EXPERIMENTAL - IT PROBABLY DOESN'T WORK AT ALL
+ *
+ * Special attribute names recognized:
+ *
+ * wrapper bindings:
+ * __attribute__((annotate("v8toolkit_generate_bindings_none"))) // skip this class/method/member
+ * __attribute__((annotate("v8toolkit_generate_bindings_some"))) // not sure if this actually works
+ * __attribute__((annotate("v8toolkit_generate_bindings_except"))) // not sure if this actually works
+ * __attribute__((annotate("v8toolkit_generate_bindings_all"))) // export everything under this by default unless marked as none
+ *
+ * bidirectional bindings:
+ * __attribute__((annotate("v8toolkit_generate_bidirectional")))
  */
 
 #include <iostream>
@@ -52,6 +62,85 @@ using namespace std;
 
 namespace {
 
+    // returns a vector of all the annotations on a Decl
+    std::vector<std::string> get_annotations(const Decl * decl) {
+        std::vector<std::string> results;
+        for (auto attr : decl->getAttrs()) {
+            AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
+            if (annotation) {
+                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+                auto annotation_string = attribute_attr->getAnnotation().str();
+                results.emplace_back(annotation->getAnnotation().str());
+            }
+        }
+        return results;
+    }
+
+    bool has_annotation(const Decl * decl, const std::string & target) {
+        auto annotations = get_annotations(decl);
+        return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
+    }
+
+
+
+    class BidirectionalBindings {
+    private:
+        const CXXRecordDecl * starting_class;
+
+    public:
+        BidirectionalBindings(const CXXRecordDecl * starting_class) : starting_class(starting_class){}
+        std::string short_name(){return starting_class->getName();}
+
+        void print_virtual(const CXXMethodDecl * method) {
+
+            std::stringstream result;
+
+
+            if (method->isConst()) {
+                result << "JS_ACCESS_CONST_";
+            } else {
+                result << "JS_ACCESS_";
+            }
+            auto num_params = method->getNumParams();
+            result << num_params << "(";
+
+            auto return_type_string = method->getReturnType().getAsString();
+            result << return_type_string << ", ";
+
+            auto method_name = method->getName();
+            result << method_name.str() << ");";
+
+
+
+            cout << result.str() << endl;
+
+        }
+
+        void handle_class(const CXXRecordDecl * klass) {
+            for(CXXMethodDecl * method : klass->methods()) {
+                if (method->isVirtual()) {
+                    print_virtual(method);
+                }
+            }
+
+            for (auto base_class : klass->bases()) {
+                auto base_decl = base_class.getType()->getAsCXXRecordDecl();
+            }
+
+        }
+
+        void print_bindings() {
+            auto annotations = get_annotations(starting_class);
+            if (has_annotation(starting_class, "v8toolkit_generate_bidirectional")) {
+                handle_class(starting_class);
+            } else {
+                printf("Class %s not marked bidirectional\n", short_name().c_str());
+            }
+        }
+    };
+
+
+
 //    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
 //        // (T, U) => "T,,"
 //        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(d->getSourceRange()), sm, LangOptions(), 0);
@@ -83,15 +172,14 @@ namespace {
             for (auto attr : attrs) {
                 if (dyn_cast<AnnotateAttr>(attr)) {
                     auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                    auto string_ref = attribute_attr->getAnnotation();
-//                        printf("annotation value: %s\n", string_ref.str().c_str());
-                    if (string_ref.str() == "v8toolkit_generate_bindings_all") {
+                    auto annotation_string = attribute_attr->getAnnotation().str();
+                    if (annotation_string == "v8toolkit_generate_bindings_all") {
                         export_type = EXPORT_ALL;
-                    } else if (string_ref.str() == "v8toolkit_generate_bindings_some") {
+                    } else if (annotation_string == "v8toolkit_generate_bindings_some") {
                         export_type = EXPORT_SOME;
-                    } else if (string_ref.str() == "v8toolkit_generate_bindings_except") {
+                    } else if (annotation_string == "v8toolkit_generate_bindings_except") {
                         export_type = EXPORT_EXCEPT;
-                    } else if (string_ref.str() == "v8toolkit_generate_bindings_none") {
+                    } else if (annotation_string == "v8toolkit_generate_bindings_none") {
                         export_type = EXPORT_NONE; // just for completeness
                     }
                 }
@@ -143,7 +231,6 @@ namespace {
                 result << param->getOriginalType().getAsString();
             }
             return result.str();
-
         }
 
         void handle_method(CXXMethodDecl * method, EXPORT_TYPE parent_export_type, const std::string & indentation) {
@@ -196,6 +283,7 @@ namespace {
             }
         }
 
+
         void handle_class(const CXXRecordDecl * klass,
                           EXPORT_TYPE parent_export_type = EXPORT_UNSPECIFIED,
                           bool top_level = true,
@@ -244,6 +332,9 @@ namespace {
         virtual void run(const MatchFinder::MatchResult &Result) {
             if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
                 handle_class(klass);
+
+                BidirectionalBindings bidirectional(klass);
+                bidirectional.print_bindings();
             }
         }
     };

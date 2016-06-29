@@ -16,13 +16,14 @@ public:
 };
 
 
-class ALL Foo : public FooParent {
+class ALL V8TOOLKIT_BIDIRECTIONAL Foo : public FooParent {
     void foo_method(int*, int){}
     double a;
 public:
     Foo();
     SKIP void foo_explicitly_skipped();
     virtual void fooparent_purevirtual_tobeoverridden();
+    virtual char const_virtual(int) const;
     int foo_int_method(char*, char){return 4;}
     float b;
     SKIP float c;

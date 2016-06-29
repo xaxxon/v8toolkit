@@ -11,6 +11,6 @@
 #define ALL __attribute__((annotate("v8toolkit_generate_bindings_all")))
 #define NOT_SPECIAL __attribute__((annotate("else")))
 
-//
-//class SPECIAL HeaderClass {};
-//class NOT_SPECIAL HeaderClass2 {};
+
+
+#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate("v8toolkit_generate_bidirectional")))

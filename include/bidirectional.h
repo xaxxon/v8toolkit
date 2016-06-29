@@ -283,6 +283,11 @@ virtual return_type name() override {\
     JS_ACCESS_CORE(return_type, name)\
 }
 
+#define JS_ACCESS_0(return_type, name)\
+virtual return_type name() override {\
+    JS_ACCESS_CORE(return_type, name)\
+}
+
 #define JS_ACCESS_1(return_type, name, t1)\
 virtual return_type name(t1 p1) override {\
     JS_ACCESS_CORE(return_type, name, p1)\
@@ -332,6 +337,12 @@ virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8,
 virtual return_type name() const override {\
     JS_ACCESS_CORE(return_type, name)\
 }
+
+#define JS_ACCESS_CONST_0(return_type, name)\
+virtual return_type name() const override {\
+    JS_ACCESS_CORE(return_type, name)\
+}
+
 
 #define JS_ACCESS_1_CONST(return_type, name, t1)\
 virtual return_type name(t1 p1) const override {\
