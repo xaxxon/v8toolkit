@@ -466,15 +466,16 @@ namespace {
                     constructor_name = annotations[0];
                 }
                 if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) != used_constructor_names.end()) {
-                    printf("Error: Skipping because duplicate JS constructor function name %s", constructor_name.c_str());
-                    return;
+                    cerr << fmt::format("Error: because duplicate JS constructor function name {}", constructor_name.c_str()) << endl;
+                    throw std::exception();
                 }
+                used_constructor_names.push_back(constructor_name);
 
-                result << fmt::format("{}  class_wrapper.add_constructor<{}>({}, isolate);\n",
+                result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
                        indentation, get_method_parameters(constructor), constructor_name);
             });
 
-            if (top_level) result << "};\n\n";
+            if (top_level) result << "}\n\n";
             return result.str();
         }
 
@@ -493,7 +494,7 @@ namespace {
 
                 BidirectionalBindings bidirectional(klass);
                 auto bidirectional_class_code = bidirectional.get_bindings();
-                bidirectional_class_file << class_wrapper_code;
+                bidirectional_class_file << bidirectional_class_code;
             }
         }
     };
@@ -535,8 +536,9 @@ namespace {
             class_wrapper_file.open(class_wrapper_filename, ios::out);
             if (!class_wrapper_file) {
                 cerr << "Couldn't open " << class_wrapper_filename << endl;
-
+                throw std::exception();
             }
+            class_wrapper_file << "void v8toolkit_initialize_class_wrappers() {" << endl;
 
             const char * bidirectional_class_filename = "v8toolkit_generated_bidirectional_class.h";
             bidirectional_class_file.open(bidirectional_class_filename, ios::out);
@@ -546,14 +548,21 @@ namespace {
             }
         }
 
-        // close up c++ syntax and close output files
-        ~PrintFunctionNamesAction() {
+        void EndSourceFileAction() {
+            static bool already_called = false;
+
+            if (already_called) {
+                cerr << "This plugin doesn't work if there's more than one file.   Use it on a unity build" << endl;
+                throw std::exception();
+            }
+            already_called = true;
+            // close up c++ syntax and close output files
             class_wrapper_file << "}\n";
             class_wrapper_file.close();
 
             bidirectional_class_file.close();
-        }
 
+        }
 
     protected:
         ofstream class_wrapper_file;
@@ -563,9 +572,6 @@ namespace {
         // The value returned here is used internally to run checks against
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
-            printf("NEW CONSUMER\n");
-
-
 
             return llvm::make_unique<MyASTConsumer>(CI, class_wrapper_file, bidirectional_class_file);
         }

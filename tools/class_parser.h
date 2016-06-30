@@ -25,7 +25,7 @@
  */
 #define V8TOOLKIT_CONSTRUCTOR_PREFIX "v8toolkit_bidirectional_constructor_"
 #define V8TOOLKIT_CONSTRUCTOR(name) \
-    __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX name)))
+    __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX #name)))
 
 
 

@@ -26,6 +26,7 @@ class V8TOOLKIT_ALL V8TOOLKIT_BIDIRECTIONAL Foo : public FooParent {
     double a;
 public:
     Foo();
+    V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);
     V8TOOLKIT_NONE void foo_explicitly_skipped();
     virtual void fooparent_purevirtual_tobeoverridden();
     virtual char const_virtual(int) const;
