@@ -5,23 +5,8 @@
 //char do_something(char c){return c;}
 
 
-class V8TOOLKIT_ALL FooParent {
-public:
-    FooParent();
-    virtual void fooparent_purevirtual() = 0;
-    virtual void fooparent_purevirtual_tobeoverridden() = 0;
-    virtual void fooparent_virtual_tobeoverridden();
-    virtual void fooparent_virtual(char * a, int b, const volatile short & c);
-    static int fooparent_static_method(const int *){return 8;}
 
-    virtual int const_virtual_not_overwritten(int, int, int) const;
-
-    char fooparent_char();
-    int fp_i;
-};
-
-
-class V8TOOLKIT_ALL V8TOOLKIT_BIDIRECTIONAL Foo : public FooParent {
+class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS Foo : public FooParent {
     void foo_method(int*, int){}
     double a;
 public:
@@ -36,6 +21,15 @@ public:
 
     float b;
     V8TOOLKIT_NONE float c;
+};
+
+
+class Foo;
+
+
+class V8TOOLKIT_WRAPPED_CLASS ConstructorTest {
+ public:
+    ~ConstructorTest();
 };
 
 //struct ALL FooStruct {

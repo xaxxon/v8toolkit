@@ -16,3 +16,21 @@
 //#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate("v8toolkit_generate_bidirectional")))
 
 #include "class_parser.h"
+
+class Uninteresting{};
+
+class V8TOOLKIT_WRAPPED_CLASS FooParent {
+public:
+    FooParent();
+    virtual void fooparent_purevirtual() = 0;
+    virtual void fooparent_purevirtual_tobeoverridden() = 0;
+    virtual void fooparent_virtual_tobeoverridden();
+    virtual void fooparent_virtual(char * a, int b, const volatile short & c);
+    static int fooparent_static_method(const int *){return 8;}
+
+    virtual int const_virtual_not_overwritten(int, int, int) const;
+
+    char fooparent_char();
+    int fp_i;
+};
+

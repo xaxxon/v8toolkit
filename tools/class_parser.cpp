@@ -1,9 +1,19 @@
 
-// This clang plugin will look for classes marked as XXXX and generate c++ wrapper files for those classes and
-//   automatically build up inheritence properly
+
+/**
+ * This clang plugin looks for classes annotated with V8TOOLKIT_WRAPPED_CLASS and/or V8TOOLKIT_BIDIRECTIONAL_CLASS
+ * and automatically generates source files for class wrappings and/or JSWrapper objects for those classes.
+ *
+ * Each JSWrapper object type will go into its own .h file called v8toolkit_generated_bidirectional_<ClassName>.h
+ *   These files should be included from within the header file defining the class.
+ *
+ * MISSING DOCS FOR CLASS WRAPPER CODE GENERATION
+ */
 
 // This program will only work with clang but the output should be useable on any platform.
 
+
+//
 
 
 /**
@@ -17,24 +27,12 @@ cotire(api-gen-template)
  */
 
 
-/**
- * THIS IS HIGHLY EXPERIMENTAL - IT PROBABLY DOESN'T WORK AT ALL
- *
- * Special attribute names recognized:
- *
- * wrapper bindings:
- * __attribute__((annotate("v8toolkit_generate_bindings_none"))) // skip this class/method/member
- * __attribute__((annotate("v8toolkit_generate_bindings_some"))) // not sure if this actually works
- * __attribute__((annotate("v8toolkit_generate_bindings_except"))) // not sure if this actually works
- * __attribute__((annotate("v8toolkit_generate_bindings_all"))) // export everything under this by default unless marked as none
- *
- * bidirectional bindings:
- * __attribute__((annotate("v8toolkit_generate_bidirectional")))
- */
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <set>
+#include <vector>
 #include <regex>
 
 #include <cppformat/format.h>
@@ -111,6 +109,31 @@ namespace {
         }
     }
 
+
+
+//    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
+//        // (T, U) => "T,,"
+//        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(d->getSourceRange()), sm, LangOptions(), 0);
+//        if (text.at(text.size()-1) == ',')
+//            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
+//        return text;
+//    }
+
+
+
+    std::string strip_path_from_filename(const std::string & filename) {
+
+        // naive regex to grab everything after the last slash or backslash
+        auto regex = std::regex("([^/\\\\]*)$");
+
+        std::smatch matches;
+        if (std::regex_search(filename, matches, regex)) {
+            return matches[1];
+        }
+        cerr << fmt::format("Unrecognizable filename {}", filename);
+        throw std::exception();
+    }
+
     // returns a vector of all the annotations on a Decl
     std::vector<std::string> get_annotations(const Decl * decl) {
         std::vector<std::string> results;
@@ -146,6 +169,10 @@ namespace {
         }
         return results;
     }
+
+
+
+
 
 
 
@@ -228,32 +255,38 @@ namespace {
 
         }
 
-        std::string get_bindings() {
+        void generate_bindings() {
             std::stringstream result;
             auto annotations = get_annotations(starting_class);
             auto matches = get_annotation_regex(starting_class, "v8toolkit_generate_(.*)");
-            if (has_annotation(starting_class, "v8toolkit_generate_bidirectional")) {
+            if (has_annotation(starting_class, std::string(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING))) {
                 result << fmt::format("class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\n", // {{ is escaped {
                                       short_name(), short_name(), short_name());
                 result << handle_class(starting_class);
                 result << "};\n";
             } else {
 //                printf("Class %s not marked bidirectional\n", short_name().c_str());
+                return;
             }
 
-            return result.str();
+            // dumps a file per class
+//            cerr << "Dumping JSWrapper type for " << short_name() << endl;
+            ofstream bidirectional_class_file;
+            auto bidirectional_class_filename = fmt::format("v8toolkit_generated_bidirectional_{}.h", short_name());
+            bidirectional_class_file.open(bidirectional_class_filename, ios::out);
+            assert(bidirectional_class_file);
+
+            bidirectional_class_file << result.str();
+            bidirectional_class_file.close();
+
+
         }
     };
 
 
 
-//    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
-//        // (T, U) => "T,,"
-//        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(d->getSourceRange()), sm, LangOptions(), 0);
-//        if (text.at(text.size()-1) == ',')
-//            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
-//        return text;
-//    }
+
+
 
 
 
@@ -269,8 +302,8 @@ namespace {
 //        CompilerInstance &CI;
 
         SourceManager & source_manager;
-        ofstream & class_wrapper_file;
-        ofstream & bidirectional_class_file;
+        std::stringstream & wrapper_data;
+        std::set<std::string> & files_to_include;
 
     public:
 
@@ -302,11 +335,11 @@ namespace {
 
 
         ClassHandler(CompilerInstance &CI,
-                     ofstream & class_wrapper_file,
-                     ofstream & bidirectional_class_file) :
+                     std::stringstream & wrapper_data,
+                     std::set<std::string> & files_to_include) :
             source_manager(CI.getSourceManager()),
-            class_wrapper_file(class_wrapper_file),
-            bidirectional_class_file(bidirectional_class_file)
+            wrapper_data(wrapper_data),
+            files_to_include(files_to_include)
         {}
 
 
@@ -403,7 +436,7 @@ namespace {
 
             bool is_bidirectional = false;
             if (top_level) {
-                if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_STRING)) {
+                if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
 //                    printf("Is bidirectional\n");
                     is_bidirectional = true;
                 } else {
@@ -421,14 +454,19 @@ namespace {
             // prints out source for decl
             //printf("class at %s", decl2str(klass,  source_manager).c_str());
 
-//            auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
+            auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
 //            printf("%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
-            if (top_level) result << "{\n";
-            if (top_level) result << fmt::format("  v8toolkit::V8ClassWrapper<{}> class_wrapper = isolate.wrap_class<{}>(isolate);\n",
-                class_name, class_name);
 
-//            printf("%s Decl at line %d, file id: %d\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
-//                   full_source_loc.getFileID().getHashValue());
+            // don't do the following code for inherited classes
+            if (top_level){
+                result << indentation << "{\n";
+                files_to_include.insert(strip_path_from_filename(source_manager.getFilename(full_source_loc).str()));
+                result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> class_wrapper = isolate.wrap_class<{}>(isolate);\n",
+                                      indentation, class_name, class_name);
+            }
+
+//            printf("%s Decl at line %d, file id: %d %s\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
+//                   full_source_loc.getFileID().getHashValue(), source_manager.getBufferName(full_source_loc));
 
 //                auto type_decl = dyn_cast<TypeDecl>(klass);
 //                assert(type_decl);
@@ -458,7 +496,15 @@ namespace {
             if (top_level) result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
 
             std::vector<std::string> used_constructor_names;
-            foreach_constructor(klass, [&](const CXXMethodDecl * constructor) {
+            foreach_constructor(klass, [&](auto constructor) {
+
+                if (constructor->isCopyConstructor()) {
+                    printf("Skipping copy constructor\n");
+                    return;
+                } else if (constructor->isMoveConstructor()) {
+                    printf("Skipping move constructor\n");
+                    return;
+                }
                 auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
 //                printf("Got %d annotations on constructor\n", (int)annotations.size());
                 std::string constructor_name = class_name;
@@ -467,6 +513,9 @@ namespace {
                 }
                 if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) != used_constructor_names.end()) {
                     cerr << fmt::format("Error: because duplicate JS constructor function name {}", constructor_name.c_str()) << endl;
+                    for(auto & name : used_constructor_names) {
+                        cerr << name << endl;
+                    }
                     throw std::exception();
                 }
                 used_constructor_names.push_back(constructor_name);
@@ -475,29 +524,41 @@ namespace {
                        indentation, get_method_parameters(constructor), constructor_name);
             });
 
-            if (top_level) result << "}\n\n";
+            if (top_level) result << indentation << "}\n\n";
+
             return result.str();
         }
 
 
         /**
-         * This runs per-match
+         * This runs per-match from MyASTConsumer, but always on the same ClassHandler object
          */
         virtual void run(const MatchFinder::MatchResult &Result) {
 
             if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
                 auto full_class_name = klass->getQualifiedNameAsString();
 
-                auto class_wrapper_code = handle_class(klass);
-                class_wrapper_file << class_wrapper_code;
+                auto class_wrapper_code = handle_class(klass, EXPORT_UNSPECIFIED, true, "  ");
+                wrapper_data << class_wrapper_code;
 
 
                 BidirectionalBindings bidirectional(klass);
-                auto bidirectional_class_code = bidirectional.get_bindings();
-                bidirectional_class_file << bidirectional_class_code;
+                bidirectional.generate_bindings();
+
             }
         }
     };
+
+
+
+
+
+
+
+
+
+
+
 
 
     // Implementation of the ASTConsumer interface for reading an AST produced
@@ -506,12 +567,13 @@ namespace {
     class MyASTConsumer : public ASTConsumer {
     public:
         MyASTConsumer(CompilerInstance &CI,
-                      ofstream & class_wrapper_file,
-                      ofstream & bidirectional_class_file) :
-                HandlerForClass(CI, class_wrapper_file, bidirectional_class_file) {
-            Matcher.addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()),
-                                             hasAttr(attr::Annotate)).bind("class"),
-                               //cxxRecordDecl(hasDeclaration(unless(namedDecl(isPrivate)))).bind("thing")
+                      std::stringstream & wrapper_data,
+                      std::set<std::string> & files_to_include) :
+                HandlerForClass(CI, wrapper_data, files_to_include) {
+            Matcher.addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()), // select all structs and classes
+                                             hasAttr(attr::Annotate), // can't check the actual annotation value here
+                                             isDefinition() // skip forward declarations
+            ).bind("class"),
                 &HandlerForClass);
         }
 
@@ -527,25 +589,22 @@ namespace {
 
 
 
+
+
+
+
+
+
+
+
+
+
     // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
     class PrintFunctionNamesAction : public PluginASTAction {
     public:
         // open up output files
         PrintFunctionNamesAction() {
-            const char * class_wrapper_filename = "v8toolkit_generated_class_wrapper.cpp";
-            class_wrapper_file.open(class_wrapper_filename, ios::out);
-            if (!class_wrapper_file) {
-                cerr << "Couldn't open " << class_wrapper_filename << endl;
-                throw std::exception();
-            }
-            class_wrapper_file << "void v8toolkit_initialize_class_wrappers() {" << endl;
 
-            const char * bidirectional_class_filename = "v8toolkit_generated_bidirectional_class.h";
-            bidirectional_class_file.open(bidirectional_class_filename, ios::out);
-            if (!bidirectional_class_file) {
-                cerr << "Couldn't open " << bidirectional_class_filename << endl;
-                throw std::exception();
-            }
         }
 
         void EndSourceFileAction() {
@@ -556,24 +615,41 @@ namespace {
                 throw std::exception();
             }
             already_called = true;
+
+            // Write class wrapper data to a file
+            ofstream class_wrapper_file;
+
+            const char * class_wrapper_filename = "v8toolkit_generated_class_wrapper.cpp";
+            class_wrapper_file.open(class_wrapper_filename, ios::out);
+            if (!class_wrapper_file) {
+                cerr << "Couldn't open " << class_wrapper_filename << endl;
+                throw std::exception();
+            }
+
+            for (auto file_to_include : files_to_include) {
+                class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);
+            }
+
+            class_wrapper_file << "void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {" << endl;
+            class_wrapper_file << wrapper_data.str();
+
             // close up c++ syntax and close output files
             class_wrapper_file << "}\n";
             class_wrapper_file.close();
 
-            bidirectional_class_file.close();
 
         }
 
     protected:
-        ofstream class_wrapper_file;
-        ofstream bidirectional_class_file;
+        std::stringstream wrapper_data;
+        std::set<std::string> files_to_include;
 
 
         // The value returned here is used internally to run checks against
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
 
-            return llvm::make_unique<MyASTConsumer>(CI, class_wrapper_file, bidirectional_class_file);
+            return llvm::make_unique<MyASTConsumer>(CI, wrapper_data, files_to_include);
         }
 
         bool ParseArgs(const CompilerInstance &CI,

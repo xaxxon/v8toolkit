@@ -18,10 +18,10 @@
 #define V8TOOLKIT_ALL_STRING "v8toolkit_generate_bindings_all"
 
 #define V8TOOLKIT_NONE __attribute__((annotate(V8TOOLKIT_NONE_STRING)))
-#define V8TOOLKIT_ALL __attribute__((annotate(V8TOOLKIT_ALL_STRING)))
+#define V8TOOLKIT_WRAPPED_CLASS __attribute__((annotate(V8TOOLKIT_ALL_STRING)))
 
 /**
- * Use this to create a JavaScript constructor function
+ * Use this to create a JavaScript constructor function with the specified name
  */
 #define V8TOOLKIT_CONSTRUCTOR_PREFIX "v8toolkit_bidirectional_constructor_"
 #define V8TOOLKIT_CONSTRUCTOR(name) \
@@ -31,8 +31,9 @@
 
 
 /**
- * Use these to allow javascript to subclass c++ types via the "bidirectional" process
+ * Use these to automatically generate bindings allowing javascript to subclass c++
+ * types via the "bidirectional" process
  */
-#define V8TOOLKIT_BIDIRECTIONAL_STRING "v8toolkit_generate_bidirectional"
-#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_STRING)))
+#define V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING "v8toolkit_generate_bidirectional"
+#define V8TOOLKIT_BIDIRECTIONAL_CLASS __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)))
 
