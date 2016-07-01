@@ -33,15 +33,15 @@ struct CastToNative<const TYPE> { \
 
 #define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
 template<> \
-struct CastToNative<TYPE>{ \
-    const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return CastToNative<TYPE>()(isolate, value); \
-    } \
+struct CastToNative<const TYPE> { \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
 }; \
 \
 template<> \
-struct CastToNative<const TYPE> { \
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
+struct CastToNative<TYPE>{ \
+    const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+        return CastToNative<const TYPE>()(isolate, value); \
+    } \
 }; \
 inline TYPE CastToNative<const TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
 
@@ -285,9 +285,7 @@ struct CastToJS<std::vector<U, Rest...>> {
             (void)array->Set(context, i, CastToJS<U>()(isolate, vector.at(i)));
         }
         return array;
-        
     }
-    
 };
 
 
