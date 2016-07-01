@@ -62,7 +62,7 @@ class Animal {
 	std::string name;
 public:
 	Animal(const std::string & name) : name(name) {}
-	Animal(const Animal&) = delete;
+	Animal(const Animal&) = default;
 	Animal(Animal&&) = delete;
 	Animal& operator=(const Animal&) = delete;
 	Animal& operator=(Animal&&) = delete;
@@ -73,7 +73,7 @@ public:
 
     virtual string get_type() {return "cow";}
     virtual int get_i() {return i;};
-    virtual string echo(string s){return s;}
+    virtual string echo(const Animal & s){return "Animal::echo";}
     virtual int add(int i, int j){return i + j;}
 };
 
@@ -98,7 +98,7 @@ public:
     
     // Every function you want to override in javascript must be in this list or it will ALWAYS call the C++ version
     JS_ACCESS(int, get_i)
-    JS_ACCESS_1(string, echo, string)
+    JS_ACCESS_1(string, echo, const Animal &)
     JS_ACCESS_2(int, add, int, int)
     JS_ACCESS(string, get_type)
         void crap(){}
@@ -175,7 +175,8 @@ int main(int argc, char ** argv)
         auto a = animals[0];
         assert(a->get_type() == "mule");
         assert(a->get_i() == 1);
-        assert(a->echo("mule") == "js-mule-echo: mule");
+		Animal monkey("monkey");
+        assert(a->echo(monkey) == "js-mule-echo: mule");
         assert(a->add(2,2) == 5); // mules don't add well
 
         
@@ -183,7 +184,7 @@ int main(int argc, char ** argv)
         a = animals[1];
         assert(a->get_type() == "zebra");
         assert(a->get_i() == 42);
-        assert(a->echo("zebra") == "zebra");
+        assert(a->echo(monkey) == "zebra");
         assert(a->add(2,2) == 4); // cows are good at math
         
     });

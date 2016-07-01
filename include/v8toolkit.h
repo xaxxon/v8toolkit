@@ -665,6 +665,25 @@ struct TupleForEach<0, Tuple> {
 };
 
 
+template<class... OriginalTypes, class... Ts>
+v8::Local<v8::Value> call_javascript_function_with_vars(const v8::Local<v8::Context> context,
+                                                        const v8::Local<v8::Function> function,
+                                                        const v8::Local<v8::Object> receiver,
+                                                        const TypeList<OriginalTypes...> & type_list,
+                                                        Ts&&... ts) {
+    auto isolate = context->GetIsolate();
+    std::vector<v8::Local<v8::Value>> parameters {CastToJS<OriginalTypes>()(isolate, std::forward<Ts>(ts))...};
+
+    v8::TryCatch tc(isolate);
+    auto maybe_result = function->Call(context, receiver, sizeof...(ts), &parameters[0]);
+    if(tc.HasCaught() || maybe_result.IsEmpty()) {
+        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        throw V8ExecutionException(isolate, tc);
+    }
+    return maybe_result.ToLocalChecked();
+
+}
+
 /**
 * Returns true on success with the result in the "result" parameter
 */
@@ -680,7 +699,7 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     TupleForEach<tuple_size, TupleType>()(isolate, parameters.data(), tuple);
     
     v8::TryCatch tc(isolate);
-    
+
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
     if(tc.HasCaught() || maybe_result.IsEmpty()) {

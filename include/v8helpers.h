@@ -52,13 +52,17 @@ struct LTG {
 
 template <class... > struct TypeList {};
 
-// This function is not defined and can only be called inside decltype()
+// for use inside a decltype only
 template <class R, class... Ts>
 auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
 
+// for use inside a decltype only
 template <class R, class Head, class... Tail>
 auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
+// for use inside a decltype only
+template <class... Ts>
+auto get_typelist_for_variables(Ts... ts) -> TypeList<Ts...>;
 
 template <class... Ts>
 auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {

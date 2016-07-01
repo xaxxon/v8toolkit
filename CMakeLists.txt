@@ -94,6 +94,7 @@ add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
 add_dependencies(bidirectional_sample v8toolkit_static)
 target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit)
+target_link_libraries(bidirectional_sample cppformat)
 add_custom_command(TARGET bidirectional_sample PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js
         ${PROJECT_BINARY_DIR})
