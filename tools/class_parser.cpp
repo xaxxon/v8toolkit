@@ -98,17 +98,6 @@ namespace {
 
 
 
-    // calls callback for each constructor in the class
-    template<class Callback>
-    void foreach_constructor(const CXXRecordDecl * klass, Callback && callback) {
-        for(CXXMethodDecl * method : klass->methods()) {
-            CXXConstructorDecl * constructor;
-            if ((constructor = dyn_cast<CXXConstructorDecl>(method))) {
-                callback(constructor);
-            }
-        }
-    }
-
 
 
 //    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
@@ -344,6 +333,23 @@ namespace {
 //            printf("Returning export type: %d\n", export_type);
             return export_type;
         }
+
+
+        // calls callback for each constructor in the class
+        template<class Callback>
+        void foreach_constructor(const CXXRecordDecl * klass, Callback && callback) {
+            for(CXXMethodDecl * method : klass->methods()) {
+                CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
+                if (constructor == nullptr) {
+                    continue;
+                }
+                if (get_export_type(constructor) == EXPORT_NONE) {
+                    continue;
+                }
+                callback(constructor);
+            }
+        }
+
 
 
         ClassHandler(CompilerInstance &CI,

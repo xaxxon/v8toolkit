@@ -11,6 +11,7 @@ class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS Foo : public FooPare
     double a;
 public:
     Foo();
+    V8TOOLKIT_NONE Foo(int, char*); // skip this constructor, otherwise name error
     V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);
     V8TOOLKIT_NONE void foo_explicitly_skipped();
     virtual void fooparent_purevirtual_tobeoverridden();
