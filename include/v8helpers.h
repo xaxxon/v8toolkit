@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <map>
 #include <vector>
@@ -56,6 +58,16 @@ auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
 
 template <class R, class Head, class... Tail>
 auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
+
+
+template <class... Ts>
+auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {
+    return std::tuple<Ts...>(std::forward<Ts>(ts)...);
+}
+
+
+
+
 
 
 template <bool... b> struct static_all_of;
@@ -350,10 +362,5 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
-
-
-
-
-
 
 } // End v8toolkit namespace

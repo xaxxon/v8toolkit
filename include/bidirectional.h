@@ -263,9 +263,10 @@ public:
         if(JS_ACCESS_CORE_DEBUG) printf("Calling native version of %s\n", #name); \
         return this->BASE_TYPE::name( __VA_ARGS__ ); \
     } \
-	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE\n");\
-    auto parameter_tuple = std::make_tuple( __VA_ARGS__ );\
-    v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native;\
+	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE\n"); \
+    auto parameter_tuple = std::make_tuple( __VA_ARGS__ ); \
+   /* auto parameter_tuple = make_tuple_for_variables(__VA_ARGS__); */ \
+    v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native; \
     return v8toolkit::scoped_run(isolate, global_context, [&](auto isolate, auto context){ \
       auto js_object = global_js_object.Get(isolate); \
         v8::Local<v8::Function> js_function; \
@@ -340,7 +341,7 @@ virtual return_type name() const override {\
     JS_ACCESS_CORE(return_type, name)\
 }
 
-#define JS_ACCESS_CONST_0(return_type, name)\
+#define JS_ACCESS_0_CONST(return_type, name)\
 virtual return_type name() const override {\
     JS_ACCESS_CORE(return_type, name)\
 }

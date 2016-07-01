@@ -195,6 +195,10 @@ namespace {
                 stack.pop_front();
 
                 for(CXXMethodDecl * method : current_class->methods()) {
+                    if (dyn_cast<CXXDestructorDecl>(method)) {
+                        cerr << "Skipping virtual destructor while gathering virtual methods" << endl;
+                        continue;
+                    }
                     if (method->isVirtual() && !method->isPure()) {
                         // go through existing ones and check for match
                         if (std::find_if(results.begin(), results.end(), [&](auto found){
@@ -227,19 +231,27 @@ namespace {
             std::stringstream result;
 
 
-            if (method->isConst()) {
-                result << "  JS_ACCESS_CONST_";
-            } else {
-                result << "  JS_ACCESS_";
-            }
+            result << "  JS_ACCESS_";
             auto num_params = method->getNumParams();
-            result << num_params << "(";
+            result << num_params;
+
+            if (method->isConst()) {
+                result << "_CONST";
+            }
+            result << "(";
 
             auto return_type_string = method->getReturnType().getAsString();
             result << return_type_string << ", ";
 
             auto method_name = method->getName();
-            result << method_name.str() << ");\n";
+
+            result << method_name.str();
+
+            if (num_params > 0) {
+                result << ", " << get_method_parameters(method);
+            }
+
+            result  << ");\n";
 
             return result.str();
 
@@ -625,6 +637,8 @@ namespace {
                 cerr << "Couldn't open " << class_wrapper_filename << endl;
                 throw std::exception();
             }
+
+            class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
 
             for (auto file_to_include : files_to_include) {
                 class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);

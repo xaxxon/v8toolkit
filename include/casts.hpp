@@ -31,86 +31,77 @@ template<TEMPLATE> \
 struct CastToNative<const TYPE> { \
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
 
+#define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
+template<> \
+struct CastToNative<TYPE>{ \
+    const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+        return CastToNative<TYPE>()(isolate, value); \
+    } \
+}; \
+\
+template<> \
+struct CastToNative<const TYPE> { \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
+}; \
+inline TYPE CastToNative<const TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
 
 
 
 
-template<typename T>
-struct CastToNative;
+#define CAST_TO_JS_PRIMITIVE_WITH_CONST(TYPE) \
+template<> struct CastToJS<const TYPE> { \
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \
+}; \
+template<> \
+struct CastToJS<TYPE> { \
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return CastToJS<const TYPE>()(isolate, value);} \
+}; \
+inline v8::Local<v8::Value>  CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
 
 
 /**
 * Casts from a boxed Javascript type to a native type
 */
+template<typename T>
+struct CastToNative;
+
+
 template<>
 struct CastToNative<void> {
     void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {}
 };
 
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(bool){return static_cast<bool>(value->ToBoolean()->Value());}
+
+
 
 // integers
-template<>
-struct CastToNative<long long> {
-	long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long long>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<unsigned long long> {
-	unsigned long long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long long>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<long> {
-	long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<unsigned long> {
-	unsigned long operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned long>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<int> {
-	int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<int>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<unsigned int> {
-	unsigned int operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned int>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<short> {
-	short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<short>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<unsigned short> {
-	unsigned short operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned short>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<char> {
-	char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<unsigned char> {
-	unsigned char operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<unsigned char>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<bool> {
-	bool operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<bool>(value->ToBoolean()->Value());}
-};
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long long){return static_cast<long long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long long){return static_cast<unsigned long long>(value->ToInteger()->Value());}
 
-template<>
-struct CastToNative<wchar_t> {
-	wchar_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<wchar_t>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<char16_t> {
-	char16_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char16_t>(value->ToInteger()->Value());}
-};
-template<>
-struct CastToNative<char32_t> {
-	char32_t operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<char32_t>(value->ToInteger()->Value());}
-};
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long){return static_cast<long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long){return static_cast<unsigned long>(value->ToInteger()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(int) {return static_cast<int>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned int){return static_cast<unsigned int>(value->ToInteger()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(short){return static_cast<short>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned short){return static_cast<unsigned short>(value->ToInteger()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char){return static_cast<char>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned char){return static_cast<unsigned char>(value->ToInteger()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(wchar_t){return static_cast<wchar_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char16_t){return static_cast<char16_t>(value->ToInteger()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char32_t){return static_cast<char32_t>(value->ToInteger()->Value());}
+
 
 template<class Return, class... Params>
 struct CastToNative<std::function<Return(Params...)>> {
     std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
 };
+
 
 
 CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT) {
@@ -140,41 +131,28 @@ CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class Firs
 
 
 
-
-// TODO: Make sure this is tested
-template<class ElementType, class... Rest>
-struct CastToNative<std::vector<ElementType, Rest...>> {
-    std::vector<ElementType, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        auto context = isolate->GetCurrentContext();
-        std::vector<ElementType, Rest...> v;
-        if(value->IsArray()) {
-            auto array = v8::Local<v8::Object>::Cast(value);
-            auto array_length = get_array_length(isolate, array);
-            for(int i = 0; i < array_length; i++) {
-                auto value = array->Get(context, i).ToLocalChecked();
-                v.push_back(CastToNative<ElementType>()(isolate, value));
-            }
-        } else {
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires an array, but another type was provided"));
+CAST_TO_NATIVE_WITH_CONST(std::vector<ElementType V8_TOOLKIT_COMMA Rest...>, class ElementType V8_TOOLKIT_COMMA class... Rest)
+{
+    auto context = isolate->GetCurrentContext();
+    std::vector<ElementType, Rest...> v;
+    if(value->IsArray()) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+        auto array_length = get_array_length(isolate, array);
+        for(int i = 0; i < array_length; i++) {
+            auto value = array->Get(context, i).ToLocalChecked();
+            v.push_back(CastToNative<ElementType>()(isolate, value));
         }
-        return v;
+    } else {
+        isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires an array, but another type was provided"));
     }
-};
+    return v;
+}};
 
 
-// floats
-template<>
-struct CastToNative<float> {
-	float operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<float>(value->ToNumber()->Value());}
-};
-template<>
-struct CastToNative<double> {
-	double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<double>(value->ToNumber()->Value());}
-};
-template<>
-struct CastToNative<long double> {
-	long double operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return static_cast<long double>(value->ToNumber()->Value());}
-};
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float){return static_cast<float>(value->ToNumber()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(double){return static_cast<double>(value->ToNumber()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long double){return static_cast<long double>(value->ToNumber()->Value());}
+
 
 
 template<>
@@ -191,7 +169,8 @@ struct CastToNative<v8::Local<v8::Function>> {
 
 /**
  * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
- *   to store the string, a std::unique_ptr<char[]> is returned.
+ *   to store the string, a std::unique_ptr<char[]> is returned.  v8toolkit::ParameterBuilder knows how to handle the
+ *   type inconsistency
  */
 template<>
 struct CastToNative<char *> {
@@ -199,29 +178,12 @@ struct CastToNative<char *> {
     return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
   }
 };
-
-
-
-
-/**
- * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
- *   to store the string, a std::unique_ptr<char[]> is returned.
- */
 template<>
 struct CastToNative<const char *> {
   std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return CastToNative<char *>()(isolate, value); }
 };
 
-template<>
-struct CastToNative<std::string> {
-  std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(*v8::String::Utf8Value(value));}
-};
-
-template<>
-struct CastToNative<const std::string> {
-  const std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return std::string(CastToNative<std::string>()(isolate, value));}
-};
-
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string){return std::string(*v8::String::Utf8Value(value));}
 
 
 /**
@@ -231,111 +193,42 @@ struct CastToNative<const std::string> {
 template<typename T>
 struct CastToJS;
 
+CAST_TO_JS_PRIMITIVE_WITH_CONST(bool){return v8::Boolean::New(isolate, value);}
+
 //TODO: Should all these operator()'s be const?
 // integers
-template<>
-struct CastToJS<char> { 
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Integer::New(isolate, value);}
-};
-template<>
-struct CastToJS<unsigned char> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned char value){return v8::Integer::New(isolate, value);}
-};
-template<>
-struct CastToJS<wchar_t> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char value){return v8::Number::New(isolate, value);}
-};
-template<>
-struct CastToJS<char16_t> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char16_t value){return v8::Integer::New(isolate, value);}
-};
-template<>
-struct CastToJS<char32_t> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char32_t value){return v8::Integer::New(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(char){return v8::Integer::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned char){return v8::Integer::New(isolate, value);}
+
+CAST_TO_JS_PRIMITIVE_WITH_CONST(wchar_t){return v8::Number::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(char16_t){return v8::Integer::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(char32_t){return v8::Integer::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(short){return v8::Integer::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned short){return v8::Integer::New(isolate, value);}
 
 
-template<>
-struct CastToJS<short> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, short value){return v8::Integer::New(isolate, value);}
-};
-template<>
-struct CastToJS<unsigned short> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned short value){return v8::Integer::New(isolate, value);}
-};
 
-template<>
-struct CastToJS<int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, int value){return v8::Number::New(isolate, value);}
-};
-template<>
-struct CastToJS<unsigned int> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned int value){return v8::Number::New(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(int){return v8::Number::New(isolate, value);}
 
-template<>
-struct CastToJS<long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long value){return v8::Number::New(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned int){return v8::Number::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(long){return v8::Number::New(isolate, value);}
 
-template<>
-struct CastToJS<const long> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const long value){return v8::Number::New(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned long){return v8::Number::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(long long){return v8::Number::New(isolate, static_cast<double>(value));}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned long long){return v8::Number::New(isolate, static_cast<double>(value));}
 
-    template<>
-struct CastToJS<unsigned long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, unsigned long value){return v8::Number::New(isolate, value);}
-};
-
-template<>
-struct CastToJS<long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
-};
-template<>
-struct CastToJS<unsigned long long> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, size_t value){return v8::Number::New(isolate, static_cast<double>(value));}
-};
 
 
 // floats
-template<>
-struct CastToJS<float> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, float value){return v8::Number::New(isolate, value);}
-};
-template<>
-struct CastToJS<double> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, double value){return v8::Number::New(isolate, value);}
-};
-template<>
-struct CastToJS<long double> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, long double value){return v8::Number::New(isolate, value);}
-};
-
-template<>
-struct CastToJS<bool> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, bool value){return v8::Boolean::New(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(float){return v8::Number::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(double){return v8::Number::New(isolate, value);}
+CAST_TO_JS_PRIMITIVE_WITH_CONST(long double){return v8::Number::New(isolate, value);}
 
 
-// strings
-template<>
-struct CastToJS<char *> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, char * value){return v8::String::NewFromUtf8(isolate, value);}
-};
-template<>
-struct CastToJS<const char *> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const char * value){return v8::String::NewFromUtf8(isolate, value);}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(char*){return v8::String::NewFromUtf8(isolate, value);}
 
-template<>
-struct CastToJS<std::string> {
-  v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
-};
-template<>
-struct CastToJS<const std::string> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::string & value){return v8::String::NewFromUtf8(isolate, value.c_str());}
-};
+CAST_TO_JS_PRIMITIVE_WITH_CONST(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
+
 
 
 template<class T>
