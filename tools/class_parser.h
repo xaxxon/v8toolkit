@@ -17,8 +17,20 @@
 #define V8TOOLKIT_NONE_STRING "v8toolkit_generate_bindings_none"
 #define V8TOOLKIT_ALL_STRING "v8toolkit_generate_bindings_all"
 
-#define V8TOOLKIT_NONE __attribute__((annotate(V8TOOLKIT_NONE_STRING)))
+
+/**
+ * Generate V8ClassWrapper code for the annotated class
+ * ex: class V8TOOLKIT_WRAPPED_CLASS MyClassName {...};
+ */
 #define V8TOOLKIT_WRAPPED_CLASS __attribute__((annotate(V8TOOLKIT_ALL_STRING)))
+
+/** Skip an entry in a class being wrapped and/or bidirectional
+ * ex: struct V8TOOLKIT_WRAPPED_CLASS MyClassName {
+ *         V8TOOLKIT_SKIP void do_not_make_binding_for_me();
+ *     };
+ */
+#define V8TOOLKIT_SKIP __attribute__((annotate(V8TOOLKIT_NONE_STRING)))
+
 
 /**
  * Use this to create a JavaScript constructor function with the specified name
@@ -30,10 +42,11 @@
 
 
 
-/**
- * Use these to automatically generate bindings allowing javascript to subclass c++
- * types via the "bidirectional" process
- */
 #define V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING "v8toolkit_generate_bidirectional"
+
+/**
+ * Generate JSWrapper class for the annotated class
+ * ex: class V8TOOLKIT_BIDIRECTIONAL_CLASS MyClassName {...};
+ */
 #define V8TOOLKIT_BIDIRECTIONAL_CLASS __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)))
 

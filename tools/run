@@ -6,7 +6,7 @@
               -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D_GNU_SOURCE \
               -I$BD/tools/clang/include -Itools/clang/include -I$BD/include -Iinclude \
                   sample.cpp \
-              -fsyntax-only \
+              -fsyntax-only -std=c++14 \
           -Xclang -load \
           -Xclang class_parser.dylib \
           -Xclang -plugin \

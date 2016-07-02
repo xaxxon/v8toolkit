@@ -280,9 +280,9 @@ public:
 	template<class DestructorBehavior>
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
 	{
-        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
+//        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
         auto any = new AnyPtr<T>(cpp_object);
-        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
+//        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
 		
@@ -309,9 +309,11 @@ public:
         init_prototype_object_template(function_template->PrototypeTemplate());
 		init_static_methods(function_template);
 
-        function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
-        
-        // printf("Making function template for type %s\n", typeid(T).name());
+//        function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
+		function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
+
+
+		// printf("Making function template for type %s\n", typeid(T).name());
         
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
@@ -538,7 +540,7 @@ public:
 			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
             this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
-			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());			
+//			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
 		}
         if (V8_CLASS_WRAPPER_DEBUG) printf("Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
 		return v8::Local<v8::Value>::Cast(javascript_object);
@@ -558,6 +560,38 @@ public:
 	using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
 	std::vector<FakeMethodAdder> fake_method_adders;
 
+	std::string class_name = "UnnamedV8ClassWrapperType";
+
+	template<class R, class... Params>
+	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
+
+		if (!std::is_const<T>::value) {
+			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
+		}
+
+		// must be set before finalization
+		assert(!this->finalized);
+
+		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
+
+			auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
+																					 callable);
+			constructor_function_template->Set(this->isolate,
+											   method_name.c_str(),
+											   static_method_function_template);
+		};
+
+		this->static_method_adders.emplace_back(static_method_adder);
+
+
+		return *this;
+	};
+
+
+	V8ClassWrapper<T> & set_class_name(const std::string & name){
+		assert(!this->finalized);
+		this->class_name = name;
+	}
 
 	template<class Callable>
 	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {

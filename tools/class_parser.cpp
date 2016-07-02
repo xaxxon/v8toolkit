@@ -67,19 +67,77 @@ using namespace std;
 
 namespace {
 
-    std::string get_method_parameters(const CXXMethodDecl * method) {
+    std::string get_type_string(QualType qual_type) {
+
+//        cerr << "original: " << qual_type.getAsString() << endl;
+//        cerr << "non-reference: " << qual_type.getNonReferenceType().getAsString() << endl;
+//        cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
+
+#if false
+        bool is_reference = qual_type->isReferenceType();
+        qual_type = qual_type.getNonReferenceType();
+
+
+
+//         This code traverses all the typdefs to get to the actual base type
+//        while (dyn_cast<TypedefType>(qual_type) != nullptr) {
+//            qual_type = dyn_cast<TypedefType>(qual_type)->getDecl()->getUnderlyingType();
+//        }
+//
+        cerr << "checking " << qual_type.getAsString();
+        if (dyn_cast<TypedefType>(qual_type)) {
+            cerr << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() << endl;
+            return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString()  + (is_reference ? " &" : "");
+        } else {
+            cerr << " and returning (no typedef) " << qual_type.getAsString() << endl;
+            return qual_type.getAsString() + (is_reference ? " &" : "");
+        }
+
+#else
+        // this isn't great because it loses the typedef'd names of things, but it ALWAYS works
+        // There is no confusion with reference types or typedefs or const/volatile
+        // EXCEPT: it generates a elaborated type specifier which can't be used in certain places
+        // http://en.cppreference.com/w/cpp/language/elaborated_type_specifier
+        auto canonical_qual_type = qual_type.getCanonicalType();
+
+        //printf("Canonical qualtype typedeftype cast: %p\n",(void*) dyn_cast<TypedefType>(canonical_qual_type));
+
+        //cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
+
+        return canonical_qual_type.getAsString();
+#endif
+    }
+
+
+    std::string get_method_parameters(const CXXMethodDecl * method, bool add_leading_comma = false) {
         std::stringstream result;
         bool first_param = true;
-        for (unsigned int i = 0; i < method->getNumParams(); i++) {
+        auto parameter_count = method->getNumParams();
+        if (parameter_count > 0 && add_leading_comma) {
+            result << ", ";
+        }
+        for (unsigned int i = 0; i < parameter_count; i++) {
             if (!first_param) {
                 result << ", ";
             }
             first_param = false;
             auto param = method->getParamDecl(i);
-            result << param->getOriginalType().getAsString();
+            auto param_qual_type = param->getOriginalType();
+            result << get_type_string(param_qual_type);
         }
         return result.str();
     }
+
+
+
+    std::string get_method_return_type_and_parameters(const CXXMethodDecl * method) {
+        std::stringstream results;
+        results << get_type_string(method->getReturnType());
+        results << get_method_parameters(method, true);
+        return results.str();
+    }
+
+
 
     std::string get_method_string(const CXXMethodDecl * method) {
         std::stringstream result;
@@ -185,7 +243,11 @@ namespace {
 
                 for(CXXMethodDecl * method : current_class->methods()) {
                     if (dyn_cast<CXXDestructorDecl>(method)) {
-                        cerr << "Skipping virtual destructor while gathering virtual methods" << endl;
+                        //cerr << "Skipping virtual destructor while gathering virtual methods" << endl;
+                        continue;
+                    }
+                    if (dyn_cast<CXXConversionDecl>(method)) {
+                        //cerr << "Skipping user-defined conversion operator" << endl;
                         continue;
                     }
                     if (method->isVirtual() && !method->isPure()) {
@@ -216,18 +278,13 @@ namespace {
             if (method->isPure()) {
                 return "";
             }
+
+            auto num_params = method->getNumParams();
 //            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
             std::stringstream result;
 
 
-            result << "  JS_ACCESS_";
-            auto num_params = method->getNumParams();
-            result << num_params;
-
-            if (method->isConst()) {
-                result << "_CONST";
-            }
-            result << "(";
+            result << "  JS_ACCESS_" << num_params << (method->isConst() ? "_CONST(" : "(");
 
             auto return_type_string = method->getReturnType().getAsString();
             result << return_type_string << ", ";
@@ -261,8 +318,12 @@ namespace {
             auto annotations = get_annotations(starting_class);
             auto matches = get_annotation_regex(starting_class, "v8toolkit_generate_(.*)");
             if (has_annotation(starting_class, std::string(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING))) {
-                result << fmt::format("class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\n", // {{ is escaped {
+                result << fmt::format("class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:\n", // {{ is escaped {
                                       short_name(), short_name(), short_name());
+                result << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n", short_name());
+                result << fmt::format("        v8::Local<v8::FunctionTemplate> created_by) :\n");
+                result << fmt::format("      {}(/*actual parameters go here*/),\n", short_name());
+                result << fmt::format("      v8toolkit::JSWrapper(context, object, created_by) {{}}\n"); // {{}} is escaped {}
                 result << handle_class(starting_class);
                 result << "};\n";
             } else {
@@ -341,6 +402,10 @@ namespace {
             for(CXXMethodDecl * method : klass->methods()) {
                 CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
                 if (constructor == nullptr) {
+                    continue;
+                }
+                if (constructor->getAccess() != AS_public) {
+                    cerr << "Skipping non-public constructor" << endl;
                     continue;
                 }
                 if (get_export_type(constructor) == EXPORT_NONE) {
@@ -427,17 +492,22 @@ namespace {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
                 return "";
             }
+            if (dyn_cast<CXXConversionDecl>(method)) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
+                return "";
+            }
+
 
             result << indentation;
 
 
             if (method->isStatic()) {
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
-                       get_method_parameters(method),
+                       get_method_return_type_and_parameters(method),
                        short_method_name, full_method_name);
             } else {
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                       get_method_parameters(method),
+                       get_method_return_type_and_parameters(method),
                        short_method_name, full_method_name);
 
             }
@@ -479,7 +549,7 @@ namespace {
             if (top_level){
                 result << indentation << "{\n";
                 files_to_include.insert(strip_path_from_filename(source_manager.getFilename(full_source_loc).str()));
-                result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> class_wrapper = isolate.wrap_class<{}>(isolate);\n",
+                result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                       indentation, class_name, class_name);
             }
 
@@ -489,6 +559,8 @@ namespace {
 //                auto type_decl = dyn_cast<TypeDecl>(klass);
 //                assert(type_decl);
 //                auto type = type_decl->getTypeForDecl();
+
+            result << fmt::format("// Declarations from {}", class_name) << "\n";
 //
             for(CXXMethodDecl * method : klass->methods()) {
                 result << handle_method(method, export_type, indentation + "  ");
@@ -505,8 +577,8 @@ namespace {
                 handle_class(record_decl, export_type, false, indentation + "  ");
             }
 
-            if (is_bidirectional) {
-                result << fmt::format("{}  JSFactory<{}, JS{}>::add_subclass_static_method(class_wrapper);\n",
+            if (false && is_bidirectional) {
+                result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}>::add_subclass_static_method(class_wrapper);\n",
                                          indentation,
                                          class_name, class_name);
             }
@@ -514,35 +586,39 @@ namespace {
             if (top_level) result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
 
             std::vector<std::string> used_constructor_names;
-            foreach_constructor(klass, [&](auto constructor) {
 
-                if (constructor->isCopyConstructor()) {
-                    printf("Skipping copy constructor\n");
-                    return;
-                } else if (constructor->isMoveConstructor()) {
-                    printf("Skipping move constructor\n");
-                    return;
-                }
-                auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-//                printf("Got %d annotations on constructor\n", (int)annotations.size());
-                std::string constructor_name = class_name;
-                if (!annotations.empty()) {
-                    constructor_name = annotations[0];
-                }
-                if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) != used_constructor_names.end()) {
-                    cerr << fmt::format("Error: because duplicate JS constructor function name {}", constructor_name.c_str()) << endl;
-                    for(auto & name : used_constructor_names) {
-                        cerr << name << endl;
+            if (top_level) {
+                foreach_constructor(klass, [&](auto constructor) {
+
+                    if (constructor->isCopyConstructor()) {
+                        printf("Skipping copy constructor\n");
+                        return;
+                    } else if (constructor->isMoveConstructor()) {
+                        printf("Skipping move constructor\n");
+                        return;
                     }
-                    throw std::exception();
-                }
-                used_constructor_names.push_back(constructor_name);
+                    auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
+//                printf("Got %d annotations on constructor\n", (int)annotations.size());
+                    std::string constructor_name = class_name;
+                    if (!annotations.empty()) {
+                        constructor_name = annotations[0];
+                    }
+                    if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
+                        used_constructor_names.end()) {
+                        cerr << fmt::format("Error: because duplicate JS constructor function name {}",
+                                            constructor_name.c_str()) << endl;
+                        for (auto &name : used_constructor_names) {
+                            cerr << name << endl;
+                        }
+                        throw std::exception();
+                    }
+                    used_constructor_names.push_back(constructor_name);
 
-                result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                       indentation, get_method_parameters(constructor), constructor_name);
-            });
-
-            if (top_level) result << indentation << "}\n\n";
+                    result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
+                                          indentation, get_method_parameters(constructor), constructor_name);
+                });
+                result << indentation << "}\n\n";
+            }
 
             return result.str();
         }

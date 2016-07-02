@@ -4,24 +4,32 @@
 //
 //char do_something(char c){return c;}
 
-
+class HelperClass {
+public:
+    using Callback = std::function<int(char)>;
+};
 
 class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS Foo : public FooParent {
     void foo_method(int*, int){}
     double a;
+    Foo(int, char, short);
 public:
+    using Using=int;
+    using Using2 = Using;
     Foo();
-    V8TOOLKIT_NONE Foo(int, char*); // skip this constructor, otherwise name error
+    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
     V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);
-    V8TOOLKIT_NONE void foo_explicitly_skipped();
+    V8TOOLKIT_SKIP void foo_explicitly_skipped();
     virtual void fooparent_purevirtual_tobeoverridden();
     virtual char const_virtual(int) const;
     int foo_int_method(char*, char){return 4;}
     virtual void fooparent_virtual_tobeoverridden();
     static int foo_static_method(const int *){return 8;}
+    const Using2 & using_return_type_test();
+    void call_helper_calback(HelperClass::Callback);
 
     float b;
-    V8TOOLKIT_NONE float c;
+    V8TOOLKIT_SKIP float c;
 };
 
 

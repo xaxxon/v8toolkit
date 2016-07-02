@@ -375,6 +375,15 @@ struct CastToJS<std::pair<T, U>> {
         (void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
         return array;
     }
+//    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T, U> & pair){
+//        assert(isolate->InContext());
+//        auto context = isolate->GetCurrentContext();
+//        auto array = v8::Array::New(isolate);
+//        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
+//        (void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
+//        return array;
+//    }
+
 };
 
 template<int position, class T>

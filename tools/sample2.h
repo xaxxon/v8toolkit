@@ -15,6 +15,8 @@
 //
 //#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate("v8toolkit_generate_bidirectional")))
 
+#include <functional>
+
 #include "class_parser.h"
 
 class Uninteresting{};

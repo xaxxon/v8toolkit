@@ -266,7 +266,6 @@ struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable,
                     const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
         info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
-        if (V8_TOOLKIT_DEBUG) printf("Just set returnvalue in CallCallable for type %s\n", typeid(R).name());
     }
 };
 
@@ -908,7 +907,7 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
     R(CLASS_TYPE::*method)(Args...);
     
     R operator()(Args... params){
-        return (object.*method)(params...); 
+        return (object.*method)(std::forward<Args>(params)...);
     }
 };
 
