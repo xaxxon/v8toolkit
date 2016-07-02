@@ -264,8 +264,8 @@ struct CallCallable{};
 template<class R, typename ... Args>
 struct CallCallable<std::function<R(Args...)>> {
     void operator()(std::function<R(Args...)> callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(args...)));
+                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&... args) {
+        info.GetReturnValue().Set(v8toolkit::CastToJS<R>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
     }
 };
 
@@ -274,9 +274,12 @@ struct CallCallable<std::function<R(Args...)>> {
 */
 template<typename ... Args>
 struct CallCallable<std::function<void(Args...)>> {
+
     void operator()(std::function<void(Args...)> callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args... args) {
-        callable(args...);
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    Args&... args) {
+
+        callable(std::forward<Args>(args)...);
     }
 };
 
@@ -313,7 +316,7 @@ struct ParameterBuilder<depth, Function, TypeList<>> {
     template<typename ... Ts>
     void operator()(Function function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
         // use CallCallable to differentiate between void and non-void return types
-        CallCallable<Function>()(function, info, std::forward<Ts>(ts)...);
+        CallCallable<Function>()(function, info, ts...);
     }
 };
 
@@ -337,7 +340,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD,TAIL...>,
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        this->super::operator()(function, info, ts..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
     }
 };
     
@@ -354,7 +357,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<char *, TAIL...>> :
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
       this->buffer = CastToNative<char *>()(info.GetIsolate(), info[depth]);
-      this->super::operator()(function, info, ts..., buffer.get());
+      this->super::operator()(function, info, std::forward<Ts>(ts)..., buffer.get());
     }
 };
 
@@ -372,7 +375,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<const char *, TAIL...>> :
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
       this->buffer = CastToNative<const char *>()(info.GetIsolate(), info[depth]);
-      this->super::operator()(function, info, ts..., buffer.get()); 
+      this->super::operator()(function, info, std::forward<Ts>(ts)..., buffer.get());
     }
 };
 
@@ -393,7 +396,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD*, TAIL...>, std::ena
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&... ts) {
       this->element = CastToNative<HEAD>()(info.GetIsolate(), info[depth]);
-      this->super::operator()(function, info, ts..., &this->element);
+      this->super::operator()(function, info, std::forward<Ts>(ts)..., &this->element);
     }
 };
 
@@ -417,7 +420,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<const v8::FunctionCallbac
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        this->super::operator()(function, info, ts..., info);
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., info);
     }
 };
 
@@ -435,7 +438,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Isolate *, TAIL...>> 
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        this->super::operator()(function, info, ts..., info.GetIsolate()); 
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., info.GetIsolate());
     }
 };
 
@@ -452,7 +455,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Local<v8::Context>, T
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
 		auto context = info.GetIsolate()->GetCurrentContext();
-        this->super::operator()(function, info, ts..., context);
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., context);
     }
 };
 
@@ -468,7 +471,7 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<v8::Local<v8::Object>, TA
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        this->super::operator()(function, info, ts..., info.This());
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., info.This());
     }
 };
 
@@ -586,7 +589,8 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 */
 template<class T>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
-    object_template->Set(isolate, name, make_function_template(isolate, callable));
+        decltype(LTG<T>::go(&T::operator())) f(callable);
+    object_template->Set(isolate, name, make_function_template(isolate, f));
 }
 
 /**

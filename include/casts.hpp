@@ -33,17 +33,17 @@ struct CastToNative<const TYPE> { \
 
 #define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
 template<> \
-struct CastToNative<const TYPE> { \
+struct CastToNative<TYPE> { \
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
 }; \
 \
 template<> \
-struct CastToNative<TYPE>{ \
+struct CastToNative<const TYPE>{ \
     const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return CastToNative<const TYPE>()(isolate, value); \
+        return CastToNative<TYPE>()(isolate, value); \
     } \
 }; \
-inline TYPE CastToNative<const TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
+inline TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
 
 
 

@@ -63,7 +63,8 @@ using namespace std;
 //#define PRINT_SKIPPED_EXPORT_REASONS true
 #define PRINT_SKIPPED_EXPORT_REASONS false
 
-
+int classes_wrapped = 0;
+int methods_wrapped = 0;
 
 namespace {
 
@@ -509,6 +510,7 @@ namespace {
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(method),
                        short_method_name, full_method_name);
+                methods_wrapped++;
 
             }
             return result.str();
@@ -519,6 +521,10 @@ namespace {
                           EXPORT_TYPE parent_export_type = EXPORT_UNSPECIFIED,
                           bool top_level = true,
                           const std::string & indentation = "") {
+
+            if (top_level) {
+                classes_wrapped++;
+            }
 
             std::stringstream result;
 
@@ -733,6 +739,7 @@ namespace {
             class_wrapper_file << "}\n";
             class_wrapper_file.close();
 
+            cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
 
         }
 

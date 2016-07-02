@@ -492,8 +492,8 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
         }
     }
 
-    (void)add_function(isolate, object_template, "require", 
-        [isolate, paths](std::string filename) {
+    (void)add_function(isolate, object_template, "require",
+        [isolate, paths](const std::string & filename) {
             auto context = isolate->GetCurrentContext();
             v8::Local<v8::Value> result; 
             
