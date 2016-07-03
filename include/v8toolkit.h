@@ -45,6 +45,19 @@ public:
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 
+/**
+ * Thrown when trying to register a function/method/member with the same name as
+ * something else already registered
+ */
+class DuplicateNameException : public std::exception {
+private:
+    std::string message;
+
+public:
+    DuplicateNameException(std::string message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
+};
+
 
 
 
@@ -340,10 +353,11 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD,TAIL...>,
 
     template<typename ... Ts>
     void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
-        this->super::operator()(function, info, std::forward<Ts>(ts)..., CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
+        this->super::operator()(function, info, std::forward<Ts>(ts)...,
+                                CastToNative<typename std::remove_reference<HEAD>::type>()(info.GetIsolate(), info[depth]));
     }
 };
-    
+
 /**
 * Specialization for function taking a char *
 */

@@ -4,6 +4,12 @@
 //
 //char do_something(char c){return c;}
 
+class V8TOOLKIT_WRAPPED_CLASS AbstractClass {
+public:
+    AbstractClass(){}
+    virtual void pure_virtual_function() = 0;
+};
+
 class HelperClass {
 public:
     using Callback = std::function<int(char)>;

@@ -219,7 +219,8 @@ private:
         
         // printf("v8 constructor creating type %s\n", typeid(T).name());
 		T * new_cpp_object = nullptr;
-		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor = [&new_cpp_object](auto... args)->void{new_cpp_object = new T(args...);};
+		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
+				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
         
         using PB_TYPE = ParameterBuilder<0, decltype(constructor), TypeList<CONSTRUCTOR_PARAMETER_TYPES...>>;
         if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
@@ -272,6 +273,12 @@ private:
     *   instances of the wrapped object are created
     */
     bool finalized = false;
+
+	/**
+	 * List of names already in use for methods/static methods/accessors
+	 * Used to make sure duplicate names aren't requested
+	 */
+	std::vector<std::string> used_attribute_name_list;
 	
 public:
 	
@@ -572,10 +579,18 @@ public:
 		// must be set before finalization
 		assert(!this->finalized);
 
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
+		}
+		used_attribute_name_list.push_back(method_name);
+
+
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
 			auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
 																					 callable);
+
 			constructor_function_template->Set(this->isolate,
 											   method_name.c_str(),
 											   static_method_function_template);
@@ -602,6 +617,13 @@ public:
 
 		// must be set before finalization
 		assert(!this->finalized);
+
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
+		}
+		used_attribute_name_list.push_back(method_name);
+
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
@@ -669,6 +691,12 @@ public:
             V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
         }
 
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), member_name) !=
+				used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", member_name));
+		}
+		used_attribute_name_list.push_back(member_name);
+
 		// store a function for adding the member on to an object template in the future
 		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
@@ -700,8 +728,15 @@ public:
                                                  MEMBER_TYPE &>::type;
 
         assert(this->finalized == false);
-        
-         member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), member_name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", member_name));
+		}
+		used_attribute_name_list.push_back(member_name);
+
+
+		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
     		auto get_member_reference = new std::function<RESULT_REF_TYPE(T*)>([member](T * cpp_object)->RESULT_REF_TYPE{
     			return cpp_object->*member;
@@ -793,6 +828,13 @@ public:
 
 		add_fake_method_for_const_type(method_name, method);
 
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
+		}
+		used_attribute_name_list.push_back(method_name);
+
+
 		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
 		// Object template that will be passed in later when the list is traversed
 		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
@@ -862,6 +904,13 @@ public:
         assert(this->finalized == false);
 
         add_method_for_const_type(method_name, method);
+
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
+		}
+		used_attribute_name_list.push_back(method_name);
+
 
 
 		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the

@@ -554,6 +554,7 @@ namespace {
             // don't do the following code for inherited classes
             if (top_level){
                 result << indentation << "{\n";
+                result << fmt::format("{}  // {}", indentation, class_name) << "\n";
                 files_to_include.insert(strip_path_from_filename(source_manager.getFilename(full_source_loc).str()));
                 result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                       indentation, class_name, class_name);
@@ -566,7 +567,6 @@ namespace {
 //                assert(type_decl);
 //                auto type = type_decl->getTypeForDecl();
 
-            result << fmt::format("// Declarations from {}", class_name) << "\n";
 //
             for(CXXMethodDecl * method : klass->methods()) {
                 result << handle_method(method, export_type, indentation + "  ");
@@ -594,35 +594,39 @@ namespace {
             std::vector<std::string> used_constructor_names;
 
             if (top_level) {
-                foreach_constructor(klass, [&](auto constructor) {
+                if (klass->isAbstract()) {
+                    cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
+                } else {
+                    foreach_constructor(klass, [&](auto constructor) {
 
-                    if (constructor->isCopyConstructor()) {
-                        printf("Skipping copy constructor\n");
-                        return;
-                    } else if (constructor->isMoveConstructor()) {
-                        printf("Skipping move constructor\n");
-                        return;
-                    }
-                    auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-//                printf("Got %d annotations on constructor\n", (int)annotations.size());
-                    std::string constructor_name = class_name;
-                    if (!annotations.empty()) {
-                        constructor_name = annotations[0];
-                    }
-                    if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
-                        used_constructor_names.end()) {
-                        cerr << fmt::format("Error: because duplicate JS constructor function name {}",
-                                            constructor_name.c_str()) << endl;
-                        for (auto &name : used_constructor_names) {
-                            cerr << name << endl;
+                        if (constructor->isCopyConstructor()) {
+                            printf("Skipping copy constructor\n");
+                            return;
+                        } else if (constructor->isMoveConstructor()) {
+                            printf("Skipping move constructor\n");
+                            return;
                         }
-                        throw std::exception();
-                    }
-                    used_constructor_names.push_back(constructor_name);
+                        auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
+//                printf("Got %d annotations on constructor\n", (int)annotations.size());
+                        std::string constructor_name = class_name;
+                        if (!annotations.empty()) {
+                            constructor_name = annotations[0];
+                        }
+                        if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
+                            used_constructor_names.end()) {
+                            cerr << fmt::format("Error: because duplicate JS constructor function name {}",
+                                                constructor_name.c_str()) << endl;
+                            for (auto &name : used_constructor_names) {
+                                cerr << name << endl;
+                            }
+                            throw std::exception();
+                        }
+                        used_constructor_names.push_back(constructor_name);
 
-                    result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                          indentation, get_method_parameters(constructor), constructor_name);
-                });
+                        result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
+                                              indentation, get_method_parameters(constructor), constructor_name);
+                    });
+                }
                 result << indentation << "}\n\n";
             }
 

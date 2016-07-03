@@ -51,6 +51,8 @@ int Point::instance_count = 0;
 
 struct Line {
     Line(){if (SAMPLE_DEBUG) printf("Created line %p (default constructor)\n", this);}
+    Line(const Line &) = delete; // wrapper cannot require copy constructor
+    Line(Line &&) = delete; // wrapper cannot require move constructor
     ~Line(){if (SAMPLE_DEBUG) printf("Deleted line %p\n", this);}
     Point p;
     Point & get_point(){return this->p;}
@@ -59,6 +61,9 @@ struct Line {
     std::string echo(const std::string & input){printf("In echo"); return input;}
     void throw_exception(){throw std::exception();}
     static int static_method(float){return 42;}
+    void takes_function(std::function<Foo&()>){};
+    void takes_const_ref_fundamental(const int & i) {};
+    void takes_ref_fundamental(int & i) {}
 };
 
 
@@ -99,6 +104,10 @@ int main(int argc, char* argv[])
     v8::Isolate* isolate = v8::Isolate::New(create_params);
     {
         scoped_run(isolate, [&](){
+
+            bool got_duplicate_name_exception = false;
+
+
             // how to expose global variables as javascript variables "x" and "y"
             // global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
             // global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
@@ -133,7 +142,16 @@ int main(int argc, char* argv[])
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
             wrapped_point.add_member("x", &Point::x_);
             wrapped_point.add_member("y", &Point::y_);
-        
+
+            got_duplicate_name_exception = false;
+            try {
+                wrapped_point.add_member("y", &Point::y_);
+            } catch (DuplicateNameException &) {
+                got_duplicate_name_exception = true;
+            }
+            assert(got_duplicate_name_exception);
+
+
             // if you register a function that returns an r-value, a copy will be made using the copy constsructor
             wrapped_point.add_method("get_foo", &Point::get_foo).finalize();
             
@@ -151,6 +169,37 @@ int main(int argc, char* argv[])
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
             wrapped_line.add_method("fake_method", [](Line * line){printf("HI");return line->echo("line echo called from fake_method").c_str();});
+            wrapped_line.add_method("takes_function", &Line::takes_function);
+            wrapped_line.add_method("takes_const_ref_fundamental", &Line::takes_const_ref_fundamental);
+            wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
+
+
+            got_duplicate_name_exception = false;
+            try {
+                wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
+            } catch (DuplicateNameException &) {
+                got_duplicate_name_exception = true;
+            }
+            assert(got_duplicate_name_exception);
+
+            got_duplicate_name_exception = false;
+            try {
+                wrapped_line.add_static_method("static_method", &Line::static_method);
+            } catch (DuplicateNameException &) {
+                got_duplicate_name_exception = true;
+            }
+            assert(got_duplicate_name_exception);
+
+
+            got_duplicate_name_exception = false;
+            try {
+                wrapped_line.add_static_method("static_lambda", [](){return 43;});
+            } catch (DuplicateNameException &) {
+                got_duplicate_name_exception = true;
+            }
+            assert(got_duplicate_name_exception);
+
+
 
             wrapped_line.finalize();
             

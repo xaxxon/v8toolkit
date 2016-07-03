@@ -24,7 +24,6 @@ class Uninteresting{};
 class V8TOOLKIT_WRAPPED_CLASS FooParent {
 public:
     FooParent();
-    virtual void fooparent_purevirtual() = 0;
     virtual void fooparent_purevirtual_tobeoverridden() = 0;
     virtual void fooparent_virtual_tobeoverridden();
     virtual void fooparent_virtual(char * a, int b, const volatile short & c);
