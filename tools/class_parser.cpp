@@ -770,7 +770,13 @@ namespace {
                         class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);
                     }
                     class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist that's fine\n", file_count+1);
-                    class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n", file_count);
+                    if (file_count == 1) {
+                        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
+
+                    } else {
+                        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n",
+                                    file_count);
+                    }
 
                 }
                 class_wrapper_file << wrapped_class.contents.str();
