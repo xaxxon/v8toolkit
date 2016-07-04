@@ -12,8 +12,10 @@
 
 // This program will only work with clang but the output should be useable on any platform.
 
-
-//
+/**
+ * KNOWN BUGS:
+ * Doesn't properly understand virtual methods and will duplicate them across the inheritence hierarchy
+ */
 
 
 /**
@@ -27,6 +29,7 @@ cotire(api-gen-template)
  */
 
 // Having this too high can lead to VERY memory-intensive compilation units
+// Single classes (+base classes) with more than this number of declarations will still be in one file.
 #define MAX_DECLARATIONS_PER_FILE 50
 
 #include <iostream>
@@ -73,6 +76,7 @@ namespace {
     struct WrappedClass {
         int declaration_count = 0;
         std::stringstream contents;
+        set<string> names;
     };
 
     std::string get_type_string(QualType qual_type) {
@@ -138,12 +142,21 @@ namespace {
 
 
 
-    std::string get_method_return_type_and_parameters(const CXXMethodDecl * method) {
+    std::string get_method_return_type_class_and_parameters(const CXXRecordDecl * klass, const CXXMethodDecl * method) {
+        std::stringstream results;
+        results << get_type_string(method->getReturnType());
+        results << ", " << klass->getName().str();
+        results << get_method_parameters(method, true);
+        return results.str();
+    }
+
+    std::string get_method_return_type_and_parameters(const CXXRecordDecl * klass, const CXXMethodDecl * method) {
         std::stringstream results;
         results << get_type_string(method->getReturnType());
         results << get_method_parameters(method, true);
         return results.str();
     }
+
 
 
 
@@ -376,6 +389,7 @@ namespace {
         std::vector<WrappedClass> & wrapped_classes;
         WrappedClass * current_wrapped_class; // the class currently being wrapped
         std::set<std::string> names_used;
+        const CXXRecordDecl * top_level_class_decl = nullptr;
 
     public:
 
@@ -438,11 +452,22 @@ namespace {
 
 
 
-        std::string handle_data_member(FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
+        std::string handle_data_member(const CXXRecordDecl * containing_class, FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
             std::stringstream result;
             auto export_type = get_export_type(field, parent_export_type);
             auto short_field_name = field->getNameAsString();
             auto full_field_name = field->getQualifiedNameAsString();
+
+//            if (containing_class != top_level_class_decl) {
+//                cerr << "************";
+//            }
+//            cerr << "changing data member from " << full_field_name << " to ";
+//
+//            std::string regex_string = fmt::format("{}::{}$", containing_class->getName().str(), short_field_name);
+//            auto regex = std::regex(regex_string);
+//            auto replacement = fmt::format("{}::{}", top_level_class_decl->getName().str(), short_field_name);
+//            full_field_name = std::regex_replace(full_field_name, regex, replacement);
+//            cerr << full_field_name << endl;
 
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
@@ -457,6 +482,16 @@ namespace {
                 return "";
             }
 
+            if (current_wrapped_class->names.count(short_field_name)) {
+                printf("Skipping duplicate name %s/%s :: %s\n",
+                       top_level_class_decl->getName().str().c_str(),
+                        containing_class->getName().str().c_str(),
+                        short_field_name.c_str());
+                return "";
+            }
+            current_wrapped_class->names.insert(short_field_name);
+
+
             current_wrapped_class->declaration_count++;
             result << fmt::format("{}class_wrapper.add_member(\"{}\", &{});\n", indentation,
                    short_field_name, full_field_name);
@@ -468,12 +503,23 @@ namespace {
         }
 
 
-        std::string handle_method(CXXMethodDecl * method, EXPORT_TYPE parent_export_type, const std::string & indentation) {
+        std::string handle_method(const CXXRecordDecl * containing_class, CXXMethodDecl * method, EXPORT_TYPE parent_export_type, const std::string & indentation) {
 
             std::stringstream result;
 
             std::string full_method_name(method->getQualifiedNameAsString());
             std::string short_method_name(method->getNameAsString());
+
+//            cerr << "changing method name from " << full_method_name << " to ";
+//
+//            auto regex = std::regex(fmt::format("{}::{}$", containing_class->getName().str(), short_method_name));
+//            auto replacement = fmt::format("{}::{}", top_level_class_decl->getName().str(), short_method_name);
+//            full_method_name = std::regex_replace(full_method_name, regex, replacement);
+//            cerr << full_method_name << endl;
+
+
+
+
             auto export_type = get_export_type(method, parent_export_type);
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
@@ -509,6 +555,16 @@ namespace {
                 return "";
             }
 
+            if (current_wrapped_class->names.count(short_method_name)) {
+                printf("Skipping duplicate name %s/%s :: %s\n",
+                       top_level_class_decl->getName().str().c_str(),
+                       containing_class->getName().str().c_str(),
+                       short_method_name.c_str());
+                return "";
+            }
+            current_wrapped_class->names.insert(short_method_name);
+
+
 
             result << indentation;
 
@@ -516,12 +572,12 @@ namespace {
             if (method->isStatic()) {
                 current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_and_parameters(method),
+                       get_method_return_type_and_parameters(containing_class, method),
                        short_method_name, full_method_name);
             } else {
                 current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_and_parameters(method),
+                       get_method_return_type_class_and_parameters(containing_class, method),
                        short_method_name, full_method_name);
                 methods_wrapped++;
 
@@ -591,11 +647,11 @@ namespace {
 
 //
             for(CXXMethodDecl * method : klass->methods()) {
-                result << handle_method(method, export_type, indentation + "  ");
+                result << handle_method(klass, method, export_type, indentation + "  ");
             }
 
             for (FieldDecl * field : klass->fields()) {
-                result << handle_data_member(field, export_type, indentation + "  ");
+                result << handle_data_member(klass, field, export_type, indentation + "  ");
             }
 
             for (auto base_class : klass->bases()) {
@@ -657,6 +713,7 @@ namespace {
         virtual void run(const MatchFinder::MatchResult &Result) {
 
             if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
+                this->top_level_class_decl = klass;
                 auto full_class_name = klass->getQualifiedNameAsString();
 
                 handle_class(klass, EXPORT_UNSPECIFIED, true, "  ");

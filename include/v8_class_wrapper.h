@@ -750,8 +750,9 @@ public:
 	}
 
 
-	template<class R, class... Args>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(T::*method)(Args...) const) {
+	template<class R, class TBase, class... Args,
+			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
 		return _add_method(method_name, method);
 	}
 
@@ -759,8 +760,9 @@ public:
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
-	template<class R, class... Args>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(T::*method)(Args...))
+	template<class R, class TBase, class... Args,
+			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
 	{
 		return _add_method(method_name, method);
     }

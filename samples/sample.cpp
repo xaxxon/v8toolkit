@@ -10,7 +10,11 @@ using namespace std;
 
 #define SAMPLE_DEBUG true
 
-struct Foo {
+struct FooParent {
+
+};
+
+struct Foo : public FooParent {
     Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
     Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n"); assert(allow_copy_constructor);}
     ~Foo(){if (SAMPLE_DEBUG) printf("deleted Foo %p\n", this);}
@@ -135,8 +139,8 @@ int main(int argc, char* argv[])
             //   at least not without some serious finagling of storing a mapping between a singlne name and
             //   multiple function templates as well as some sort of "closeness" function for determining
             //   which primitive type parameters most closely match the javascript values provided
-            wrapped_point.add_method<int, char*>("overloaded_method1", &Point::overloaded_method);
-            wrapped_point.add_method<int, int>("overloaded_method2", &Point::overloaded_method);
+            wrapped_point.add_method<int, Point, char*>("overloaded_method1", &Point::overloaded_method);
+            wrapped_point.add_method<int, Point, int>("overloaded_method2", &Point::overloaded_method);
             wrapped_point.add_method("make_point", &Point::make_point);
 
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
