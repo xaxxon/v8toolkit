@@ -174,6 +174,25 @@ private:
 	V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {
 		this->isolate_to_wrapper_map.emplace(isolate, this);
 	}
+
+
+	/**
+	 * List of names already in use for methods/static methods/accessors
+	 * Used to make sure duplicate names aren't requested
+	 */
+	std::vector<std::string> used_attribute_name_list;
+
+
+	/**
+	 * Throws if name has already been checked by this function for this type in this isolate
+	 */
+	void check_if_name_used(const std::string & name) {
+		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), name) !=
+			used_attribute_name_list.end()) {
+			throw DuplicateNameException(fmt::format("Cannot add method/static method/member named '{}' to class '{}', name already in use", name, class_name));
+		}
+		used_attribute_name_list.push_back(name);
+	}
 	
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
@@ -274,12 +293,7 @@ private:
     */
     bool finalized = false;
 
-	/**
-	 * List of names already in use for methods/static methods/accessors
-	 * Used to make sure duplicate names aren't requested
-	 */
-	std::vector<std::string> used_attribute_name_list;
-	
+
 public:
 	
 	
@@ -579,11 +593,7 @@ public:
 		// must be set before finalization
 		assert(!this->finalized);
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
-			used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
-		}
-		used_attribute_name_list.push_back(method_name);
+		this->check_if_name_used(method_name);
 
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
@@ -606,6 +616,7 @@ public:
 	V8ClassWrapper<T> & set_class_name(const std::string & name){
 		assert(!this->finalized);
 		this->class_name = name;
+		return *this;
 	}
 
 	template<class Callable>
@@ -618,12 +629,7 @@ public:
 		// must be set before finalization
 		assert(!this->finalized);
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
-			used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
-		}
-		used_attribute_name_list.push_back(method_name);
-
+		this->check_if_name_used(method_name);
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
@@ -677,6 +683,8 @@ public:
 //    };
 
 
+
+
     /**
     * Adds a getter and setter method for the specified class member
     * add_member(&ClassName::member_name, "javascript_attribute_name");
@@ -691,11 +699,7 @@ public:
             V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
         }
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), member_name) !=
-				used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", member_name));
-		}
-		used_attribute_name_list.push_back(member_name);
+		this->check_if_name_used(member_name);
 
 		// store a function for adding the member on to an object template in the future
 		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
@@ -729,12 +733,7 @@ public:
 
         assert(this->finalized == false);
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), member_name) !=
-			used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", member_name));
-		}
-		used_attribute_name_list.push_back(member_name);
-
+		this->check_if_name_used(member_name);
 
 		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
              
@@ -828,11 +827,7 @@ public:
 
 		add_fake_method_for_const_type(method_name, method);
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
-			used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
-		}
-		used_attribute_name_list.push_back(method_name);
+		this->check_if_name_used(method_name);
 
 
 		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
@@ -905,11 +900,7 @@ public:
 
         add_method_for_const_type(method_name, method);
 
-		if (std::find(used_attribute_name_list.begin(), used_attribute_name_list.end(), method_name) !=
-			used_attribute_name_list.end()) {
-			throw DuplicateNameException(fmt::format("Cannot add member named {}, name already in use", method_name));
-		}
-		used_attribute_name_list.push_back(method_name);
+		this->check_if_name_used(method_name);
 
 
 

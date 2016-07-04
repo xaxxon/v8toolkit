@@ -26,7 +26,8 @@ set_target_properties(api-gen-template PROPERTIES COTIRE_UNITY_TARGET_NAME "api-
 cotire(api-gen-template)
  */
 
-
+// Having this too high can lead to VERY memory-intensive compilation units
+#define MAX_DECLARATIONS_PER_FILE 50
 
 #include <iostream>
 #include <fstream>
@@ -67,6 +68,12 @@ int classes_wrapped = 0;
 int methods_wrapped = 0;
 
 namespace {
+
+
+    struct WrappedClass {
+        int declaration_count = 0;
+        std::stringstream contents;
+    };
 
     std::string get_type_string(QualType qual_type) {
 
@@ -365,8 +372,10 @@ namespace {
 //        CompilerInstance &CI;
 
         SourceManager & source_manager;
-        std::stringstream & wrapper_data;
         std::set<std::string> & files_to_include;
+        std::vector<WrappedClass> & wrapped_classes;
+        WrappedClass * current_wrapped_class; // the class currently being wrapped
+        std::set<std::string> names_used;
 
     public:
 
@@ -406,7 +415,7 @@ namespace {
                     continue;
                 }
                 if (constructor->getAccess() != AS_public) {
-                    cerr << "Skipping non-public constructor" << endl;
+//                    cerr << "Skipping non-public constructor" << endl;
                     continue;
                 }
                 if (get_export_type(constructor) == EXPORT_NONE) {
@@ -419,11 +428,12 @@ namespace {
 
 
         ClassHandler(CompilerInstance &CI,
-                     std::stringstream & wrapper_data,
-                     std::set<std::string> & files_to_include) :
+                     std::set<std::string> & files_to_include,
+                     std::vector<WrappedClass> & wrapped_classes) :
             source_manager(CI.getSourceManager()),
-            wrapper_data(wrapper_data),
-            files_to_include(files_to_include)
+            files_to_include(files_to_include),
+            wrapped_classes(wrapped_classes),
+            current_wrapped_class(&wrapped_classes[0])
         {}
 
 
@@ -447,6 +457,7 @@ namespace {
                 return "";
             }
 
+            current_wrapped_class->declaration_count++;
             result << fmt::format("{}class_wrapper.add_member(\"{}\", &{});\n", indentation,
                    short_field_name, full_field_name);
 //            printf("%sData member %s, type: %s\n",
@@ -503,10 +514,12 @@ namespace {
 
 
             if (method->isStatic()) {
+                current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(method),
                        short_method_name, full_method_name);
             } else {
+                current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(method),
                        short_method_name, full_method_name);
@@ -517,50 +530,59 @@ namespace {
         }
 
 
-        std::string handle_class(const CXXRecordDecl * klass,
+        void handle_class(const CXXRecordDecl * klass,
                           EXPORT_TYPE parent_export_type = EXPORT_UNSPECIFIED,
                           bool top_level = true,
                           const std::string & indentation = "") {
 
+
+
             if (top_level) {
+
                 classes_wrapped++;
+                names_used.clear();
+
+                wrapped_classes.emplace_back(WrappedClass());
+                current_wrapped_class = &wrapped_classes.back();
+
             }
 
-            std::stringstream result;
+
+            std::stringstream & result = current_wrapped_class->contents;
 
             bool is_bidirectional = false;
             if (top_level) {
                 if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-//                    printf("Is bidirectional\n");
+//                    fprintf(stderr,"Is bidirectional\n");
                     is_bidirectional = true;
                 } else {
-//                    printf("Is *not* bidirectional\n");
+//                    fprintf(stderr,"Is *not* bidirectional\n");
                 }
             }
-
             auto class_name = klass->getQualifiedNameAsString();
             auto export_type = get_export_type(klass, parent_export_type);
             if (export_type == EXPORT_NONE) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping class %s marked EXPORT_NONE\n", indentation.c_str(), class_name.c_str());
-                return "";
+                if (PRINT_SKIPPED_EXPORT_REASONS) fprintf(stderr,"%sSkipping class %s marked EXPORT_NONE\n", indentation.c_str(), class_name.c_str());
+                return;
             }
 
             // prints out source for decl
-            //printf("class at %s", decl2str(klass,  source_manager).c_str());
+            //fprintf(stderr,"class at %s", decl2str(klass,  source_manager).c_str());
 
             auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
-//            printf("%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
-
+//            fprintf(stderr,"%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
             // don't do the following code for inherited classes
             if (top_level){
+
                 result << indentation << "{\n";
+
                 result << fmt::format("{}  // {}", indentation, class_name) << "\n";
                 files_to_include.insert(strip_path_from_filename(source_manager.getFilename(full_source_loc).str()));
                 result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                       indentation, class_name, class_name);
+                result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, class_name);
             }
-
-//            printf("%s Decl at line %d, file id: %d %s\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
+//            fprintf(stderr,"%s Decl at line %d, file id: %d %s\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
 //                   full_source_loc.getFileID().getHashValue(), source_manager.getBufferName(full_source_loc));
 
 //                auto type_decl = dyn_cast<TypeDecl>(klass);
@@ -576,38 +598,35 @@ namespace {
                 result << handle_data_member(field, export_type, indentation + "  ");
             }
 
-
             for (auto base_class : klass->bases()) {
                 auto qual_type = base_class.getType();
                 auto record_decl = qual_type->getAsCXXRecordDecl();
                 handle_class(record_decl, export_type, false, indentation + "  ");
             }
-
             if (false && is_bidirectional) {
                 result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}>::add_subclass_static_method(class_wrapper);\n",
                                          indentation,
                                          class_name, class_name);
             }
-
             if (top_level) result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
 
             std::vector<std::string> used_constructor_names;
 
             if (top_level) {
                 if (klass->isAbstract()) {
-                    cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
+//                    cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
                 } else {
                     foreach_constructor(klass, [&](auto constructor) {
 
                         if (constructor->isCopyConstructor()) {
-                            printf("Skipping copy constructor\n");
+                            fprintf(stderr,"Skipping copy constructor\n");
                             return;
                         } else if (constructor->isMoveConstructor()) {
-                            printf("Skipping move constructor\n");
+                            fprintf(stderr,"Skipping move constructor\n");
                             return;
                         }
                         auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-//                printf("Got %d annotations on constructor\n", (int)annotations.size());
+//                fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
                         std::string constructor_name = class_name;
                         if (!annotations.empty()) {
                             constructor_name = annotations[0];
@@ -629,8 +648,6 @@ namespace {
                 }
                 result << indentation << "}\n\n";
             }
-
-            return result.str();
         }
 
 
@@ -642,8 +659,7 @@ namespace {
             if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
                 auto full_class_name = klass->getQualifiedNameAsString();
 
-                auto class_wrapper_code = handle_class(klass, EXPORT_UNSPECIFIED, true, "  ");
-                wrapper_data << class_wrapper_code;
+                handle_class(klass, EXPORT_UNSPECIFIED, true, "  ");
 
 
                 BidirectionalBindings bidirectional(klass);
@@ -671,9 +687,9 @@ namespace {
     class MyASTConsumer : public ASTConsumer {
     public:
         MyASTConsumer(CompilerInstance &CI,
-                      std::stringstream & wrapper_data,
-                      std::set<std::string> & files_to_include) :
-                HandlerForClass(CI, wrapper_data, files_to_include) {
+                      std::set<std::string> & files_to_include,
+                      std::vector<WrappedClass> & wrapped_classes) :
+                HandlerForClass(CI, files_to_include, wrapped_classes) {
             Matcher.addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()), // select all structs and classes
                                              hasAttr(attr::Annotate), // can't check the actual annotation value here
                                              isDefinition() // skip forward declarations
@@ -711,6 +727,7 @@ namespace {
 
         }
 
+        // This is called when all parsing is done
         void EndSourceFileAction() {
             static bool already_called = false;
 
@@ -722,25 +739,49 @@ namespace {
 
             // Write class wrapper data to a file
             ofstream class_wrapper_file;
+            int current_file_declaration_count = 0;
+            int file_count = 0;
 
-            const char * class_wrapper_filename = "v8toolkit_generated_class_wrapper.cpp";
-            class_wrapper_file.open(class_wrapper_filename, ios::out);
-            if (!class_wrapper_file) {
-                cerr << "Couldn't open " << class_wrapper_filename << endl;
-                throw std::exception();
+            for (WrappedClass & wrapped_class : wrapped_classes) {
+                // is it time to start a new file?
+                if (current_file_declaration_count != 0 &&
+                        current_file_declaration_count + wrapped_class.declaration_count > MAX_DECLARATIONS_PER_FILE) {
+
+                    // need to put stuff at the end of the old file to call the second file
+                    current_file_declaration_count = 0;
+                }
+                if (current_file_declaration_count == 0) {
+                    if (class_wrapper_file.is_open()) {
+                        class_wrapper_file << fmt::format("  v8toolkit_initialize_class_wrappers_{}(isolate);\n", file_count+1);
+                        class_wrapper_file << "}\n";
+                        class_wrapper_file.close();
+                    }
+
+
+                    auto class_wrapper_filename = fmt::format("v8toolkit_generated_class_wrapper_{}.cpp", ++file_count);
+                    class_wrapper_file.open(class_wrapper_filename, ios::out);
+                    if (!class_wrapper_file) {
+                        cerr << "Couldn't open " << class_wrapper_filename << endl;
+                        throw std::exception();
+                    }
+                    class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
+                    for (auto file_to_include : files_to_include) {
+
+                        class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);
+                    }
+                    class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist that's fine\n", file_count+1);
+                    class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n", file_count);
+
+                }
+                class_wrapper_file << wrapped_class.contents.str();
+
+                current_file_declaration_count += wrapped_class.declaration_count;
+
             }
-
-            class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
-
-            for (auto file_to_include : files_to_include) {
-                class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);
-            }
-
-            class_wrapper_file << "void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {" << endl;
-            class_wrapper_file << wrapper_data.str();
 
             // close up c++ syntax and close output files
             class_wrapper_file << "}\n";
+
             class_wrapper_file.close();
 
             cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
@@ -748,15 +789,15 @@ namespace {
         }
 
     protected:
-        std::stringstream wrapper_data;
         std::set<std::string> files_to_include;
+        std::vector<WrappedClass> wrapped_classes;
 
 
         // The value returned here is used internally to run checks against
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
 
-            return llvm::make_unique<MyASTConsumer>(CI, wrapper_data, files_to_include);
+            return llvm::make_unique<MyASTConsumer>(CI, files_to_include, wrapped_classes);
         }
 
         bool ParseArgs(const CompilerInstance &CI,
