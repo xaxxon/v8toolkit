@@ -952,7 +952,7 @@ public:
 //			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
 //                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
-    			auto bound_method = v8toolkit::bind(*backing_object_pointer, method);
+    			auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
                 using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
