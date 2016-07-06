@@ -15,7 +15,11 @@ public:
     using Callback = std::function<int(char)>;
 };
 
-class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS Foo : public FooParent {
+class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS
+Foo : public FooParent {
+
+    struct NestedFooStruct{};
+
     void foo_method(int*, int){}
     double a;
     Foo(int, char, short);
@@ -32,6 +36,8 @@ public:
     virtual void fooparent_virtual_tobeoverridden();
     static int foo_static_method(const int *){return 8;}
     const Using2 & using_return_type_test();
+    std::string take_and_return_string(std::string);
+    void nested_foo_struct_test(const NestedFooStruct *&);
     void call_helper_calback(HelperClass::Callback);
 
     HelperClass & do_foo_things(Foo &, HelperClass**&, volatile FooParent *&);
@@ -40,6 +46,8 @@ public:
     V8TOOLKIT_SKIP float c;
     std::unique_ptr<OnlyUsedInTemplate> unique_ptr_type_test;
     virtual void templated_input_parameter_test(std::pair<OnlyUsedInTemplate, OnlyUsedInTemplate>);
+
+    TemplatedClass<HelperClass, 5> test_method_with_templated_types(const TemplatedClass<const Using2*&, 8828>****&);
 };
 
 

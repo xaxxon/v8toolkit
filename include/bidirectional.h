@@ -71,16 +71,25 @@ class Factory;
 template<class Base, class... ConstructorArgs>
 class Factory<Base, TypeList<ConstructorArgs...>> {
 public:
+
+    /**
+     * Returns a pointer to a new object inheriting from type Base
+     */
     virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
 
+    /**
+     * Returns a unique_ptr to a new object inheriting from type Base
+     */
     template <class U = Base, class... Args>
     std::unique_ptr<U> get_unique(Args&&... args) {
+
+	// call operator() on the factory and put the results in a unique pointer
         return std::unique_ptr<U>((*this)(std::forward<Args>(args)...));
     }
 
     /**
-    * Helper to quickly turn a Base type into another type if allowed
-    */
+     * Helper to quickly turn a Base type into another type if allowed
+     */
     template<class U, class... Args>
     U * as(Args&&...  args){
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
@@ -157,7 +166,7 @@ public:
             auto result = call_javascript_function(context, global_javascript_function.Get(isolate),
                                                     context->Global(),
 						   std::tuple<ExternalConstructorParams...>(constructor_parameters...));
-			return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
+	    return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
         });
     }
 

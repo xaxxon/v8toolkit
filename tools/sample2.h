@@ -24,6 +24,9 @@ class Uninteresting{};
 
 class OnlyUsedInTemplate{};
 
+template<class T, int i>
+class TemplatedClass{};
+
 class V8TOOLKIT_WRAPPED_CLASS FooParent {
 public:
     FooParent();

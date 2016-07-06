@@ -378,11 +378,10 @@ public:
 
 
 	T * get_cpp_object(v8::Local<v8::Object> object) {
-		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+	    auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 
 	    if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
 	    return this->cast(static_cast<AnyBase *>(wrap->Value()));
-    
 	}
 	
 	

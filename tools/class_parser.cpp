@@ -228,42 +228,108 @@ namespace {
 //        throw std::exception();
 //    }
 
+
     std::string get_type_string(QualType qual_type) {
+        cerr << "Started at " << qual_type.getAsString() << endl;
 
+        auto original_qual_type = qual_type;
 
-#if false
         bool is_reference = qual_type->isReferenceType();
+        string reference_suffix = is_reference ? "&" : "";
         qual_type = qual_type.getNonReferenceType();
 
+        stringstream pointer_suffix;
+        bool changed = true;
+        while(changed) {
+            changed = false;
+            if (!qual_type->getPointeeType().isNull()) {
+                changed = true;
+                pointer_suffix << "*";
+                qual_type = qual_type->getPointeeType();
+                cerr << "stripped pointer, went to: " << qual_type.getAsString() << endl;
+                continue; // check for more pointers first
+            }
 
-
-//         This code traverses all the typdefs to get to the actual base type
-//        while (dyn_cast<TypedefType>(qual_type) != nullptr) {
-//            qual_type = dyn_cast<TypedefType>(qual_type)->getDecl()->getUnderlyingType();
-//        }
-//
-        cerr << "checking " << qual_type.getAsString();
-        if (dyn_cast<TypedefType>(qual_type)) {
-            cerr << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() << endl;
-            return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString()  + (is_reference ? " &" : "");
-        } else {
-            cerr << " and returning (no typedef) " << qual_type.getAsString() << endl;
-            return qual_type.getAsString() + (is_reference ? " &" : "");
+            // This code traverses all the typdefs and pointers to get to the actual base type
+            if (dyn_cast<TypedefType>(qual_type) != nullptr) {
+                changed = true;
+                cerr << "stripped typedef, went to: " << qual_type.getAsString() << endl;
+                qual_type = dyn_cast<TypedefType>(qual_type)->getDecl()->getUnderlyingType();
+            }
         }
 
+
+        auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
+        if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
+            stringstream result;
+
+            std::smatch matches;
+            string qual_type_string = qual_type.getAsString();
+            if (!regex_match(qual_type_string, matches, regex("^([^<]+<).*(>[^>]*)$"))) {
+                cerr << "ERROR: Template type must match regex" << endl;
+            }
+            result << matches[1];
+            auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
+
+            auto & template_arg_list = template_specialization_decl->getTemplateArgs();
+            for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
+                if (i > 0) {
+                    result << ", ";
+                }
+                cerr << "Working on template parameter " << i << endl;
+                auto & arg = template_arg_list[i];
+
+                switch(arg.getKind()) {
+                    case clang::TemplateArgument::Type: {
+                        cerr << "processing as type argument" << endl;
+                        auto template_arg_qual_type = arg.getAsType();
+                        result << get_type_string(template_arg_qual_type);
+                        break; }
+                    case clang::TemplateArgument::Integral: {
+                        cerr << "processing as integral argument" << endl;
+                        auto integral_value = arg.getAsIntegral();
+                        cerr << "integral value radix10: " << integral_value.toString(10) << endl;
+                        result << integral_value.toString(10);
+                        break;}
+                    default:
+                        cerr << "Oops, unhandled argument type" << endl;
+                }
+            }
+            result << matches[2] << pointer_suffix.str() << reference_suffix;
+            cerr << "Finished stringifying templated type to: " << result.str() << endl;
+            return result.str();
+
+        } else {
+#if true
+
+            cerr << "checking " << qual_type.getAsString();
+            if (dyn_cast<TypedefType>(qual_type)) {
+                cerr << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() << endl;
+                return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() +
+                       (is_reference ? " &" : "");
+            } else {
+                cerr << " and returning (no typedef) " << qual_type.getAsString() << endl;
+                return qual_type.getAsString() + pointer_suffix.str() + reference_suffix;
+            }
+
 #else
-        // this isn't great because it loses the typedef'd names of things, but it ALWAYS works
-        // There is no confusion with reference types or typedefs or const/volatile
-        // EXCEPT: it generates a elaborated type specifier which can't be used in certain places
-        // http://en.cppreference.com/w/cpp/language/elaborated_type_specifier
-        auto canonical_qual_type = qual_type.getCanonicalType();
 
-        //printf("Canonical qualtype typedeftype cast: %p\n",(void*) dyn_cast<TypedefType>(canonical_qual_type));
+            // THIS APPROACH DOES NOT GENERATE PORTABLE STL NAMES LIKE THE LINE BELOW IS libc++ only not libstdc++
+            // std::__1::basic_string<char, struct std::__1::char_traits<char>, class std::__1::allocator<char> >
 
-        //cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
+            // this isn't great because it loses the typedef'd names of things, but it ALWAYS works
+            // There is no confusion with reference types or typedefs or const/volatile
+            // EXCEPT: it generates a elaborated type specifier which can't be used in certain places
+            // http://en.cppreference.com/w/cpp/language/elaborated_type_specifier
+            auto canonical_qual_type = qual_type.getCanonicalType();
 
-        return canonical_qual_type.getAsString();
+            //printf("Canonical qualtype typedeftype cast: %p\n",(void*) dyn_cast<TypedefType>(canonical_qual_type));
+
+            //cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
+
+            return canonical_qual_type.getAsString();
 #endif
+        }
     }
 
     // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
@@ -274,12 +340,15 @@ namespace {
                                        // don't capture qualtype by ref since it is changed
                                        QualType qual_type) {
 
-//        cerr << "Went from " << qual_type.getAsString();
+        cerr << "Went from " << qual_type.getAsString();
+        qual_type = qual_type.getLocalUnqualifiedType();
+
         while(!qual_type->getPointeeType().isNull()) {
             qual_type = qual_type->getPointeeType();
-
         }
-//        cerr << " to " << qual_type.getAsString() << endl;
+        qual_type = qual_type.getLocalUnqualifiedType();
+
+        cerr << " to " << qual_type.getAsString() << endl;
         auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
 
         // primitive types don't have record decls
@@ -293,19 +362,23 @@ namespace {
 
         auto actual_include_string = get_include_string_for_fileid(source_manager, file_id);
 
-//        cerr << "GOT IT: " << actual_include_string << endl;
+        cerr << "GOT IT: " << actual_include_string << endl;
         wrapped_class.include_files.insert(actual_include_string);
 
-//        if (isa<TemplateSpecializationType>(qual_type)) {
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
 
-//            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
+            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
             auto & template_arg_list = template_specialization_decl->getTemplateArgs();
             for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
                 auto & arg = template_arg_list[i];
+
+                // this code only cares about types
+                if (arg.getKind() != clang::TemplateArgument::Type) {
+                    continue;
+                }
                 auto template_arg_qual_type = arg.getAsType();
                 if (template_arg_qual_type.isNull()) {
 //                    cerr << "qual type is null" << endl;
@@ -498,23 +571,41 @@ namespace {
 
         }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
         if (!got_constructor) {
-            cerr << "ERROR, NO BIDIRECTIONAL CONSTRUCTOR FOUND" << endl;
+            cerr << "ERROR, NO BIDIRECTIONAL CONSTRUCTOR FOUND IN " << klass->getNameAsString() << endl;
         }
         return result;
     }
 
-    string get_bidirectional_constructor_internal_parameter_typelist(const CXXRecordDecl * klass, bool leading_comma) {
+    string get_bidirectional_constructor_parameter_typelists(const CXXRecordDecl * klass, bool leading_comma) {
         auto constructor = get_bidirectional_constructor(klass);
-        auto types = get_method_param_qual_types(constructor, V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING);
-        vector<string> names;
-        for(auto & type : types) {
-            names.push_back(type.getAsString());
-        }
+
+	// all internal params must come before all external params
+	bool found_external_param = false;
+        auto parameter_count = constructor->getNumParams();
+	vector<string> internal_params;
+	vector<string> external_params;
+        for (unsigned int i = 0; i < parameter_count; i++) {
+            auto param_decl = constructor->getParamDecl(i);
+	    if (has_annotation(param_decl, V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)) {
+		if (found_external_param) {
+		    cerr << "ERROR: Found internal parameter after external parameter found in " << klass->getNameAsString() << endl;
+		    throw std::exception();
+		}
+		internal_params.push_back(param_decl->getType().getAsString());
+	    } else {
+		found_external_param = true;
+		external_params.push_back(param_decl->getType().getAsString());
+	    }
+	}
+
         stringstream result;
         if (leading_comma) {
             result << ", ";
         }
-        result << "v8toolkit::TypeList<" << join(names, ", ") << ">";
+        result << "v8toolkit::TypeList<" << join(internal_params, ", ") << ">";
+	result << ", ";
+	result << "v8toolkit::TypeList<" << join(external_params, ", ") << ">";
+
         return result.str();
     }
 
@@ -963,7 +1054,7 @@ namespace {
 
                 result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}{}>::add_subclass_static_method(class_wrapper);\n",
                                          indentation,
-                                         class_name, class_name, get_bidirectional_constructor_internal_parameter_typelist(klass, true));
+                                         class_name, class_name, get_bidirectional_constructor_parameter_typelists(klass, true));
             }
             if (top_level) {
                 if (!current_wrapped_class->compatible_types.empty()) {
