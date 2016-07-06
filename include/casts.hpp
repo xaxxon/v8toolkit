@@ -490,11 +490,19 @@ struct CastToJS<std::array<T, N>> {
 /**
 * Does NOT transfer ownership.  Original ownership is maintained.
 */
-template<class T>
-struct CastToJS<std::unique_ptr<T>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::unique_ptr<T> & unique_ptr) {
+template<class T, class... Rest>
+struct CastToJS<std::unique_ptr<T, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::unique_ptr<T, Rest...> & unique_ptr) {
         return CastToJS<T*>()(isolate, unique_ptr.get());
     }
+};
+
+/**
+ * Not sure how this could be implemented, so trying to make sure it's a clear compile-time error
+ */
+template<class T, class... Rest>
+struct CastToNative<std::unique_ptr<T, Rest...>> {
+    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const = delete;
 };
 
 

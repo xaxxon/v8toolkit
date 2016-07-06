@@ -16,7 +16,7 @@
  */
 #define V8TOOLKIT_NONE_STRING "v8toolkit_generate_bindings_none"
 #define V8TOOLKIT_ALL_STRING "v8toolkit_generate_bindings_all"
-
+#define V8TOOLKIT_READONLY_STRING "v8toolkit_generate_bindings_readonly"
 
 /**
  * Generate V8ClassWrapper code for the annotated class
@@ -31,6 +31,11 @@
  */
 #define V8TOOLKIT_SKIP __attribute__((annotate(V8TOOLKIT_NONE_STRING)))
 
+/**
+ * This member cannot be assigned to.
+ * However, it is not "const", as its contents can be changed.
+ */
+#define V8TOOLKIT_READONLY __attribute__((annotate(V8TOOLKIT_READONLY_STRING)))
 
 /**
  * Use this to create a JavaScript constructor function with the specified name
@@ -43,10 +48,21 @@
 
 
 #define V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING "v8toolkit_generate_bidirectional"
-
+#define V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING "v8toolkit_generate_bidirectional_constructor"
+#define V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING "V8toolkit_generate_bidirectional_internal_parameter"
 /**
  * Generate JSWrapper class for the annotated class
  * ex: class V8TOOLKIT_BIDIRECTIONAL_CLASS MyClassName {...};
  */
 #define V8TOOLKIT_BIDIRECTIONAL_CLASS __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)))
+
+/**
+ * Annotate the constructor bidirectional should use with this
+ */
+#define V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING)))
+
+/**
+ * Marks a parameter as one that is always the same, not something that will change per instance
+ */
+#define V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)))
 

@@ -914,15 +914,15 @@ struct Bind{};
 /** 
  * Non-const object to non-const method
  */
-template<class CLASS_TYPE, class R, class... Args>  
-struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
+template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
+struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
     
-    Bind(CLASS_TYPE & object, R(CLASS_TYPE::*method)(Args...) ) :
+    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) ) :
       object(object), method(method){}
       ~Bind(){}
     
     CLASS_TYPE & object;
-    R(CLASS_TYPE::*method)(Args...);
+    R(METHOD_CLASS::*method)(Args...);
     
     R operator()(Args... params){
         return (object.*method)(std::forward<Args>(params)...);
@@ -933,14 +933,14 @@ struct Bind<CLASS_TYPE, R(CLASS_TYPE::*)(Args...)> {
 /** 
  * Non-const object to const method
  */
-template<class Class, class R, class... Args>
-struct Bind<Class, R(Class::*)(Args...) const> {
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
     
-    Bind(Class & object, R(Class::*method)(Args...) const) :
+    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const) :
       object(object), method(method){}
 
     Class & object;
-    R(Class::*method)(Args...) const;
+    R(METHOD_CLASS::*method)(Args...) const;
     
     R operator()(Args... params){
         return (object.*method)(params...); 
@@ -951,13 +951,13 @@ struct Bind<Class, R(Class::*)(Args...) const> {
 /**
  * Const object to const method
  */
-template<class Class, class R, class... Args>
-struct Bind<const Class, R(Class::*)(Args...) const> {
-    Bind(const Class & object, R(Class::*method)(Args...) const) :
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
+    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const) :
             object(object), method(method){}
 
     const Class & object;
-    R(Class::*method)(Args...) const;
+    R(METHOD_CLASS::*method)(Args...) const;
 
     R operator()(Args... params){
         return (object.*method)(params...);
@@ -975,21 +975,21 @@ struct Bind<const Class, R(Class::*)(Args...) const> {
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
 {
-    return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...)>(object, method));
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...)>(object, method));
 }
 
 
-template <class CLASS, class R, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(CLASS::*method)(Args...) const)
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
-    return std::function<R(Args...)>(Bind<CLASS, R(CLASS::*)(Args...) const>(object, method));
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
 }
 
 
-template <class CLASS, class R, class... Args>
-std::function<R(Args...)> bind(const CLASS & object, R(CLASS::*method)(Args...) const)
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
-    return std::function<R(Args...)>(Bind<const CLASS, R(CLASS::*)(Args...) const>(object, method));
+    return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
 }
 
 

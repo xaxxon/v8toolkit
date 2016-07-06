@@ -22,7 +22,7 @@ class V8TOOLKIT_WRAPPED_CLASS V8TOOLKIT_BIDIRECTIONAL_CLASS Foo : public FooPare
 public:
     using Using=int;
     using Using2 = Using;
-    Foo();
+    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER short, int*);
     V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
     V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);
     V8TOOLKIT_SKIP void foo_explicitly_skipped();
@@ -34,8 +34,12 @@ public:
     const Using2 & using_return_type_test();
     void call_helper_calback(HelperClass::Callback);
 
+    HelperClass & do_foo_things(Foo &, HelperClass**&, volatile FooParent *&);
+
     float b;
     V8TOOLKIT_SKIP float c;
+    std::unique_ptr<OnlyUsedInTemplate> unique_ptr_type_test;
+    virtual void templated_input_parameter_test(std::pair<OnlyUsedInTemplate, OnlyUsedInTemplate>);
 };
 
 

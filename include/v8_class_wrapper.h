@@ -214,7 +214,7 @@ private:
 
     // function used to set the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
-	template<typename VALUE_T>
+	template<typename VALUE_T, std::enable_if_t<std::is_copy_assignable<VALUE_T>::value, int> = 0>
 	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
 	               const v8::PropertyCallbackInfo<void>& info) 
 	{
@@ -224,10 +224,19 @@ private:
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
 
 		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-		auto & member_ref = (*member_reference_getter)(cpp_object);
+		VALUE_T & member_ref = (*member_reference_getter)(cpp_object);
 	  	member_ref = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
 	}
-    
+
+
+
+	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
+	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
+							   const v8::PropertyCallbackInfo<void>& info)
+	{}
+
+
+
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript

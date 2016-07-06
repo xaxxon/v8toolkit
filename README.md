@@ -1,6 +1,32 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
 
+## Recent Feature: Automatic class binding generator
+
+There is an experimental clang compiler plugin that will look at all your code and generate bindings for your
+classes automatically - you just put in a few annotations to say which things you want.
+
+    class V8TOOLKIT_WRAPPED_CLASS MyClassToWrap {
+        MyClassToWrap(){}
+
+        // avoid name conflict between constructors
+        V8TOOLKIT_CONSTRUCTOR(MyClassToWrapIntInt) MyClassToWrap(int, int){}
+
+        void this_function_will_be_wrapped(){}
+        V8TOOLKIT_SKIP void do_not_wrap_this_function(){}
+
+        int this_member_will_be_wrapped;
+        V8TOOLKIT_SKIP int do_not_wrap_this_member;
+    }
+
+The generated code has all the includes needed based on the actual types in the classes/methods/members being
+wrapped - including template parameter types.  It will also build header files for your bidirectional types -
+just add V8TOOLKIT_BIDIRECTIONAL_CLASS to the class as well.
+
+The plugin only works with clang, but the generated code will then work with any compiler.
+
+Check out the "tools" directory.   It will require some customization to get working, but it's really neat!
+
 ## Tutorial for using this library
 
 #### Install git

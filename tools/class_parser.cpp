@@ -74,16 +74,162 @@ namespace {
 
 
     struct WrappedClass {
+        string class_name;
+        set<string> include_files;
         int declaration_count = 0;
         std::stringstream contents;
         set<string> names;
+        set<string> compatible_types;
+        set<string> parent_types;
+        WrappedClass(const std::string & class_name) : class_name(class_name) {}
     };
+
+
+
+    // returns a vector of all the annotations on a Decl
+    std::vector<std::string> get_annotations(const Decl * decl) {
+        std::vector<std::string> results;
+        for (auto attr : decl->getAttrs()) {
+            AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
+            if (annotation) {
+                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+                auto annotation_string = attribute_attr->getAnnotation().str();
+                //cerr << "Got annotation " << annotation_string << endl;
+                results.emplace_back(annotation->getAnnotation().str());
+            }
+        }
+        return results;
+    }
+
+    std::vector<std::string> get_annotation_regex(const Decl * decl, const std::string & regex_string) {
+        auto regex = std::regex(regex_string);
+        std::vector<std::string> results;
+
+        auto annotations = get_annotations(decl);
+        for (auto & annotation : annotations) {
+            std::smatch matches;
+            if (std::regex_match(annotation, matches, regex)) {
+//                printf("GOT %d MATCHES\n", (int)matches.size());
+                if (matches.size() > 1) {
+                    results.push_back(matches[1]);
+                }
+            }
+        }
+        return results;
+    }
+
+
+
+
+
+    bool has_annotation(const Decl * decl, const std::string & target) {
+        auto annotations = get_annotations(decl);
+        return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
+    }
+
+
+    enum EXPORT_TYPE {
+        EXPORT_UNSPECIFIED = 0,
+        EXPORT_NONE, // export nothing
+        EXPORT_SOME, // only exports specifically marked entities
+        EXPORT_EXCEPT, // exports everything except specifically marked entities
+        EXPORT_ALL}; // exports everything
+
+    EXPORT_TYPE get_export_type(const Decl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED) {
+        auto &attrs = decl->getAttrs();
+        EXPORT_TYPE export_type = previous;
+
+        for (auto attr : attrs) {
+            if (dyn_cast<AnnotateAttr>(attr)) {
+                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+                auto annotation_string = attribute_attr->getAnnotation().str();
+
+                if (annotation_string == V8TOOLKIT_ALL_STRING) {
+                    export_type = EXPORT_ALL;
+                } else if (annotation_string == "v8toolkit_generate_bindings_some") {
+                    export_type = EXPORT_SOME;
+                } else if (annotation_string == "v8toolkit_generate_bindings_except") {
+                    export_type = EXPORT_EXCEPT;
+                } else if (annotation_string == V8TOOLKIT_NONE_STRING) {
+                    export_type = EXPORT_NONE; // just for completeness
+                }
+            }
+        }
+//            printf("Returning export type: %d\n", export_type);
+        return export_type;
+    }
+
+
+
+
+    // Finds where file_id is included, how it was included, and returns the string to duplicate
+    //   that inclusion
+    std::string get_include_string_for_fileid(SourceManager & source_manager, FileID & file_id) {
+        auto include_source_location = source_manager.getIncludeLoc(file_id);
+
+        // If it's in the "root" file (file id 1), then there's no include for it
+        if (include_source_location.isValid()) {
+            auto header_file = include_source_location.printToString(source_manager);
+//            cerr << "include source location: " << header_file << endl;
+            //            wrapped_class.include_files.insert(header_file);
+        } else {
+//            cerr << "No valid source location" << endl;
+            return "";
+        }
+
+        bool invalid;
+        // This gets EVERYTHING after the start of the filename in the include.  "asdf.h"..... or <asdf.h>.....
+        const char * text = source_manager.getCharacterData(include_source_location, &invalid);
+        const char * text_end = text + 1;
+        while(*text_end != '>' && *text_end != '"') {
+            text_end++;
+        }
+
+        return string(text, (text_end - text) + 1);
+
+    }
+
+    std::string get_include_for_record_decl(SourceManager & source_manager, const CXXRecordDecl * record_decl) {
+        auto full_source_loc = FullSourceLoc(record_decl->getLocStart(), source_manager);
+
+        auto file_id = full_source_loc.getFileID();
+        return get_include_string_for_fileid(source_manager, file_id);
+    }
+
+    template<class T>
+    std::string join(const T & source, const std::string & between = ", ", bool leading_between = false) {
+        if (source.empty()) {
+            return "";
+        }
+        stringstream result;
+        if (leading_between) {
+            result << between;
+        }
+        bool first = true;
+        for (auto & str : source) {
+            if (!first) { result << between;}
+            first = false;
+            result << str;
+        }
+        return result.str();
+    }
+
+
+//    std::string strip_path_from_filename(const std::string & filename) {
+//
+//        // naive regex to grab everything after the last slash or backslash
+//        auto regex = std::regex("([^/\\\\]*)$");
+//
+//        std::smatch matches;
+//        if (std::regex_search(filename, matches, regex)) {
+//            return matches[1];
+//        }
+//        cerr << fmt::format("Unrecognizable filename {}", filename);
+//        throw std::exception();
+//    }
 
     std::string get_type_string(QualType qual_type) {
 
-//        cerr << "original: " << qual_type.getAsString() << endl;
-//        cerr << "non-reference: " << qual_type.getNonReferenceType().getAsString() << endl;
-//        cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
 
 #if false
         bool is_reference = qual_type->isReferenceType();
@@ -120,47 +266,172 @@ namespace {
 #endif
     }
 
+    // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
+    //   then calls out to get how to include that most basic type definition
+    //   and puts it in wrapped_class.include_files
+    void update_wrapped_class_for_type(SourceManager & source_manager,
+                                       WrappedClass & wrapped_class,
+                                       // don't capture qualtype by ref since it is changed
+                                       QualType qual_type) {
 
-    std::string get_method_parameters(const CXXMethodDecl * method, bool add_leading_comma = false) {
+//        cerr << "Went from " << qual_type.getAsString();
+        while(!qual_type->getPointeeType().isNull()) {
+            qual_type = qual_type->getPointeeType();
+
+        }
+//        cerr << " to " << qual_type.getAsString() << endl;
+        auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
+
+        // primitive types don't have record decls
+        if (base_type_record_decl == nullptr) {
+            return;
+        }
+
+        auto full_source_loc = FullSourceLoc(base_type_record_decl->getLocStart(), source_manager);
+
+        auto file_id = full_source_loc.getFileID();
+
+        auto actual_include_string = get_include_string_for_fileid(source_manager, file_id);
+
+//        cerr << "GOT IT: " << actual_include_string << endl;
+        wrapped_class.include_files.insert(actual_include_string);
+
+//        if (isa<TemplateSpecializationType>(qual_type)) {
+        if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
+
+//            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
+
+            auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
+
+            auto & template_arg_list = template_specialization_decl->getTemplateArgs();
+            for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
+                auto & arg = template_arg_list[i];
+                auto template_arg_qual_type = arg.getAsType();
+                if (template_arg_qual_type.isNull()) {
+//                    cerr << "qual type is null" << endl;
+                    continue;
+                } else {
+//                    cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
+                }
+                update_wrapped_class_for_type(source_manager, wrapped_class, template_arg_qual_type);
+
+            }
+        } else {
+//            cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+        }
+
+//
+//        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
+//        cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
+//        wrapped_class.include_files.insert(header_file);
+
+    }
+
+
+    vector<QualType> get_method_param_qual_types(const CXXMethodDecl * method,
+                                                 const string & annotation = "") {
+        vector<QualType> results;
+        auto parameter_count = method->getNumParams();
+        for (unsigned int i = 0; i < parameter_count; i++) {
+            auto param_decl = method->getParamDecl(i);
+            if (annotation != "" && !has_annotation(param_decl, annotation)) {
+                cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
+                continue;
+            }
+            auto param_qual_type = param_decl->getType();
+            results.push_back(param_qual_type);
+        }
+        return results;
+    }
+
+    vector<string> generate_variable_names(std::size_t count) {
+        vector<string> results;
+        for (std::size_t i = 0; i < count; i++) {
+            results.push_back(fmt::format("var{}", i+1));
+        }
+        return results;
+    }
+
+    std::string get_method_parameters(SourceManager & source_manager,
+                                      WrappedClass & wrapped_class,
+                                      const CXXMethodDecl * method,
+                                      bool add_leading_comma = false,
+                                      bool insert_variable_names = false,
+                                      const string & annotation = "") {
         std::stringstream result;
         bool first_param = true;
-        auto parameter_count = method->getNumParams();
-        if (parameter_count > 0 && add_leading_comma) {
+        auto type_list = get_method_param_qual_types(method, annotation);
+
+        if (!type_list.empty() && add_leading_comma) {
             result << ", ";
         }
-        for (unsigned int i = 0; i < parameter_count; i++) {
+        int count = 0;
+        auto var_names = generate_variable_names(type_list.size());
+        for (auto & param_qual_type : type_list) {
+
             if (!first_param) {
                 result << ", ";
             }
             first_param = false;
-            auto param = method->getParamDecl(i);
-            auto param_qual_type = param->getOriginalType();
-            result << get_type_string(param_qual_type);
+
+
+            auto type_string = get_type_string(param_qual_type);
+            result << type_string;
+
+            if (insert_variable_names) {
+                result << " " << var_names[count++];
+            }
+
+            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type);
+
         }
         return result.str();
     }
 
+    std::string get_return_type(SourceManager & source_manager,
+                                      WrappedClass & wrapped_class,
+                                      const CXXMethodDecl * method) {
+        auto qual_type = method->getReturnType();
+        auto result = get_type_string(qual_type);
+//        auto return_type_decl = qual_type->getAsCXXRecordDecl();
+//        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), source_manager);
+//        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
+//        cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
+//        wrapped_class.include_files.insert(header_file);
+//
+
+        update_wrapped_class_for_type(source_manager, wrapped_class, qual_type);
+
+        return result;
+
+    }
 
 
-    std::string get_method_return_type_class_and_parameters(const CXXRecordDecl * klass, const CXXMethodDecl * method) {
+    std::string get_method_return_type_class_and_parameters(SourceManager & source_manager,
+                                                            WrappedClass & wrapped_class,
+                                                            const CXXRecordDecl * klass, const CXXMethodDecl * method) {
         std::stringstream results;
-        results << get_type_string(method->getReturnType());
+        results << get_return_type(source_manager, wrapped_class, method);
         results << ", " << klass->getName().str();
-        results << get_method_parameters(method, true);
+        results << get_method_parameters(source_manager, wrapped_class, method, true);
         return results.str();
     }
 
-    std::string get_method_return_type_and_parameters(const CXXRecordDecl * klass, const CXXMethodDecl * method) {
+    std::string get_method_return_type_and_parameters(SourceManager & source_manager,
+                                                      WrappedClass & wrapped_class,
+                                                      const CXXRecordDecl * klass, const CXXMethodDecl * method) {
         std::stringstream results;
-        results << get_type_string(method->getReturnType());
-        results << get_method_parameters(method, true);
+        results << get_return_type(source_manager, wrapped_class, method);
+        results << get_method_parameters(source_manager, wrapped_class, method, true);
         return results.str();
     }
 
 
 
 
-    std::string get_method_string(const CXXMethodDecl * method) {
+    std::string get_method_string(SourceManager & source_manager,
+                                  WrappedClass & wrapped_class,
+                                  const CXXMethodDecl * method) {
         std::stringstream result;
         result << method->getReturnType().getAsString();
 
@@ -168,7 +439,7 @@ namespace {
 
         result << "(";
 
-        result << get_method_parameters(method);
+        result << get_method_parameters(source_manager, wrapped_class, method);
 
         result << ")";
 
@@ -189,69 +460,82 @@ namespace {
 
 
 
-    std::string strip_path_from_filename(const std::string & filename) {
-
-        // naive regex to grab everything after the last slash or backslash
-        auto regex = std::regex("([^/\\\\]*)$");
-
-        std::smatch matches;
-        if (std::regex_search(filename, matches, regex)) {
-            return matches[1];
-        }
-        cerr << fmt::format("Unrecognizable filename {}", filename);
-        throw std::exception();
-    }
-
-    // returns a vector of all the annotations on a Decl
-    std::vector<std::string> get_annotations(const Decl * decl) {
-        std::vector<std::string> results;
-        for (auto attr : decl->getAttrs()) {
-            AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
-            if (annotation) {
-                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                auto annotation_string = attribute_attr->getAnnotation().str();
-                results.emplace_back(annotation->getAnnotation().str());
+    // calls callback for each constructor in the class.  If annotation specified, only
+    //   constructors with that annotation will be sent to the callback
+    template<class Callback>
+    void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
+                             const std::string & annotation = "") {
+        for(CXXMethodDecl * method : klass->methods()) {
+            CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
+            if (constructor == nullptr) {
+                continue;
             }
-        }
-        return results;
-    }
-
-    bool has_annotation(const Decl * decl, const std::string & target) {
-        auto annotations = get_annotations(decl);
-        return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
-    }
-
-    std::vector<std::string> get_annotation_regex(const Decl * decl, const std::string & regex_string) {
-        auto regex = std::regex(regex_string);
-        std::vector<std::string> results;
-
-        auto annotations = get_annotations(decl);
-        for (auto & annotation : annotations) {
-            std::smatch matches;
-            if (std::regex_match(annotation, matches, regex)) {
-//                printf("GOT %d MATCHES\n", (int)matches.size());
-                if (matches.size() > 1) {
-                    results.push_back(matches[1]);
-                }
+            if (constructor->getAccess() != AS_public) {
+//                    cerr << "Skipping non-public constructor" << endl;
+                continue;
             }
+            if (get_export_type(constructor) == EXPORT_NONE) {
+                continue;
+            }
+
+            if (annotation != "" && !has_annotation(constructor, annotation)) {
+//                cerr << "Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
+                continue;
+            }
+            callback(constructor);
         }
-        return results;
     }
 
+    CXXConstructorDecl * get_bidirectional_constructor(const CXXRecordDecl * klass) {
+        CXXConstructorDecl * result = nullptr;
+        bool got_constructor = false;
+        foreach_constructor(klass, [&](auto constructor){
+            if (got_constructor) {
+                cerr << "ERROR, MORE THAN ONE BIDIRECTIONAL CONSTRUCTOR" << endl;
+            }
+            got_constructor = true;
+            result = constructor;
 
+        }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
+        if (!got_constructor) {
+            cerr << "ERROR, NO BIDIRECTIONAL CONSTRUCTOR FOUND" << endl;
+        }
+        return result;
+    }
 
+    string get_bidirectional_constructor_internal_parameter_typelist(const CXXRecordDecl * klass, bool leading_comma) {
+        auto constructor = get_bidirectional_constructor(klass);
+        auto types = get_method_param_qual_types(constructor, V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING);
+        vector<string> names;
+        for(auto & type : types) {
+            names.push_back(type.getAsString());
+        }
+        stringstream result;
+        if (leading_comma) {
+            result << ", ";
+        }
+        result << "v8toolkit::TypeList<" << join(names, ", ") << ">";
+        return result.str();
+    }
 
 
 
 
     class BidirectionalBindings {
     private:
+        SourceManager & source_manager;
         const CXXRecordDecl * starting_class;
+        WrappedClass & wrapped_class;
 
     public:
-        BidirectionalBindings(const CXXRecordDecl * starting_class) : starting_class(starting_class){}
-        std::string short_name(){return starting_class->getName();}
+        BidirectionalBindings(SourceManager & source_manager,
+                              const CXXRecordDecl * starting_class,
+                              WrappedClass & wrapped_class) :
+                source_manager(source_manager),
+                starting_class(starting_class),
+                wrapped_class(wrapped_class) {}
 
+        std::string short_name(){return starting_class->getName();}
 
 
         std::vector<const CXXMethodDecl *> get_all_virtual_methods_for_class(const CXXRecordDecl * klass) {
@@ -274,7 +558,8 @@ namespace {
                     if (method->isVirtual() && !method->isPure()) {
                         // go through existing ones and check for match
                         if (std::find_if(results.begin(), results.end(), [&](auto found){
-                            if(get_method_string(method) == get_method_string(found)) {
+                            if(get_method_string(source_manager, wrapped_class, method) ==
+                                    get_method_string(source_manager, wrapped_class, found)) {
 //                                printf("Found dupe: %s\n", get_method_string(method).c_str());
                                 return true;
                             }
@@ -315,7 +600,15 @@ namespace {
             result << method_name.str();
 
             if (num_params > 0) {
-                result << ", " << get_method_parameters(method);
+                auto types = get_method_param_qual_types(method);
+                vector<string>type_names;
+                for (auto & type : types) {
+                    type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+                }
+
+
+
+                result << join(type_names, ", ", true);
             }
 
             result  << ");\n";
@@ -342,9 +635,25 @@ namespace {
                 result << fmt::format("class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:\n", // {{ is escaped {
                                       short_name(), short_name(), short_name());
                 result << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n", short_name());
-                result << fmt::format("        v8::Local<v8::FunctionTemplate> created_by) :\n");
-                result << fmt::format("      {}(/*actual parameters go here*/),\n", short_name());
-                result << fmt::format("      v8toolkit::JSWrapper(context, object, created_by) {{}}\n"); // {{}} is escaped {}
+                result << fmt::format("        v8::Local<v8::FunctionTemplate> created_by");
+                bool got_constructor = false;
+                int constructor_parameter_count;
+                foreach_constructor(starting_class, [&](auto constructor_decl){
+                    if (got_constructor) { cerr << "ERROR: Got more than one constructor" << endl; return;}
+                    got_constructor = true;
+                    result << get_method_parameters(source_manager, wrapped_class, constructor_decl, true, true);
+                    constructor_parameter_count = constructor_decl->getNumParams();
+
+                }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
+                if (!got_constructor) {
+                    cerr << "ERROR: Got no constructor for " << starting_class->getNameAsString() << endl;
+                }
+                result << fmt::format(") :\n");
+
+                auto variable_names = generate_variable_names(constructor_parameter_count);
+
+                result << fmt::format("      {}({}),\n", short_name(), join(variable_names));
+                result << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", short_name()); // {{}} is escaped {}
                 result << handle_class(starting_class);
                 result << "};\n";
             } else {
@@ -359,6 +668,8 @@ namespace {
             bidirectional_class_file.open(bidirectional_class_filename, ios::out);
             assert(bidirectional_class_file);
 
+	    bidirectional_class_file << "#pragma once\n";
+	    bidirectional_class_file << "#include " << get_include_for_record_decl(source_manager, starting_class) << "\n";
             bidirectional_class_file << result.str();
             bidirectional_class_file.close();
 
@@ -375,17 +686,11 @@ namespace {
 
     class ClassHandler : public MatchFinder::MatchCallback {
     private:
-        enum EXPORT_TYPE {
-            EXPORT_UNSPECIFIED = 0,
-            EXPORT_NONE, // export nothing
-            EXPORT_SOME, // only exports specifically marked entities
-            EXPORT_EXCEPT, // exports everything except specifically marked entities
-            EXPORT_ALL}; // exports everything
+
 
 //        CompilerInstance &CI;
 
         SourceManager & source_manager;
-        std::set<std::string> & files_to_include;
         std::vector<WrappedClass> & wrapped_classes;
         WrappedClass * current_wrapped_class; // the class currently being wrapped
         std::set<std::string> names_used;
@@ -393,59 +698,12 @@ namespace {
 
     public:
 
-        EXPORT_TYPE get_export_type(const Decl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED) {
-            auto &attrs = decl->getAttrs();
-            EXPORT_TYPE export_type = previous;
-
-            for (auto attr : attrs) {
-                if (dyn_cast<AnnotateAttr>(attr)) {
-                    auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                    auto annotation_string = attribute_attr->getAnnotation().str();
-
-
-
-                    if (annotation_string == V8TOOLKIT_ALL_STRING) {
-                        export_type = EXPORT_ALL;
-                    } else if (annotation_string == "v8toolkit_generate_bindings_some") {
-                        export_type = EXPORT_SOME;
-                    } else if (annotation_string == "v8toolkit_generate_bindings_except") {
-                        export_type = EXPORT_EXCEPT;
-                    } else if (annotation_string == V8TOOLKIT_NONE_STRING) {
-                        export_type = EXPORT_NONE; // just for completeness
-                    }
-                }
-            }
-//            printf("Returning export type: %d\n", export_type);
-            return export_type;
-        }
-
-
-        // calls callback for each constructor in the class
-        template<class Callback>
-        void foreach_constructor(const CXXRecordDecl * klass, Callback && callback) {
-            for(CXXMethodDecl * method : klass->methods()) {
-                CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
-                if (constructor == nullptr) {
-                    continue;
-                }
-                if (constructor->getAccess() != AS_public) {
-//                    cerr << "Skipping non-public constructor" << endl;
-                    continue;
-                }
-                if (get_export_type(constructor) == EXPORT_NONE) {
-                    continue;
-                }
-                callback(constructor);
-            }
-        }
 
 
 
         ClassHandler(CompilerInstance &CI,
-                     std::set<std::string> & files_to_include,
                      std::vector<WrappedClass> & wrapped_classes) :
             source_manager(CI.getSourceManager()),
-            files_to_include(files_to_include),
             wrapped_classes(wrapped_classes),
             current_wrapped_class(&wrapped_classes[0])
         {}
@@ -483,7 +741,7 @@ namespace {
             }
 
             if (current_wrapped_class->names.count(short_field_name)) {
-                printf("Skipping duplicate name %s/%s :: %s\n",
+                printf("WARNING: Skipping duplicate name %s/%s :: %s\n",
                        top_level_class_decl->getName().str().c_str(),
                         containing_class->getName().str().c_str(),
                         short_field_name.c_str());
@@ -493,8 +751,16 @@ namespace {
 
 
             current_wrapped_class->declaration_count++;
-            result << fmt::format("{}class_wrapper.add_member(\"{}\", &{});\n", indentation,
-                   short_field_name, full_field_name);
+
+            update_wrapped_class_for_type(source_manager, *current_wrapped_class, field->getType());
+
+            if (has_annotation(field, V8TOOLKIT_READONLY_STRING)) {
+                result << fmt::format("{}class_wrapper.add_member_readonly(\"{}\", &{});\n", indentation,
+                                      short_field_name, full_field_name);
+            } else {
+                result << fmt::format("{}class_wrapper.add_member(\"{}\", &{});\n", indentation,
+                                      short_field_name, full_field_name);
+            }
 //            printf("%sData member %s, type: %s\n",
 //                   indentation.c_str(),
 //                   field->getNameAsString().c_str(),
@@ -569,15 +835,16 @@ namespace {
             result << indentation;
 
 
+
             if (method->isStatic()) {
                 current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_and_parameters(containing_class, method),
+                       get_method_return_type_and_parameters(source_manager, *current_wrapped_class, containing_class, method),
                        short_method_name, full_method_name);
             } else {
                 current_wrapped_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_class_and_parameters(containing_class, method),
+                       get_method_return_type_class_and_parameters(source_manager, *current_wrapped_class, containing_class, method),
                        short_method_name, full_method_name);
                 methods_wrapped++;
 
@@ -598,10 +865,40 @@ namespace {
                 classes_wrapped++;
                 names_used.clear();
 
-                wrapped_classes.emplace_back(WrappedClass());
+                wrapped_classes.emplace_back(WrappedClass(klass->getName().str()));
                 current_wrapped_class = &wrapped_classes.back();
 
+                // if this is a bidirectional class, make a minimal wrapper for it
+                if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+                    cerr << "Type " << current_wrapped_class->class_name << " **IS** bidirectional" << endl;
+
+                    auto bidirectional_class_name = fmt::format("JS{}", current_wrapped_class->class_name);
+                    WrappedClass bidirectional(bidirectional_class_name);
+                    bidirectional.parent_types.insert(current_wrapped_class->class_name);
+                    bidirectional.contents <<
+                    fmt::format("  {{\n") <<
+                    fmt::format("    // {}\n", bidirectional.class_name) <<
+                    fmt::format("    v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
+                                bidirectional.class_name, bidirectional.class_name) <<
+                    fmt::format("    class_wrapper.set_parent_type<{}>();\n", current_wrapped_class->class_name) <<
+                    fmt::format("    class_wrapper.finalize();\n") <<
+                    fmt::format("  }}\n\n");
+
+                    // not sure if this is needed
+                    //bidirectional.include_files.insert(get_include_for_record_decl(klass));
+                    bidirectional.include_files.insert(fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", current_wrapped_class->class_name));
+
+
+                    wrapped_classes.emplace_back(move(bidirectional));
+
+
+
+                    current_wrapped_class->compatible_types.insert(bidirectional_class_name);
+                } else {
+                    cerr << "Type " << current_wrapped_class->class_name << " is not bidirectional" << endl;
+                }
             }
+
 
 
             std::stringstream & result = current_wrapped_class->contents;
@@ -626,6 +923,8 @@ namespace {
             //fprintf(stderr,"class at %s", decl2str(klass,  source_manager).c_str());
 
             auto full_source_loc = FullSourceLoc(klass->getLocation(), source_manager);
+            auto file_id = full_source_loc.getFileID();
+
 //            fprintf(stderr,"%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
             // don't do the following code for inherited classes
             if (top_level){
@@ -633,7 +932,8 @@ namespace {
                 result << indentation << "{\n";
 
                 result << fmt::format("{}  // {}", indentation, class_name) << "\n";
-                files_to_include.insert(strip_path_from_filename(source_manager.getFilename(full_source_loc).str()));
+
+                current_wrapped_class->include_files.insert(get_include_string_for_fileid(source_manager, file_id));
                 result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                       indentation, class_name, class_name);
                 result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, class_name);
@@ -659,12 +959,23 @@ namespace {
                 auto record_decl = qual_type->getAsCXXRecordDecl();
                 handle_class(record_decl, export_type, false, indentation + "  ");
             }
-            if (false && is_bidirectional) {
-                result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}>::add_subclass_static_method(class_wrapper);\n",
+            if (is_bidirectional) {
+
+                result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}{}>::add_subclass_static_method(class_wrapper);\n",
                                          indentation,
-                                         class_name, class_name);
+                                         class_name, class_name, get_bidirectional_constructor_internal_parameter_typelist(klass, true));
             }
-            if (top_level) result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
+            if (top_level) {
+                if (!current_wrapped_class->compatible_types.empty()) {
+                    result << fmt::format("{}  class_wrapper.set_compatible_types<{}>();\n", indentation,
+                                          join(current_wrapped_class->compatible_types));
+                }
+                if (!current_wrapped_class->parent_types.empty()) {
+                    result << fmt::format("{}  class_wrapper.set_parent_type<{}>();\n", indentation,
+                                          join(current_wrapped_class->parent_types));
+                }
+                result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
+            }
 
             std::vector<std::string> used_constructor_names;
 
@@ -674,15 +985,26 @@ namespace {
                 } else {
                     foreach_constructor(klass, [&](auto constructor) {
 
+//                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), source_manager);
+//                        fprintf(stderr,"%s %s constructor Decl at line %d, file id: %d %s\n", indentation.c_str(),
+//                                top_level_class_decl->getName().str().c_str(),
+//                                full_source_loc.getExpansionLineNumber(),
+//                                full_source_loc.getFileID().getHashValue(),
+//                                source_manager.getBufferName(full_source_loc));
+
+
                         if (constructor->isCopyConstructor()) {
-                            fprintf(stderr,"Skipping copy constructor\n");
+//                            fprintf(stderr,"Skipping copy constructor\n");
                             return;
                         } else if (constructor->isMoveConstructor()) {
-                            fprintf(stderr,"Skipping move constructor\n");
+//                            fprintf(stderr,"Skipping move constructor\n");
+                            return;
+                        } else if (constructor->isDeleted()) {
+//                            cerr << "Skipping deleted constructor" << endl;
                             return;
                         }
                         auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-//                fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
+//                        fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
                         std::string constructor_name = class_name;
                         if (!annotations.empty()) {
                             constructor_name = annotations[0];
@@ -699,7 +1021,9 @@ namespace {
                         used_constructor_names.push_back(constructor_name);
 
                         result << fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                              indentation, get_method_parameters(constructor), constructor_name);
+                                              indentation, get_method_parameters(source_manager,
+                                                                                 *current_wrapped_class,
+                                                                                 constructor), constructor_name);
                     });
                 }
                 result << indentation << "}\n\n";
@@ -719,7 +1043,7 @@ namespace {
                 handle_class(klass, EXPORT_UNSPECIFIED, true, "  ");
 
 
-                BidirectionalBindings bidirectional(klass);
+                BidirectionalBindings bidirectional(source_manager, klass, *current_wrapped_class);
                 bidirectional.generate_bindings();
 
             }
@@ -744,9 +1068,8 @@ namespace {
     class MyASTConsumer : public ASTConsumer {
     public:
         MyASTConsumer(CompilerInstance &CI,
-                      std::set<std::string> & files_to_include,
                       std::vector<WrappedClass> & wrapped_classes) :
-                HandlerForClass(CI, files_to_include, wrapped_classes) {
+                HandlerForClass(CI, wrapped_classes) {
             Matcher.addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()), // select all structs and classes
                                              hasAttr(attr::Annotate), // can't check the actual annotation value here
                                              isDefinition() // skip forward declarations
@@ -795,64 +1118,103 @@ namespace {
             already_called = true;
 
             // Write class wrapper data to a file
-            ofstream class_wrapper_file;
-            int current_file_declaration_count = 0;
-            int file_count = 0;
+            int file_count = 1;
 
-            for (WrappedClass & wrapped_class : wrapped_classes) {
-                // is it time to start a new file?
-                if (current_file_declaration_count != 0 &&
-                        current_file_declaration_count + wrapped_class.declaration_count > MAX_DECLARATIONS_PER_FILE) {
+            int declaration_count_this_file = 0;
+            vector<WrappedClass*> classes_for_this_file;
 
-                    // need to put stuff at the end of the old file to call the second file
-                    current_file_declaration_count = 0;
+            for (auto wrapped_class_iterator = wrapped_classes.begin(); wrapped_class_iterator != wrapped_classes.end(); wrapped_class_iterator++) {
+                cerr << "dumping wrapped class " << wrapped_class_iterator->class_name << endl;
+                // if there's room in the current file, add this class
+                auto space_available = declaration_count_this_file == 0 || declaration_count_this_file + wrapped_class_iterator->declaration_count < MAX_DECLARATIONS_PER_FILE;
+                auto last_class = wrapped_class_iterator + 1 == wrapped_classes.end();
+
+                if (!space_available) {
+                    write_classes(file_count, classes_for_this_file, last_class);
+
+                    // reset for next file
+                    classes_for_this_file.clear();
+                    declaration_count_this_file = 0;
+                    file_count++;
                 }
-                if (current_file_declaration_count == 0) {
-                    if (class_wrapper_file.is_open()) {
-                        class_wrapper_file << fmt::format("  v8toolkit_initialize_class_wrappers_{}(isolate);\n", file_count+1);
-                        class_wrapper_file << "}\n";
-                        class_wrapper_file.close();
-                    }
+
+                classes_for_this_file.push_back(&*wrapped_class_iterator);
+                declaration_count_this_file += wrapped_class_iterator->declaration_count;
 
 
-                    auto class_wrapper_filename = fmt::format("v8toolkit_generated_class_wrapper_{}.cpp", ++file_count);
-                    class_wrapper_file.open(class_wrapper_filename, ios::out);
-                    if (!class_wrapper_file) {
-                        cerr << "Couldn't open " << class_wrapper_filename << endl;
-                        throw std::exception();
-                    }
-                    class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
-                    for (auto file_to_include : files_to_include) {
-
-                        class_wrapper_file << fmt::format("#include \"{}\"\n", file_to_include);
-                    }
-                    class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist that's fine\n", file_count+1);
-                    if (file_count == 1) {
-                        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
-
-                    } else {
-                        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n",
-                                    file_count);
-                    }
-
+                if (last_class) {
+                    write_classes(file_count++, classes_for_this_file, true);
                 }
-                class_wrapper_file << wrapped_class.contents.str();
-
-                current_file_declaration_count += wrapped_class.declaration_count;
-
             }
-
-            // close up c++ syntax and close output files
-            class_wrapper_file << "}\n";
-
-            class_wrapper_file.close();
 
             cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
 
         }
 
+        // takes a file number starting at 1 and incrementing 1 each time
+        // a list of WrappedClasses to print
+        // and whether or not this is the last file to be written
+        void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_one) {
+            // Open file
+            string class_wrapper_filename = fmt::format("v8toolkit_generated_class_wrapper_{}.cpp", file_count);
+            ofstream class_wrapper_file;
+
+            class_wrapper_file.open(class_wrapper_filename, ios::out);
+            if (!class_wrapper_file) {
+                cerr << "Couldn't open " << class_wrapper_filename << endl;
+                throw std::exception();
+            }
+
+            // Write includes
+            class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
+
+
+            set<string> already_included_this_file;
+
+            for (WrappedClass * wrapped_class : classes) {
+                for(auto & include_file : wrapped_class->include_files) {
+                    if (include_file != "" && already_included_this_file.count(include_file) == 0) {
+                        class_wrapper_file << fmt::format("#include {}\n", include_file);
+                        already_included_this_file.insert(include_file);
+                    }
+                }
+            }
+
+            // Write function header
+            class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist that's fine\n", file_count+1);
+            if (file_count == 1) {
+                class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
+
+            } else {
+                class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n",
+                                                  file_count);
+            }
+
+            // Print function body
+            for (auto wrapped_class : classes) {
+                class_wrapper_file << wrapped_class->contents.str();
+            }
+
+
+            // if there's going to be another file, call the function in it
+            if (!last_one) {
+                class_wrapper_file << fmt::format("  v8toolkit_initialize_class_wrappers_{}(isolate);\n", file_count + 1);
+            }
+
+            // Close function and file
+            class_wrapper_file << "}\n";
+            class_wrapper_file.close();
+
+        }
+
+
+
+
+
+
+
+
     protected:
-        std::set<std::string> files_to_include;
         std::vector<WrappedClass> wrapped_classes;
 
 
@@ -860,7 +1222,7 @@ namespace {
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
 
-            return llvm::make_unique<MyASTConsumer>(CI, files_to_include, wrapped_classes);
+            return llvm::make_unique<MyASTConsumer>(CI, wrapped_classes);
         }
 
         bool ParseArgs(const CompilerInstance &CI,

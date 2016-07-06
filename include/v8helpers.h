@@ -25,6 +25,7 @@
 
 namespace v8toolkit {
 
+#define V8TOOLKIT_COMMA ,
 
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,

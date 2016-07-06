@@ -16,10 +16,13 @@
 //#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate("v8toolkit_generate_bidirectional")))
 
 #include <functional>
+#include <memory>
 
 #include "class_parser.h"
 
 class Uninteresting{};
+
+class OnlyUsedInTemplate{};
 
 class V8TOOLKIT_WRAPPED_CLASS FooParent {
 public:
