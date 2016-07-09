@@ -15,6 +15,8 @@
 /**
  * KNOWN BUGS:
  * Doesn't properly understand virtual methods and will duplicate them across the inheritence hierarchy
+ * Doesn't include root file of compilation - if this is pretty safe in a unity build, as the root file is a file that
+ *   just includes all the other files
  */
 
 
@@ -72,6 +74,68 @@ int methods_wrapped = 0;
 
 namespace {
 
+
+
+//
+//    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
+//        // (T, U) => "T,,"
+//        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(d->getSourceRange()), sm, LangOptions(), 0);
+//        if (text.at(text.size()-1) == ',')
+//            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
+//        return text;
+//    }
+
+    std::string get_source_for_source_range(SourceManager & sm, SourceRange source_range) {
+        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(source_range), sm, LangOptions(), 0);
+        if (text.at(text.size()-1) == ',')
+            return Lexer::getSourceText(CharSourceRange::getCharRange(source_range), sm, LangOptions(), 0);
+        return text;
+    }
+
+    vector<string> count_top_level_template_parameters(const std::string & source) {
+        int open_angle_count = 0;
+        vector<string> parameter_strings;
+        std::string * current;
+        for (char c : source) {
+            if (isspace(c)) {
+                continue;
+            }
+            if (c == '<') {
+                open_angle_count++;
+                if (open_angle_count > 1) {
+                    *current += c;
+                }
+            } else if (c == '>') {
+                open_angle_count--;
+                if (open_angle_count > 0) {
+                    *current += c;
+                }
+            } else {
+                if (open_angle_count == 1) {
+                    if (parameter_strings.size() == 0) {
+                        parameter_strings.push_back("");
+                        current = &parameter_strings.back();
+                    }
+                    if (c == ',') {
+                        parameter_strings.push_back("");
+                        current = &parameter_strings.back();
+                        if (open_angle_count > 1) {
+                            *current += c;
+                        }
+                    } else {
+                        *current += c;
+                    }
+                } else if (open_angle_count > 1) {
+                    *current += c;
+                }
+            }
+        }
+        cerr << "^^^^^^^^^^^^^^^ Counted " << parameter_strings.size() << " for " << source << endl;
+        for (auto & str : parameter_strings) {
+            cerr <<  "^^^^^^^^^^^^^^^" << str << endl;
+        }
+        return parameter_strings;
+    }
 
     struct WrappedClass {
         string class_name;
@@ -228,11 +292,80 @@ namespace {
 //        throw std::exception();
 //    }
 
+    std::string handle_std(const std::string & input) {
+        smatch matches;
+        regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__1::)?)?(.*)"));
+        // space before std:: is handled from const/volatile if needed
+        auto result = matches[1].str() + "std::" + matches[2].str();
 
-    std::string get_type_string(QualType qual_type) {
-        cerr << "Started at " << qual_type.getAsString() << endl;
+        cerr << "Stripping std from " << input << " results in " << result << endl;
+        return result;
+    }
 
+    bool has_std(const std::string & input) {
+        return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
+    }
+
+
+    // Returns true if qual_type is a 'trivial' std:: type like
+    //   std::string
+    bool is_trivial_std_type(QualType & qual_type, std::string & output) {
+        std::string name = qual_type.getAsString();
+        std::string canonical_name = qual_type.getCanonicalType().getAsString();
+
+        // if it's a std:: type and not explicitly user-specialized, pass it through
+        if (std::regex_match(name, regex("^(const\\s+|volatile\\s+)*(class |struct )?std::[^<]*$"))) {
+            output = handle_std(name);
+            return true;
+        }
+        // or if the canonical type has std:: in it and it's not user-customized
+        else if (has_std(canonical_name) &&
+                 std::regex_match(name, regex("^[^<]*$"))) {
+            output = handle_std(name);
+            return true;
+        }
+        return false;
+    }
+
+    // Returns true if qual_type is a 'non-trivial' std:: type (containing user-specified template types like
+    //   std::map<MyType1, MyType2>
+    bool is_nontrivial_std_type(QualType & qual_type, std::string & output) {
+
+        std::string name = qual_type.getAsString();
+        std::string canonical_name = qual_type.getCanonicalType().getAsString();
+        cerr << "Checking nontrivial std type on " << name << " : " << canonical_name << endl;
+        smatch matches;
+
+
+        // if it's in standard (according to its canonical type) and has user-specified types
+        if (has_std(canonical_name) &&
+                 std::regex_match(name, matches, regex("^([^<]*<).*$"))) {
+            output = handle_std(matches[1].str());
+            cerr << "Yes" << endl;
+            return true;
+        }
+        cerr << "No" << endl;
+        return false;
+    }
+
+
+
+
+    std::string get_type_string(QualType qual_type,
+                                const std::string & source,
+                                const std::string & indentation = "") {
         auto original_qual_type = qual_type;
+        cerr << indentation << "Started at " << qual_type.getAsString() << endl;
+        cerr << indentation << "  And canonical name: " << qual_type.getCanonicalType().getAsString() << endl;
+        cerr << indentation << "  And source " << source << endl;
+
+        std::string std_result;
+        if (is_trivial_std_type(qual_type, std_result)) {
+            cerr << indentation << "Returning trivial std:: type: " << std_result << endl << endl;
+            return std_result;
+        }
+
+//        auto original_qual_type = qual_type;
 
         bool is_reference = qual_type->isReferenceType();
         string reference_suffix = is_reference ? "&" : "";
@@ -246,73 +379,101 @@ namespace {
                 changed = true;
                 pointer_suffix << "*";
                 qual_type = qual_type->getPointeeType();
-                cerr << "stripped pointer, went to: " << qual_type.getAsString() << endl;
+                cerr << indentation << "stripped pointer, went to: " << qual_type.getAsString() << endl;
                 continue; // check for more pointers first
             }
 
             // This code traverses all the typdefs and pointers to get to the actual base type
             if (dyn_cast<TypedefType>(qual_type) != nullptr) {
                 changed = true;
-                cerr << "stripped typedef, went to: " << qual_type.getAsString() << endl;
+                cerr << indentation << "stripped typedef, went to: " << qual_type.getAsString() << endl;
                 qual_type = dyn_cast<TypedefType>(qual_type)->getDecl()->getUnderlyingType();
             }
         }
 
-
-        auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
+        cerr << indentation << "CHECKING TO SEE IF " << qual_type.getUnqualifiedType().getAsString() << " is a template specialization"<< endl;
+        auto base_type_record_decl = qual_type.getUnqualifiedType()->getAsCXXRecordDecl();
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
+
+
+
+            cerr << indentation << "!!!!! Started with template specialization: " << qual_type.getAsString() << endl;
             stringstream result;
 
             std::smatch matches;
             string qual_type_string = qual_type.getAsString();
-            if (!regex_match(qual_type_string, matches, regex("^([^<]+<).*(>[^>]*)$"))) {
-                cerr << "ERROR: Template type must match regex" << endl;
+
+            std::string std_type_output;
+            bool nontrivial_std_type = false;
+            if (is_nontrivial_std_type(qual_type, std_type_output)) {
+                cerr << indentation << "is nontrivial std type and got result: " << std_type_output << endl;
+                nontrivial_std_type = true;
+                result << std_type_output;
             }
-            result << matches[1];
+            // Get everything EXCEPT the template parameters into matches[1] and [2]
+            else if (!regex_match(qual_type_string, matches, regex("^([^<]+<).*(>[^>]*)$"))) {
+                cerr << indentation << "ERROR: Template type must match regex" << endl;
+            } else {
+                result << matches[1];
+                cerr << indentation << "is NOT nontrivial std type" << endl;
+            }
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
+            auto user_specified_template_parameters = count_top_level_template_parameters(source);
+
+
             auto & template_arg_list = template_specialization_decl->getTemplateArgs();
-            for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
+            if (user_specified_template_parameters.size() > template_arg_list.size()) {
+                cerr << "ERROR: detected template parameters > actual list size" << endl;
+            }
+
+//            for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
+            for (decltype(template_arg_list.size()) i = 0; i < user_specified_template_parameters.size(); i++) {
                 if (i > 0) {
                     result << ", ";
                 }
-                cerr << "Working on template parameter " << i << endl;
+                cerr << indentation << "Working on template parameter " << i << endl;
                 auto & arg = template_arg_list[i];
 
                 switch(arg.getKind()) {
                     case clang::TemplateArgument::Type: {
-                        cerr << "processing as type argument" << endl;
+                        cerr << indentation << "processing as type argument" << endl;
                         auto template_arg_qual_type = arg.getAsType();
-                        result << get_type_string(template_arg_qual_type);
+                        auto template_type_string = get_type_string(template_arg_qual_type,
+                                                  user_specified_template_parameters[i],
+                                                  indentation + "  ");
+                        cerr << indentation << "About to append " << template_type_string << " template type string onto existing: " << result.str() << endl;
+                        result << template_type_string;
                         break; }
                     case clang::TemplateArgument::Integral: {
-                        cerr << "processing as integral argument" << endl;
+                        cerr << indentation << "processing as integral argument" << endl;
                         auto integral_value = arg.getAsIntegral();
-                        cerr << "integral value radix10: " << integral_value.toString(10) << endl;
+                        cerr << indentation << "integral value radix10: " << integral_value.toString(10) << endl;
                         result << integral_value.toString(10);
                         break;}
                     default:
-                        cerr << "Oops, unhandled argument type" << endl;
+                        cerr << indentation << "Oops, unhandled argument type" << endl;
                 }
             }
-            result << matches[2] << pointer_suffix.str() << reference_suffix;
-            cerr << "Finished stringifying templated type to: " << result.str() << endl;
+            result << ">" << pointer_suffix.str() << reference_suffix;
+            cerr << indentation << "!!!!!Finished stringifying templated type to: " << result.str() << endl << endl;
             return result.str();
 
+//        } else if (std::regex_match(qual_type.getAsString(), regex("^(class |struct )?std::.*$"))) {
+//
+//
+//            cerr << indentation << "checking " << qual_type.getAsString();
+//            if (dyn_cast<TypedefType>(qual_type)) {
+//                cerr << indentation << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() <<
+//                endl << endl;
+//                return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() +
+//                       (is_reference ? " &" : "");
+//            } else {
+//                cerr << indentation << " and returning (no typedef) " << qual_type.getAsString() << endl << endl;
+//                return qual_type.getAsString() + pointer_suffix.str() + reference_suffix;
+//            }
+
         } else {
-#if true
-
-            cerr << "checking " << qual_type.getAsString();
-            if (dyn_cast<TypedefType>(qual_type)) {
-                cerr << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() << endl;
-                return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() +
-                       (is_reference ? " &" : "");
-            } else {
-                cerr << " and returning (no typedef) " << qual_type.getAsString() << endl;
-                return qual_type.getAsString() + pointer_suffix.str() + reference_suffix;
-            }
-
-#else
 
             // THIS APPROACH DOES NOT GENERATE PORTABLE STL NAMES LIKE THE LINE BELOW IS libc++ only not libstdc++
             // std::__1::basic_string<char, struct std::__1::char_traits<char>, class std::__1::allocator<char> >
@@ -321,14 +482,13 @@ namespace {
             // There is no confusion with reference types or typedefs or const/volatile
             // EXCEPT: it generates a elaborated type specifier which can't be used in certain places
             // http://en.cppreference.com/w/cpp/language/elaborated_type_specifier
-            auto canonical_qual_type = qual_type.getCanonicalType();
+            auto canonical_qual_type = original_qual_type.getCanonicalType();
 
             //printf("Canonical qualtype typedeftype cast: %p\n",(void*) dyn_cast<TypedefType>(canonical_qual_type));
 
-            //cerr << "canonical: " << qual_type.getCanonicalType().getAsString() << endl;
+            cerr << indentation << "returning canonical: " << canonical_qual_type.getAsString() << endl << endl;
 
             return canonical_qual_type.getAsString();
-#endif
         }
     }
 
@@ -340,7 +500,7 @@ namespace {
                                        // don't capture qualtype by ref since it is changed
                                        QualType qual_type) {
 
-        cerr << "Went from " << qual_type.getAsString();
+//        cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
         while(!qual_type->getPointeeType().isNull()) {
@@ -348,7 +508,7 @@ namespace {
         }
         qual_type = qual_type.getLocalUnqualifiedType();
 
-        cerr << " to " << qual_type.getAsString() << endl;
+//        cerr << " to " << qual_type.getAsString() << endl;
         auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
 
         // primitive types don't have record decls
@@ -362,12 +522,12 @@ namespace {
 
         auto actual_include_string = get_include_string_for_fileid(source_manager, file_id);
 
-        cerr << "GOT IT: " << actual_include_string << endl;
+        cerr << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
         wrapped_class.include_files.insert(actual_include_string);
 
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
 
-            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
+//            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
@@ -401,9 +561,9 @@ namespace {
     }
 
 
-    vector<QualType> get_method_param_qual_types(const CXXMethodDecl * method,
+    vector<pair<QualType, SourceRange>> get_method_param_qual_types(const CXXMethodDecl * method,
                                                  const string & annotation = "") {
-        vector<QualType> results;
+        vector<pair<QualType, SourceRange>> results;
         auto parameter_count = method->getNumParams();
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
@@ -412,7 +572,8 @@ namespace {
                 continue;
             }
             auto param_qual_type = param_decl->getType();
-            results.push_back(param_qual_type);
+            results.push_back(make_pair(param_qual_type, param_decl->getSourceRange()));
+            cerr << "Got " << (param_decl->getSourceRange().isValid() ? "valid" : "invalid") << " source range for " << param_qual_type.getAsString() << endl;
         }
         return results;
     }
@@ -440,7 +601,7 @@ namespace {
         }
         int count = 0;
         auto var_names = generate_variable_names(type_list.size());
-        for (auto & param_qual_type : type_list) {
+        for (auto & param_qual_type_pair : type_list) {
 
             if (!first_param) {
                 result << ", ";
@@ -448,14 +609,15 @@ namespace {
             first_param = false;
 
 
-            auto type_string = get_type_string(param_qual_type);
+            auto type_string = get_type_string(param_qual_type_pair.first,
+                                               get_source_for_source_range(source_manager, param_qual_type_pair.second));
             result << type_string;
 
             if (insert_variable_names) {
                 result << " " << var_names[count++];
             }
 
-            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type);
+            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type_pair.first);
 
         }
         return result.str();
@@ -465,7 +627,8 @@ namespace {
                                       WrappedClass & wrapped_class,
                                       const CXXMethodDecl * method) {
         auto qual_type = method->getReturnType();
-        auto result = get_type_string(qual_type);
+        auto result = get_type_string(qual_type, get_source_for_source_range(source_manager,
+                                                                             method->getReturnTypeSourceRange()));
 //        auto return_type_decl = qual_type->getAsCXXRecordDecl();
 //        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), source_manager);
 //        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
@@ -521,15 +684,6 @@ namespace {
 
 
 
-
-
-//    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
-//        // (T, U) => "T,,"
-//        std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(d->getSourceRange()), sm, LangOptions(), 0);
-//        if (text.at(text.size()-1) == ',')
-//            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
-//        return text;
-//    }
 
 
 
@@ -693,11 +847,9 @@ namespace {
             if (num_params > 0) {
                 auto types = get_method_param_qual_types(method);
                 vector<string>type_names;
-                for (auto & type : types) {
-                    type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+                for (auto & type_pair : types) {
+                    type_names.push_back(std::regex_replace(type_pair.first.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
                 }
-
-
 
                 result << join(type_names, ", ", true);
             }
@@ -958,6 +1110,10 @@ namespace {
 
                 wrapped_classes.emplace_back(WrappedClass(klass->getName().str()));
                 current_wrapped_class = &wrapped_classes.back();
+
+
+                cerr << "*&&&&&&&&&&&&&&&adding include for class being handled: " << klass->getName().str() << " : " << get_include_for_record_decl(source_manager, klass) << endl;
+                current_wrapped_class->include_files.insert(get_include_for_record_decl(source_manager, klass));
 
                 // if this is a bidirectional class, make a minimal wrapper for it
                 if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
