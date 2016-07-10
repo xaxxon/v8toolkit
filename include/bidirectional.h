@@ -105,13 +105,14 @@ public:
 
 /**
 * Returns a pure-C++ object of type Child which inherits from type Base.  It's Base type and ConstructorArgs... 
-*   must match with the Factory it is associated with.
+*   must match with the Factory it is associated with.  You can have it inherit from a type that inherits from v8toolkit::Factory
+*   but v8toolkit::Factory must be in the inheritance chain somewhere
 */
-template<class Base, class Child, class ExternalTypeList = TypeList<>>
+ template<class Base, class Child, class ExternalTypeList = TypeList<>, template<class, class...> class ParentType = Factory>
 class CppFactory;
 
-template<class Base, class Child, class... ExternalConstructorParams>
-class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>>{
+ template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType>
+     class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType> : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
 public:
     virtual Base * operator()(ExternalConstructorParams... constructor_args) override
     {
@@ -133,12 +134,12 @@ public:
 *
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
-template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>>
+ template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory>
 class JSFactory;
 
 
-template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams>
-class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>> : public Factory<Base, TypeList<ExternalConstructorParams...>> {
+ template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams, template<class, class...> class ParentType>
+     class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType> : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
