@@ -75,13 +75,13 @@ public:
     /**
      * Returns a pointer to a new object inheriting from type Base
      */
-    virtual Base * operator()(ConstructorArgs... constructor_args) = 0;
+    virtual Base * operator()(ConstructorArgs... constructor_args) const = 0;
 
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
      */
     template <class U = Base, class... Args>
-    std::unique_ptr<U> get_unique(Args&&... args) {
+    std::unique_ptr<U> get_unique(Args&&... args) const {
 
 	// call operator() on the factory and put the results in a unique pointer
         return std::unique_ptr<U>((*this)(std::forward<Args>(args)...));
@@ -91,7 +91,7 @@ public:
      * Helper to quickly turn a Base type into another type if allowed
      */
     template<class U, class... Args>
-    U * as(Args&&...  args){
+    U * as(Args&&...  args) const {
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
         auto result = this->operator()(std::forward<Args>(args)...);
         if (dynamic_cast<U*>(result)) {
@@ -114,7 +114,7 @@ class CppFactory;
  template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType>
      class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType> : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
 public:
-    virtual Base * operator()(ExternalConstructorParams... constructor_args) override
+    virtual Base * operator()(ExternalConstructorParams... constructor_args) const override
     {
         // printf("CppFactory making a %s\n", typeid(Child).name());
         return new Child(constructor_args...);
@@ -134,12 +134,16 @@ public:
 *
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
- template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory>
+ template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory, class = void>
 class JSFactory;
 
 
  template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams, template<class, class...> class ParentType>
-     class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType> : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
+     class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType,
+
+     // Verify Factory<...> is in the hierarchy somewhere (either immediate parent or any ancestor)
+     std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>>, ParentType<Base, TypeList<ExternalConstructorParams...>>>::value>>
+     : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
@@ -160,7 +164,7 @@ public:
     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
     *   extends the C++ functionality in javascript
     */
-    Base * operator()(ExternalConstructorParams... constructor_parameters) {
+    Base * operator()(ExternalConstructorParams... constructor_parameters) const {
         // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
 
         return scoped_run(isolate, global_context, [&](auto isolate, auto context) {
