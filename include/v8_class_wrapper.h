@@ -161,6 +161,14 @@ private:
 	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
 
 
+	using AttributeChangeCallback = std::function<void(v8::Isolate * isolate,
+													   v8::Local<v8::Object> & self,
+													   const std::string &,
+													   const v8::Local<v8::Value> & value)>;
+
+	/// List of callbacks for when attributes change
+	std::vector<AttributeChangeCallback> attribute_callbacks;
+
 	V8ClassWrapper<T>() = delete;
 	V8ClassWrapper<T>(const V8ClassWrapper<T> &) = delete;
 	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;
@@ -183,6 +191,13 @@ private:
 	std::vector<std::string> used_attribute_name_list;
 
 
+	void call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value) {
+	    for (auto & callback : attribute_callbacks) {
+			callback(isolate, object, property_name, value);
+	    }
+	}
+
+
 	/**
 	 * Throws if name has already been checked by this function for this type in this isolate
 	 */
@@ -198,36 +213,38 @@ private:
     //   via the V8 SetAccessor method
 	template<class VALUE_T> // type being returned
 	static void _getter_helper(v8::Local<v8::String> property,
-	                  const v8::PropertyCallbackInfo<v8::Value>& info) 
-	{
+	                  const v8::PropertyCallbackInfo<v8::Value>& info) {
+
 		auto isolate = info.GetIsolate();
 		v8::Local<v8::Object> self = info.Holder();				   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-        auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
-        if (V8_CLASS_WRAPPER_DEBUG) printf("Getter helper got cpp object: %p\n", cpp_object);
+		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+		if (V8_CLASS_WRAPPER_DEBUG) printf("Getter helper got cpp object: %p\n", cpp_object);
 		// This function returns a reference to member in question
-		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-	
-		auto & member_ref = (*member_reference_getter)(cpp_object);
-		info.GetReturnValue().Set(CastToJS<VALUE_T>()(isolate, member_ref));
+		auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
+		auto attribute_data = (*attribute_data_getter)(cpp_object);
+		info.GetReturnValue().Set(CastToJS<VALUE_T>()(isolate, attribute_data.member_reference));
 	}
 
     // function used to set the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
 	template<typename VALUE_T, std::enable_if_t<std::is_copy_assignable<VALUE_T>::value, int> = 0>
 	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
-	               const v8::PropertyCallbackInfo<void>& info) 
-	{
-        auto isolate = info.GetIsolate();
-		v8::Local<v8::Object> self = info.Holder();		   
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+	               const v8::PropertyCallbackInfo<void>& info) {
+	    
+	    auto isolate = info.GetIsolate();
+	    v8::Local<v8::Object> self = info.Holder();		   
+	    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+	    
+	    auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
+	    auto attribute_data = (*attribute_data_getter)(cpp_object);
+	    
+	    attribute_data.member_reference = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
+	    attribute_data.class_wrapper.call_callbacks(self, *v8::String::Utf8Value(property), value);
 
-		auto member_reference_getter = (std::function<VALUE_T&(T*)> *)v8::External::Cast(*(info.Data()))->Value();
-		VALUE_T & member_ref = (*member_reference_getter)(cpp_object);
-	  	member_ref = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
 	}
-
+	
 
 
 	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
@@ -295,7 +312,8 @@ private:
     */
     std::vector<v8::Global<v8::FunctionTemplate>> this_class_function_templates;
 
-    
+
+
     /**
     * Forces user to state that all members/methods have been added before any
     *   instances of the wrapped object are created
@@ -304,8 +322,16 @@ private:
 
 
 public:
-	
-	
+
+	/**
+	 * This is probably not useful since it doesn't have object information
+	 */
+	void register_callback(AttributeChangeCallback callback) {
+		attribute_callbacks.push_back(callback);
+	}
+
+
+
 	// Common tasks to do for any new js object regardless of how it is created
 	template<class DestructorBehavior>
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
@@ -690,7 +716,18 @@ public:
 //        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
 //    };
 
+    template<class MemberType>
+    struct AttributeHelperData {
+    public:
+		AttributeHelperData(V8ClassWrapper<T> & class_wrapper, MemberType & member_reference) :
+			class_wrapper(class_wrapper), member_reference(member_reference)
+		{}
 
+		V8ClassWrapper<T> & class_wrapper;
+		MemberType & member_reference;
+    };
+	template<class MemberType>
+	using AttributeHelperDataCreator = std::function<AttributeHelperData<MemberType>(T*)>;
 
 
     /**
@@ -701,27 +738,30 @@ public:
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
-        assert(this->finalized == false);
+	    assert(this->finalized == false);
+	    
+	    if (!std::is_const<T>::value) {
+		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
+	    }
+	    
+	    this->check_if_name_used(member_name);
+	    
+	    // store a function for adding the member on to an object template in the future
+	    member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+		    
+		    auto get_attribute_helper_data =
+					new AttributeHelperDataCreator<MEMBER_TYPE>(
+							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE> {
 
-        if (!std::is_const<T>::value) {
-            V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
-        }
-
-		this->check_if_name_used(member_name);
-
-		// store a function for adding the member on to an object template in the future
-		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
-             
-    		auto get_member_reference = new std::function<MEMBER_TYPE&(T*)>([member](T * cpp_object)->MEMBER_TYPE&{
-    			return cpp_object->*member;
-    		});
-            
-			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
-				_getter_helper<MEMBER_TYPE>, 
-				_setter_helper<MEMBER_TYPE>, 
-				v8::External::New(isolate, get_member_reference));
-        });
-        return *this;
+			    return AttributeHelperData<MEMBER_TYPE>(*this, cpp_object->*member);
+			});
+		    
+		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
+						      _getter_helper<MEMBER_TYPE>, 
+						      _setter_helper<MEMBER_TYPE>, 
+						      v8::External::New(isolate, get_attribute_helper_data));
+		});
+	    return *this;
 	}
 
 
@@ -729,35 +769,39 @@ public:
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
-		// the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
-		if (!std::is_const<T>::value) {
-			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
-		}
+	    // make sure to be using the const version even if it's not passed in
+	    using ConstMemberType = typename std::add_const<MEMBER_TYPE>::type;
+	    
+	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
+	    if (!std::is_const<T>::value) {
+		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_member_readonly(member_name, member);
+	    }
+	    
+	    
+	    using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
+	    const MEMBER_TYPE &,
+	    MEMBER_TYPE &>::type;
+	    
+	    assert(this->finalized == false);
+	    
+	    this->check_if_name_used(member_name);
+	    
+	    member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 
-		using RESULT_REF_TYPE = typename std::conditional<std::is_const<T>::value,
-                                                 const MEMBER_TYPE &,
-                                                 MEMBER_TYPE &>::type;
-
-        assert(this->finalized == false);
-
-		this->check_if_name_used(member_name);
-
-		member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
-             
-    		auto get_member_reference = new std::function<RESULT_REF_TYPE(T*)>([member](T * cpp_object)->RESULT_REF_TYPE{
-    			return cpp_object->*member;
-    		});
-            
-			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
-				_getter_helper<MEMBER_TYPE>,
-                0,
-				v8::External::New(isolate, get_member_reference));
-        });
-        return *this;
+		    auto get_attribute_helper_data = new AttributeHelperDataCreator<ConstMemberType>([this, member](T * cpp_object)->AttributeHelperData<ConstMemberType>{
+			    return AttributeHelperData<ConstMemberType>(*this, cpp_object->*member);
+			});
+		    
+		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
+						      _getter_helper<ConstMemberType>,
+						      0,
+						      v8::External::New(isolate, get_attribute_helper_data));
+		});
+	    return *this;
 	}
-
-
+    
+    
 	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {

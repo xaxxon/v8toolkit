@@ -71,7 +71,16 @@ auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {
 }
 
 
+template<bool... b> struct static_any;
 
+template<bool... tail>
+struct static_any<true, tail...> : std::true_type {};
+
+template<bool... tail>
+struct static_any<false, tail...> : static_any<tail...> {};
+
+template<>
+struct static_any<> : std::false_type {};
 
 
 

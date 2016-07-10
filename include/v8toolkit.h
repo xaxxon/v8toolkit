@@ -690,11 +690,14 @@ v8::Local<v8::Value> call_javascript_function_with_vars(const v8::Local<v8::Cont
                                                         Ts&&... ts) {
     auto isolate = context->GetIsolate();
     std::vector<v8::Local<v8::Value>> parameters {CastToJS<OriginalTypes>()(isolate, std::forward<Ts>(ts))...};
-
+    auto parameter_count = sizeof...(ts);
     v8::TryCatch tc(isolate);
-    auto maybe_result = function->Call(context, receiver, sizeof...(ts), &parameters[0]);
+    auto maybe_result = function->Call(context, receiver, parameter_count, &parameters[0]);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
+            printf("Some of the types are const, make sure what you are using them for is available on the const type\n");
+        }
         throw V8ExecutionException(isolate, tc);
     }
     return maybe_result.ToLocalChecked();

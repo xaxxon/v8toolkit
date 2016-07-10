@@ -74,7 +74,7 @@ int methods_wrapped = 0;
 
 namespace {
 
-
+int print_logging = 0;
 
 //
 //    std::string decl2str(const clang::Decl *d, SourceManager &sm) {
@@ -130,9 +130,9 @@ namespace {
                 }
             }
         }
-        cerr << "^^^^^^^^^^^^^^^ Counted " << parameter_strings.size() << " for " << source << endl;
+        if (print_logging) if (print_logging) cerr << "^^^^^^^^^^^^^^^ Counted " << parameter_strings.size() << " for " << source << endl;
         for (auto & str : parameter_strings) {
-            cerr <<  "^^^^^^^^^^^^^^^" << str << endl;
+            if (print_logging) cerr <<  "^^^^^^^^^^^^^^^" << str << endl;
         }
         return parameter_strings;
     }
@@ -158,7 +158,7 @@ namespace {
             if (annotation) {
                 auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
                 auto annotation_string = attribute_attr->getAnnotation().str();
-                //cerr << "Got annotation " << annotation_string << endl;
+                //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
                 results.emplace_back(annotation->getAnnotation().str());
             }
         }
@@ -234,10 +234,10 @@ namespace {
         // If it's in the "root" file (file id 1), then there's no include for it
         if (include_source_location.isValid()) {
             auto header_file = include_source_location.printToString(source_manager);
-//            cerr << "include source location: " << header_file << endl;
+//            if (print_logging) cerr << "include source location: " << header_file << endl;
             //            wrapped_class.include_files.insert(header_file);
         } else {
-//            cerr << "No valid source location" << endl;
+//            if (print_logging) cerr << "No valid source location" << endl;
             return "";
         }
 
@@ -288,7 +288,7 @@ namespace {
 //        if (std::regex_search(filename, matches, regex)) {
 //            return matches[1];
 //        }
-//        cerr << fmt::format("Unrecognizable filename {}", filename);
+//        if (print_logging) cerr << fmt::format("Unrecognizable filename {}", filename);
 //        throw std::exception();
 //    }
 
@@ -298,7 +298,7 @@ namespace {
         // space before std:: is handled from const/volatile if needed
         auto result = matches[1].str() + "std::" + matches[2].str();
 
-        cerr << "Stripping std from " << input << " results in " << result << endl;
+        if (print_logging) cerr << "Stripping std from " << input << " results in " << result << endl;
         return result;
     }
 
@@ -333,7 +333,7 @@ namespace {
 
         std::string name = qual_type.getAsString();
         std::string canonical_name = qual_type.getCanonicalType().getAsString();
-        cerr << "Checking nontrivial std type on " << name << " : " << canonical_name << endl;
+        if (print_logging) cerr << "Checking nontrivial std type on " << name << " : " << canonical_name << endl;
         smatch matches;
 
 
@@ -341,10 +341,10 @@ namespace {
         if (has_std(canonical_name) &&
                  std::regex_match(name, matches, regex("^([^<]*<).*$"))) {
             output = handle_std(matches[1].str());
-            cerr << "Yes" << endl;
+            if (print_logging) cerr << "Yes" << endl;
             return true;
         }
-        cerr << "No" << endl;
+        if (print_logging) cerr << "No" << endl;
         return false;
     }
 
@@ -352,16 +352,34 @@ namespace {
 
 
     std::string get_type_string(QualType qual_type,
-                                const std::string & source,
+                                const std::string & input_source,
                                 const std::string & indentation = "") {
+
+        auto canonical_qual_type = qual_type.getCanonicalType();
+        auto canonical = canonical_qual_type.getAsString();
+        return regex_replace(canonical, regex("std::__1::"), "std::");
+
+#if 0
+
+
+        // need read/write version
+        std::string source = input_source;
+
+        bool turn_logging_off = false;
+        if (regex_match(qual_type.getAsString(), regex("^.*glm.*$") )) {
+            print_logging++;
+            turn_logging_off = true;
+        }
+        
         auto original_qual_type = qual_type;
-        cerr << indentation << "Started at " << qual_type.getAsString() << endl;
-        cerr << indentation << "  And canonical name: " << qual_type.getCanonicalType().getAsString() << endl;
-        cerr << indentation << "  And source " << source << endl;
+        if (print_logging) cerr << indentation << "Started at " << qual_type.getAsString() << endl;
+        if (print_logging) cerr << indentation << "  And canonical name: " << qual_type.getCanonicalType().getAsString() << endl;
+        if (print_logging) cerr << indentation << "  And source " << source << endl;
 
         std::string std_result;
         if (is_trivial_std_type(qual_type, std_result)) {
-            cerr << indentation << "Returning trivial std:: type: " << std_result << endl << endl;
+            if (print_logging) cerr << indentation << "Returning trivial std:: type: " << std_result << endl << endl;
+            if (turn_logging_off) print_logging--;
             return std_result;
         }
 
@@ -379,26 +397,29 @@ namespace {
                 changed = true;
                 pointer_suffix << "*";
                 qual_type = qual_type->getPointeeType();
-                cerr << indentation << "stripped pointer, went to: " << qual_type.getAsString() << endl;
+                if (print_logging) cerr << indentation << "stripped pointer, went to: " << qual_type.getAsString() << endl;
                 continue; // check for more pointers first
             }
 
             // This code traverses all the typdefs and pointers to get to the actual base type
             if (dyn_cast<TypedefType>(qual_type) != nullptr) {
                 changed = true;
-                cerr << indentation << "stripped typedef, went to: " << qual_type.getAsString() << endl;
+                if (print_logging) cerr << indentation << "stripped typedef, went to: " << qual_type.getAsString() << endl;
                 qual_type = dyn_cast<TypedefType>(qual_type)->getDecl()->getUnderlyingType();
+                source = ""; // source is invalidated if it's a typedef
             }
         }
 
-        cerr << indentation << "CHECKING TO SEE IF " << qual_type.getUnqualifiedType().getAsString() << " is a template specialization"<< endl;
+        if (print_logging) cerr << indentation << "CHECKING TO SEE IF " << qual_type.getUnqualifiedType().getAsString() << " is a template specialization"<< endl;
         auto base_type_record_decl = qual_type.getUnqualifiedType()->getAsCXXRecordDecl();
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
 
 
 
-            cerr << indentation << "!!!!! Started with template specialization: " << qual_type.getAsString() << endl;
+            if (print_logging) cerr << indentation << "!!!!! Started with template specialization: " << qual_type.getAsString() << endl;
             stringstream result;
+
+
 
             std::smatch matches;
             string qual_type_string = qual_type.getAsString();
@@ -406,16 +427,18 @@ namespace {
             std::string std_type_output;
             bool nontrivial_std_type = false;
             if (is_nontrivial_std_type(qual_type, std_type_output)) {
-                cerr << indentation << "is nontrivial std type and got result: " << std_type_output << endl;
+                if (print_logging) cerr << indentation << "is nontrivial std type and got result: " << std_type_output << endl;
                 nontrivial_std_type = true;
                 result << std_type_output;
             }
             // Get everything EXCEPT the template parameters into matches[1] and [2]
             else if (!regex_match(qual_type_string, matches, regex("^([^<]+<).*(>[^>]*)$"))) {
-                cerr << indentation << "ERROR: Template type must match regex" << endl;
+                if (print_logging) cerr << indentation << "short circuiting on " << original_qual_type.getAsString() << endl;
+                if (turn_logging_off) print_logging--;
+                return original_qual_type.getAsString();
             } else {
                 result << matches[1];
-                cerr << indentation << "is NOT nontrivial std type" << endl;
+                if (print_logging) cerr << indentation << "is NOT nontrivial std type" << endl;
             }
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
@@ -427,49 +450,56 @@ namespace {
                 cerr << "ERROR: detected template parameters > actual list size" << endl;
             }
 
+            auto template_types_to_handle = user_specified_template_parameters.size();
+            if (source == "") {
+                // if a typedef was followed, then user sources is meaningless
+                template_types_to_handle = template_arg_list.size();
+            }
+
 //            for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
-            for (decltype(template_arg_list.size()) i = 0; i < user_specified_template_parameters.size(); i++) {
+            for (decltype(template_arg_list.size()) i = 0; i < template_types_to_handle; i++) {
                 if (i > 0) {
                     result << ", ";
                 }
-                cerr << indentation << "Working on template parameter " << i << endl;
+                if (print_logging) cerr << indentation << "Working on template parameter " << i << endl;
                 auto & arg = template_arg_list[i];
 
                 switch(arg.getKind()) {
                     case clang::TemplateArgument::Type: {
-                        cerr << indentation << "processing as type argument" << endl;
+                        if (print_logging) cerr << indentation << "processing as type argument" << endl;
                         auto template_arg_qual_type = arg.getAsType();
                         auto template_type_string = get_type_string(template_arg_qual_type,
                                                   user_specified_template_parameters[i],
                                                   indentation + "  ");
-                        cerr << indentation << "About to append " << template_type_string << " template type string onto existing: " << result.str() << endl;
+                        if (print_logging) cerr << indentation << "About to append " << template_type_string << " template type string onto existing: " << result.str() << endl;
                         result << template_type_string;
                         break; }
                     case clang::TemplateArgument::Integral: {
-                        cerr << indentation << "processing as integral argument" << endl;
+                        if (print_logging) cerr << indentation << "processing as integral argument" << endl;
                         auto integral_value = arg.getAsIntegral();
-                        cerr << indentation << "integral value radix10: " << integral_value.toString(10) << endl;
+                        if (print_logging) cerr << indentation << "integral value radix10: " << integral_value.toString(10) << endl;
                         result << integral_value.toString(10);
                         break;}
                     default:
-                        cerr << indentation << "Oops, unhandled argument type" << endl;
+                        if (print_logging) cerr << indentation << "Oops, unhandled argument type" << endl;
                 }
             }
             result << ">" << pointer_suffix.str() << reference_suffix;
-            cerr << indentation << "!!!!!Finished stringifying templated type to: " << result.str() << endl << endl;
+            if (print_logging) cerr << indentation << "!!!!!Finished stringifying templated type to: " << result.str() << endl << endl;
+            if (turn_logging_off) print_logging--;
             return result.str();
 
 //        } else if (std::regex_match(qual_type.getAsString(), regex("^(class |struct )?std::.*$"))) {
 //
 //
-//            cerr << indentation << "checking " << qual_type.getAsString();
+//            if (print_logging) cerr << indentation << "checking " << qual_type.getAsString();
 //            if (dyn_cast<TypedefType>(qual_type)) {
-//                cerr << indentation << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() <<
+//                if (print_logging) cerr << indentation << " and returning " << dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() <<
 //                endl << endl;
 //                return dyn_cast<TypedefType>(qual_type)->getDecl()->getQualifiedNameAsString() +
 //                       (is_reference ? " &" : "");
 //            } else {
-//                cerr << indentation << " and returning (no typedef) " << qual_type.getAsString() << endl << endl;
+//                if (print_logging) cerr << indentation << " and returning (no typedef) " << qual_type.getAsString() << endl << endl;
 //                return qual_type.getAsString() + pointer_suffix.str() + reference_suffix;
 //            }
 
@@ -486,10 +516,12 @@ namespace {
 
             //printf("Canonical qualtype typedeftype cast: %p\n",(void*) dyn_cast<TypedefType>(canonical_qual_type));
 
-            cerr << indentation << "returning canonical: " << canonical_qual_type.getAsString() << endl << endl;
+            if (print_logging) cerr << indentation << "returning canonical: " << canonical_qual_type.getAsString() << endl << endl;
+            if (turn_logging_off) print_logging--;
 
             return canonical_qual_type.getAsString();
         }
+#endif
     }
 
     // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
@@ -500,7 +532,7 @@ namespace {
                                        // don't capture qualtype by ref since it is changed
                                        QualType qual_type) {
 
-//        cerr << "Went from " << qual_type.getAsString();
+//        if (print_logging) cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
         while(!qual_type->getPointeeType().isNull()) {
@@ -508,7 +540,7 @@ namespace {
         }
         qual_type = qual_type.getLocalUnqualifiedType();
 
-//        cerr << " to " << qual_type.getAsString() << endl;
+//        if (print_logging) cerr << " to " << qual_type.getAsString() << endl;
         auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
 
         // primitive types don't have record decls
@@ -522,12 +554,12 @@ namespace {
 
         auto actual_include_string = get_include_string_for_fileid(source_manager, file_id);
 
-        cerr << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
+        if (print_logging) cerr << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
         wrapped_class.include_files.insert(actual_include_string);
 
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
 
-//            cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
+//            if (print_logging) cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
@@ -541,21 +573,21 @@ namespace {
                 }
                 auto template_arg_qual_type = arg.getAsType();
                 if (template_arg_qual_type.isNull()) {
-//                    cerr << "qual type is null" << endl;
+//                    if (print_logging) cerr << "qual type is null" << endl;
                     continue;
                 } else {
-//                    cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
+//                    if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
                 }
                 update_wrapped_class_for_type(source_manager, wrapped_class, template_arg_qual_type);
 
             }
         } else {
-//            cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+//            if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
         }
 
 //
 //        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
-//        cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
+//        if (print_logging) cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
 //        wrapped_class.include_files.insert(header_file);
 
     }
@@ -568,12 +600,12 @@ namespace {
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
             if (annotation != "" && !has_annotation(param_decl, annotation)) {
-                cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
+                if (print_logging) cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
                 continue;
             }
             auto param_qual_type = param_decl->getType();
             results.push_back(make_pair(param_qual_type, param_decl->getSourceRange()));
-            cerr << "Got " << (param_decl->getSourceRange().isValid() ? "valid" : "invalid") << " source range for " << param_qual_type.getAsString() << endl;
+            if (print_logging) cerr << "Got " << (param_decl->getSourceRange().isValid() ? "valid" : "invalid") << " source range for " << param_qual_type.getAsString() << endl;
         }
         return results;
     }
@@ -632,7 +664,7 @@ namespace {
 //        auto return_type_decl = qual_type->getAsCXXRecordDecl();
 //        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), source_manager);
 //        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
-//        cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
+//        if (print_logging) cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
 //        wrapped_class.include_files.insert(header_file);
 //
 
@@ -698,7 +730,7 @@ namespace {
                 continue;
             }
             if (constructor->getAccess() != AS_public) {
-//                    cerr << "Skipping non-public constructor" << endl;
+//                    if (print_logging) cerr << "Skipping non-public constructor" << endl;
                 continue;
             }
             if (get_export_type(constructor) == EXPORT_NONE) {
@@ -706,7 +738,7 @@ namespace {
             }
 
             if (annotation != "" && !has_annotation(constructor, annotation)) {
-//                cerr << "Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
+//                if (print_logging) cerr << "Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
                 continue;
             }
             callback(constructor);
@@ -793,11 +825,11 @@ namespace {
 
                 for(CXXMethodDecl * method : current_class->methods()) {
                     if (dyn_cast<CXXDestructorDecl>(method)) {
-                        //cerr << "Skipping virtual destructor while gathering virtual methods" << endl;
+                        //if (print_logging) cerr << "Skipping virtual destructor while gathering virtual methods" << endl;
                         continue;
                     }
                     if (dyn_cast<CXXConversionDecl>(method)) {
-                        //cerr << "Skipping user-defined conversion operator" << endl;
+                        //if (print_logging) cerr << "Skipping user-defined conversion operator" << endl;
                         continue;
                     }
                     if (method->isVirtual() && !method->isPure()) {
@@ -905,7 +937,7 @@ namespace {
             }
 
             // dumps a file per class
-//            cerr << "Dumping JSWrapper type for " << short_name() << endl;
+//            if (print_logging) cerr << "Dumping JSWrapper type for " << short_name() << endl;
             ofstream bidirectional_class_file;
             auto bidirectional_class_filename = fmt::format("v8toolkit_generated_bidirectional_{}.h", short_name());
             bidirectional_class_file.open(bidirectional_class_filename, ios::out);
@@ -960,15 +992,15 @@ namespace {
             auto full_field_name = field->getQualifiedNameAsString();
 
 //            if (containing_class != top_level_class_decl) {
-//                cerr << "************";
+//                if (print_logging) cerr << "************";
 //            }
-//            cerr << "changing data member from " << full_field_name << " to ";
+//            if (print_logging) cerr << "changing data member from " << full_field_name << " to ";
 //
 //            std::string regex_string = fmt::format("{}::{}$", containing_class->getName().str(), short_field_name);
 //            auto regex = std::regex(regex_string);
 //            auto replacement = fmt::format("{}::{}", top_level_class_decl->getName().str(), short_field_name);
 //            full_field_name = std::regex_replace(full_field_name, regex, replacement);
-//            cerr << full_field_name << endl;
+//            if (print_logging) cerr << full_field_name << endl;
 
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
@@ -1019,12 +1051,12 @@ namespace {
             std::string full_method_name(method->getQualifiedNameAsString());
             std::string short_method_name(method->getNameAsString());
 
-//            cerr << "changing method name from " << full_method_name << " to ";
+//            if (print_logging) cerr << "changing method name from " << full_method_name << " to ";
 //
 //            auto regex = std::regex(fmt::format("{}::{}$", containing_class->getName().str(), short_method_name));
 //            auto replacement = fmt::format("{}::{}", top_level_class_decl->getName().str(), short_method_name);
 //            full_method_name = std::regex_replace(full_method_name, regex, replacement);
-//            cerr << full_method_name << endl;
+//            if (print_logging) cerr << full_method_name << endl;
 
 
 
@@ -1060,7 +1092,7 @@ namespace {
                 return "";
             }
             if (dyn_cast<CXXConversionDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
+                if (PRINT_SKIPPED_EXPORT_REASONS) if (print_logging) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
                 return "";
             }
 
@@ -1112,12 +1144,12 @@ namespace {
                 current_wrapped_class = &wrapped_classes.back();
 
 
-                cerr << "*&&&&&&&&&&&&&&&adding include for class being handled: " << klass->getName().str() << " : " << get_include_for_record_decl(source_manager, klass) << endl;
+                if (print_logging) cerr << "*&&&&&&&&&&&&&&&adding include for class being handled: " << klass->getName().str() << " : " << get_include_for_record_decl(source_manager, klass) << endl;
                 current_wrapped_class->include_files.insert(get_include_for_record_decl(source_manager, klass));
 
                 // if this is a bidirectional class, make a minimal wrapper for it
                 if (has_annotation(klass, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-                    cerr << "Type " << current_wrapped_class->class_name << " **IS** bidirectional" << endl;
+                    if (print_logging) cerr << "Type " << current_wrapped_class->class_name << " **IS** bidirectional" << endl;
 
                     auto bidirectional_class_name = fmt::format("JS{}", current_wrapped_class->class_name);
                     WrappedClass bidirectional(bidirectional_class_name);
@@ -1142,7 +1174,7 @@ namespace {
 
                     current_wrapped_class->compatible_types.insert(bidirectional_class_name);
                 } else {
-                    cerr << "Type " << current_wrapped_class->class_name << " is not bidirectional" << endl;
+                    if (print_logging) cerr << "Type " << current_wrapped_class->class_name << " is not bidirectional" << endl;
                 }
             }
 
@@ -1228,7 +1260,7 @@ namespace {
 
             if (top_level) {
                 if (klass->isAbstract()) {
-//                    cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
+//                    if (print_logging) cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
                 } else {
                     foreach_constructor(klass, [&](auto constructor) {
 
@@ -1247,7 +1279,7 @@ namespace {
 //                            fprintf(stderr,"Skipping move constructor\n");
                             return;
                         } else if (constructor->isDeleted()) {
-//                            cerr << "Skipping deleted constructor" << endl;
+//                            if (print_logging) cerr << "Skipping deleted constructor" << endl;
                             return;
                         }
                         auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
@@ -1261,7 +1293,7 @@ namespace {
                             cerr << fmt::format("Error: because duplicate JS constructor function name {}",
                                                 constructor_name.c_str()) << endl;
                             for (auto &name : used_constructor_names) {
-                                cerr << name << endl;
+                                if (print_logging) cerr << name << endl;
                             }
                             throw std::exception();
                         }
@@ -1359,7 +1391,7 @@ namespace {
             static bool already_called = false;
 
             if (already_called) {
-                cerr << "This plugin doesn't work if there's more than one file.   Use it on a unity build" << endl;
+                if (print_logging) cerr << "This plugin doesn't work if there's more than one file.   Use it on a unity build" << endl;
                 throw std::exception();
             }
             already_called = true;
@@ -1371,7 +1403,7 @@ namespace {
             vector<WrappedClass*> classes_for_this_file;
 
             for (auto wrapped_class_iterator = wrapped_classes.begin(); wrapped_class_iterator != wrapped_classes.end(); wrapped_class_iterator++) {
-                cerr << "dumping wrapped class " << wrapped_class_iterator->class_name << endl;
+                if (print_logging) cerr << "dumping wrapped class " << wrapped_class_iterator->class_name << endl;
                 // if there's room in the current file, add this class
                 auto space_available = declaration_count_this_file == 0 || declaration_count_this_file + wrapped_class_iterator->declaration_count < MAX_DECLARATIONS_PER_FILE;
                 auto last_class = wrapped_class_iterator + 1 == wrapped_classes.end();
@@ -1394,7 +1426,7 @@ namespace {
                 }
             }
 
-            cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
+            if (print_logging) cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
 
         }
 
@@ -1408,7 +1440,7 @@ namespace {
 
             class_wrapper_file.open(class_wrapper_filename, ios::out);
             if (!class_wrapper_file) {
-                cerr << "Couldn't open " << class_wrapper_filename << endl;
+                if (print_logging) cerr << "Couldn't open " << class_wrapper_filename << endl;
                 throw std::exception();
             }
 

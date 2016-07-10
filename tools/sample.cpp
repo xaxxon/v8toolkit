@@ -39,11 +39,11 @@ public:
 //    std::string take_and_return_string(string);
 //    const std::string take_and_return_const_string(const string);
 //    volatile const std::string & take_and_return_const_volatile_string(const volatile string *&);
-    /*const volatile map<const volatile int*&,const volatile Using2*&>*&*/ void map_test(const volatile std::map<const volatile Using2 *&,
+    const volatile map<const volatile int*&,const volatile Using2*&>*& map_test(const volatile std::map<const volatile Using2 *&,
             const volatile std::set<const volatile int*&>*&>*&);
 //
 //    void nested_foo_struct_test(const NestedFooStruct *&);
-//    void call_helper_calback(HelperClass::Callback);
+//    void call_helper_callback(HelperClass::Callback);
 //
 //    HelperClass & do_foo_things(Foo &, HelperClass**&, volatile FooParent *&);
 //

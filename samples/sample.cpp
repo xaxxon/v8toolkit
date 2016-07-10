@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
             // global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 
             // make the Point constructor function available to JS
-            auto & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
+            V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
             wrapped_point.add_method("thing", &Point::thing);
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
         
@@ -145,6 +145,15 @@ int main(int argc, char* argv[])
 
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
             wrapped_point.add_member("x", &Point::x_);
+            int changed_x = 0;
+            wrapped_point.register_callback([&changed_x](v8::Isolate * isolate,
+                                                         v8::Local<v8::Object> & object,
+                                                         const std::string & property_name,
+                                                         const v8::Local<v8::Value> & value){
+                auto point = CastToNative<Point*>()(isolate, object);
+                printf("%d,%d: property change callback: %s => %s\n",point->x_, point->y_, property_name.c_str(), *v8::String::Utf8Value(value));
+                changed_x++;
+            });
             wrapped_point.add_member("y", &Point::y_);
 
             got_duplicate_name_exception = false;
@@ -261,6 +270,15 @@ int main(int argc, char* argv[])
             v8::TryCatch tc4(isolate);
             (void)script6->Run(context);
             assert(tc4.HasCaught());
+
+            assert(changed_x == 0);
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p=new Pii(1,2);p2=new Pii(3,4); p.x = 2; p2.x = 4")).ToLocalChecked();
+            (void)script->Run(context);
+            assert(changed_x == 2);
+            (void)script->Run(context);
+            assert(changed_x == 4);
+
+
         });
         
     }

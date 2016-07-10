@@ -71,16 +71,17 @@ public:
 
     int i = 42;
 
-    virtual string get_type() {return "cow";}
-    virtual int get_i() {return i;};
-    virtual string echo(const Animal & s){return "Animal::echo";}
-    virtual int add(int i, int j){return i + j;}
+    virtual string get_name() const {return name;}
+    virtual string get_type() const {return "cow";}
+    virtual int get_i() const {return i;};
+    virtual string echo(const Animal & s) const {return "Animal::echo";}
+    virtual int add(int i, int j) const {return i + j;}
 };
 
 class Zebra : public Animal {
 public:
 	Zebra(const std::string & name) : Animal(name) {}
-    virtual string get_type() override {return "zebra";}
+    virtual string get_type() const override {return "zebra";}
 	~Zebra(){}
 };
 
@@ -97,10 +98,11 @@ public:
 	~JSAnimal(){}
     
     // Every function you want to override in javascript must be in this list or it will ALWAYS call the C++ version
-    JS_ACCESS(int, get_i)
-    JS_ACCESS_1(string, echo, const Animal &)
-    JS_ACCESS_2(int, add, int, int)
-    JS_ACCESS(string, get_type)
+    JS_ACCESS_CONST(string, get_name);
+    JS_ACCESS_CONST(int, get_i);
+    JS_ACCESS_1_CONST(string, echo, const Animal &);
+    JS_ACCESS_2_CONST(int, add, int, int);
+    JS_ACCESS_CONST(string, get_type);
         void crap(){}
 };
 
@@ -137,6 +139,7 @@ int main(int argc, char ** argv)
 
         auto & animal = i->wrap_class<Animal>();
         animal.add_method("get_type", &Animal::get_type);
+	animal.add_method("get_name", &Animal::get_name);
         animal.add_method("get_i", &Animal::get_i);
 		animal.add_method("echo", &Animal::echo);
 		animal.add_method("add", &Animal::add);
@@ -159,7 +162,7 @@ int main(int argc, char ** argv)
 		c->run("add_animal_factory('mule', function(name){var foo = subclass_animal({get_type:function(){return 'mule'},\
 																				add:function(a,b){return a + b + this.get_i()}, \
 																				get_i:function(){return 1}, \
-																				echo:function(s){return 'js-mule-echo: ' + s;}}, name \
+																				echo:function(s){printobj(s); return 'js-mule-echo: ' + s.get_name();}}, name \
 																			 ); println('inline test', foo.get_type()); return foo;})");
 		
         animal_factories.insert(pair<string, std::unique_ptr< AnimalFactory >>("zebra", make_unique< CppAnimalFactory<Zebra> >()));
@@ -172,20 +175,20 @@ int main(int argc, char ** argv)
         assert(animals.size() == 2);
         
         // mule
-        auto a = animals[0];
-        assert(a->get_type() == "mule");
-        assert(a->get_i() == 1);
-		Animal monkey("monkey");
-        assert(a->echo(monkey) == "js-mule-echo: mule");
-        assert(a->add(2,2) == 5); // mules don't add well
+        auto & mule = animals[0];
+        assert(mule->get_type() == "mule");
+        assert(mule->get_i() == 1);
+	Animal monkey("monkey");
+        assert(mule->echo(monkey) == "js-mule-echo: monkey");
+        assert(mule->add(2,2) == 5); // mules don't add well
 
         
         // Checking Zebra
-        a = animals[1];
-        assert(a->get_type() == "zebra");
-        assert(a->get_i() == 42);
-        assert(a->echo(monkey) == "zebra");
-        assert(a->add(2,2) == 4); // cows are good at math
+        auto & zebra = animals[1];
+        assert(zebra->get_type() == "zebra");
+        assert(zebra->get_i() == 42);
+        assert(zebra->echo(monkey) == "Animal::echo");
+        assert(zebra->add(2,2) == 4); // zebras are good at math
         
     });
 	
