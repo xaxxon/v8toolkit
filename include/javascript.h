@@ -611,7 +611,7 @@ template<class T>
 v8::Local<v8::Value> Context::wrap_object(T* object)
 {
 	auto & class_wrapper = V8ClassWrapper<T>::get_instance(this->get_isolate());
-	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(this->get_context(), object);
+	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(this->get_context(), object);
 }
 
 

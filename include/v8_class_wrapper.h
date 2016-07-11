@@ -15,14 +15,6 @@
 #include "v8toolkit.h"
 #include "casts.hpp"
 
-// If this is defined, additional information will be made available during clang compilation
-//   to allow for auto-generation of class method/member bindings.  This only can work with clang
-#ifdef V8TOOLKIT_ENABLE_GENERATE_BINDINGS
-#define V8TOOLKIT_GENERATE_BINDINGS __attribute__((annotate("v8toolkit_generate_bindings")))
-#else
-#define V8TOOLKIT_GENERATE_BINDINGS
-#endif
-
 
 namespace v8toolkit {
 
@@ -61,11 +53,11 @@ template<bool> struct const_type_method_adder;
 /***
 * set of classes for determining what to do do the underlying c++
 *   object when the javascript object is garbage collected
+* This code is not templated to reduce the number of templates being used
 */
-template<class T>
 struct DestructorBehavior 
 {
-	virtual void operator()(v8::Isolate * isolate, T* object) const = 0;
+	virtual void operator()(v8::Isolate * isolate, const void * object) const = 0;
 };
 
 
@@ -73,24 +65,25 @@ struct DestructorBehavior
 * Helper to delete a C++ object when the corresponding javascript object is garbage collected
 */
 template<class T>
-struct DestructorBehavior_Delete : DestructorBehavior<T> 
+struct DestructorBehavior_Delete : DestructorBehavior
 {
-	void operator()(v8::Isolate * isolate, T* object) const 
+	void operator()(v8::Isolate * isolate, const void* void_object) const 
 	{
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Deleting object at %p during V8 garbage collection\n", object);
-		delete object;
-		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
+	    T* object = (T*)void_object;
+	    if (V8_CLASS_WRAPPER_DEBUG) printf("Deleting object at %p during V8 garbage collection\n", object);
+	    delete object;
+	    isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
 };
 
 /**
 * Helper to not do anything to the underlying C++ object when the corresponding javascript object
 *   is garbage collected
+* This code is not templated to reduce the number of templates used
 */
-template<class T>
-struct DestructorBehavior_LeaveAlone : DestructorBehavior<T> 
+struct DestructorBehavior_LeaveAlone : DestructorBehavior
 {
-	void operator()(v8::Isolate * isolate, T* object) const 
+	void operator()(v8::Isolate * isolate, const void* object) const 
 	{
 		if (V8_CLASS_WRAPPER_DEBUG) printf("Not deleting object %p during V8 garbage collection\n", object);
 	}
@@ -346,7 +339,7 @@ public:
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
 		
 		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object]() {
-				DestructorBehavior()(isolate, cpp_object);
+			DestructorBehavior()(isolate, cpp_object);
 			}
 		);
 	}
@@ -607,44 +600,44 @@ public:
     using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
     std::vector<AttributeAdder> member_adders;
 
-	using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
-	std::vector<StaticMethodAdder> static_method_adders;
+    using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
+    std::vector<StaticMethodAdder> static_method_adders;
+    
+    // stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
+    //   the "this" pointer before any javascript parameters are passed in
+    using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
+    std::vector<FakeMethodAdder> fake_method_adders;
 
-	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
-	//   the "this" pointer before any javascript parameters are passed in
-	using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
-	std::vector<FakeMethodAdder> fake_method_adders;
-
-	std::string class_name = "UnnamedV8ClassWrapperType";
-
-	template<class R, class... Params>
+    std::string class_name = "UnnamedV8ClassWrapperType";
+    
+    template<class R, class... Params>
 	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
-
-		if (!std::is_const<T>::value) {
-			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
-		}
-
-		// must be set before finalization
-		assert(!this->finalized);
-
-		this->check_if_name_used(method_name);
-
-
-		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
-
-			auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-																					 callable);
-
-			constructor_function_template->Set(this->isolate,
-											   method_name.c_str(),
-											   static_method_function_template);
-		};
-
-		this->static_method_adders.emplace_back(static_method_adder);
-
-
-		return *this;
+	
+	if (!std::is_const<T>::value) {
+	    V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
+	}
+	
+	// must be set before finalization
+	assert(!this->finalized);
+	
+	this->check_if_name_used(method_name);
+	
+	    
+	auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
+	    
+	    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
+										     callable);
+	    
+	    constructor_function_template->Set(this->isolate,
+					       method_name.c_str(),
+					       static_method_function_template);
 	};
+	
+	this->static_method_adders.emplace_back(static_method_adder);
+	
+	
+	return *this;
+    };
 
 
 	V8ClassWrapper<T> & set_class_name(const std::string & name){
@@ -805,7 +798,10 @@ public:
 	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
-		return _add_method(method_name, method);
+	    if (!std::is_const<T>::value) {
+		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
+	    }
+	    return _add_method(method_name, method);
 	}
 
     
@@ -819,26 +815,6 @@ public:
 		return _add_method(method_name, method);
     }
     
-    
-	/**
-	 * If the method is marked const, add it to the const version of the wrapped type
-	 */
-    template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
-    void add_method_for_const_type(const std::string & method_name, Method method) {
-        V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
-//        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
-    };
-
-
-	/**
-	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
-	 */
-    template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
-    void add_method_for_const_type(const std::string & method_name, Method method) {
-//        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
-    };
-
-
 
 
 	/**
@@ -952,8 +928,6 @@ public:
     {
         assert(this->finalized == false);
 
-        add_method_for_const_type(method_name, method);
-
 		this->check_if_name_used(method_name);
 
 
@@ -1004,10 +978,10 @@ public:
 //			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
 //                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
-    			auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
+		auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
-                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
+                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), typename decltype(bound_method)::TypeList>;
             
                 PB_TYPE pb;
                 auto arity = PB_TYPE::ARITY;
@@ -1086,7 +1060,7 @@ struct CastToJS<T*> {
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
         if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object\n");
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(context, cpp_object);
+		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
 	}
 };
 
