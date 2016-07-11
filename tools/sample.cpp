@@ -15,17 +15,17 @@
 //    using Callback = std::function<int(char)>;
 //};
 
-class V8TOOLKIT_WRAPPED_CLASS// V8TOOLKIT_BIDIRECTIONAL_CLASS
+class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 Foo : public FooParent {
 
 //    struct NestedFooStruct{};
 //
 //    void foo_method(int*, int){}
 //    double a;
-//    Foo(int, char, short);
 public:
     using Using=int;
     using Using2 = Using;
+    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short);
 //    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(V8TOOLKIT_BIDIREC TIONAL_INTERNAL_PARAMETER short, int*);
 //    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
 //    V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);

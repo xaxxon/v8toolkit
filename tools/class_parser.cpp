@@ -32,7 +32,7 @@ cotire(api-gen-template)
 
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
-// TODO: Ideally this would be a command line parameter to the plugin
+// TODO: This should be a command line parameter to the plugin
 #define MAX_DECLARATIONS_PER_FILE 50
 
 #include <iostream>
@@ -85,13 +85,14 @@ int print_logging = 0;
 //            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
 //        return text;
 //    }
-
+#if 0
     std::string get_source_for_source_range(SourceManager & sm, SourceRange source_range) {
         std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(source_range), sm, LangOptions(), 0);
         if (text.at(text.size()-1) == ',')
             return Lexer::getSourceText(CharSourceRange::getCharRange(source_range), sm, LangOptions(), 0);
         return text;
     }
+
 
     vector<string> count_top_level_template_parameters(const std::string & source) {
         int open_angle_count = 0;
@@ -137,7 +138,7 @@ int print_logging = 0;
         }
         return parameter_strings;
     }
-
+#endif
     struct WrappedClass {
         string class_name;
         set<string> include_files;
@@ -292,10 +293,11 @@ int print_logging = 0;
 //        if (print_logging) cerr << fmt::format("Unrecognizable filename {}", filename);
 //        throw std::exception();
 //    }
-
+#if 0
     std::string handle_std(const std::string & input) {
         smatch matches;
-        regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__1::)?)?(.*)"));
+	// EricWF said to remove __[0-9] just to be safe for future updates
+        regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__[0-9]::)?)?(.*)"));
         // space before std:: is handled from const/volatile if needed
         auto result = matches[1].str() + "std::" + matches[2].str();
 
@@ -306,6 +308,7 @@ int print_logging = 0;
     bool has_std(const std::string & input) {
         return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
     }
+
 
 
     // Returns true if qual_type is a 'trivial' std:: type like
@@ -350,10 +353,9 @@ int print_logging = 0;
     }
 
 
-
+#endif
 
     std::string get_type_string(QualType qual_type,
-                                const std::string & input_source,
                                 const std::string & indentation = "") {
 
         auto canonical_qual_type = qual_type.getCanonicalType();
@@ -361,18 +363,16 @@ int print_logging = 0;
         return regex_replace(canonical, regex("std::__1::"), "std::");
 
 #if 0
-
-
-        // need read/write version
         std::string source = input_source;
 
         bool turn_logging_off = false;
+	/*
         if (regex_match(qual_type.getAsString(), regex("^.*glm.*$") )) {
             print_logging++;
             turn_logging_off = true;
         }
+	*/
         
-        auto original_qual_type = qual_type;
         if (print_logging) cerr << indentation << "Started at " << qual_type.getAsString() << endl;
         if (print_logging) cerr << indentation << "  And canonical name: " << qual_type.getCanonicalType().getAsString() << endl;
         if (print_logging) cerr << indentation << "  And source " << source << endl;
@@ -383,8 +383,6 @@ int print_logging = 0;
             if (turn_logging_off) print_logging--;
             return std_result;
         }
-
-//        auto original_qual_type = qual_type;
 
         bool is_reference = qual_type->isReferenceType();
         string reference_suffix = is_reference ? "&" : "";
@@ -470,7 +468,6 @@ int print_logging = 0;
                         if (print_logging) cerr << indentation << "processing as type argument" << endl;
                         auto template_arg_qual_type = arg.getAsType();
                         auto template_type_string = get_type_string(template_arg_qual_type,
-                                                  user_specified_template_parameters[i],
                                                   indentation + "  ");
                         if (print_logging) cerr << indentation << "About to append " << template_type_string << " template type string onto existing: " << result.str() << endl;
                         result << template_type_string;
@@ -530,10 +527,10 @@ int print_logging = 0;
     //   and puts it in wrapped_class.include_files
     void update_wrapped_class_for_type(SourceManager & source_manager,
                                        WrappedClass & wrapped_class,
-                                       // don't capture qualtype by ref since it is changed
+                                       // don't capture qualtype by ref since it is changed in this function
                                        QualType qual_type) {
 
-//        if (print_logging) cerr << "Went from " << qual_type.getAsString();
+        if (print_logging) cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
         while(!qual_type->getPointeeType().isNull()) {
@@ -541,26 +538,22 @@ int print_logging = 0;
         }
         qual_type = qual_type.getLocalUnqualifiedType();
 
-//        if (print_logging) cerr << " to " << qual_type.getAsString() << endl;
+        if (print_logging) cerr << " to " << qual_type.getAsString() << endl;
         auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
 
-        // primitive types don't have record decls
+       // primitive types don't have record decls
         if (base_type_record_decl == nullptr) {
             return;
         }
 
-        auto full_source_loc = FullSourceLoc(base_type_record_decl->getLocStart(), source_manager);
+	auto actual_include_string = get_include_for_record_decl(source_manager, base_type_record_decl);
 
-        auto file_id = full_source_loc.getFileID();
-
-        auto actual_include_string = get_include_string_for_fileid(source_manager, file_id);
-
-        if (print_logging) cerr << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
+        if (print_logging) cerr << &wrapped_class << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
+	
         wrapped_class.include_files.insert(actual_include_string);
 
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
-
-//            if (print_logging) cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
+            if (print_logging) cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
@@ -574,29 +567,21 @@ int print_logging = 0;
                 }
                 auto template_arg_qual_type = arg.getAsType();
                 if (template_arg_qual_type.isNull()) {
-//                    if (print_logging) cerr << "qual type is null" << endl;
+                    if (print_logging) cerr << "qual type is null" << endl;
                     continue;
-                } else {
-//                    if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
                 }
+		if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
                 update_wrapped_class_for_type(source_manager, wrapped_class, template_arg_qual_type);
-
             }
         } else {
-//            if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+            if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
         }
-
-//
-//        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
-//        if (print_logging) cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
-//        wrapped_class.include_files.insert(header_file);
-
     }
 
 
-    vector<pair<QualType, SourceRange>> get_method_param_qual_types(const CXXMethodDecl * method,
+    vector<QualType> get_method_param_qual_types(const CXXMethodDecl * method,
                                                  const string & annotation = "") {
-        vector<pair<QualType, SourceRange>> results;
+        vector<QualType> results;
         auto parameter_count = method->getNumParams();
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
@@ -605,8 +590,7 @@ int print_logging = 0;
                 continue;
             }
             auto param_qual_type = param_decl->getType();
-            results.push_back(make_pair(param_qual_type, param_decl->getSourceRange()));
-            if (print_logging) cerr << "Got " << (param_decl->getSourceRange().isValid() ? "valid" : "invalid") << " source range for " << param_qual_type.getAsString() << endl;
+            results.push_back(param_qual_type);
         }
         return results;
     }
@@ -634,7 +618,7 @@ int print_logging = 0;
         }
         int count = 0;
         auto var_names = generate_variable_names(type_list.size());
-        for (auto & param_qual_type_pair : type_list) {
+        for (auto & param_qual_type : type_list) {
 
             if (!first_param) {
                 result << ", ";
@@ -642,15 +626,13 @@ int print_logging = 0;
             first_param = false;
 
 
-            auto type_string = get_type_string(param_qual_type_pair.first,
-                                               get_source_for_source_range(source_manager, param_qual_type_pair.second));
+            auto type_string = get_type_string(param_qual_type);
             result << type_string;
 
             if (insert_variable_names) {
                 result << " " << var_names[count++];
             }
-
-            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type_pair.first);
+            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type);
 
         }
         return result.str();
@@ -660,8 +642,7 @@ int print_logging = 0;
                                       WrappedClass & wrapped_class,
                                       const CXXMethodDecl * method) {
         auto qual_type = method->getReturnType();
-        auto result = get_type_string(qual_type, get_source_for_source_range(source_manager,
-                                                                             method->getReturnTypeSourceRange()));
+        auto result = get_type_string(qual_type);
 //        auto return_type_decl = qual_type->getAsCXXRecordDecl();
 //        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), source_manager);
 //        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
@@ -727,22 +708,39 @@ int print_logging = 0;
                              const std::string & annotation = "") {
         for(CXXMethodDecl * method : klass->methods()) {
             CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
+	    bool skip = false;
+
+	    // check if method is a constructor
             if (constructor == nullptr) {
-                continue;
+		continue;
             }
+
+	    if (print_logging) cerr << "Checking constructor: " << endl;
             if (constructor->getAccess() != AS_public) {
-//                    if (print_logging) cerr << "Skipping non-public constructor" << endl;
-                continue;
+		if (print_logging) cerr << "  Skipping non-public constructor" << endl;
+		skip = true;
             }
             if (get_export_type(constructor) == EXPORT_NONE) {
-                continue;
+		if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
+		skip = true;
             }
 
             if (annotation != "" && !has_annotation(constructor, annotation)) {
-//                if (print_logging) cerr << "Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
-                continue;
-            }
-            callback(constructor);
+		if (print_logging) cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
+		skip = true;
+            } else {
+		if (skip) {
+		    if (print_logging) cerr << "  Annotation " << annotation << " found, but constructor skipped for reason(s) listed above" << endl;
+		}
+	    }
+
+
+	    if (skip) {
+		continue;
+	    } else {
+		if (print_logging) cerr << " Running callback on constructor" << endl;
+		callback(constructor);
+	    }
         }
     }
 
@@ -880,8 +878,8 @@ int print_logging = 0;
             if (num_params > 0) {
                 auto types = get_method_param_qual_types(method);
                 vector<string>type_names;
-                for (auto & type_pair : types) {
-                    type_names.push_back(std::regex_replace(type_pair.first.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+                for (auto & type : types) {
+                    type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
                 }
 
                 result << join(type_names, ", ", true);
@@ -903,7 +901,7 @@ int print_logging = 0;
 
         }
 
-        void generate_bindings() {
+        void generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
             std::stringstream result;
             auto annotations = get_annotations(starting_class);
             auto matches = get_annotation_regex(starting_class, "v8toolkit_generate_(.*)");
@@ -944,8 +942,22 @@ int print_logging = 0;
             bidirectional_class_file.open(bidirectional_class_filename, ios::out);
             assert(bidirectional_class_file);
 
-	    bidirectional_class_file << "#pragma once\n";
-	    bidirectional_class_file << "#include " << get_include_for_record_decl(source_manager, starting_class) << "\n";
+	    bidirectional_class_file << "#pragma once\n\n";
+
+	    // find corresponding wrapped class
+	    const WrappedClass * this_class = nullptr;
+	    for (auto & wrapped_class : wrapped_classes) {
+		if (wrapped_class->class_name == short_name()) {
+		    this_class = wrapped_class.get();
+		    break;
+		}
+	    }
+	    assert(this_class != nullptr);
+	    for (auto & include : this_class->include_files) {
+	        if (include == ""){continue;}
+		bidirectional_class_file << "#include " << include << "\n";
+	    }
+	    
             bidirectional_class_file << result.str();
             bidirectional_class_file.close();
 
@@ -967,7 +979,7 @@ int print_logging = 0;
 //        CompilerInstance &CI;
 
         SourceManager & source_manager;
-        std::vector<WrappedClass> & wrapped_classes;
+        std::vector<unique_ptr<WrappedClass>> & wrapped_classes;
         WrappedClass * current_wrapped_class; // the class currently being wrapped
         std::set<std::string> names_used;
         const CXXRecordDecl * top_level_class_decl = nullptr;
@@ -978,10 +990,9 @@ int print_logging = 0;
 
 
         ClassHandler(CompilerInstance &CI,
-                     std::vector<WrappedClass> & wrapped_classes) :
+                     std::vector<unique_ptr<WrappedClass>> & wrapped_classes) :
             source_manager(CI.getSourceManager()),
-            wrapped_classes(wrapped_classes),
-            current_wrapped_class(&wrapped_classes[0])
+            wrapped_classes(wrapped_classes)
         {}
 
 
@@ -1060,8 +1071,6 @@ int print_logging = 0;
 //            if (print_logging) cerr << full_method_name << endl;
 
 
-
-
             auto export_type = get_export_type(method, parent_export_type);
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
@@ -1134,16 +1143,13 @@ int print_logging = 0;
                           bool top_level = true,
                           const std::string & indentation = "") {
 
-
-
             if (top_level) {
 
                 classes_wrapped++;
                 names_used.clear();
 
-                wrapped_classes.emplace_back(WrappedClass(klass->getName().str()));
-                current_wrapped_class = &wrapped_classes.back();
-
+                wrapped_classes.emplace_back(make_unique<WrappedClass>(klass->getName().str()));
+                current_wrapped_class = wrapped_classes.back().get();
 
                 if (print_logging) cerr << "*&&&&&&&&&&&&&&&adding include for class being handled: " << klass->getName().str() << " : " << get_include_for_record_decl(source_manager, klass) << endl;
                 current_wrapped_class->include_files.insert(get_include_for_record_decl(source_manager, klass));
@@ -1153,7 +1159,8 @@ int print_logging = 0;
                     if (print_logging) cerr << "Type " << current_wrapped_class->class_name << " **IS** bidirectional" << endl;
 
                     auto bidirectional_class_name = fmt::format("JS{}", current_wrapped_class->class_name);
-                    WrappedClass bidirectional(bidirectional_class_name);
+                    auto bidirectional_unique_ptr = make_unique<WrappedClass>(bidirectional_class_name);
+		    auto & bidirectional = *bidirectional_unique_ptr;
                     bidirectional.parent_types.insert(current_wrapped_class->class_name);
                     bidirectional.contents <<
                     fmt::format("  {{\n") <<
@@ -1169,7 +1176,7 @@ int print_logging = 0;
                     bidirectional.include_files.insert(fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", current_wrapped_class->class_name));
 
 
-                    wrapped_classes.emplace_back(move(bidirectional));
+                    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
 
 
 
@@ -1315,7 +1322,6 @@ int print_logging = 0;
          * This runs per-match from MyASTConsumer, but always on the same ClassHandler object
          */
         virtual void run(const MatchFinder::MatchResult &Result) {
-
             if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class")) {
                 this->top_level_class_decl = klass;
                 auto full_class_name = klass->getQualifiedNameAsString();
@@ -1324,7 +1330,7 @@ int print_logging = 0;
 
 
                 BidirectionalBindings bidirectional(source_manager, klass, *current_wrapped_class);
-                bidirectional.generate_bindings();
+                bidirectional.generate_bindings(wrapped_classes);
 
             }
         }
@@ -1348,7 +1354,7 @@ int print_logging = 0;
     class MyASTConsumer : public ASTConsumer {
     public:
         MyASTConsumer(CompilerInstance &CI,
-                      std::vector<WrappedClass> & wrapped_classes) :
+                      std::vector<unique_ptr<WrappedClass>> & wrapped_classes) :
                 HandlerForClass(CI, wrapped_classes) {
             Matcher.addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()), // select all structs and classes
                                              hasAttr(attr::Annotate), // can't check the actual annotation value here
@@ -1404,9 +1410,10 @@ int print_logging = 0;
             vector<WrappedClass*> classes_for_this_file;
 
             for (auto wrapped_class_iterator = wrapped_classes.begin(); wrapped_class_iterator != wrapped_classes.end(); wrapped_class_iterator++) {
-                if (print_logging) cerr << "dumping wrapped class " << wrapped_class_iterator->class_name << endl;
+		WrappedClass & wrapped_class = **wrapped_class_iterator;
+                if (print_logging) cerr << "dumping wrapped class " << wrapped_class.class_name << endl;
                 // if there's room in the current file, add this class
-                auto space_available = declaration_count_this_file == 0 || declaration_count_this_file + wrapped_class_iterator->declaration_count < MAX_DECLARATIONS_PER_FILE;
+                auto space_available = declaration_count_this_file == 0 || declaration_count_this_file + wrapped_class.declaration_count < MAX_DECLARATIONS_PER_FILE;
                 auto last_class = wrapped_class_iterator + 1 == wrapped_classes.end();
 
                 if (!space_available) {
@@ -1418,8 +1425,8 @@ int print_logging = 0;
                     file_count++;
                 }
 
-                classes_for_this_file.push_back(&*wrapped_class_iterator);
-                declaration_count_this_file += wrapped_class_iterator->declaration_count;
+                classes_for_this_file.push_back(&wrapped_class);
+                declaration_count_this_file += wrapped_class.declaration_count;
 
 
                 if (last_class) {
@@ -1447,13 +1454,18 @@ int print_logging = 0;
 
             // Write includes
             class_wrapper_file << "#include <v8toolkit/bidirectional.h>\n";
-
+	    
 
             set<string> already_included_this_file;
 
             for (WrappedClass * wrapped_class : classes) {
                 for(auto & include_file : wrapped_class->include_files) {
                     if (include_file != "" && already_included_this_file.count(include_file) == 0) {
+
+			// skip "internal looking" includes - look at 1 because 0 is < or "
+			if (include_file.find("__") == 1) {
+			    continue;
+			}
                         class_wrapper_file << fmt::format("#include {}\n", include_file);
                         already_included_this_file.insert(include_file);
                     }
@@ -1495,13 +1507,13 @@ int print_logging = 0;
 
 
     protected:
-        std::vector<WrappedClass> wrapped_classes;
+	// unique_ptr so references to the WrappedClass objects can be held and not invalidated
+        std::vector<unique_ptr<WrappedClass>> wrapped_classes;
 
 
         // The value returned here is used internally to run checks against
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
-
             return llvm::make_unique<MyASTConsumer>(CI, wrapped_classes);
         }
 
