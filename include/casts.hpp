@@ -62,7 +62,7 @@ inline v8::Local<v8::Value>  CastToJS<const TYPE>::operator()(v8::Isolate * isol
 /**
 * Casts from a boxed Javascript type to a native type
 */
-template<typename T>
+template<typename T, class = void>
 struct CastToNative;
 
 
@@ -186,7 +186,61 @@ struct CastToNative<const char *> {
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string){return std::string(*v8::String::Utf8Value(value));}
 
 
-/**
+
+//
+//template<class T>
+//struct CastToNative<T&&> {
+//    T && operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+//
+//        // if T is a user-defined type
+//        if (value->IsObject()) {
+//            auto object = value->ToObject();
+//            if (object->InternalFieldCount() == 1) {
+//                auto && result = CastToNative<T>()(isolate, value);
+//                // anything else to do that is specific to dealing with moved internal field objects?
+//            }
+//        }
+//
+//        // else maybe something wants a vector<string>&& or unique_ptr<int>&&
+//        return CastToNative<T>()(isolate, value);
+//    }
+//};
+//
+template<class T, class... Rest>
+struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
+    std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        // if T is a user-defined type
+        if (value->IsObject()) {
+            auto object = value->ToObject();
+            if (object->InternalFieldCount() == 1) {
+                auto && result = CastToNative<T>()(isolate, value);
+                std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
+            }
+        }
+        return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
+    }
+};
+
+template<class T, class... Rest>
+struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value>> {
+    std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        // if T is a user-defined type
+        if (value->IsObject()) {
+            auto object = value->ToObject();
+            if (object->InternalFieldCount() == 1) {
+                auto && result = CastToNative<T>()(isolate, value);
+                std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
+            }
+        }
+        throw CastException("Cannot make unique ptr for type that is not wrapped and not copy constructible");
+    }
+};
+
+
+//
+
+
+    /**
 * Casts from a native type to a boxed Javascript type
 */
 
@@ -499,13 +553,6 @@ struct CastToJS<std::unique_ptr<T, Rest...>> {
     }
 };
 
-/**
- * Not sure how this could be implemented, so trying to make sure it's a clear compile-time error
- */
-template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>> {
-    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const = delete;
-};
 
 
 
@@ -524,6 +571,7 @@ struct CastToJS<std::shared_ptr<T>> {
 
 
 } // end namespace v8toolkit
+
 
 
 #endif // CASTS_HPP

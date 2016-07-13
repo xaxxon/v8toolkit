@@ -1079,13 +1079,6 @@ struct CastToJS<T&> {
 
 
 
-template<typename T>
-struct CastToNative<T*>
-{
-	T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-        return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
-    }
-};
 
 template<class T>
 std::string type_details(){
@@ -1093,43 +1086,102 @@ std::string type_details(){
 		       std::is_const<T>::value, std::is_pointer<T>::value,
 		       std::is_reference<T>::value, typeid(T).name());
  }
+//
+///**
+// * This can be used from CastToNative<UserType> calls to fall back to if other conversions aren't appropriate
+// */
+//v8toolkit::AnyBase * get_embedded_anybase_from_js_object(v8::Isolate * isolate,
+//														 v8::Local<v8::Value> value,
+//														 bool nullify_internal_field = false) {
+//	if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+//	if(!value->IsObject()){
+//		return nullptr;
+////		printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+////		throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+//	}
+//	auto object = v8::Object::Cast(*value);
+//	if (object->InternalFieldCount() <= 0) {
+//		return nullptr;
+////		throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
+//	}
+//	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+//
+//	auto any_base = (v8toolkit::AnyBase *)wrap->Value();
+//	return any_base;
+//}
+//
+//
+//template<typename T, class>
+//struct CastToNative
+//{
+//    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value, bool nullify_internal_field = false) {
+//		auto any_base = get_embedded_anybase_from_js_object(isolate, value, nullify_internal_field);
+//
+//		T * t = nullptr;
+//		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+//			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+//			throw CastException(fmt::format("Cannot convert {} to {} {}",
+//											TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
+//		}
+//		return *t;
+//    }
+//};
+//
+//
+
+
 
 /**
  * This can be used from CastToNative<UserType> calls to fall back to if other conversions aren't appropriate
  */
-template<class T>
-T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-	if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
-	if(!value->IsObject()){
-		printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
-		throw CastException("No specialized CastToNative found and value was not a Javascript Object");
-	}
-	auto object = v8::Object::Cast(*value);
-	if (object->InternalFieldCount() <= 0) {
-		throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
-	}
-	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+	template<class T>
+	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+		if(!value->IsObject()){
+			printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+			throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+		}
+		auto object = v8::Object::Cast(*value);
+		if (object->InternalFieldCount() <= 0) {
+			throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
+		}
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 
-	// I don't know any way to determine if a type is
-	auto any_base = (v8toolkit::AnyBase *)wrap->Value();
-	T * t = nullptr;
-	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
-		printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
-		throw CastException(fmt::format("Cannot convert {} to {} {}",
-										TYPE_DETAILS(*any_base), std::is_const<T>::value, typeid(T).name()));
+		// I don't know any way to determine if a type is
+		auto any_base = (v8toolkit::AnyBase *)wrap->Value();
+		T * t = nullptr;
+		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+			throw CastException(fmt::format("Cannot convert {} to {} {}",
+											TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle_typeid_name(typeid(T).name())));
+		}
+		return *t;
 	}
-	return *t;
-}
+
+	// excluding types that CastToNative without a reference type return stops trying &int when int is an rvalue
+	//   when trying to deal with unique_ptr in casts.hpp (in an unused but still compiled code path)
+	template<typename T>
+	struct CastToNative<T*, std::enable_if_t<std::is_reference<
+			std::result_of_t<
+					CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+							> // end result_of
+	        >::value // end is_reference
+			>// end enable_if_t
+			>// end template
+	{
+	       T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+		        return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
+		    }
+	};
+
+	template<typename T, class>
+	struct CastToNative
+	{
+		T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+			return get_object_from_embedded_cpp_object<T>(isolate, value);
+		}
+	};
 
 
-template<typename T>
-struct CastToNative
-{
-    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		return get_object_from_embedded_cpp_object<T>(isolate, value);
-    }
-};
-    
-    
 }
 

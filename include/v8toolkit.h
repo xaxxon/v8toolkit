@@ -343,7 +343,7 @@ struct ParameterBuilder<depth, Function, TypeList<>> {
 *   the inheritance chain ends
 */
 template<int depth, typename FUNCTION_TYPE, typename HEAD, typename...TAIL>
-struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD,TAIL...>,
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<HEAD, TAIL...>,
         // if it's not a pointer or it is a pointer but it's a pointer to a user-defined (non-fundamental) type
                         std::enable_if_t<!std::is_pointer<HEAD>::value || !std::is_fundamental< typename std::remove_pointer<HEAD>::type >::value > >:
         public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
@@ -375,7 +375,9 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<char *, TAIL...>> :
     }
 };
 
-/**
+
+
+    /**
 * Specialization for function taking a const char *
 */
 template<int depth, typename FUNCTION_TYPE, typename...TAIL>
@@ -395,6 +397,42 @@ struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<const char *, TAIL...>> :
 
 
 /**
+* Specialization for function taking any pointer (except char*)
+*/
+template<int depth, typename FUNCTION_TYPE, typename Head, typename...TAIL>
+struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<Head*, TAIL...>> :
+        public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
+
+    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> super;
+    enum {DEPTH = depth, ARITY=super::ARITY+1};
+
+    template<typename ... Ts>
+    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
+        std::unique_ptr<typename std::remove_pointer<Head>::type> holder = CastToNative<Head>()(info.GetIsolate(), info[depth]);
+        this->super::operator()(function, info, std::forward<Ts>(ts)..., holder.get());
+    }
+};
+
+///**
+// * Specialization for function taking any pointer (except char*)
+// */
+//template<int depth, typename FUNCTION_TYPE, typename Head, typename... UniquePtrParams, typename...TAIL>
+//struct ParameterBuilder<depth, FUNCTION_TYPE, TypeList<std::unique_ptr<Head, UniquePtrParams...>, TAIL...>> :
+//        public ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> {
+//
+//    typedef ParameterBuilder<depth+1, FUNCTION_TYPE, TypeList<TAIL...>> super;
+//    enum {DEPTH = depth, ARITY=super::ARITY+1};
+//
+//    template<typename ... Ts>
+//    void operator()(FUNCTION_TYPE function, const v8::FunctionCallbackInfo<v8::Value> & info, Ts &&...  ts) {
+//        this->super::operator()(function, info, std::forward<Ts>(ts)...,
+//        std::unique_ptr<Head, UniquePtrParams...>(CastToNative<Head*>(info.GetIsolate(), info[depth])));
+//    }
+//};
+
+
+
+    /**
 * Specialization that deals with pointers to primitive types by creating a holder that the address of can be passed along
 */
 template<int depth, typename FUNCTION_TYPE, typename HEAD, typename...TAIL>

@@ -30,6 +30,9 @@ public:
     Point() : x_(69), y_(69) {instance_count++;}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
     Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
+    Point & operator=(const Point &){assert(false);}
+    Point(Point&&){cerr<<"Point move constructor called" << endl;}
+    Point & operator=(Point&&){cerr << "Point move assignment called" << endl; return *this;}
     ~Point(){instance_count--;}
     int x_, y_;
     int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
@@ -65,9 +68,19 @@ struct Line {
     std::string echo(const std::string & input){printf("In echo"); return input;}
     void throw_exception(){throw std::exception();}
     static int static_method(float){return 42;}
-    void takes_function(std::function<Foo&()>){};
-    void takes_const_ref_fundamental(const int & i) {};
+    void takes_function(std::function<Foo&()>){}
+    void takes_const_ref_fundamental(const int & i) {}
     void takes_ref_fundamental(int & i) {}
+
+    void take_point(Point && point){p = std::move(point);}
+    void take_map(map<string, int> && new_map){map<string, int> my_map(std::move(new_map));}
+
+    void take_unique(unique_ptr<Line> upl){unique_ptr<Line> line(std::move(upl));}
+    void take_unique_ref(unique_ptr<Line> && upl){unique_ptr<Line> line(std::move(upl));}
+
+    void take_unique_int(unique_ptr<int> upl){unique_ptr<int> line(std::move(upl));}
+    void take_unique_int_ref(unique_ptr<int> && upl){unique_ptr<int> line(std::move(upl));}
+
 };
 
 
@@ -185,7 +198,12 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("takes_function", &Line::takes_function);
             wrapped_line.add_method("takes_const_ref_fundamental", &Line::takes_const_ref_fundamental);
             wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
-
+            wrapped_line.add_method("take_point", &Line::take_point);
+            wrapped_line.add_method("take_map", &Line::take_map);
+            wrapped_line.add_method("take_unique", &Line::take_unique);
+            wrapped_line.add_method("take_unique_ref", &Line::take_unique_ref);
+            wrapped_line.add_method("take_unique_int", &Line::take_unique_int);
+            wrapped_line.add_method("take_unique_int_ref", &Line::take_unique_int_ref);
 
             got_duplicate_name_exception = false;
             try {
@@ -277,6 +295,12 @@ int main(int argc, char* argv[])
             assert(changed_x == 2);
             (void)script->Run(context);
             assert(changed_x == 4);
+
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
+            (void)script->Run(context);
+
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
+            (void)script->Run(context);
 
 
         });

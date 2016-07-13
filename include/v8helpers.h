@@ -37,6 +37,15 @@ template<class T>
 std::string demangle(){return demangle_typeid_name(typeid(T).name());}
 
 
+
+template<typename Test, template<typename...> class Ref>
+struct is_specialization : std::false_type {};
+
+template<template<typename...> class Ref, typename... Args>
+struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
+
+
+
     /**
  * Returns a std::function type compatible with the lambda passed in
  */
@@ -99,7 +108,7 @@ template <> struct static_all_of<> : std::true_type {};
 
 
 
-#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, typeid(thing).name()).c_str()
+#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
 
 // thrown when data cannot be converted properly
 class CastException : public std::exception {
