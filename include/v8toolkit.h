@@ -262,79 +262,6 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
     };
 
 
-    
-/**
-* Accepts an object and a method on that object to be called later via its operator()
-* Does not require knowledge of how many parameters the method takes or any placeholder arguments
-* Can be wrapped with a std::function
-*/
-template<class T, class U>
-struct Bind{};
-
-/** 
- * Non-const object to non-const method
- */
-template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
-struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
-    
-    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) ) :
-      object(object), method(method){}
-      ~Bind(){}
-    
-    CLASS_TYPE & object;
-    R(METHOD_CLASS::*method)(Args...);
-
-    using TypeList = ::v8toolkit::TypeList<Args...>;
-    using ReturnType = R;
-    
-    R operator()(Args... params){
-        return (object.*method)(std::forward<Args>(params)...);
-    }
-};
-
-
-/** 
- * Non-const object to const method
- */
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
-    
-    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const) :
-      object(object), method(method){}
-
-    Class & object;
-    R(METHOD_CLASS::*method)(Args...) const;
-
-    using TypeList = ::v8toolkit::TypeList<Args...>;
-    using ReturnType = R;
-
-    R operator()(Args... params){
-        return (object.*method)(params...); 
-    }
-};
-
-
-/**
- * Const object to const method
- */
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
-    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const) :
-            object(object), method(method){}
-
-    const Class & object;
-    R(METHOD_CLASS::*method)(Args...) const;
-
-    using TypeList = ::v8toolkit::TypeList<Args...>;
-    using ReturnType = R;
-
-    R operator()(Args... params){
-        return (object.*method)(params...);
-    }
-};
-
-
-
 
 
 /**
@@ -344,49 +271,6 @@ struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
 template<class T>
 struct CallCallable{};
 
-
- template<class ClassType, class ReturnType, class MethodClass, class... Args>
- struct CallCallable<v8toolkit::Bind<ClassType, ReturnType(MethodClass::*)(Args...)>> {
-     using BindType = v8toolkit::Bind<ClassType, ReturnType(MethodClass::*)(Args...)>;
-    
-     void operator()(BindType & callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&... args) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
-    }     
- };
-
- template<class ClassType, class MethodClass, class... Args>
- struct CallCallable<v8toolkit::Bind<ClassType, void(MethodClass::*)(Args...)>> {
-     using BindType = v8toolkit::Bind<ClassType, void(MethodClass::*)(Args...)>;
-
-     void operator()(BindType & callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&... args) {
-	 callable(std::forward<Args>(args)...);
-    }     
- };
-
-  template<class ClassType, class ReturnType, class MethodClass, class... Args>
- struct CallCallable<v8toolkit::Bind<ClassType, ReturnType(MethodClass::*)(Args...) const>> {
-     using BindType = v8toolkit::Bind<ClassType, ReturnType(MethodClass::*)(Args...) const>;
-    
-     void operator()(BindType & callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&... args) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(), callable(std::forward<Args>(args)...)));
-    }     
- };
-
- template<class ClassType, class MethodClass, class... Args>
- struct CallCallable<v8toolkit::Bind<ClassType, void(MethodClass::*)(Args...) const>> {
-     using BindType = v8toolkit::Bind<ClassType, void(MethodClass::*)(Args...) const>;
-
-     void operator()(BindType & callable,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, Args&... args) {
-	 callable(std::forward<Args>(args)...);
-    }     
- };
-
- 
- 
 /**
 * specialization for functions with non-void return types so the value is sent back to javascript
 */
@@ -626,17 +510,18 @@ struct ParameterBuilder<depth, T, TypeList<const v8::FunctionCallbackInfo<v8::Va
 /**
 * Creates a function template from a std::function
 */
-template <class R, class... Args, class Callable>
-v8::Local<v8::FunctionTemplate> _make_function_template(v8::Isolate * isolate, Callable * callable)
+template <class R, class... Args>
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
 {
+    auto copy = new std::function<R(Args...)>(f);
 
     // wrap the actual call in this lambda
     return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
 
-        auto callable = *(Callable*)v8::External::Cast(*(info.Data()))->Value();
+        auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(info.Data()))->Value();
 
-        using PB_TYPE = ParameterBuilder<0, Callable, TypeList<Args...>>;
+        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, TypeList<Args...>>;
         PB_TYPE pb;
         
         auto arity = PB_TYPE::ARITY;
@@ -661,10 +546,25 @@ v8::Local<v8::FunctionTemplate> _make_function_template(v8::Isolate * isolate, C
         }
         return; // no return value, PB sets it in the 'info' object
 
-    }, v8::External::New(isolate, (void*)callable));
+    }, v8::External::New(isolate, (void*)copy));
 }
 
 
+/**
+* Takes an arbitrary class method and returns a std::function wrapping it
+*/
+template<class R, class CLASS, class... Args>
+std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable )
+{
+    return std::function<R(Args...)>(callable);
+}
+
+
+
+template<class R, class... Args>
+std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...)) {
+    return std::function<R(Args...)>(callable);
+};
 
 
 /**
@@ -673,9 +573,7 @@ v8::Local<v8::FunctionTemplate> _make_function_template(v8::Isolate * isolate, C
 template<class T>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable) 
 {
-
-    return _make_function_template<typename LTG<T>::ReturnType, typename LTG<T>::TypeList>(isolate, callable);
-
+    return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
 }
 
 
@@ -705,7 +603,8 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 */
 template<class T>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
-    object_template->Set(isolate, name, make_function_template(isolate, callable));
+        decltype(LTG<T>::go(&T::operator())) f(callable);
+    object_template->Set(isolate, name, make_function_template(isolate, f));
 }
 
 /**
@@ -1007,6 +906,68 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
 
 
+/**
+* Accepts an object and a method on that object to be called later via its operator()
+* Does not require knowledge of how many parameters the method takes or any placeholder arguments
+* Can be wrapped with a std::function
+*/
+template<class T, class U>
+struct Bind{};
+
+/** 
+ * Non-const object to non-const method
+ */
+template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
+struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
+    
+    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) ) :
+      object(object), method(method){}
+      ~Bind(){}
+    
+    CLASS_TYPE & object;
+    R(METHOD_CLASS::*method)(Args...);
+    
+    R operator()(Args... params){
+        return (object.*method)(std::forward<Args>(params)...);
+    }
+};
+
+
+/** 
+ * Non-const object to const method
+ */
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
+    
+    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const) :
+      object(object), method(method){}
+
+    Class & object;
+    R(METHOD_CLASS::*method)(Args...) const;
+    
+    R operator()(Args... params){
+        return (object.*method)(params...); 
+    }
+};
+
+
+/**
+ * Const object to const method
+ */
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
+    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const) :
+            object(object), method(method){}
+
+    const Class & object;
+    R(METHOD_CLASS::*method)(Args...) const;
+
+    R operator()(Args... params){
+        return (object.*method)(params...);
+    }
+};
+
+
 
 
 /**
@@ -1015,23 +976,23 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
 * This specialization is for handling non-const class methods
 */
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-Bind<CLASS, R(METHOD_CLASS::*)(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
 {
-    return Bind<CLASS, R(METHOD_CLASS::*)(Args...)>(object, method);
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...)>(object, method));
 }
 
 
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-Bind<CLASS, R(METHOD_CLASS::*)(Args...) const> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
-    return Bind<CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method);
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
 }
 
 
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-Bind<CLASS, R(METHOD_CLASS::*)(Args...) const> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
+std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
-    return Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method);
+    return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
 }
 
 

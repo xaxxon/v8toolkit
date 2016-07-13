@@ -27,9 +27,6 @@ namespace v8toolkit {
 
 #define V8TOOLKIT_COMMA ,
 
-template<class T>
-    using void_t = void;
-    
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
@@ -38,6 +35,21 @@ std::string demangle_typeid_name(const std::string & manged_name);
 
 template<class T>
 std::string demangle(){return demangle_typeid_name(typeid(T).name());}
+
+
+    /**
+ * Returns a std::function type compatible with the lambda passed in
+ */
+template<class T>
+struct LTG {
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+
+    // this version might not be necessary
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+};
+
 
 template <class... > struct TypeList {};
 
@@ -49,48 +61,9 @@ auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
 template <class R, class Head, class... Tail>
 auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
- 
-
 // for use inside a decltype only
 template <class... Ts>
 auto get_typelist_for_variables(Ts... ts) -> TypeList<Ts...>;
-
- 
-
-/**
- * Returns a std::function type compatible with the lambda passed in
- */
- template<class T, class = void>
-    struct LTG;
-
-
- template<class ReturnT, class ClassType, class... Args>
-     struct LTG<ReturnT(ClassType::*)(Args...)> {
-     using ReturnType = ReturnT;
-     using TypeList = ::v8toolkit::TypeList<Args...>;
- };
-
- template<class ReturnT, class ClassType, class... Args>
-     struct LTG<ReturnT(ClassType::*)(Args...) const> {
-     using ReturnType = ReturnT;
-     using TypeList = ::v8toolkit::TypeList<Args...>;
- };
-
-
- template<class ReturnT, class... Args>
-     struct LTG<ReturnT(*)(Args...)> {
-     using ReturnType = ReturnT;
-     using TypeList = ::v8toolkit::TypeList<Args...>;
- };
-
- template<class T>
-     struct LTG<T, void_t<typename LTG<decltype(&T::operator())>::ReturnType>> {
-     using ReturnType = typename LTG<decltype(&T::operator())>::ReturnType;
-     using TypeList = typename LTG<decltype(&T::operator())>::TypeList;
-};
-
-
-
 
 template <class... Ts>
 auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {

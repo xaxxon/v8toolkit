@@ -58,3 +58,17 @@ Installing boost on os x, make sure to build for libc++ as well:
 
 brew install boost --c++11
 
+
+
+DELETE BELOW THIS:
+
+javascript.h -- keep
+v8_class_wrapper.h - keep template removal from LeaveAlone and removal of V8TOOLKIT_ENABLE_GENERATE_BINDINGS and
+   deletion of add_method_for_const_type  change to add_method :
+
+   +           if (!std::is_const<T>::value) {
+   +               V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
+   +           }
+   +           return _add_method(method_name, method);
+
+
