@@ -301,8 +301,6 @@ int main(int argc, char* argv[])
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
             (void)script->Run(context);
-
-
         });
         
     }

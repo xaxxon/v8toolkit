@@ -28,9 +28,9 @@ auto run_tests()
 
         auto c = ih1->create_context();
         auto c2 = ih1->create_context();
-        
-        c->run("5");
-        c->run("assert('x == 1');");
+
+//        c->run("5");
+//        c->run("assert('x == 1');");
         c->run("assert_contents(return_hi(), 'hi')");
         
         ih1->expose_variable("y", y);
@@ -368,7 +368,7 @@ void test_asserts()
     bool caught_expected_assertion = false;
     try {
         c->run("assert('false')");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -376,7 +376,7 @@ void test_asserts()
     
     try {
         c->run("assert('0')");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -384,7 +384,7 @@ void test_asserts()
     
     try {
         c->run("assert(\"''\")");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -392,7 +392,7 @@ void test_asserts()
     
     try {
         c->run("assert('null')");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -400,7 +400,7 @@ void test_asserts()
     
     try {
         c->run("assert('undefined')");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -408,7 +408,7 @@ void test_asserts()
     
     try {
         c->run("assert('NaN')");
-    } catch (V8AssertionException & e) {
+    } catch (...) {
         caught_expected_assertion = true;
     }
     assert(caught_expected_assertion);
@@ -522,7 +522,7 @@ int main(int argc, char ** argv) {
     printf("Testing asserts\n");
     test_asserts();
 
-    require_directory_test();
+//    require_directory_test();
 
     run_inheritance_test();
 

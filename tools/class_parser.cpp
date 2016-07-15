@@ -33,7 +33,7 @@ cotire(api-gen-template)
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 50
+#define MAX_DECLARATIONS_PER_FILE 100
 
 #include <iostream>
 #include <fstream>

@@ -10,7 +10,7 @@ namespace v8toolkit {
 std::string demangle_typeid_name(const std::string & mangled_name) {
 
 #ifdef V8TOOLKIT_DEMANGLE_NAMES
-    printf("Starting name demangling\n");
+//    printf("Starting name demangling\n");
     std::string result;
     int status;
     auto demangled_name_needs_to_be_freed = abi::__cxa_demangle(mangled_name.c_str(), nullptr, 0, &status);

@@ -169,8 +169,7 @@ struct CastToNative<v8::Local<v8::Function>> {
 
 /**
  * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
- *   to store the string, a std::unique_ptr<char[]> is returned.  v8toolkit::ParameterBuilder knows how to handle the
- *   type inconsistency
+ *   to store the string, a std::unique_ptr<char[]> is returned.
  */
 template<>
 struct CastToNative<char *> {
@@ -279,11 +278,9 @@ CAST_TO_JS_PRIMITIVE_WITH_CONST(double){return v8::Number::New(isolate, value);}
 CAST_TO_JS_PRIMITIVE_WITH_CONST(long double){return v8::Number::New(isolate, value);}
 
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(char*){return v8::String::NewFromUtf8(isolate, value);}
-
 CAST_TO_JS_PRIMITIVE_WITH_CONST(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
 
-
+CAST_TO_JS_PRIMITIVE_WITH_CONST(char *){return v8::String::NewFromUtf8(isolate, value);}
 
 template<class T>
 struct CastToJS<T**> {

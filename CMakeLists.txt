@@ -15,7 +15,9 @@ set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location o
 
 
 file(GLOB HEADER_FILES
-        include/*.h)
+        include/*.h
+	include/*.hpp
+	)
 
 file(GLOB SOURCE_FILES
         src/*.cpp

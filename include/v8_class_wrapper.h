@@ -19,17 +19,6 @@
 
 namespace v8toolkit {
 
-template<class T>
-struct is_const_member_function{enum {value = 0};};
-
-template<class R, class T, class...Args>
-struct is_const_member_function<R(T::*)(Args...)const> {
-        enum {value = 1};
-};
-
-template<bool> struct const_type_method_adder;
-
-
 
 #define V8_CLASS_WRAPPER_DEBUG false
 
@@ -96,17 +85,11 @@ struct TypeCheckerBase {
 template<class, class...>
 struct TypeChecker;
 
-template<class T, class Head>
-struct TypeChecker<T, Head> : public TypeCheckerBase<T>
+template<class T>
+struct TypeChecker<T> : public TypeCheckerBase<T>
 {
     T * check(AnyBase * any_base) {
-        AnyPtr<Head> * any = nullptr;
-        if (V8_CLASS_WRAPPER_DEBUG) printf("TypeChecker checking against %s\n", typeid(Head).name());
-        if ((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
-            return static_cast<T*>(any->get());
-        } else {
-            return nullptr;
-        }
+	return nullptr;
     }
 };
 
@@ -255,15 +238,15 @@ private:
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
         
-        using PB_TYPE = ParameterBuilder<0, decltype(constructor), TypeList<CONSTRUCTOR_PARAMETER_TYPES...>>;
-        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
-            // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
-            return;
-        }
-        
-		PB_TYPE()(constructor, args);
-
+//        using PB_TYPE = ParameterBuilder<0, decltype(constructor), TypeList<CONSTRUCTOR_PARAMETER_TYPES...>>;
+//        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
+//            // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
+//            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
+//            return;
+//        }
+//
+//		PB_TYPE()(constructor, args);
+		CallCallable<decltype(constructor)>()(constructor, args);
 		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
@@ -783,7 +766,10 @@ public:
 	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
-		return _add_method(method_name, method);
+	    if (!std::is_const<T>::value) {
+		V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+	    }
+	    return _add_method(method_name, method);
 	}
 
     
@@ -796,27 +782,6 @@ public:
 	{
 		return _add_method(method_name, method);
     }
-    
-    
-	/**
-	 * If the method is marked const, add it to the const version of the wrapped type
-	 */
-    template<class Method, std::enable_if_t<is_const_member_function<Method>::value && !std::is_const<T>::value, int> = 0>
-    void add_method_for_const_type(const std::string & method_name, Method method) {
-        V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_method(method_name, method);
-//        printf("Adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
-    };
-
-
-	/**
-	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
-	 */
-    template<class Method, std::enable_if_t<!(is_const_member_function<Method>::value && !std::is_const<T>::value), int> = 0>
-    void add_method_for_const_type(const std::string & method_name, Method method) {
-//        printf("Not adding to const version: %d %s :: %s\n", std::is_const<T>::value, typeid(T).name(), typeid(Method).name());
-    };
-
-
 
 
 	/**
@@ -886,22 +851,22 @@ public:
 
 				// the typelist and std::function parameters don't match because the first parameter doesn't come
 				// from the javascript value array in 'info', it is passed in from this function as the 'this' pointer
-				using PB_TYPE = v8toolkit::ParameterBuilder<0, std::function<R(Head, Tail...)>, TypeList<Tail...>>;
-
-				PB_TYPE pb;
-				auto arity = PB_TYPE::ARITY;
+//				using PB_TYPE = v8toolkit::ParameterBuilder<0, std::function<R(Head, Tail...)>, TypeList<Tail...>>;
+//
+//				PB_TYPE pb;
+//				auto arity = PB_TYPE::ARITY;
 				// 1  because the first parameter doesn't count because it's reserved for "this"
-				if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
-				  std::stringstream ss;
-				  ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
-				  isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
-				  return; // return now so the exception can be thrown inside the javascript
-				}
+//				if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
+//				  std::stringstream ss;
+//				  ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+//				  isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+//				  return; // return now so the exception can be thrown inside the javascript
+//				}
 
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-					pb(*copy, info, cpp_object);
+					CallCallable<std::remove_reference_t<decltype(*copy)>, decltype(cpp_object)>()(*copy, info, cpp_object);
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -929,8 +894,6 @@ public:
     V8ClassWrapper<T> & _add_method(const std::string & method_name, M method)
     {
         assert(this->finalized == false);
-
-        add_method_for_const_type(method_name, method);
 
 		this->check_if_name_used(method_name);
 
@@ -985,16 +948,16 @@ public:
     			auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
-                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
-            
-                PB_TYPE pb;
-                auto arity = PB_TYPE::ARITY;
-                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
-                    std::stringstream ss;
-                    ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
-                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
-                    return; // return now so the exception can be thrown inside the javascript
-                }
+//                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
+//
+//                PB_TYPE pb;
+//                auto arity = PB_TYPE::ARITY;
+//                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
+//                    std::stringstream ss;
+//                    ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
+//                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
+//                    return; // return now so the exception can be thrown inside the javascript
+//                }
             
                 // V8 does not support C++ exceptions, so all exceptions must be caught before control
                 //   is returned to V8 or the program will instantly terminate
@@ -1002,7 +965,7 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-        			pb(bound_method, info);
+        			CallCallable<decltype(bound_method)>()(bound_method, info);
                 } catch(std::exception & e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
@@ -1109,7 +1072,7 @@ std::string type_details(){
 //	auto any_base = (v8toolkit::AnyBase *)wrap->Value();
 //	return any_base;
 //}
-//
+////
 //
 //template<typename T, class>
 //struct CastToNative
@@ -1126,8 +1089,8 @@ std::string type_details(){
 //		return *t;
 //    }
 //};
-//
-//
+
+
 
 
 
@@ -1151,7 +1114,7 @@ std::string type_details(){
 		auto any_base = (v8toolkit::AnyBase *)wrap->Value();
 		T * t = nullptr;
 		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
-			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+//			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
 			throw CastException(fmt::format("Cannot convert {} to {} {}",
 											TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle_typeid_name(typeid(T).name())));
 		}
@@ -1183,5 +1146,6 @@ std::string type_details(){
 	};
 
 
-}
+
+} // end namespace v8toolkit
 
