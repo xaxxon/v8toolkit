@@ -93,13 +93,14 @@ install(TARGETS v8toolkit_static DESTINATION ${INSTALL_LIB_DIR})
 link_directories(${PROJECT_BINARY_DIR})
 
 add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
-add_dependencies(bidirectional_sample v8toolkit_static)
+add_dependencies(bidirectional_sample v8toolkit_static copy_bidirectional_sample_resources)
 target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit)
 target_link_libraries(bidirectional_sample cppformat)
-add_custom_command(TARGET bidirectional_sample PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js
-        ${PROJECT_BINARY_DIR})
+
+add_custom_target(copy_bidirectional_sample_resources)
+add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js ${PROJECT_BINARY_DIR})
 
 add_executable(exception_sample samples/exception_sample.cpp)
 add_dependencies(exception_sample v8toolkit_static)
@@ -119,6 +120,8 @@ add_executable(toolbox_sample samples/toolbox_sample.cpp)
 add_dependencies(toolbox_sample v8toolkit_static)
 target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
 target_link_libraries(toolbox_sample v8toolkit)
+
+# This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET toolbox_sample PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/toolbox_sample.js
         ${PROJECT_BINARY_DIR}
@@ -136,6 +139,8 @@ add_dependencies(sample v8toolkit_static)
 target_link_libraries(sample ${V8_STATIC_LIBS})
 target_link_libraries(sample v8toolkit)
 target_link_libraries(sample cppformat)
+
+# This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET sample PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/code.js
         ${PROJECT_BINARY_DIR})

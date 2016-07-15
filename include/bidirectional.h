@@ -50,12 +50,16 @@ protected:
     */ 
     mutable bool called_from_javascript = false;
 public:
-    JSWrapper(v8::Local<v8::Context> context, v8::Local<v8::Object> object, v8::Local<v8::FunctionTemplate> created_by) :
-        isolate(context->GetIsolate()), 
-        global_context(v8::Global<v8::Context>(isolate, context)),
-        global_js_object(v8::Global<v8::Object>(isolate, object)),
-		global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by))
+    JSWrapper(v8::Local<v8::Context> context,
+              v8::Local<v8::Object> object,
+              v8::Local<v8::FunctionTemplate> created_by) :
+            isolate(context->GetIsolate()),
+            global_context(v8::Global<v8::Context>(isolate, context)),
+            global_js_object(v8::Global<v8::Object>(isolate, object)),
+            global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by))
 		{}
+
+    v8::Local<v8::Object> get_javascript_object(){return global_js_object.Get(isolate);}
 };
 
 
@@ -136,12 +140,12 @@ public:
 *
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
- template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory, class = void>
+template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory, class = void>
 class JSFactory;
 
 
- template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams, template<class, class...> class ParentType>
-     class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType,
+template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams, template<class, class...> class ParentType>
+class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType,
 
      // Verify Factory<...> is in the hierarchy somewhere (either immediate parent or any ancestor)
      std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>>, ParentType<Base, TypeList<ExternalConstructorParams...>>>::value>>
@@ -149,129 +153,73 @@ class JSFactory;
 protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
-    v8::Global<v8::Function> global_javascript_function;
+    v8::Global<v8::FunctionTemplate> js_constructor_function;
+    v8::Global<v8::Object> js_prototype;
 
-    std::tuple<InternalConstructorParams...> internal_constructor_values;
-    std::function<std::unique_ptr<Base>(ExternalConstructorParams...)> make_cpp_object;
-    mutable std::unique_ptr<Base> cpp_object_being_built;
-    
+    std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
+    mutable std::unique_ptr<JSWrapperClass> cpp_object_being_built;
+
+
 public:
     /**
     * Takes a context to use while calling a javascript_function that returns an object
     *   inheriting from JSWrapper
     */
- JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Function> javascript_function, InternalConstructorParams&&... internal_constructor_values) :
+ JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Object> prototype, InternalConstructorParams&&... internal_constructor_values) :
         isolate(context->GetIsolate()),
         global_context(v8::Global<v8::Context>(isolate, context)),
-	    global_javascript_function(v8::Global<v8::Function>(isolate, javascript_function)),
-	    internal_constructor_values(internal_constructor_values...)
+        js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<JSWrapperClass>::get_instance(isolate).get_function_template())),
+        js_prototype(v8::Global<v8::Object>(isolate, prototype))
     {
-        this->make_cpp_object = [internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values)->std::unique_ptr<Base> {
-            return std::make_unique<Base>(std::forward<InternalConstructorParams>(internal_constructor_values)...,
-                                          std::forward<ExternalConstructorParams>(external_constructor_values)...);
+
+        // Create a new object of the full wrapper type (i.e. JSMyType : MyType, JSWrapper<MyTYpe>)
+        auto new_js_object = js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+        (void) this->js_prototype.Get(isolate)->SetPrototype(context, new_js_object->GetPrototype());
+
+
+        // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
+        // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global;:Get()
+        this->make_jswrapper_object = [this, internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+            std::cerr << "In JSFactory constructor make_cpp_object lambda: " << sizeof...(InternalConstructorParams) << " : " << sizeof...(ExternalConstructorParams) << std::endl;
+            auto context = isolate->GetCurrentContext();
+
+            // Create a new javascript object for Base but then set its prototype to the subclass's prototype
+            auto new_js_object = this->js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+            (void)new_js_object->SetPrototype(context, this->js_prototype.Get(isolate));
+
+            auto js_wrapper_class_cpp_object = std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
+                                                    new_js_object,
+                                                    this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
+                                                    std::forward<InternalConstructorParams>(internal_constructor_values)...,
+                                                    std::forward<ExternalConstructorParams>(external_constructor_values)...);
+
+            V8ClassWrapper<JSWrapperClass>::get_instance(isolate).template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, js_wrapper_class_cpp_object.get());
+
+
+            return js_wrapper_class_cpp_object.release();
         };
     }
+
 
     /**
      * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
      *   extends the C++ functionality in javascript
      */
-    Base * operator()(ExternalConstructorParams... constructor_parameters) const {
-        // printf("JSFactory making a %s\n", typeid(JSWrapperClass).name());
-
-        GLOBAL_CONTEXT_SCOPED_RUN(isolate, global_context);
-        auto context = global_context.Get(isolate);
-
-
-		if (this->make_cpp_object) {
-		    assert(!this->cpp_object_being_built);
-		    this->cpp_object_being_built = this->make_cpp_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
-		}
-		auto result =
-                call_javascript_function_with_vars(context,
-                                                   global_javascript_function.Get(isolate),
-                                                   context->Global(), v8toolkit::TypeList<ExternalConstructorParams..., Base*>(),
-                                                   std::forward<ExternalConstructorParams>(constructor_parameters)...,
-                                                   this->cpp_object_being_built.get());
-		return V8ClassWrapper<Base>::get_instance(isolate).get_cpp_object(v8::Local<v8::Object>::Cast(result));
-
-    }
-   
-
-    static void subclass_helper(const v8::FunctionCallbackInfo<v8::Value>& info) {
-        auto isolate = info.GetIsolate();
-        auto context = isolate->GetCurrentContext();
-
-	// make sure the prototype is an object
-        if (!info[0]->IsObject()) {
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "First parameter must be the subclass prototype object"));
-            return;
-        }
-        auto subclass_prototype = v8::Local<v8::Object>::Cast(info[0]);
-
-        // Create a new JavaScript object
-        JSWrapperClass * new_cpp_object;
-
-	// This calls the javascript constructor function for this type just as if the following javascript code were run:
-	//   new JSWrapper_SomeType()
-        auto & class_wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
-        auto function_template = class_wrapper.get_function_template();
-        auto new_js_object = function_template->GetFunction()->NewInstance();
-
-	
-        std::function<void(InternalConstructorParams..., ExternalConstructorParams...)> constructor = [&](auto... args)->void{
-            new_cpp_object = new JSWrapperClass(context, v8::Local<v8::Object>::Cast(new_js_object), function_template, args...);
-        };
-
-//        using PB_TYPE = ParameterBuilder<1, decltype(constructor), TypeList<InternalConstructorParams..., ExternalConstructorParams...>>;
-//        if (!check_parameter_builder_parameter_count<PB_TYPE, 1>(info)) {
-//            //printf("add_subclass_function for %s got %d parameters but needed %d parameters\n", typeid(JSWrapperClass).name(), (int)info.Length()-1, (int)PB_TYPE::ARITY);
-//            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "JSFactory::add_subclass_function constructor parameter count mismatch"));
-//            return;
-//        }
-
-	// Call the real JSWrapper_MyType constructor using the javascript parameters passed to MyType.subclass({...}, ...);
-        CallCallable<decltype(constructor)>()(constructor, info);
-
-        // now initialize the JavaScript object with the C++ object (circularly)
-        // TODO: This circular reference may cause the GC to never destroy these objects
-        class_wrapper.template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, new_cpp_object);
-
-        // Set the prototypes appropriately  object -> subclass prototype (passed in) -> JSWrapper prototype -> base type prototype (via set_parent_type)
-        (void)subclass_prototype->SetPrototype(context, new_js_object->GetPrototype());
-
-	// Take the javascript object passed in as the first parameter to MyType.subclass(...) and set its prototype to
-	//   a "normal" MyType object
-        (void)new_js_object->SetPrototype(context, subclass_prototype);
-
-        info.GetReturnValue().Set(new_js_object);
+    Base * operator()(ExternalConstructorParams&&... constructor_parameters) const {
+       return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
     }
 
 
-	
-	/**
-    * Creates a JavaScript helper function which is similar to Object.create() in that it creates an object implmenting templated type Base 
-    *   which is ready to be extended in javascript and the prototype object containing the overrides.  See samples/bidirectional_sample.cpp for
-    *   how to use it.  This function must be used when creating all "javascript subclassed objects" or they will not function properly.  
-    *   Common use for this is to put it in your JSFactory JavaScript callback function.
-    */
-	static void add_subclass_function(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, const std::string & js_function_name)
-	{
-		v8toolkit::add_function(isolate, object_template, js_function_name.c_str(), &subclass_helper);
-	}
 
-    /**
-     * Pass in an un-finalized V8ClassWrapper object to have a static method added to the constructor function
-     * to create a subclass.  This is identical functionality to add_subclass_function() but puts it in a more
-     * intuitive location.
-     *
-     * auto & my_class_wrapper = Isolate.wrap_class<MyClass>();
-     * JSFactory<MyClass, JSMyClass>::add_subclass_static_method(my_class_wrapper);
-     */
-    template<class T>
-    static void add_subclass_static_method(V8ClassWrapper<T> & wrapper, const std::string & method_name = "subclass") {
-        wrapper.add_static_method(method_name, &subclass_helper);
-    }
+
+
+     static void wrap_factory(v8::Isolate * isolate) {
+//         using FactoryType = Factory<Base, TypeList<ConstructorArgs...>>;
+         using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, void>;
+         V8ClassWrapper<FactoryType> & wrapper = V8ClassWrapper<FactoryType>::get_instance(isolate);
+         wrapper.add_method("create", &FactoryType::operator());
+         wrapper.finalize();
+     }
 };
 
 

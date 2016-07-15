@@ -293,15 +293,6 @@ struct Stuff : public StuffBase {
 };
 
 
-
-template <class ParameterBuilder, int depth>
-bool check_parameter_builder_parameter_count(const v8::FunctionCallbackInfo<v8::Value> & info)
-{
-    auto arity = ParameterBuilder::ARITY;
-    printf("Comparing %d - %d == %d\n", info.Length(), depth, arity);
-    return info.Length() - depth == arity;
-}
-
 /**
 * Class for turning a function parameter list into a parameter pack useful for calling the function
  * depth is the current index into the FunctionCallbackInfo object's parameter list
@@ -319,6 +310,9 @@ struct ParameterBuilder;
 template<class HEAD>
 struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::value >> {
     HEAD * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        if (i >= info.Length()) {
+            throw InvalidCallException("Not enough javascript parameters for function call");
+        }
         stuff.emplace_back(std::make_unique<Stuff<HEAD>>(CastToNative<HEAD>()(info.GetIsolate(), info[i++])));
         return static_cast<Stuff<HEAD>>(*stuff.back()).get();
     }
@@ -334,6 +328,9 @@ struct ParameterBuilder<T,
         >> {
     using NoRefT = std::remove_const_t<std::remove_reference_t<T>>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        if (i >= info.Length()) {
+            throw InvalidCallException("Not enough javascript parameters for function call");
+        }
         return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
     }
 };
@@ -348,6 +345,9 @@ struct ParameterBuilder<T,
         >> {
     using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        if (i >= info.Length()) {
+            throw InvalidCallException("Not enough javascript parameters for function call");
+        }
         stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
         return *static_cast<Stuff<NoRefT>&>(*stuff.back()).get();
     }
@@ -362,6 +362,9 @@ template<>
 struct ParameterBuilder<char *> {
 
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        if (i >= info.Length()) {
+            throw InvalidCallException("Not enough javascript parameters for function call");
+        }
         auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');
@@ -375,6 +378,9 @@ struct ParameterBuilder<char *> {
 template<>
 struct ParameterBuilder<const char *> {
     const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        if (i >= info.Length()) {
+            throw InvalidCallException("Not enough javascript parameters for function call");
+        }
         auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');

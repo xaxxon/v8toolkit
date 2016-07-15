@@ -659,7 +659,7 @@ public:
     V8ClassWrapper<T> & finalize() {
 
         if (!std::is_const<T>::value) {
-            V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).finalize();
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();
         }
 
         this->finalized = true;
@@ -1031,16 +1031,15 @@ struct CastToJS<T*> {
 	}
 };
 
+
 template<typename T>
 struct CastToJS<T&> {
+	using Pointer = typename std::add_pointer_t<T>;
+
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-        using Pointer = typename std::add_pointer_t<T>;
 		return CastToJS<Pointer>()(isolate, &cpp_object);
 	}
 };
-
-
-
 
 
 template<class T>
