@@ -70,36 +70,36 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source)
 
 v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
 {
-    return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
-    
-        // This catches any errors thrown during script compilation
-        v8::TryCatch try_catch(isolate);
-        // auto local_script = this->get_local(script);
-        auto local_script = v8::Local<v8::Script>::New(isolate, script);
-        auto maybe_result = local_script->Run(context.Get(isolate));
-        if(maybe_result.IsEmpty()) {
+    GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 
-            
-            v8::Local<v8::Value> e = try_catch.Exception();
-            // print_v8_value_details(e);
-            
-            
-            if(e->IsExternal()) {
-                auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
-                auto anyptr_exception_ptr = dynamic_cast<Any<std::exception_ptr> *>(anybase);
-                assert(anyptr_exception_ptr); // cannot handle other types at this time TODO: throw some other type of exception if this happens UnknownExceptionException or something
-            
-                // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
-                std::rethrow_exception(anyptr_exception_ptr->get());
-            } else {
-                printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
-                throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
-            }
+
+    // This catches any errors thrown during script compilation
+    v8::TryCatch try_catch(isolate);
+    // auto local_script = this->get_local(script);
+    auto local_script = v8::Local<v8::Script>::New(isolate, script);
+    auto maybe_result = local_script->Run(context.Get(isolate));
+    if(maybe_result.IsEmpty()) {
+
+
+        v8::Local<v8::Value> e = try_catch.Exception();
+        // print_v8_value_details(e);
+
+
+        if(e->IsExternal()) {
+            auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
+            auto anyptr_exception_ptr = dynamic_cast<Any<std::exception_ptr> *>(anybase);
+            assert(anyptr_exception_ptr); // cannot handle other types at this time TODO: throw some other type of exception if this happens UnknownExceptionException or something
+
+            // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
+            std::rethrow_exception(anyptr_exception_ptr->get());
+        } else {
+            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
+            throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
-        v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-    
-        return v8::Global<v8::Value>(isolate, result);
-    });
+    }
+    v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
+
+    return v8::Global<v8::Value>(isolate, result);
 }
 
 

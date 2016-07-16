@@ -207,11 +207,10 @@ public:
     * Calls v8toolkit::scoped_run with the associated isolate and context data
     */
 	template<class Callable>
-	auto operator()(Callable && callable) -> typename std::result_of<Callable()>::type
+	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+        GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable();
 	}
 
     /**
@@ -221,9 +220,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*)>
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable(isolate);
 	}
 
     /**
@@ -233,9 +231,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable(isolate, context.Get(isolate));
 	}
 	
 	/**
@@ -245,18 +242,15 @@ public:
 	template<class Function>
 	void add_function(std::string name, Function function)
 	{
-		operator()([&](){
-			v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
-		});
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
 	}
     
     template<class T>
     void add_variable(std::string name, v8::Local<T> variable)
     {
-		operator()([&](){
-			v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
-		});
-        
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
     }
 	
 	/**

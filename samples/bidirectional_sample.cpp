@@ -13,18 +13,19 @@ class JSThing;
 
 using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
 
-static vector<JSThingFactory> thing_factories;
+static vector<JSThingFactory *> thing_factories;
 
-const JSThingFactory & create_thing_factory(v8::Local<v8::Context> context, v8::Local<v8::Function> factory_method, int i) {
-	thing_factories.push_back(JSThingFactory(context, factory_method, std::forward<int>(i)));
-	return thing_factories.back();
+void create_thing_factory(const v8::FunctionCallbackInfo<v8::Value> & info) {
+	auto isolate = info.GetIsolate();
+
+	thing_factories.push_back(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
+	info.GetReturnValue().Set(CastToJS<JSThingFactory*>()(isolate, thing_factories.back()));
 }
+
 
 void clear_thing_factories(){
 	thing_factories.clear();
 }
-
-
 
 
 struct Thing {

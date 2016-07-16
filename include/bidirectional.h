@@ -171,6 +171,7 @@ public:
         js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<JSWrapperClass>::get_instance(isolate).get_function_template())),
         js_prototype(v8::Global<v8::Object>(isolate, prototype))
     {
+        printf("Created JSFactory object at %p\n", (void*)this);
 
         // Create a new object of the full wrapper type (i.e. JSMyType : MyType, JSWrapper<MyTYpe>)
         auto new_js_object = js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
@@ -180,8 +181,10 @@ public:
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
         // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global;:Get()
         this->make_jswrapper_object = [this, internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+            printf("Using JSFactory object at %p\n", (void*)this);
+
             std::cerr << "In JSFactory constructor make_cpp_object lambda: " << sizeof...(InternalConstructorParams) << " : " << sizeof...(ExternalConstructorParams) << std::endl;
-            auto context = isolate->GetCurrentContext();
+            auto context = this->global_context.Get(this->isolate);
 
             // Create a new javascript object for Base but then set its prototype to the subclass's prototype
             auto new_js_object = this->js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
@@ -200,6 +203,10 @@ public:
         };
     }
 
+    ~JSFactory(){
+        printf("Deleting JSFactory object at %p\n", (void*)this);
+    }
+
 
     /**
      * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
@@ -214,7 +221,6 @@ public:
 
 
      static void wrap_factory(v8::Isolate * isolate) {
-//         using FactoryType = Factory<Base, TypeList<ConstructorArgs...>>;
          using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, void>;
          V8ClassWrapper<FactoryType> & wrapper = V8ClassWrapper<FactoryType>::get_instance(isolate);
          wrapper.add_method("create", &FactoryType::operator());

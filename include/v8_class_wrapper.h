@@ -305,7 +305,7 @@ public:
 
 	// Common tasks to do for any new js object regardless of how it is created
 	template<class DestructorBehavior>
-	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object) 
+	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
 	{
 //        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
         auto any = new AnyPtr<T>(cpp_object);
@@ -480,10 +480,9 @@ public:
     {
         assert(!is_finalized());
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
-        scoped_run(isolate, [this]{
-            global_parent_function_template =
-                v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
-        });
+		ISOLATE_SCOPED_RUN(isolate);
+		global_parent_function_template =
+			v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
         return *this;
     }
     

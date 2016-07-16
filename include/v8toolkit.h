@@ -58,7 +58,7 @@ public:
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 
-
+/* Use these to try to decrease the amount of template instantiations */
 #define CONTEXT_SCOPED_RUN(local_context) \
     v8::Isolate * _v8toolkit_internal_isolate = local_context->GetIsolate(); \
     v8::Locker _v8toolkit_internal_locker(_v8toolkit_internal_isolate);                \
@@ -527,28 +527,14 @@ struct CallCallable<std::function<void(Args...)>> {
 };
 
 
+template<>
+struct CallCallable<std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
 
-// I NEVER PORTED THIS ONE
-//
-///**
-//* Specialization to handle functions that want the javascript callback info directly
-//* Useful for things that want to handle multiple, untyped arguments in a custom way (like the print functions provided in this library)
-//* Any return value must be handled directly by the function itself by populating info parameter
-//*/
-//template<int depth, class T>
-//struct ParameterBuilder<depth, T, TypeList<const v8::FunctionCallbackInfo<v8::Value>&>> {
-//    enum {
-//        ARITY = 0
-//    };
-//
-//    void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> function,
-//                    const v8::FunctionCallbackInfo<v8::Value> &info) {
-//        function(info);
-//    }
-//
-//};
-
-
+    void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)> & function,
+                    const v8::FunctionCallbackInfo<v8::Value> & info) {
+        function(info);
+    }
+};
 
 
 /**
@@ -667,12 +653,12 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 template<class T>
 void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Object> & object, const char * name, T callable) 
 {
+    CONTEXT_SCOPED_RUN(context);
+
     auto isolate = context->GetIsolate();
-    scoped_run(isolate, context, [&](){
-        auto function_template = make_function_template(isolate, callable);
-        auto function = function_template->GetFunction();
-        (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
-    });
+    auto function_template = make_function_template(isolate, callable);
+    auto function = function_template->GetFunction();
+    (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
 }
 
 /**

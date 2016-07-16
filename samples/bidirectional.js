@@ -17,7 +17,7 @@ let thing2_factory = create_thing_factory({}, 24);
 //     return Thing.subclass({}, 24, j_value);
 //
 // }, 11);
-
+//
 println("HERE");
 let count = 0;
 let thing21 = thing2_factory.create("hello" + ++count);
