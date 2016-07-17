@@ -65,13 +65,20 @@ public:
             global_js_object(v8::Global<v8::Object>(isolate, object)),
             global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by)) { }
 
-    v8::Local<v8::Object> get_javascript_object() { return global_js_object.Get(isolate); }
+    v8::Local<v8::Object> get_javascript_object() const { return global_js_object.Get(isolate); }
 };
 
 
+/* template<class... Ts> */
+/* struct CastToJS<JSWrapper<Ts...>> { */
+/*     v8::Local<v8::Value> operator()(v8::Isolate *isolate, JSWrapper<Ts...> &js_wrapper) { */
+/* //        printf("Using custom JSWrapper CastToJS method"); */
+/*         return js_wrapper.get_javascript_object(); */
+/*     } */
+/* }; */
 template<class... Ts>
 struct CastToJS<JSWrapper<Ts...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, JSWrapper<Ts...> &js_wrapper) {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const JSWrapper<Ts...> &js_wrapper) {
 //        printf("Using custom JSWrapper CastToJS method");
         return js_wrapper.get_javascript_object();
     }

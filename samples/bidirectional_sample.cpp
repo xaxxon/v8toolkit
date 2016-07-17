@@ -15,6 +15,8 @@ using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const s
 
 static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
+struct NonPolymorphicType {};
+
 
 struct Thing {
 	Thing(int i, const std::string & j): i(i), j(j) {}
@@ -25,6 +27,9 @@ struct Thing {
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
 	virtual std::string get_string_const()const{return "const C++ string";}
+
+	// test case for non-polymorphic types
+	NonPolymorphicType take_and_return_non_polymorphic(const NonPolymorphicType &) const {return NonPolymorphicType();}
 
 	int i = 42;
 	std::string j = "forty-two";
@@ -71,6 +76,7 @@ void test_calling_bidirectional_from_javascript()
 		auto & thing = isolate->wrap_class<Thing>();
 		thing.add_method("get_string", &Thing::get_string);
 		thing.add_method("get_string_const", &Thing::get_string_const);
+		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
 		thing.set_compatible_types<JSThing>();
 		thing.add_member("i", &Thing::i);
 		thing.add_member("j", &Thing::j);
@@ -83,6 +89,10 @@ void test_calling_bidirectional_from_javascript()
 		jsthing.finalize();
 
 		JSThingFactory::wrap_factory(*isolate);
+
+		auto & non_polymoprhic = isolate->wrap_class<NonPolymorphicType>();
+		non_polymoprhic.finalize();
+
 
 		auto context = isolate->create_context();
 

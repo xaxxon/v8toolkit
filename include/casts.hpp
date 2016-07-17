@@ -243,7 +243,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
 * Casts from a native type to a boxed Javascript type
 */
 
-template<typename T>
+template<typename T, class = void>
 struct CastToJS;
 
 CAST_TO_JS_PRIMITIVE_WITH_CONST(bool){return v8::Boolean::New(isolate, value);}
