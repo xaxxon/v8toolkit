@@ -1037,10 +1037,11 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
+        using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
 //		printf("Checking to see if object * is a JSWrapper *\n");
-		auto js_wrapper_t = dynamic_cast<const JSWrapper<T> *>(cpp_object);
+		auto js_wrapper_t = dynamic_cast<const JSWrapperType *>(cpp_object);
 		if (js_wrapper_t) {
-		    return CastToJS<JSWrapper<std::remove_const_t<T>>>()(isolate, *js_wrapper_t);
+		    return CastToJS<JSWrapperType>()(isolate, *js_wrapper_t);
 		}
 #endif
 		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());

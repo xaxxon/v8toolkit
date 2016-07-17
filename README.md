@@ -6,7 +6,8 @@
 ## Recent Feature: Automatic class binding generator
 
 There is an experimental clang compiler plugin that will look at all your code and generate bindings for your
-classes automatically - you just put in a few annotations to say which things you want.  
+classes automatically - you just put in a few annotations to say which things you want.  Anything not annotated
+will be wrapped.
 
     class V8TOOLKIT_WRAPPED_CLASS MyClassToWrap {
         MyClassToWrap(){}
@@ -19,7 +20,14 @@ classes automatically - you just put in a few annotations to say which things yo
 
         int this_member_will_be_wrapped;
         V8TOOLKIT_SKIP int do_not_wrap_this_member;
-    }
+
+        void some_method_1(); // will be automatically wrapped
+        void some_method_2(); // will be automatically wrapped
+        void some_method_3(); // will be automatically wrapped
+
+        int i;         // will be automatically wrapped
+        std::string j; // will be automatically wrapped
+    };
 
 The generated code has all the includes needed based on the actual types in the classes/methods/members being
 wrapped - including template parameter types.  It will also build header files for your bidirectional types -

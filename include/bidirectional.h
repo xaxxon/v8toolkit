@@ -76,9 +76,9 @@ public:
 /*         return js_wrapper.get_javascript_object(); */
 /*     } */
 /* }; */
-template<class... Ts>
-struct CastToJS<JSWrapper<Ts...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const JSWrapper<Ts...> &js_wrapper) {
+template<class T>
+struct CastToJS<JSWrapper<T>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const JSWrapper<T> &js_wrapper) {
 //        printf("Using custom JSWrapper CastToJS method");
         return js_wrapper.get_javascript_object();
     }
