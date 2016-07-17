@@ -810,6 +810,9 @@ public:
 	}
 
 
+	/**
+	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
+	 */
 	template<class Callback>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
 		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
@@ -868,7 +871,7 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-					CallCallable<std::remove_reference_t<decltype(*copy)>, decltype(cpp_object)>()(*copy, info, cpp_object);
+					CallCallable<std::remove_reference_t<decltype(*copy)>, Head>()(*copy, info, cpp_object);
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1065,7 +1068,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
 
 
-	template<typename T>
+template<typename T>
 struct CastToJS<T&> {
 	using Pointer = typename std::add_pointer_t<T>;
 

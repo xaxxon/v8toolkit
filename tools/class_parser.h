@@ -17,6 +17,7 @@
 #define V8TOOLKIT_NONE_STRING "v8toolkit_generate_bindings_none"
 #define V8TOOLKIT_ALL_STRING "v8toolkit_generate_bindings_all"
 #define V8TOOLKIT_READONLY_STRING "v8toolkit_generate_bindings_readonly"
+#define V8TOOLKIT_EXTEND_WRAPPER_STRING "v8toolkit_extend_wrapper"
 
 /**
  * Generate V8ClassWrapper code for the annotated class
@@ -36,6 +37,13 @@
  * However, it is not "const", as its contents can be changed.
  */
 #define V8TOOLKIT_READONLY __attribute__((annotate(V8TOOLKIT_READONLY_STRING)))
+
+/**
+ * This function should be called while creating the mapping for this class before it is
+ * finalize()'d
+ */
+#define V8TOOLKIT_EXTEND_WRAPPER __attribute__((annotate(V8TOOLKIT_EXTEND_WRAPPER_STRING)))
+
 
 /**
  * Use this to create a JavaScript constructor function with the specified name
@@ -62,6 +70,7 @@
 #define V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING)))
 
 /**
+ * Unused, but may come back.
  * Marks a parameter as one that is always the same, not something that will change per instance
  */
 #define V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)))

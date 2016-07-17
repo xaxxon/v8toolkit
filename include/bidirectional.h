@@ -213,7 +213,7 @@ public:
         // info.Length() must be sum of any skipped parameters + 2 for the prototype and object callback + 1 for each InternalConstructorParameters
         constexpr std::size_t parameter_count = starting_info_index + 2 + sizeof...(InternalConstructorParams);
         if (info.Length() != parameter_count) {
-            throw InvalidCallException(fmt::format("Wrong number of parameters to create new factory - needs {} (object type name, prototype, ...), got {}", parameter_count, info.Length()));
+            throw InvalidCallException(fmt::format("Wrong number of parameters to create new factory - needs {}, got {}", parameter_count, info.Length()));
         }
 
         int i = starting_info_index + 2; // skip the prototype object and object constructor callback as well

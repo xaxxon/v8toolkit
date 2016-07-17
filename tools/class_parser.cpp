@@ -147,6 +147,7 @@ int print_logging = 0;
         set<string> names;
         set<string> compatible_types;
         set<string> parent_types;
+        set<string> wrapper_extension_methods;
         WrappedClass(const std::string & class_name) : class_name(class_name) {}
     };
 
@@ -761,38 +762,39 @@ int print_logging = 0;
         return result;
     }
 
-    string get_bidirectional_constructor_parameter_typelists(const CXXRecordDecl * klass, bool leading_comma) {
-        auto constructor = get_bidirectional_constructor(klass);
-
-	// all internal params must come before all external params
-	bool found_external_param = false;
-        auto parameter_count = constructor->getNumParams();
-	vector<string> internal_params;
-	vector<string> external_params;
-        for (unsigned int i = 0; i < parameter_count; i++) {
-            auto param_decl = constructor->getParamDecl(i);
-	    if (has_annotation(param_decl, V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)) {
-		if (found_external_param) {
-		    cerr << "ERROR: Found internal parameter after external parameter found in " << klass->getNameAsString() << endl;
-		    throw std::exception();
-		}
-		internal_params.push_back(param_decl->getType().getAsString());
-	    } else {
-		found_external_param = true;
-		external_params.push_back(param_decl->getType().getAsString());
-	    }
-	}
-
-        stringstream result;
-        if (leading_comma) {
-            result << ", ";
-        }
-        result << "v8toolkit::TypeList<" << join(internal_params, ", ") << ">";
-	result << ", ";
-	result << "v8toolkit::TypeList<" << join(external_params, ", ") << ">";
-
-        return result.str();
-    }
+    // This may be useful for autogenerating factory type information
+//    string get_bidirectional_constructor_parameter_typelists(const CXXRecordDecl * klass, bool leading_comma) {
+//        auto constructor = get_bidirectional_constructor(klass);
+//
+//	// all internal params must come before all external params
+//	bool found_external_param = false;
+//        auto parameter_count = constructor->getNumParams();
+//	vector<string> internal_params;
+//	vector<string> external_params;
+//        for (unsigned int i = 0; i < parameter_count; i++) {
+//            auto param_decl = constructor->getParamDecl(i);
+//	    if (has_annotation(param_decl, V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)) {
+//		if (found_external_param) {
+//		    cerr << "ERROR: Found internal parameter after external parameter found in " << klass->getNameAsString() << endl;
+//		    throw std::exception();
+//		}
+//		internal_params.push_back(param_decl->getType().getAsString());
+//	    } else {
+//		found_external_param = true;
+//		external_params.push_back(param_decl->getType().getAsString());
+//	    }
+//	}
+//
+//        stringstream result;
+//        if (leading_comma) {
+//            result << ", ";
+//        }
+//        result << "v8toolkit::TypeList<" << join(internal_params, ", ") << ">";
+//	result << ", ";
+//	result << "v8toolkit::TypeList<" << join(external_params, ", ") << ">";
+//
+//        return result.str();
+//    }
 
 
 
@@ -1102,7 +1104,19 @@ int print_logging = 0;
                 return "";
             }
             if (dyn_cast<CXXConversionDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) if (print_logging) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
+                if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
+                return "";
+            }
+
+            // If this
+            if (has_annotation(method, V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
+                if (!method->isStatic()) {
+                    fprintf(stderr, "method %s annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str());
+                    assert("false");
+                }
+                if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping", indentation) << endl;
+                current_wrapped_class->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
+
                 return "";
             }
 
@@ -1162,14 +1176,16 @@ int print_logging = 0;
                     auto bidirectional_unique_ptr = make_unique<WrappedClass>(bidirectional_class_name);
 		    auto & bidirectional = *bidirectional_unique_ptr;
                     bidirectional.parent_types.insert(current_wrapped_class->class_name);
+
+                    // wrap the JSWrapper<T> class
                     bidirectional.contents <<
-                    fmt::format("  {{\n") <<
-                    fmt::format("    // {}\n", bidirectional.class_name) <<
-                    fmt::format("    v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
+                        fmt::format("  {{\n") <<
+                        fmt::format("    // {}\n", bidirectional.class_name) <<
+                        fmt::format("    v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                 bidirectional.class_name, bidirectional.class_name) <<
-                    fmt::format("    class_wrapper.set_parent_type<{}>();\n", current_wrapped_class->class_name) <<
-                    fmt::format("    class_wrapper.finalize();\n") <<
-                    fmt::format("  }}\n\n");
+                        fmt::format("    class_wrapper.set_parent_type<{}>();\n", current_wrapped_class->class_name) <<
+                        fmt::format("    class_wrapper.finalize();\n") <<
+                        fmt::format("  }}\n\n");
 
                     // not sure if this is needed
                     //bidirectional.include_files.insert(get_include_for_record_decl(klass));
@@ -1256,6 +1272,9 @@ int print_logging = 0;
                 if (!current_wrapped_class->compatible_types.empty()) {
                     result << fmt::format("{}  class_wrapper.set_compatible_types<{}>();\n", indentation,
                                           join(current_wrapped_class->compatible_types));
+                }
+                for(auto & wrapper_extension_method : current_wrapped_class->wrapper_extension_methods) {
+                    result << fmt::format("{}  {}\n", indentation, wrapper_extension_method);
                 }
                 if (!current_wrapped_class->parent_types.empty()) {
                     result << fmt::format("{}  class_wrapper.set_parent_type<{}>();\n", indentation,

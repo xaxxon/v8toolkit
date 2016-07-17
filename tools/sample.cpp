@@ -15,6 +15,9 @@
 //    using Callback = std::function<int(char)>;
 //};
 
+template<class T>
+class V8ClassWrapper;
+
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 Foo : public FooParent {
 
@@ -53,6 +56,8 @@ public:
 //    virtual void templated_input_parameter_test(std::pair<OnlyUsedInTemplate, OnlyUsedInTemplate>);
 //
 //    TemplatedClass<HelperClass, 5> test_method_with_templated_types(const TemplatedClass<const Using2*&, 8828>****&);
+
+    V8TOOLKIT_EXTEND_WRAPPER static void wrapper_extension(V8ClassWrapper<Foo> &);
 };
 
 //
