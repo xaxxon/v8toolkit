@@ -33,7 +33,7 @@ cotire(api-gen-template)
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 100
+#define MAX_DECLARATIONS_PER_FILE 75
 
 #include <iostream>
 #include <fstream>
@@ -1247,10 +1247,10 @@ int print_logging = 0;
                 handle_class(record_decl, export_type, false, indentation + "  ");
             }
             if (is_bidirectional) {
-
-                result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}{}>::add_subclass_static_method(class_wrapper);\n",
-                                         indentation,
-                                         class_name, class_name, get_bidirectional_constructor_parameter_typelists(klass, true));
+                // New bidirectional code doesn't require this - it was wrong to need this in the first place
+//                result << fmt::format("{}  v8toolkit::JSFactory<{}, JS{}{}>::add_subclass_static_method(class_wrapper);\n",
+//                                         indentation,
+//                                         class_name, class_name, get_bidirectional_constructor_parameter_typelists(klass, true));
             }
             if (top_level) {
                 if (!current_wrapped_class->compatible_types.empty()) {

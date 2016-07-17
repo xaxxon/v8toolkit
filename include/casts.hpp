@@ -297,7 +297,8 @@ struct CastToJS<T**> {
 template<>
 struct CastToJS<v8::Local<v8::Object>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Object> object){
-		return v8::Local<v8::Value>::New(isolate, object);
+		//return v8::Local<v8::Value>::New(isolate, object);
+        return object;
 	}
 };
 
@@ -315,13 +316,11 @@ struct CastToJS<v8::Local<v8::Value>> {
 
 template<>
 struct CastToJS<v8::Global<v8::Value> &> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Global<v8::Value> & value){
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
         return value.Get(isolate);
     }
 };
-
-
-
+    
 
 /**
 * supports vectors containing any type also supported by CastToJS to javascript arrays

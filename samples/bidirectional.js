@@ -4,7 +4,13 @@ var js_method_result = "JS string";
 let thing2_i_val = 24;
 
 
-let thing2_factory = create_thing_factory({}, 24);
+let thing2_factory = create_thing_factory(
+    {}, // This is the actual prototype object shared by all new instances of the type
+    function(new_thing2){ // This function is called on each new object, creating non-shared, per-object properties
+        // println("In new thing2 object constructor");
+        new_thing2.per_object_property = 42;
+        // printobj(new_thing2);
+    }, 24);
 
 // let thing2_factory = create_thing_factory(function(j_value, base_thing){
 //     // println("base_thing i = " + base_thing.i);
@@ -18,11 +24,19 @@ let thing2_factory = create_thing_factory({}, 24);
 //
 // }, 11);
 //
-println("HERE");
 let count = 0;
 let thing21 = thing2_factory.create("hello" + ++count);
 let thing22 = thing2_factory.create("hello" + ++count);
-let thing23 = thing2_factory.create("hello" + ++count);
+
+
+
+assert(thing21.per_object_property === 42);
+assert(thing22.per_object_property === 42);
+
+thing21.per_object_property++;
+assert(thing21.per_object_property === 43);
+assert(thing22.per_object_property === 42);
+
 
 
 

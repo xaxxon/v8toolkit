@@ -32,31 +32,7 @@
 
 namespace v8toolkit {
 
-
-/**
-* General purpose exception for invalid uses of the v8toolkit API
-*/
-class InvalidCallException : public std::exception {
-private:
-    std::string message;
-
-public:
-    InvalidCallException(std::string message) : message(message) {}
-    virtual const char * what() const noexcept override {return message.c_str();}
-};
-
-/**
- * Thrown when trying to register a function/method/member with the same name as
- * something else already registered
- */
-class DuplicateNameException : public std::exception {
-private:
-    std::string message;
-
-public:
-    DuplicateNameException(std::string message) : message(message) {}
-    virtual const char * what() const noexcept override {return message.c_str();}
-};
+void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
 
 /* Use these to try to decrease the amount of template instantiations */
 #define CONTEXT_SCOPED_RUN(local_context) \
@@ -67,10 +43,11 @@ public:
     v8::Context::Scope _v8toolkit_internal_context_scope(local_context);
 
 #define GLOBAL_CONTEXT_SCOPED_RUN(isolate, global_context) \
-    v8::Local<v8::Context> _v8toolkit_internal_local_context = global_context.Get(isolate);   \
     v8::Locker _v8toolkit_internal_locker(isolate);                \
     v8::Isolate::Scope _v8toolkit_internal_isolate_scope(isolate); \
     v8::HandleScope _v8toolkit_internal_handle_scope(isolate);     \
+    /* creating local context must be after creating handle scope */	\
+    v8::Local<v8::Context> _v8toolkit_internal_local_context = global_context.Get(isolate); \
     v8::Context::Scope _v8toolkit_internal_context_scope(_v8toolkit_internal_local_context);
 
 #define ISOLATE_SCOPED_RUN(isolate) \
@@ -354,10 +331,6 @@ struct ParameterBuilder<T,
 };
 
 
-
-
-
-
 template<>
 struct ParameterBuilder<char *> {
 
@@ -390,8 +363,6 @@ struct ParameterBuilder<const char *> {
 };
 
 
-
-
 template<>
 struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
     const v8::FunctionCallbackInfo<v8::Value> & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
@@ -399,13 +370,13 @@ struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
     }
 };
 
+
 template<>
 struct ParameterBuilder<v8::Isolate *> {
     v8::Isolate * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         return info.GetIsolate();
     }
 };
-
 
 
 template<>
@@ -416,8 +387,6 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
 };
 
 
-
-
 template<>
 struct ParameterBuilder<v8::Local<v8::Object>> {
     v8::Local<v8::Object> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
@@ -426,23 +395,41 @@ struct ParameterBuilder<v8::Local<v8::Object>> {
 };
 
 
+template<class ReturnType, class... Args, class... Ts>
+auto run_function(std::function<ReturnType(Args...)> & function,
+              const v8::FunctionCallbackInfo<v8::Value> & info,
+              Ts&&... ts) -> ReturnType {
+
+    return function(std::forward<Args>(ts)...);
+}
+
+ 
+template<class ReturnType, class... Args, class Callable, class... Ts>
+auto run_function(Callable callable,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return callable(std::forward<Args>(ts)...);
+};
+
+
 template<class Function, class... T>
 struct CallCallable;
 
+ 
 template<class ReturnType, class... Args, class InitialArg>
 struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-    template<class T, class... Ts>
-    void thingify(std::function<ReturnType(InitialArg, Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  T&& t,
-                  Ts&&... ts) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                    function(std::forward<InitialArg>(t),
-                                                                             std::forward<Args>(ts)...)));
-
-    }
+//    template<class T, class... Ts>
+//    void thingify(std::function<ReturnType(InitialArg, Args...)> & function,
+//                  const v8::FunctionCallbackInfo<v8::Value> & info,
+//                  T&& t,
+//                  Ts&&... ts) {
+//        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+//                                                                    function(std::forward<InitialArg>(t),
+//                                                                             std::forward<Args>(ts)...)));
+//
+//    }
 
     void operator()(std::function<ReturnType(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
@@ -450,8 +437,9 @@ struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> 
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        thingify(function, info, std::forward<InitialArg>(initial_arg),
-                 std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
+        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+                                                                    run_function(function, info, std::forward<InitialArg>(initial_arg),
+                 std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...)));
     }
 };
 
@@ -459,16 +447,6 @@ struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> 
 template<class InitialArg, class... Args>
 struct CallCallable<std::function<void(InitialArg, Args...)>, InitialArg> {
 
-    template<class T, class... Ts>
-    void thingify(std::function<void(InitialArg, Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  T&& t,
-                  Ts&&... ts) {
-
-        function(std::forward<T>(t),
-                 std::forward<Args>(ts)...);
-
-    }
 
 
     void operator()(std::function<void(InitialArg, Args...)> & function,
@@ -477,7 +455,7 @@ struct CallCallable<std::function<void(InitialArg, Args...)>, InitialArg> {
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        thingify(function, info, std::forward<InitialArg>(initial_arg),
+        run_function(function, info, std::forward<InitialArg>(initial_arg),
                  std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
     }
 };
@@ -487,12 +465,12 @@ template<class ReturnType, class... Args>
 struct CallCallable<std::function<ReturnType(Args...)>> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
     template<class... Ts>
-    void thingify(std::function<ReturnType(Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) {
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                    function(std::forward<Args>(ts)...)));
-    }
+//    void thingify(std::function<ReturnType(Args...)> & function,
+//                  const v8::FunctionCallbackInfo<v8::Value> & info,
+//                  Ts&&... ts) {
+//        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+//                                                                    function(std::forward<Args>(ts)...)));
+//    }
 
 
     void operator()(std::function<ReturnType(Args...)> & function,
@@ -500,7 +478,8 @@ struct CallCallable<std::function<ReturnType(Args...)>> {
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        thingify(function, info, std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
+        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+                                                                    run_function(function, info, std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...)));
     }
 };
 
@@ -508,21 +487,13 @@ struct CallCallable<std::function<ReturnType(Args...)>> {
 template<class... Args>
 struct CallCallable<std::function<void(Args...)>> {
 
-    template<class... Ts>
-    void thingify(std::function<void(Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) {
-        function(std::forward<Args>(ts)...);
-
-    }
-
 
     void operator()(std::function<void(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info) {
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        thingify(function, info, std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
+        run_function(function, info, std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
     }
 };
 
@@ -730,6 +701,7 @@ v8::Local<v8::Value> call_javascript_function_with_vars(const v8::Local<v8::Cont
         if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
             printf("Some of the types are const, make sure what you are using them for is available on the const type\n");
         }
+	ReportException(isolate, &tc);
         throw V8ExecutionException(isolate, tc);
     }
     return maybe_result.ToLocalChecked();
@@ -755,6 +727,7 @@ v8::Local<v8::Value> call_javascript_function(const v8::Local<v8::Context> conte
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
+	ReportException(isolate, &tc);
         printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
         throw V8ExecutionException(isolate, tc);
     }
@@ -1125,8 +1098,7 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 
 std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 
-
-
+v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Script> script);
 } // end v8toolkit namespace
 
 

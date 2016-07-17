@@ -2,8 +2,8 @@
 #include <map>
 #include <functional>
 
-#include "javascript.h"
 #include "bidirectional.h"
+#include "javascript.h"
 
 using namespace std;
 using namespace v8toolkit;
@@ -13,23 +13,11 @@ class JSThing;
 
 using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
 
-static vector<JSThingFactory *> thing_factories;
-
-void create_thing_factory(const v8::FunctionCallbackInfo<v8::Value> & info) {
-	auto isolate = info.GetIsolate();
-
-	thing_factories.push_back(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
-	info.GetReturnValue().Set(CastToJS<JSThingFactory*>()(isolate, thing_factories.back()));
-}
-
-
-void clear_thing_factories(){
-	thing_factories.clear();
-}
+static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
 
 struct Thing {
-	Thing(int i, const std::string & j): i(i), j(j) {printf("Creating Thing\n");}
+	Thing(int i, const std::string & j): i(i), j(j) {}
 	Thing(const Thing &) = delete;
 	Thing& operator=(const Thing &) = delete;
 	Thing(Thing &&) = delete;
@@ -48,13 +36,29 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
 			v8::Local<v8::FunctionTemplate> created_by,
 			int i, const std::string & j) :
 			Thing(i, j),
-			JSWrapper(context, js_object, created_by) {
-		printf("Creating JSThing\n");
-	}
+			JSWrapper(context, js_object, created_by) {}
 
 	JS_ACCESS(std::string, get_string);
 	JS_ACCESS_CONST(std::string, get_string_const);
 };
+
+
+void create_thing_factory(const v8::FunctionCallbackInfo<v8::Value> & info) {
+	auto isolate = info.GetIsolate();
+
+	//	thing_factories.push_back(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
+
+	// Since the newly created type is not being named, we don't skip any parameters <0>.  If the javascript caller was going to
+	// provide a type/factory name as the first parameter, then it would be <1>
+	thing_factories.emplace_back(JSThingFactory::create_factory_from_javascript<0>(info));
+	info.GetReturnValue().Set(CastToJS<JSThingFactory*>()(isolate, thing_factories.back().get()));
+}
+
+
+void clear_thing_factories(){
+	thing_factories.clear();
+}
+
 
 
 void test_calling_bidirectional_from_javascript()

@@ -8,10 +8,9 @@
 #include "v8_class_wrapper.h"
 
 namespace v8toolkit {
-	
+
 class Isolate;
 class Script;
-
 
 
 
@@ -85,13 +84,13 @@ public:
     * Compiles the contents of the passed in string as javascripts
     * Throws v8toolkit::CompilationError on compilation error
     */
-	std::shared_ptr<Script> compile(const std::string & source);
+	std::shared_ptr<Script> compile(const std::string & source, const std::string & filename = "Unspecified");
     
 	/**
     * Compiles the contents of the passed in v8::String as javascript
     * Throws v8toolkit::CompilationError on compilation error
     */
-	std::shared_ptr<Script> compile(const v8::Local<v8::String> script);
+	std::shared_ptr<Script> compile(const v8::Local<v8::String> source, const std::string & filename = "Unspecified");
     
     /**
     * Loads the contents of the given file as javascript
@@ -297,15 +296,18 @@ class Script : public std::enable_shared_from_this<Script>
     friend class Context;
     
 private:
-    Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script) :
-        context_helper(context_helper),
-        isolate(*context_helper),
-        script(v8::Global<v8::Script>(isolate, script)) {}
+ Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin) :
+    context_helper(context_helper),
+	isolate(*context_helper),
+	script(v8::Global<v8::Script>(isolate, script)),
+	script_origin(std::move(script_origin))
+    {}
     
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
+    std::unique_ptr<v8::ScriptOrigin> script_origin;
     
 public:
     
@@ -474,7 +476,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
+	    ISOLATE_SCOPED_RUN(isolate);
+	    return callable();
 	}
 
 	/**
@@ -484,7 +487,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*)>::type
 	{
-		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
+	    ISOLATE_SCOPED_RUN(isolate);
+	    return callable(isolate);
 	}
 
 	/**

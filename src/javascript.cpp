@@ -43,28 +43,28 @@ std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
         throw V8CompilationException(*this, std::string("Could not load file: ") + filename);
     }
 
-    return compile(contents);
+    return compile(contents, filename);
 }
 
 
-std::shared_ptr<Script> Context::compile(const std::string & javascript_source)
+std::shared_ptr<Script> Context::compile(const std::string & javascript_source, const std::string & filename)
 {
-    return v8toolkit::scoped_run(isolate, context.Get(isolate), [&](){
+    GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
     
-        // printf("Compiling %s\n", javascript_source.c_str());
-        // This catches any errors thrown during script compilation
-        v8::TryCatch try_catch(isolate);
+    // printf("Compiling %s\n", javascript_source.c_str());
+    // This catches any errors thrown during script compilation
+    v8::TryCatch try_catch(isolate);
     
-        v8::Local<v8::String> source =
-            v8::String::NewFromUtf8(this->isolate, javascript_source.c_str());
-
-        // Compile the source code.
-        v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source);
-        if (compiled_script.IsEmpty()) {
-            throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
-        }
-        return std::shared_ptr<Script>(new Script(shared_from_this(), compiled_script.ToLocalChecked()));
-    });
+    v8::Local<v8::String> source =
+	v8::String::NewFromUtf8(this->isolate, javascript_source.c_str());
+    
+    // Compile the source code.
+    auto script_origin = std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate, filename.c_str()));
+    v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source,  script_origin.get());
+    if (compiled_script.IsEmpty()) {
+	throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
+    }
+    return std::shared_ptr<Script>(new Script(shared_from_this(), compiled_script.ToLocalChecked(), std::move(script_origin)));
 }
 
 
@@ -72,12 +72,18 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
 {
     GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 
-
     // This catches any errors thrown during script compilation
     v8::TryCatch try_catch(isolate);
     // auto local_script = this->get_local(script);
     auto local_script = v8::Local<v8::Script>::New(isolate, script);
     auto maybe_result = local_script->Run(context.Get(isolate));
+    if (try_catch.HasCaught()) {
+	printf("Context::run threw exception - about to print details:\n");
+	ReportException(isolate, &try_catch);
+    } else {
+	printf("Context::run ran without throwing exception\n");
+    }
+
     if(maybe_result.IsEmpty()) {
 
 
@@ -98,7 +104,6 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
         }
     }
     v8::Local<v8::Value> result = maybe_result.ToLocalChecked();
-
     return v8::Global<v8::Value>(isolate, result);
 }
 

@@ -120,8 +120,45 @@ public:
     virtual const char * what() const noexcept override {return reason.c_str();}
 };
 
+ 
+/**
+* General purpose exception for invalid uses of the v8toolkit API
+*/
+class InvalidCallException : public std::exception {
+private:
+    std::string message;
 
-    /**
+public:
+    InvalidCallException(const std::string & message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
+};
+
+/**
+ * Thrown when trying to register a function/method/member with the same name as
+ * something else already registered
+ */
+class DuplicateNameException : public std::exception {
+private:
+    std::string message;
+
+public:
+    DuplicateNameException(const std::string & message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
+};
+
+
+ class UndefinedPropertyException : public std::exception {
+ private:
+     std::string message;
+
+ public:
+ UndefinedPropertyException(const std::string & message) : message(message) {}
+     virtual const char * what() const noexcept override {return message.c_str();}
+     
+
+ };
+
+/**
 * prints out a ton of info about a v8::Value
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
@@ -250,6 +287,8 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
     Results operator()(std::map<Key, Value, AddParams...> container, Callable callable)
     {
         Results results;
+
+
         for (auto && element : container) {
             results.insert(callable(std::forward<decltype(element)>(element)));
         }
@@ -338,14 +377,11 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Tried to get value as %s\n", typeid(T).name());
+        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
         print_v8_value_details(value);
-        printf("Throwing exception\n");
-        throw "Bad Cast";
+	throw v8toolkit::CastException("Couldn't cast value to requested type");
     }
 }
-
-
 
 
 template<class T>
@@ -361,8 +397,9 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> ob
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
     auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-    if(get_maybe.IsEmpty()) {
-        throw "no such key";
+
+    if(get_maybe.IsEmpty() || get_maybe.ToLocalChecked()->IsUndefined()) {
+	throw UndefinedPropertyException(key);
     }
     return get_value_as<T>(get_maybe.ToLocalChecked());
 }
