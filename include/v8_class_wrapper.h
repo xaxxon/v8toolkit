@@ -539,6 +539,7 @@ public:
         
         
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
+		//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
         if (!this->is_finalized()) {    
             // printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object);
@@ -1141,7 +1142,7 @@ std::string type_details(){
 		}
 		auto object = v8::Object::Cast(*value);
 		if (object->InternalFieldCount() <= 0) {
-			throw CastException(fmt::format("No specialization CastToNative<{}> found and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
+			throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
 		}
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 

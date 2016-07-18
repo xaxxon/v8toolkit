@@ -236,6 +236,28 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
 };
 
 
+CAST_TO_NATIVE_WITH_CONST(std::map<Key V8TOOLKIT_COMMA Value V8TOOLKIT_COMMA Args...>, class Key V8TOOLKIT_COMMA class Value V8TOOLKIT_COMMA class... Args)
+
+//template<class Key, class Value, class... Args>
+//struct CastToNative<std::map<Key, Value, Args...>>
+{
+        using MapType = std::map<Key, Value, Args...>;
+//    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	if (!value->IsObject()) {
+	    throw CastException("Javascript Object type must be passed in to convert to std::map");
+	}
+
+	auto context = isolate->GetCurrentContext();
+
+	MapType results;
+	for_each_own_property(context, value->ToObject(), [isolate, &results](v8::Local<v8::Value> key, v8::Local<v8::Value> value){
+		results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
+				v8toolkit::CastToNative<Value>()(isolate, value));
+	    });
+	return results;
+}};
+
+
 //
 
 

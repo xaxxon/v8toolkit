@@ -111,6 +111,8 @@ public:
      */
     virtual Base * operator()(ConstructorArgs... constructor_args) const = 0;
 
+    Base * create(ConstructorArgs... constructor_args) const {return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);}
+
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
      */
