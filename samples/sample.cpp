@@ -36,7 +36,7 @@ public:
     ~Point(){instance_count--;}
     int x_, y_;
     int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
-    int overloaded_method(char * foo){return 0;}
+    int overloaded_method(char * const foo){return 0;}
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
     void void_func() {}
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
             //   at least not without some serious finagling of storing a mapping between a singlne name and
             //   multiple function templates as well as some sort of "closeness" function for determining
             //   which primitive type parameters most closely match the javascript values provided
-            wrapped_point.add_method<int, Point, char*>("overloaded_method1", &Point::overloaded_method);
+            wrapped_point.add_method<int, Point, char* const>("overloaded_method1", &Point::overloaded_method);
             wrapped_point.add_method<int, Point, int>("overloaded_method2", &Point::overloaded_method);
             wrapped_point.add_method("make_point", &Point::make_point);
 

@@ -45,6 +45,7 @@
 #define V8TOOLKIT_EXTEND_WRAPPER __attribute__((annotate(V8TOOLKIT_EXTEND_WRAPPER_STRING)))
 
 
+
 /**
  * Use this to create a JavaScript constructor function with the specified name
  */
@@ -52,6 +53,27 @@
 #define V8TOOLKIT_CONSTRUCTOR(name) \
     __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX #name)))
 
+
+
+/**
+ * For classes with multiple inheritance, allows you to specify type(s) not to use.
+ * Templates should be specified with only the base template name, not with template parameters
+ *   e.g. MyTemplatedType not MyTemplatedType<int, char*> - does not support
+ *        MI to select one where type inherits from two different versions of same template
+ */
+#define V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "v8toolkit_ignore_base_type_"
+#define V8TOOLKIT_IGNORE_BASE_TYPE(name) \
+    __attribute__((annotate(V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX #name)))
+
+/**
+ * For classes with multiple inheritance, allows you to specify which one to use
+ * Templates should be specified with only the base template name, not with template parameters
+ *   e.g. MyTemplatedType not MyTemplatedType<int, char*> - does not support
+ *        MI to select one where type inherits from two different specializations of same template
+ */
+#define V8TOOLKIT_USE_BASE_TYPE_PREFIX "v8toolkit_use_base_type_"
+#define V8TOOLKIT_USE_BASE_TYPE(name) \
+    __attribute__((annotate(V8TOOLKIT_USE_BASE_TYPE_PREFIX #name)))
 
 
 

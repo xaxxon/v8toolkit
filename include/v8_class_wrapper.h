@@ -23,7 +23,7 @@
 namespace v8toolkit {
 
 
-#define V8_CLASS_WRAPPER_DEBUG false
+#define V8_CLASS_WRAPPER_DEBUG true
 
 /**
 * Design Questions:
@@ -85,24 +85,53 @@ struct TypeCheckerBase {
       virtual T * check(AnyBase *) = 0;
 };
 
-template<class, class...>
+// type to convert to, typelist of all types to check, sfinae helper type
+template<class, class, class = void>
 struct TypeChecker;
 
 template<class T>
-struct TypeChecker<T> : public TypeCheckerBase<T>
+    struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
     T * check(AnyBase * any_base) {
 	return nullptr;
     }
 };
 
+
+template<class T, class Head, class... Tail>
+struct TypeChecker<T, TypeList<Head, Tail...>,
+    // if the type we want isn't const but the type being checked is, it cannot be a match
+    std::enable_if_t<!std::is_const<T>::value && std::is_const<Head>::value>> : public TypeChecker<T, TypeList<Tail...>> {
+
+    using SUPER = TypeChecker<T, TypeList<Tail...>>;
+    T * check(AnyBase * any_base) {
+	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+
+        if(dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
+	    std::cerr << "ERROR:::: But if I would have checked, it wuld have been a match!!!!!!" << std::endl;
+	    assert(false);
+        }
+	
+	return SUPER::check(any_base);
+    }
+};
+
+ 
 // tests an AnyBase * against a list of types compatible with T
 //   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
-struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
-    using SUPER = TypeChecker<T, Tail...>;
+    struct TypeChecker<T, TypeList<Head, Tail...>,
+
+    // if it's *not* the condition of the specialization above
+    std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
+    > : public TypeChecker<T, TypeList<Tail...>> {
+    using SUPER = TypeChecker<T, TypeList<Tail...>>;
     T * check(AnyBase * any_base) {
         AnyPtr<Head> * any = nullptr;
+	std::cerr << fmt::format("In Type Checker<{}> seeing if it is a {}", demangle<T>(), demangle<Head>()) << std::endl;
+#ifdef ANYBASE_DEBUG
+	std::cerr << fmt::format("anybase debug type: {}", any_base->type_name) << std::endl;
+#endif
         if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
             return static_cast<T*>(any->get());
         } else {
@@ -110,6 +139,8 @@ struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
         }
     }
 };
+
+ 
 
 
 /**
@@ -124,8 +155,14 @@ struct TypeChecker<T, Head, Tail...> : public TypeChecker<T, Tail...> {
 *
 *
 */
+template<class T, class = void> class V8ClassWrapper;
+
+
+#define V8CLASSWRAPPER_SFINAE std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>
+ 
+// Cannot make class wrappers for pointer or reference types
 template<class T>
-class V8ClassWrapper
+class V8ClassWrapper<T, V8CLASSWRAPPER_SFINAE>
 {
 private:
 
@@ -272,7 +309,7 @@ private:
 	v8::Isolate * isolate;
 
     // Stores a functor capable of converting compatible types into a <T> object
-    std::unique_ptr<TypeCheckerBase<T>> type_checker;
+	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<T, std::remove_const_t<T>>>>();
         
 	/**
 	* Stores a function template with any methods from the parent already in place.
@@ -311,7 +348,7 @@ public:
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
 	{
 //        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
-        auto any = new AnyPtr<T>(cpp_object);
+	    auto any = new AnyPtr<T>(cpp_object, typeid(T).name());
 //        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
@@ -390,7 +427,7 @@ public:
 	 */
     T * cast(AnyBase * any_base)
     {
-        if (V8_CLASS_WRAPPER_DEBUG) printf("In ClassWrapper::cast for type %s\n", typeid(T).name());
+        if (V8_CLASS_WRAPPER_DEBUG) printf("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
         if(type_checker != nullptr) {
             if (V8_CLASS_WRAPPER_DEBUG) printf("Explicit compatible types set, using that\n");
             return type_checker->check(any_base);
@@ -399,8 +436,8 @@ public:
             return static_cast<AnyPtr<T>*>(any_base)->get();
         }
         // if it's already not const, it's ok to run it again
-        else if (dynamic_cast<AnyPtr<typename std::remove_const<T>::type>*>(any_base)) {
-            return static_cast<AnyPtr<typename std::remove_const<T>::type>*>(any_base)->get();
+        else if (dynamic_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)) {
+            return static_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)->get();
         }
         if (V8_CLASS_WRAPPER_DEBUG) printf("Cast was sad :( returning nullptr\n");
         return nullptr;
@@ -466,7 +503,9 @@ public:
     set_compatible_types()
     {
         assert(!is_finalized());
-        type_checker.reset(new TypeChecker<T, T, typename std::remove_const<T>::type, CompatibleTypes...>());
+	// Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
+	type_checker.reset(new TypeChecker<T, TypeList<T, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>);
+
         return *this;
     }
 	
@@ -482,6 +521,11 @@ public:
     set_parent_type()
     {
         assert(!is_finalized());
+	if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
+	    printf("Tried to set parent type of %s to unfinalized %s\n",
+		   demangle<T>().c_str(), demangle<ParentType>().c_str());
+		   
+	}
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
 		ISOLATE_SCOPED_RUN(isolate);
 		global_parent_function_template =
@@ -510,18 +554,19 @@ public:
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
 	{				
-        assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
-        
-		// create a function template even if no javascript constructor will be used so 
-		//   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
-		//   later the FunctionTemplate will be ready to go
-        auto constructor_template = make_function_template(V8ClassWrapper<T>::v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>, v8::Local<v8::Value>());
-
-
-		// Add the constructor function to the parent object template (often the global template)
-		parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
-
-		return *this;
+	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
+	    
+	    // create a function template even if no javascript constructor will be used so 
+	    //   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
+	    //   later the FunctionTemplate will be ready to go
+	    auto constructor_template =
+		make_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
+				       v8::Local<v8::Value>());
+	    
+	    // Add the constructor function to the parent object template (often the global template)
+	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
+	    
+	    return *this;
 	}
 
 
@@ -784,7 +829,7 @@ public:
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
 	{
 		return _add_method(method_name, method);
-    }
+	}
 
 
 	/**
@@ -979,9 +1024,9 @@ public:
                 return;
     		});
 
-			// create a function template, set the lambda created above to be the handler
+		// create a function template, set the lambda created above to be the handler
     		auto function_template = v8::FunctionTemplate::New(this->isolate);
-            function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, method_caller));
+		function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, method_caller));
 		
             // methods are put into the protype of the newly created javascript object
     		prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
@@ -994,7 +1039,7 @@ public:
 * Stores the "singleton" per isolate
 */
 template <class T> 
-std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T>::isolate_to_wrapper_map;
+    std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8CLASSWRAPPER_SFINAE>::isolate_to_wrapper_map;
 
 template<class T>
 class JSWrapper;
@@ -1065,7 +1110,14 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
 	}
-};
+ };
+
+ template<typename T>
+     struct CastToJS<T* const> {
+     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
+	 return CastToJS<T*>()(isolate, cpp_object);
+     }
+ };
 
 
 
@@ -1127,13 +1179,16 @@ std::string type_details(){
 //};
 
 
-
-
+// specialization for pointers and reference types
+ template<class T, std::enable_if_t<std::is_pointer<T>::value || std::is_reference<T>::value, int> = 0>
+	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+     throw CastException(fmt::format("Pointer and reference types ({}) won't ever succeed in getting an embedded cpp object", demangle<T>()));
+ }
 
 /**
  * This can be used from CastToNative<UserType> calls to fall back to if other conversions aren't appropriate
  */
-	template<class T>
+ template<class T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value, int> = 0>
 	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
 		if(!value->IsObject()){
@@ -1142,6 +1197,7 @@ std::string type_details(){
 		}
 		auto object = v8::Object::Cast(*value);
 		if (object->InternalFieldCount() <= 0) {
+		    assert(false);
 			throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
 		}
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
@@ -1149,6 +1205,7 @@ std::string type_details(){
 		// I don't know any way to determine if a type is
 		auto any_base = (v8toolkit::AnyBase *)wrap->Value();
 		T * t = nullptr;
+		std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
 //			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
 			throw CastException(fmt::format("Cannot convert {} to {} {}",

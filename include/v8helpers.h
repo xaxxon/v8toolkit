@@ -31,10 +31,16 @@ namespace v8toolkit {
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
  */
-std::string demangle_typeid_name(const std::string & manged_name);
+std::string demangle_typeid_name(const std::string & mangled_name);
 
 template<class T>
-std::string demangle(){return demangle_typeid_name(typeid(T).name());}
+std::string demangle(){
+    auto demangled_name =  demangle_typeid_name(typeid(T).name());
+    std::string constness = std::is_const<T>::value ? "const " : "";
+    std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+
+    return constness + volatility + demangled_name;
+ }
 
 
 
@@ -326,15 +332,35 @@ auto reducer(const Container & container, Callable callable) ->
 *   a AnyBase* on the other side and then dynamic_cast to any child types to 
 *   determine the type of the object actually stored.
 */
-struct AnyBase
+
+// if this is defined, AnyBase will store the actual typename but this is only needed for debugging
+#define ANYBASE_DEBUG
+
+
+ struct AnyBase
 {
     virtual ~AnyBase();
+#ifdef ANYBASE_DEBUG
+    std::string type_name;
+#endif
+    AnyBase(char const *
+#ifdef ANYBASE_DEBUG
+	     type_name
+#endif
+	    )
+#ifdef ANYBASE_DEBUG
+    : type_name(type_name)
+#endif
+    {}
 };
 
+ template<class T, class = void>
+ struct AnyPtr;
 
-template<class T>
-struct AnyPtr : public AnyBase {
-    AnyPtr(T * data) : data(data) {}
+
+ template<class T>
+     struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
+ AnyPtr(T * data, char const * type_name) : AnyBase(type_name), data(data) {}
     virtual ~AnyPtr(){}
     T* data;
     T * get() {return data;}
@@ -346,7 +372,7 @@ struct AnyPtr : public AnyBase {
 */
 template<class T>
 struct Any : public AnyBase {
-    Any(T data) : data(data) {}
+ Any(T data, char const * type_name) : AnyBase(type_name), data(data) {}
     virtual ~Any(){}
     T data;
     T get() {return data;}

@@ -590,7 +590,7 @@ when it's known best what the right thing to do
 OK TO START READING AGAIN
 
 
-For full example use that's guaranteed to be up to date, please see sample.cpp, toolbox_sample.cpp, and javascript_sample.cpp.  Also see threaded_smaple.cpp for examples of how to do multithreaded calls.
+For more examples, look at the files in the `samples` subdirectory.  
 
 
 # Behaviors:
@@ -598,4 +598,27 @@ If a wrapped class type r-value is returned from a function, a default copy will
 Subsequent calls to that function will return different javascript objects backed by different c++ objects.
 
 If a wrapped class type reference or pointer value is returned from a function, the first time it will create a new javascript object for the object.   Subsequent calls will return the same javascript object (not different javascript objects wrapping the same c++ object).   This means you can customize the object in javascript outside of the c++ interactions and get it again later.
+
+
+
+
+
+# Bidirectional.h
+
+(The following 'documentation' is highly incomplete - look at bidirectional_sample.cpp for a concrete example)
+
+This is a set of classes for allowing the creation of "subclasses" in javascript and being being able to use them from either C++ or Javascript.
+
+In javascript, you can create a factory for creating new objects that override C++ virtual methods which are called when the object is used
+from either C++ or JavaScript.  In C++, you will want to write a "factory creator" function to expose to javascript that takes a prototype and callback
+function, potentially along with some sort of identifier.
+
+Of course these are not full C++ types, as they are not known to C++ at compile-time, so the terms "type" and "subclass" below refer to bidirectional
+types and subclasses, not pure C++ types and subclasses.
+
+To create a subclass, you create a new JSFactory object with a prototype and a callback for adding attributes to individual objects.   For examples
+see samples/bidirectional_sample.cpp.
+
+In many ways, the Factory type can be thought of as the "type" of these objects and additional functionaity can be put on these by injecting a custom factory
+type into the middle of the chain using the `ParentType` template parameter to insert your type which inherits from the bidirectional factory type.
 

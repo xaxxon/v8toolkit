@@ -18,8 +18,18 @@
 template<class T>
 class V8ClassWrapper;
 
+// This puts the annotation on each instantiated type of the template, not the template itself
+template<class T>
+class V8TOOLKIT_WRAPPED_CLASS
+MyTemplate {};
+
+template<class T>
+class V8TOOLKIT_WRAPPED_CLASS DerivedFromMyTemplate : public MyTemplate<T> {};
+
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
-Foo : public FooParent {
+//V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
+V8TOOLKIT_USE_BASE_TYPE(FooParent)
+Foo : public FooParent, public MyTemplate<int> {
 
 //    struct NestedFooStruct{};
 //
@@ -29,6 +39,16 @@ public:
     using Using=int;
     using Using2 = Using;
     V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short);
+
+    MyTemplate<int> my_template_int;
+    MyTemplate<char> my_template_char;
+
+    DerivedFromMyTemplate<short> derived_my_template_short;
+    DerivedFromMyTemplate<char*> derived_my_template_charp;
+
+    template<class T2>
+	const T2& templated_function(const T2 & t){return t;};
+    
 //    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(V8TOOLKIT_BIDIREC TIONAL_INTERNAL_PARAMETER short, int*);
 //    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
 //    V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int);
@@ -60,6 +80,9 @@ public:
     V8TOOLKIT_EXTEND_WRAPPER static void wrapper_extension(V8ClassWrapper<Foo> &);
 };
 
+
+
+
 //
 //class Foo;
 //
@@ -87,4 +110,11 @@ public:
 //struct SPECIAL Baz { };
 //
 
-int main() {}
+int main() {
+    Foo f(5,5,5);
+    f.templated_function(5);
+    f.templated_function<short>(5);
+    f.templated_function<long>(5);
+        f.templated_function<unsigned int>(5);
+	    
+}
