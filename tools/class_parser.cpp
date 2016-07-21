@@ -41,6 +41,9 @@ using namespace std;
 // if this is defined, only template info will be printed
 //#define TEMPLATE_INFO_ONLY
 
+// Generate an additional file with sfinae for each wrapped class type
+bool generate_v8classwrapper_sfinae = true;
+
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
@@ -50,7 +53,7 @@ using namespace std;
 vector<string> base_types_to_ignore = {"Subscriber"};
 
 
-vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"",  "<v8toolkit/bidirectional.h>"};
+vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\""};
 
 // sometimes files sneak in that just shouldn't be
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
@@ -275,16 +278,16 @@ namespace {
         SourceManager & source_manager;
 	string my_include; // the include for getting my type
 
-	std::string get_short_name() {
+	std::string get_short_name() const {
 	    return decl->getNameAsString();
 	}
 
 
-	std::string make_sfinae_to_match_wrapped_class() {
-	    return fmt::format("std::is_same<{}>::value", class_name)
+	std::string make_sfinae_to_match_wrapped_class() const {
+	    return fmt::format("std::is_same<T, {}>::value", class_name);
 	}
 	
-        bool ready_for_wrapping(set<WrappedClass *> wrapped_classes) {
+        bool ready_for_wrapping(set<WrappedClass *> wrapped_classes) const {
 
             // don't double wrap yourself
             if (find(wrapped_classes.begin(), wrapped_classes.end(), this) != wrapped_classes.end()) {
@@ -397,12 +400,17 @@ namespace {
 
 
 
-    string get_sfinae_matching_wrapped_classes() {
+    string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>> & wrapped_classes) {
 	vector<string> sfinaes;
+	string forward_declarations = "#define V8TOOLKIT_V8CLASSWRAPPER_FORWARD_DECLARATIONS ";
 	for (auto & wrapped_class : wrapped_classes) {
-	    sfinaes.emplace_back(wrapped_class.make_sfinae_to_match_wrapped_class);
+	    sfinaes.emplace_back(wrapped_class->make_sfinae_to_match_wrapped_class());
+	    forward_declarations += wrapped_class->class_name + "; ";
 	}
-	return join(sfinaes);
+	auto sfinae = string("#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE ") + join(sfinaes, " || ") + "\n";
+	forward_declarations += "\n";
+	return sfinae + "\n" + forward_declarations;
+
     }
     
 
@@ -1696,8 +1704,10 @@ namespace {
 	    Matcher.addMatcher(cxxRecordDecl(allOf(
                     anyOf(isStruct(), isClass()),
 		    allOf(
-			  hasAttr(attr::Annotate), // can't check the actual annotation value here
-			  isDefinition() // skip forward declaration
+                    // using inheritance instead of annotations now
+			  //hasAttr(attr::Annotate), // can't check the actual annotation value here
+			  isDefinition(), // skip forward declaration
+                    isDerivedFrom("::v8toolkit::WrappedClassBase")
 			  )
                     )
 
@@ -1831,6 +1841,19 @@ namespace {
 		llvm::report_fatal_error(fmt::format("Could not wrap all classes - wrapped {} out of {}",
 					 already_wrapped_classes.size(), wrapped_classes.size()), false);
             }
+
+	    if (generate_v8classwrapper_sfinae) {
+		string sfinae_filename = fmt::format("v8toolkit_generated_v8classwrapper_sfinae.h", file_count);
+		ofstream sfinae_file;
+		
+		sfinae_file.open(sfinae_filename, ios::out);
+		if (!sfinae_file) {
+		    llvm::report_fatal_error(fmt::format( "Couldn't open {}", sfinae_filename).c_str());
+		}
+
+		sfinae_file << get_sfinae_matching_wrapped_classes(wrapped_classes) << std::endl;
+		sfinae_file.close();
+	    }
 
             if (print_logging) cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
 

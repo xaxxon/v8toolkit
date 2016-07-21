@@ -144,13 +144,18 @@ template<class T, class Head, class... Tail>
  // Cannot make class wrappers for pointer or reference types
 #define V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE !std::is_pointer<T>::value && !std::is_reference<T>::value
 
+/**
+ * Allows user to specify a list of types to instantiate real V8ClassWrapper template for -- CastToNative/CastToJS will otherwise
+ *   try to instantiate it for a very large number of types which can drastically slow down compilation.
+ * Setting an explicit value for this is NOT required - it is just a compile-time, compile-RAM (and maybe binary size) optimizatioan
+ */
 #ifndef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
  class UnusedType;
-#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE std::is_same<UnusedType, T>::value
+#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<UnusedType, T>::value
 #endif
 
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && (V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE)>
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && !(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE)>
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE)>
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE)>
 
  
 /**
@@ -167,19 +172,13 @@ template<class T, class Head, class... Tail>
       T * cast(AnyBase * any_base){throw std::exception();}
 
 
- 	template<class R, class TBase, class... Args>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
+      template <class Callable>
+	V8ClassWrapper<T> & add_method(const std::string & method_name, Callable) {
 	    throw std::exception();
 	}
 
-    	template<class R, class TBase, class... Args>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
-	{
-	    throw std::exception();
-	}
-
- template<class R, class... Args>
-	void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
+      template <class Method>
+	void add_method(const std::string & method_name, Method method) {
 	throw std::exception();
 	}
  
@@ -192,7 +191,7 @@ template<class T, class Head, class... Tail>
 
  void finalize(){throw std::exception();}
 
-     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
+     template<class MEMBER_TYPE, class MemberClass>
 	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
  {throw std::exception();}
 
@@ -204,18 +203,19 @@ template<class T, class Head, class... Tail>
     std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
  set_parent_type(){throw std::exception();}
  
- template<class R, class... Params>
- V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {throw std::exception();}
+ template<class Callable>
+ V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable) {throw std::exception();}
 
  V8ClassWrapper<T> & set_class_name(const std::string & name){throw std::exception();}
 
-     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
+     template<class MEMBER_TYPE, class MemberClass>
  V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member){throw std::exception();}
 
  v8::Local<v8::FunctionTemplate> get_function_template(){throw std::exception();}
 
  template<class DestructorBehavior>
  static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object){throw std::exception();}
+
 
 };
 
@@ -404,9 +404,6 @@ private:
 
 public:
 
-	/**
-	 * This is probably not useful since it doesn't have object information
-	 */
 	void register_callback(AttributeChangeCallback callback) {
 		attribute_callbacks.push_back(callback);
 	}
