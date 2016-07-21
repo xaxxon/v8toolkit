@@ -39,7 +39,7 @@ using namespace std;
 //////////////////////////////
 
 // if this is defined, only template info will be printed
-#define TEMPLATE_INFO_ONLY
+//#define TEMPLATE_INFO_ONLY
 
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
@@ -278,6 +278,11 @@ namespace {
 	std::string get_short_name() {
 	    return decl->getNameAsString();
 	}
+
+
+	std::string make_sfinae_to_match_wrapped_class() {
+	    return fmt::format("std::is_same<{}>::value", class_name)
+	}
 	
         bool ready_for_wrapping(set<WrappedClass *> wrapped_classes) {
 
@@ -391,6 +396,15 @@ namespace {
     };
 
 
+
+    string get_sfinae_matching_wrapped_classes() {
+	vector<string> sfinaes;
+	for (auto & wrapped_class : wrapped_classes) {
+	    sfinaes.emplace_back(wrapped_class.make_sfinae_to_match_wrapped_class);
+	}
+	return join(sfinaes);
+    }
+    
 
     // returns a vector of all the annotations on a Decl
     std::vector<std::string> get_annotations(const Decl * decl) {
@@ -1739,7 +1753,9 @@ namespace {
 		    });
 		int skipped = 0;
 		int skip_threshold = 10;
+		int total = 0;
 		for (auto & pair : insts) {
+		    total += pair.second;
 		    if (pair.second < skip_threshold) {
 		    skipped++;
 		    continue;
@@ -1748,6 +1764,7 @@ namespace {
 		}
 		
 		cerr << "Skipped " << skipped << " entries because they had fewer than " << skip_threshold << " instantiations" << endl;
+		cerr << "Total of " << total << " instantiations" << endl;
 	    }
 
             if (already_called) {

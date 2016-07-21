@@ -194,7 +194,11 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
-            wrapped_line.add_method("fake_method", [](Line * line){printf("HI");return line->echo("line echo called from fake_method").c_str();});
+            wrapped_line.add_method("fake_method", [](Line * line){
+                printf("HI");
+                return line->echo("line echo called from fake_method");
+            });
+
             wrapped_line.add_method("takes_function", &Line::takes_function);
             wrapped_line.add_method("takes_const_ref_fundamental", &Line::takes_const_ref_fundamental);
             wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
