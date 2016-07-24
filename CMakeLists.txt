@@ -46,6 +46,9 @@ if (WIN32)
 
 
 else()
+
+    set(CXX_COMPILER_FLAGS ${CXX_COMPILER_FLAGS} -Wshadow)
+
     set(V8_BASE_STATIC_LIB_DIR_DEFAULT ../v8/out/native)
     set(V8_BASE_SHARED_LIB_DIR_DEFAULT ../v8/out/native)
     set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)

@@ -15,16 +15,31 @@
 //    using Callback = std::function<int(char)>;
 //};
 
-template<class T>
-class V8ClassWrapper;
 
 // This puts the annotation on each instantiated type of the template, not the template itself
-template<class T>
-class V8TOOLKIT_WRAPPED_CLASS
-MyTemplate {};
 
-template<class T>
-class V8TOOLKIT_WRAPPED_CLASS DerivedFromMyTemplate : public MyTemplate<T> {};
+// Doesn't match because it inherits from JSWrapper -- don't want re-wrap existing bidirectional types
+class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
+
+
+class WrappedClass : public v8toolkit::WrappedClassBase {};
+
+class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;
+class DoNotWrapEvenThoughInheritsFromWrapped : public WrappedClass {};
+
+
+
+
+
+template<class T> class V8TOOLKIT_WRAPPED_CLASS MyTemplate {};
+
+
+template<class T> class  DerivedFromWrappedClassBase : public MyTemplate<int>, public v8toolkit::WrappedClassBase {
+public:
+    void function_in_templated_class(T t){
+
+    }
+};
 
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
@@ -38,14 +53,16 @@ Foo : public FooParent, public MyTemplate<int> {
 public:
     using Using=int;
     using Using2 = Using;
-    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short);
+    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short &&);
 
     MyTemplate<int> my_template_int;
     MyTemplate<char> my_template_char;
 
-    DerivedFromMyTemplate<short> derived_my_template_short;
-    DerivedFromMyTemplate<char*> derived_my_template_charp;
+    DerivedFromWrappedClassBase<short> derived_my_template_short;
+    DerivedFromWrappedClassBase<char*> derived_my_template_charp;
 
+    
+    
     template<class T2>
 	const T2& templated_function(const T2 & t){return t;};
     
@@ -77,7 +94,7 @@ public:
 //
 //    TemplatedClass<HelperClass, 5> test_method_with_templated_types(const TemplatedClass<const Using2*&, 8828>****&);
 
-    V8TOOLKIT_EXTEND_WRAPPER static void wrapper_extension(V8ClassWrapper<Foo> &);
+    V8TOOLKIT_EXTEND_WRAPPER static void wrapper_extension(v8toolkit::V8ClassWrapper<Foo> &);
 };
 
 
@@ -112,9 +129,13 @@ public:
 
 int main() {
     Foo f(5,5,5);
+
     f.templated_function(5);
     f.templated_function<short>(5);
     f.templated_function<long>(5);
         f.templated_function<unsigned int>(5);
-	    
+	DerivedFromWrappedClassBase<int> dfwcb;
+	dfwcb.function_in_templated_class(5);
+
+    //    DerivedFromWrappedClassBase<char>;
 }

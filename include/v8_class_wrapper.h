@@ -141,9 +141,16 @@ template<class T, class Head, class... Tail>
 };
 
 
+// Inheriting from this gives hints to the system that you are a wrapped type
+//   However, it is not required, just simpler.
+class WrappedClassBase {};
+
+
+
  // Cannot make class wrappers for pointer or reference types
 #define V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE !std::is_pointer<T>::value && !std::is_reference<T>::value
 
+#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX std::is_base_of<WrappedClassBase, T>::value
 /**
  * Allows user to specify a list of types to instantiate real V8ClassWrapper template for -- CastToNative/CastToJS will otherwise
  *   try to instantiate it for a very large number of types which can drastically slow down compilation.
@@ -154,9 +161,29 @@ template<class T, class Head, class... Tail>
 #define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<UnusedType, T>::value
 #endif
 
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE)>
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE)>
 
+ // uncomment this to see the effects of generating the wrapper class on compile time (but won't actually run correctly)
+ //#define TEST_NO_REAL_WRAPPERS
+ 
+
+ #ifdef TEST_NO_REAL_WRAPPERS
+ class UnusedType;
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<std::is_same<T, UnusedType>::value>
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<!std::is_same<T, UnusedType>::value>
+
+ #else
+// Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \  
+    (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+
+// otherwise use the 'cheap' specialization
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
+    !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+#endif
+
+
+
+	
  
 /**
  * The real template is quite expensive to make for types that don't need it, so here's an alternative for when it isn't actually going to be used
@@ -172,18 +199,32 @@ template<class T, class Head, class... Tail>
       T * cast(AnyBase * any_base){throw std::exception();}
 
 
-      template <class Callable>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, Callable) {
+      	template<class R, class TBase, class... Args,
+			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
 	    throw std::exception();
 	}
 
-      template <class Method>
-	void add_method(const std::string & method_name, Method method) {
-	throw std::exception();
+	template<class R, class TBase, class... Args,
+	    std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+	    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...)) {
+	    throw std::exception();
 	}
- 
+	template<class R, class... Args>
+	    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
+	    throw std::exception();
+	}
+
+
+	/**
+	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
+	 */
 	template<class Callback>
- V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {throw std::exception();}
+	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
+	    throw std::exception();
+	}
+
+		    
 
  	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
  v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
@@ -203,9 +244,19 @@ template<class T, class Head, class... Tail>
     std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
  set_parent_type(){throw std::exception();}
  
- template<class Callable>
- V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable) {throw std::exception();}
+     
+     template<class R, class... Params>
+	 V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
+	 throw std::exception();
+     }
 
+     template<class Callable>
+	 V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
+	 throw std::exception();
+     }
+
+
+     
  V8ClassWrapper<T> & set_class_name(const std::string & name){throw std::exception();}
 
      template<class MEMBER_TYPE, class MemberClass>
@@ -237,6 +288,7 @@ class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 
 {
 private:
+
 
 	/**
 	 * Wrapped classes are per-isolate, so this tracks each wrapped class/isolate tuple for later retrieval

@@ -23,6 +23,17 @@
 using namespace std;
 #include "class_parser.h"
 
+// simulate classes actually in v8_class_wrapper.h
+namespace v8toolkit {
+    template<class T>
+    class V8ClassWrapper;
+    class WrappedClassBase{};
+
+    template<class T>
+	class JSWrapper{};
+}
+
+
 class Uninteresting{};
 
 class OnlyUsedInTemplate{};
@@ -43,4 +54,5 @@ public:
 //    char fooparent_char();
 //    int fp_i;
 };
+
 

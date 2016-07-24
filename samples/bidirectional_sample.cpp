@@ -11,7 +11,7 @@ using namespace v8toolkit;
 class Thing;
 class JSThing;
 
-using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
+using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>, v8toolkit::Factory, v8toolkit::EmptyFactoryBase>;
 
 static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 

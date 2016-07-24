@@ -31,6 +31,11 @@ public:
     virtual const char *what() const noexcept { return reason.c_str(); }
 };
 
+
+// Inheriting from this gives hints to the system that you are a bidirectional type
+class BidirectionalBase;
+
+
 /**
 * C++ types to be extended in javascript must inherit from this class.
 * Example: class MyClass{};  class JSMyClass : public MyClass, public JSWrapper {};
@@ -93,17 +98,24 @@ struct CastToJS<JSWrapper<T>> {
 
 namespace v8toolkit {
 
+    /** 
+     * Class for Factory to inherit from when no other parent is specified
+     * Must be empty
+     */
+ class EmptyFactoryBase {};
+
+    
 /**
 * Base class for a Factory that creates a bidirectional "type" by name.  The object
 *   returned can be used as a class T regardless of whether it is a pure C++ type 
 *   or if it has been extended in javascript
 */
-template<class Base, class TypeList = TypeList<>>
+    template<class Base, class TypeList = TypeList<>, class ParentType = EmptyFactoryBase>
 class Factory;
 
 
-template<class Base, class... ConstructorArgs>
-class Factory<Base, TypeList<ConstructorArgs...>> {
+ template<class Base, class... ConstructorArgs, class ParentType>
+     class Factory<Base, TypeList<ConstructorArgs...>, ParentType> : public ParentType {
 public:
 
     /**
@@ -144,11 +156,17 @@ public:
 *   must match with the Factory it is associated with.  You can have it inherit from a type that inherits from v8toolkit::Factory
 *   but v8toolkit::Factory must be in the inheritance chain somewhere
 */
- template<class Base, class Child, class ExternalTypeList = TypeList<>, template<class, class...> class ParentType = Factory>
-class CppFactory;
+    template<
+	class Base,
+	class Child,
+	class ExternalTypeList = TypeList<>,
+	template<class, class...> class ParentType = Factory,
+	class FactoryBase = EmptyFactoryBase>
+    class CppFactory;
 
- template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType>
-     class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType> : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
+    template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase>
+	class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase> :
+    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
 public:
     virtual Base * operator()(ExternalConstructorParams... constructor_args) const override
     {
@@ -172,18 +190,46 @@ public:
 *
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
-template<class Base, class JSWrapperClass, class Internal = TypeList<>, class External = TypeList<>, template<class, class...> class ParentType = Factory, class = void>
+    template<
+	class Base,
+	class JSWrapperClass,
+
+	class Internal = TypeList<>,
+	class External = TypeList<>,
+
+	template<class, class...> class ParentType = Factory,
+	class FactoryBase = EmptyFactoryBase,
+
+	class = void>
 class JSFactory;
 
 
-template<class Base, class JSWrapperClass, class... InternalConstructorParams, class... ExternalConstructorParams, template<class, class...> class ParentType>
-class JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType,
+    // Begin real specialization
+    template<
+	class Base,
+	class JSWrapperClass,
+
+	class... InternalConstructorParams,
+	class... ExternalConstructorParams,
+
+	template<class, class...> class ParentType,
+	class FactoryBase>
+    class JSFactory<
+	Base,
+	JSWrapperClass,
+
+	TypeList<InternalConstructorParams...>,
+	TypeList<ExternalConstructorParams...>,
+
+	ParentType,
+	FactoryBase,
 
      // Verify Factory<...> is in the hierarchy somewhere (either immediate parent or any ancestor)
-     std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>>, ParentType<Base, TypeList<ExternalConstructorParams...>>>::value>>
-     : public ParentType<Base, TypeList<ExternalConstructorParams...>> {
+	std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>, FactoryBase>, ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>>::value>>
+	
+	: public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> { // Begin JSFactory class
 
-    using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, void>;
+	using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase>;
     
     
 protected:
@@ -315,8 +361,7 @@ public:
     
     
     static void wrap_factory(v8::Isolate * isolate) {
-        using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, void>;
-        V8ClassWrapper<FactoryType> & wrapper = V8ClassWrapper<FactoryType>::get_instance(isolate);
+	V8ClassWrapper<FactoryType> & wrapper = V8ClassWrapper<FactoryType>::get_instance(isolate);
         wrapper.add_method("create", &FactoryType::operator());
         wrapper.finalize();
     }

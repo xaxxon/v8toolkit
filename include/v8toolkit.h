@@ -296,6 +296,10 @@ struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::valu
 };
 
 
+
+/**
+ * If CastToNative returns a reference
+ */
 template<class T>
 struct ParameterBuilder<T,
         std::enable_if_t<std::is_reference<std::result_of_t<
