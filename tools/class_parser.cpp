@@ -39,8 +39,8 @@ using namespace std;
 //////////////////////////////
 
 // if this is defined, only template info will be printed
-#define TEMPLATE_INFO_ONLY
-#define TEMPLATE_FILTER_STD
+//#define TEMPLATE_INFO_ONLY
+//#define TEMPLATE_FILTER_STD
 
 #define TEMPLATED_CLASS_PRINT_THRESHOLD 10
 #define TEMPLATED_FUNCTION_PRINT_THRESHOLD 100
@@ -52,7 +52,7 @@ bool generate_v8classwrapper_sfinae = true;
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 100
+#define MAX_DECLARATIONS_PER_FILE 20
 
 // Any base types you want to always ignore -- v8toolkit::WrappedClassBase must remain, others may be added/changed
 vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "class Subscriber"};
@@ -1961,6 +1961,7 @@ namespace {
 		bool print_logging = false;
 		
 		if (std::regex_search(class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
+		//		if (std::regex_search(class_name, std::regex("remove_reference"))) {
 		    print_logging = true;
 		    cerr << fmt::format("Got class {}", class_name) << endl;
 		}
@@ -2195,7 +2196,8 @@ namespace {
             // Write class wrapper data to a file
             int file_count = 1;
 
-            int declaration_count_this_file = 0;
+	    // start at one so they are never considered "empty"
+            int declaration_count_this_file = 1;
             vector<WrappedClass*> classes_for_this_file;
 
             set<WrappedClass *> already_wrapped_classes;

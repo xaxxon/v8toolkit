@@ -105,12 +105,15 @@ struct TypeChecker<T, TypeList<Head, Tail...>,
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
     T * check(AnyBase * any_base) {
+
+#ifdef ANYBASE_DEBUG
 	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
 
         if(dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
 	    std::cerr << "ERROR:::: But if I would have checked, it wuld have been a match!!!!!!" << std::endl;
 	    assert(false);
         }
+#endif
 	
 	return SUPER::check(any_base);
     }
@@ -173,7 +176,7 @@ class WrappedClassBase {};
 
  #else
 // Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \  
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
     (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
 
 // otherwise use the 'cheap' specialization
@@ -730,7 +733,6 @@ public:
 		
 			if (V8_CLASS_WRAPPER_DEBUG) printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
 		
-			// TODO: Remove these?
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
@@ -1009,7 +1011,8 @@ public:
 		// Object template that will be passed in later when the list is traversed
 		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
 
-			auto copy = new std::function<R(Head, Tail...)>(method);
+			using CopyFunctionType = std::function<R(Head, Tail...)>;
+			CopyFunctionType * copy = new std::function<R(Head, Tail...)>(method);
 
 
 			// This is the actual code associated with "method_name" and called when javascript calls the method
@@ -1044,7 +1047,7 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-					CallCallable<std::remove_reference_t<decltype(*copy)>, Head>()(*copy, info, cpp_object);
+					CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
