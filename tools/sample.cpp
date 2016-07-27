@@ -19,21 +19,47 @@
 // This puts the annotation on each instantiated type of the template, not the template itself
 
 // Doesn't match because it inherits from JSWrapper -- don't want re-wrap existing bidirectional types
+
+#if 0
 class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
-
-
 class WrappedClass : public v8toolkit::WrappedClassBase {};
-
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;
 class DoNotWrapEvenThoughInheritsFromWrapped : public WrappedClass {};
 
 
+//template<class> class V8TOOLKIT_WRAPPED_CLASS MyTemplate;
+namespace Test {
+template<class T=char> class MyTemplate<vector<T>> {};
+}
+
+#endif
+
+using asdf = int;
+
+namespace v8toolkit {
+
+    template<
+	class Base,
+	class Child,
+	class ExternalTypeList = TypeList<>,
+	template<class, class...> class ParentType = FlexibleParent,
+	class FactoryBase = EmptyFactoryBase>
+    class CppFactory;
+
+    
+    template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase>
+    class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase> :
+	public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
+    };
+
+    using MyType V8TOOLKIT_NAME_ALIAS V8TOOLKIT_WRAPPED_CLASS = v8toolkit::CppFactory<int, char, v8toolkit::TypeList<double>>;
+
+    
+}
 
 
 
-template<class T> class V8TOOLKIT_WRAPPED_CLASS MyTemplate {};
-
-
+#if 0
 template<class T> class  DerivedFromWrappedClassBase : public MyTemplate<int>, public v8toolkit::WrappedClassBase {
 public:
     void function_in_templated_class(T t){
@@ -126,8 +152,12 @@ public:
 //// this is the only one that should match
 //struct SPECIAL Baz { };
 //
-
+#endif
 int main() {
+
+    v8toolkit::CppFactory<int, char, v8toolkit::TypeList<double>> factory;
+    
+    /*
     Foo f(5,5,5);
 
     f.templated_function(5);
@@ -136,6 +166,6 @@ int main() {
         f.templated_function<unsigned int>(5);
 	DerivedFromWrappedClassBase<int> dfwcb;
 	dfwcb.function_in_templated_class(5);
-
+    */
     //    DerivedFromWrappedClassBase<char>;
 }

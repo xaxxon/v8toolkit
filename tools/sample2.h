@@ -27,13 +27,15 @@ using namespace std;
 namespace v8toolkit {
     template<class T>
     class V8ClassWrapper;
+
+
     class WrappedClassBase{};
 
     template<class T>
 	class JSWrapper{};
 }
 
-
+#if 0
 class Uninteresting{};
 
 class OnlyUsedInTemplate{};
@@ -55,4 +57,41 @@ public:
 //    int fp_i;
 };
 
+#endif
+
+
+namespace v8toolkit {
+
+    class EmptyFactoryBase {};
+
+    class WrappedClassBase;
+    
+    template<class, class...>
+	class FlexibleParent : public WrappedClassBase {};
+    
+
+
+template<class...>
+    class TypeList;
+    
+template<
+    class Base,
+    class Child,
+    class ExternalTypeList,
+    template<class, class...> class ParentType,
+    class FactoryBase>
+    class CppFactory;
+
+
+/*
+template<
+    class,
+    class Child,
+    class ExternalTypeList,
+    template<class, class...> class ParentType,
+    class FactoryBase>
+    
+    class V8TOOLKIT_SKIP CppFactory;
+*/
+}
 

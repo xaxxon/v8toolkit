@@ -32,6 +32,7 @@
  */
 #define V8TOOLKIT_SKIP __attribute__((annotate(V8TOOLKIT_NONE_STRING)))
 
+
 /**
  * This member cannot be assigned to.
  * However, it is not "const", as its contents can be changed.
@@ -44,6 +45,17 @@
  */
 #define V8TOOLKIT_EXTEND_WRAPPER __attribute__((annotate(V8TOOLKIT_EXTEND_WRAPPER_STRING)))
 
+
+/**
+ * For setting a name alias to be used for javascript to refer to the type as
+ * -- basically sets a different constructor name when you don't have control
+ *    over the class definition
+ * Usage: using MyTypeInt V8TOOLKIT_NAME_ALIAS = MyType<int>;
+ *        using MyTypeChar V8TOOLKIT_NAME_ALIAS = MyType<char>;
+ * Otherwise both of those would get the same constructor name (MyType) and code generation would fail
+ */
+#define V8TOOLKIT_NAME_ALIAS_STRING "v8toolkit_name_alias"
+#define V8TOOLKIT_NAME_ALIAS __attribute__((annotate(V8TOOLKIT_NAME_ALIAS_STRING)))
 
 
 /**
@@ -75,6 +87,12 @@
 #define V8TOOLKIT_USE_BASE_TYPE(name) \
     __attribute__((annotate(V8TOOLKIT_USE_BASE_TYPE_PREFIX #name)))
 
+
+/**
+ * This can be specified in a forward declaration of a type to eliminate all constructors from being wrapped
+ */
+#define V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING "v8toolkit_do_not_wrap_constructors"
+#define V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS __attribute__((annotate(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)))
 
 
 #define V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING "v8toolkit_generate_bidirectional"

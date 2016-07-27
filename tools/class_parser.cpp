@@ -75,6 +75,9 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 #include <cppformat/format.h>
 
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -87,6 +90,8 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/raw_ostream.h"
+
+#pragma clang diagnostic pop
 
 #include "class_parser.h"
 
@@ -107,7 +112,7 @@ int matched_classes_returned = 0;
 namespace {
 
 
-    int print_logging = 1;
+    int print_logging = 0;
 
     // how was a wrapped class determined to be a wrapped class?
     enum FOUND_METHOD {
@@ -133,6 +138,24 @@ namespace {
     }
 
 
+    class PrintLoggingGuard {
+	bool logging = false;
+    public:
+	PrintLoggingGuard() = default;
+	~PrintLoggingGuard() {
+	    if (logging) {
+		print_logging--;
+	    }
+	}
+	void log(){
+	    print_logging++;
+	    logging = true;
+	}
+    };
+
+
+    
+    
     void print_vector(const vector<string> & vec, const string & header = "", const string & indentation = "", bool ignore_empty = true) {
 
 	if (ignore_empty && vec.empty()) {
@@ -180,7 +203,15 @@ namespace {
         if (decl == nullptr) {
             return false;
         }
+
+	if (!decl->isThisDeclarationADefinition()) {
+	    return true;
+	}
+	
         for (auto base : decl->bases()) {
+	    if (base.getType().getTypePtrOrNull() == nullptr) {
+		llvm::report_fatal_error("base type ptr was null");
+	    }
             if (!is_good_record_decl(base.getType()->getAsCXXRecordDecl())) {
                 return false;
             }
@@ -217,14 +248,18 @@ namespace {
     }
 
 
-    std::string get_include_for_record_decl(SourceManager & source_manager, const CXXRecordDecl * record_decl) {
-        if (record_decl == nullptr) {
-            return "";
-        }
-        auto full_source_loc = FullSourceLoc(record_decl->getLocStart(), source_manager);
+    std::string get_include_for_source_location(SourceManager & source_manager, const SourceLocation & source_location) {
+        auto full_source_loc = FullSourceLoc(source_location, source_manager);
 
         auto file_id = full_source_loc.getFileID();
         return get_include_string_for_fileid(source_manager, file_id);
+    }
+
+    std::string get_include_for_type_decl(SourceManager & source_manager, const TypeDecl * type_decl) {
+        if (type_decl == nullptr) {
+            return "";
+        }
+        return get_include_for_source_location(source_manager, type_decl->getLocStart());
     }
 
 
@@ -292,6 +327,99 @@ namespace {
     }
 #endif
 
+    class Annotations {
+	set<string> annotations;
+
+	void get_annotations_for_decl(const Decl * decl) {
+	    if (!decl) { return; }
+	    for (auto attr : decl->getAttrs()) {
+		AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
+		if (annotation) {
+		    auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+		    auto annotation_string = attribute_attr->getAnnotation().str();
+		    //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
+		    annotations.emplace(annotation->getAnnotation().str());
+		}
+	    }
+	}
+
+	
+    public:
+
+	Annotations(const Decl * decl) {
+	    get_annotations_for_decl(decl);
+	}
+	
+	Annotations(const CXXRecordDecl * decl);
+	Annotations(const CXXMethodDecl * decl) {
+	    get_annotations_for_decl(decl);
+	    
+	}
+
+	Annotations() = default;
+
+	const vector<string> get() const {
+	    std::vector<string> results;
+	    
+	    for (auto & annotation : annotations) {
+		results.push_back(annotation);
+	    }
+	    return results;
+	}
+
+	std::vector<string> get_regex( const string & regex_string) const {
+	    auto regex = std::regex(regex_string);
+	    std::vector<string> results;
+	    
+	    for (auto & annotation : annotations) {
+		std::smatch matches;
+		if (std::regex_match(annotation, matches, regex)) {
+		    // printf("GOT %d MATCHES\n", (int)matches.size());
+		    if (matches.size() > 1) {
+			results.emplace_back(matches[1]);
+		    }
+		}
+	    }
+	    return results;
+	}
+    
+	bool has(const std::string & target) const {
+	    return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
+	}
+
+	void merge(const Annotations & other) {
+	    cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size()) << endl;
+	    annotations.insert(other.annotations.begin(), other.annotations.end());
+	}
+    };
+
+    map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
+
+    // any annotations on 'using' statements should be applied to the actual CXXRecordDecl being aliased (the right side)
+    map<const CXXRecordDecl *, Annotations> annotations_for_record_decls;
+
+
+
+    // if a template instantiation is named with a 'using' statement, use that alias for the type isntead of the template/class name itself
+    //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
+    map<const CXXRecordDecl *, string> names_for_record_decls;
+
+    Annotations::Annotations(const CXXRecordDecl * decl) {
+	auto name = get_canonical_name_for_decl(decl);
+	get_annotations_for_decl(decl);
+	cerr << "Making annotations object for " << name << endl;
+	if (auto spec_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
+	    cerr << fmt::format("{} is a template, getting any tmeplate annotations available", name) << endl;
+	    cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size() << " annotations available" << endl;
+	    merge(annotations_for_class_templates[spec_decl->getSpecializedTemplate()]);
+	} else {
+	    cerr << "Not a template" << endl;
+	}
+	
+    }
+
+
+
     struct ClassTemplate;
     vector<std::unique_ptr<ClassTemplate>> class_templates;
     struct ClassTemplate {
@@ -349,10 +477,17 @@ namespace {
 	}
     };
 
+    // store all the constructor names used, since they all go into the same global object template used as for building contexts
+    std::vector<std::string> used_constructor_names;
+
     
     struct WrappedClass {
 	CXXRecordDecl const * decl = nullptr;
+
+	// if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
+	CXXRecordDecl const * instantiation_pattern = nullptr;
         string class_name;
+	string name_alias; // if no alias, is equal to class_name
         set<string> include_files;
         int declaration_count = 0;
         set<string> methods;
@@ -366,8 +501,10 @@ namespace {
 	string my_include; // the include for getting my type
 	EXPORT_TYPE export_type;
 	bool done = false;
-	bool valid = true; // if this shouldn't be processed
-
+	bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
+	Annotations annotations;
+	
+	
 	FOUND_METHOD found_method = FOUND_UNSPECIFIED;
 	
 	std::string get_short_name() const {
@@ -377,7 +514,22 @@ namespace {
 	    return decl->getNameAsString();
 	}
 
-
+	
+	// all the correct annotations and name overrides may not be available when the WrappedObject is initially created 
+	void update_data() {
+	    cerr << "Updating wrapped class data for " << class_name << endl;
+	    string new_name = names_for_record_decls[decl];
+	    if (!new_name.empty()) {
+		cerr << "Got type alias: " << new_name << endl;
+		name_alias = new_name;
+	    } else {
+		cerr << "no type alias" << endl;
+	    }
+	    cerr << "Went from " << this->annotations.get().size() << " annotations to ";
+	    this->annotations = Annotations(this->decl);
+	    cerr << this->annotations.get().size() << endl;
+	}
+	
 	std::string make_sfinae_to_match_wrapped_class() const {
 	    
 	    // if it was found by annotation, there's no way for V8ClassWrapper to know about it other than
@@ -388,34 +540,100 @@ namespace {
 		return "";
 	    }
 	}
-	
-        bool ready_for_wrapping(set<WrappedClass *> wrapped_classes) const {
 
+
+	bool should_be_wrapped() const {
+	    auto a = class_name;
+	    auto b = found_method;
+	    auto c = join(annotations.get());
+	    cerr << fmt::format("In should be wrapped with class {}, found: {}, annotations: {}", a, b, c) << endl;
+	    
+	    if (annotations.has(V8TOOLKIT_NONE_STRING) &&
+		annotations.has(V8TOOLKIT_ALL_STRING)) {
+		llvm::report_fatal_error("type has both NONE_STRING and ALL_STRING - this makes no sense");
+	    }
+	    
+	    if (found_method == FOUND_INHERITANCE) {
+		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+		    cerr << "Found NONE_STRING" << endl;
+		    return false;
+		}
+	    } else if (found_method == FOUND_ANNOTATION) {
+		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+		    cerr << "Found NONE_STRING" << endl;
+		    return false;
+		}
+		if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
+		    llvm::report_fatal_error("Type was supposedly found by annotation, but annotation not found");
+		}
+	    } else if (found_method == FOUND_UNSPECIFIED) {
+		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+		    cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
+		    return false;
+		}
+		if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
+		    cerr << "didn't find all string on UNSPECIFIED" << endl;
+		    return false;
+		}
+	    }
+
+
+	    
+	    // THIS MUST BE THE FINAL CHECK
+	    if (base_types.size() > 1) {
+		llvm::report_fatal_error("trying to see if type should be wrapped but it has more than one base type -- unsupported");
+	    }
+	    if (base_types.empty()) {
+		cerr << "no base typ so SHOULD BE WRAPPED" << endl;
+		return true;
+	    } else {
+		cerr << "Checking should_be_wrapped for base type" << endl;
+		auto & base_type_wrapped_class = **base_types.begin();
+		cerr << "base type is '" << base_type_wrapped_class.class_name << "'" << endl;
+		return base_type_wrapped_class.should_be_wrapped();
+	    }
+
+	}
+	
+        bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const {
+
+
+	    if (!valid) {
+		cerr << "'invalid' class" << endl;
+		return false;
+	    }
+
+	    
             // don't double wrap yourself
-            if (find(wrapped_classes.begin(), wrapped_classes.end(), this) != wrapped_classes.end()) {
-		//                printf("Already wrapped %s\n", class_name.c_str());
+            if (find(dumped_classes.begin(), dumped_classes.end(), this) != dumped_classes.end()) {
+		printf("Already wrapped %s\n", class_name.c_str());
                 return false;
             }
 
+	    if (!should_be_wrapped()) {
+		cerr << "should be wrapped returned false" << endl;
+		return false;
+	    }
+	    
 	    /*
             // if all this class's directly derived types have been wrapped, then we're good since their
             //   dependencies would have to be met for them to be wrapped
             for (auto derived_type : derived_types) {
-                if (find(wrapped_classes.begin(), wrapped_classes.end(), derived_type) == wrapped_classes.end()) {
+                if (find(dumped_classes.begin(), dumped_classes.end(), derived_type) == dumped_classes.end()) {
                     printf("Couldn't find %s\n", derived_type->class_name.c_str());
                     return false;
                 }
             }
 	    */
             for (auto base_type : base_types) {
-                if (find(wrapped_classes.begin(), wrapped_classes.end(), base_type) == wrapped_classes.end()) {
-		    //                    printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
+                if (find(dumped_classes.begin(), dumped_classes.end(), base_type) == dumped_classes.end()) {
+		    printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
                     return false;
                 }
             }
 
-	    //            printf("Ready to wrap %s\n", class_name.c_str());
-
+	    printf("Ready to wrap %s\n", class_name.c_str());
+	    
             return true;
         }
 
@@ -429,10 +647,15 @@ namespace {
             return results;
         }
 
-	// for newly created classes
+
+	WrappedClass(const WrappedClass &) = delete;
+	WrappedClass & operator=(const WrappedClass &) = delete;
+	
+	// for newly created classes --- used for bidirectional classes that don't actually exist in the AST
 	WrappedClass(const std::string class_name, SourceManager & source_manager) :
 	    decl(nullptr),
 	    class_name(class_name),
+	    name_alias(class_name),
 	    source_manager(source_manager),
 	    found_method(FOUND_GENERATED)
 	{}
@@ -440,12 +663,48 @@ namespace {
 
 	// for classes actually in the code being parsed
         WrappedClass(const CXXRecordDecl * decl, SourceManager & source_manager, FOUND_METHOD found_method = FOUND_UNSPECIFIED) :
-	    decl(decl), class_name(get_canonical_name_for_decl(decl)),
+	    decl(decl),
+	    class_name(get_canonical_name_for_decl(decl)),
+	    name_alias(class_name),
 	    source_manager(source_manager),
-	    my_include(get_include_for_record_decl(source_manager, decl)),
+	    my_include(get_include_for_type_decl(source_manager, decl)),
 	    export_type(get_export_type(decl, EXPORT_UNSPECIFIED)),
+	    annotations(decl),
 	    found_method(found_method)
-        {}
+        {
+	    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
+	    string using_name = names_for_record_decls[decl];
+	    if (!using_name.empty()) {
+		cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
+		name_alias = using_name;
+	    }
+
+	    
+	    cerr << "Top of WrappedClass constructor body" << endl;
+	    if (class_name == "") {
+		fprintf(stderr, "%p\n", (void *)decl);
+		llvm::report_fatal_error("Empty name string for decl");
+	    }
+
+	    auto pattern = this->decl->getTemplateInstantiationPattern();
+	    if (pattern && pattern != this->decl) {
+		if (!pattern->isDependentType()) {
+		    llvm::report_fatal_error("template instantiation class's pattern isn't dependent - this is not expected from my understanding");
+		}
+	    }
+
+		    //	    instantiation_pattern = pattern;
+		    // annotations.merge(Annotations(instantiation_pattern));
+
+
+
+	    if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->decl)) {
+		annotations.merge(Annotations(specialization->getSpecializedTemplate()));
+	    }
+	    
+	     cerr << "Final wrapped class annotations: " << endl;
+	     print_vector(annotations.get());
+	}
 
         std::string get_derived_classes_string(int level = 0, const std::string indent = ""){
             vector<string> results;
@@ -483,7 +742,7 @@ namespace {
             result << fmt::format("{}  // {}", indentation, class_name) << "\n";
             result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
                                   indentation, class_name, class_name);
-            result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, class_name);
+            result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
             for(auto & method : methods) {
                 result << method;
@@ -515,6 +774,63 @@ namespace {
     };
 
 
+    std::vector<WrappedClass *> definitions_to_process;
+    
+    void add_definition(WrappedClass & wrapped_class) {
+	if (!wrapped_class.decl->isThisDeclarationADefinition()) {
+	    llvm::report_fatal_error("tried to add non-definition to definition list for post processing");
+	}
+	if (std::find(definitions_to_process.begin(), definitions_to_process.end(), &wrapped_class) == definitions_to_process.end()) {
+	    definitions_to_process.push_back(&wrapped_class);
+	}
+    }
+    
+
+    std::vector<unique_ptr<WrappedClass>> wrapped_classes;
+	
+	
+    WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
+					       SourceManager & source_manager,
+					       FOUND_METHOD found_method = FOUND_UNSPECIFIED) {
+
+	    if (decl->isDependentType()) {
+		throw exception();
+	    }
+
+            auto class_name = get_canonical_name_for_decl(decl);
+
+	    if (!decl->isThisDeclarationADefinition()) {
+
+		cerr << class_name << " is not a definition - getting definition..." << endl;
+		if (!decl->hasDefinition()) {
+
+		    llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
+		}
+
+		decl = decl->getDefinition();
+	    }
+
+	    
+            //fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
+            //fprintf(stderr, " -- class name %s\n", class_name.c_str());
+            for (auto & wrapped_class : wrapped_classes) {
+
+                if (wrapped_class->class_name == class_name) {
+		    //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
+                    return *wrapped_class;
+                }
+            }
+
+		auto up = std::make_unique<WrappedClass>(decl, source_manager, found_method);
+
+		wrapped_classes.emplace_back(std::move(up));
+
+	    //fprintf(stderr, "get or insert wrapped class returning new object: %p\n", (void*)wrapped_classes.back().get());
+            return *wrapped_classes.back();
+        }
+
+    
+
 
     string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>> & wrapped_classes) {
 	vector<string> sfinaes;
@@ -542,46 +858,10 @@ namespace {
     }
     
 
-    // returns a vector of all the annotations on a Decl
-    std::vector<std::string> get_annotations(const Decl * decl) {
-        std::vector<std::string> results;
-        for (auto attr : decl->getAttrs()) {
-            AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
-            if (annotation) {
-                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                auto annotation_string = attribute_attr->getAnnotation().str();
-                //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
-                results.emplace_back(annotation->getAnnotation().str());
-            }
-        }
-        return results;
-    }
-
-    std::vector<std::string> get_annotation_regex(const Decl * decl, const std::string & regex_string) {
-        auto regex = std::regex(regex_string);
-        std::vector<std::string> results;
-
-        auto annotations = get_annotations(decl);
-        for (auto & annotation : annotations) {
-            std::smatch matches;
-            if (std::regex_match(annotation, matches, regex)) {
-//                printf("GOT %d MATCHES\n", (int)matches.size());
-                if (matches.size() > 1) {
-                    results.push_back(matches[1]);
-                }
-            }
-        }
-        return results;
-    }
 
 
 
 
-
-    bool has_annotation(const Decl * decl, const std::string & target) {
-        auto annotations = get_annotations(decl);
-        return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
-    }
 
 
     EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous) {
@@ -681,8 +961,8 @@ namespace {
         std::string canonical_name = qual_type.getCanonicalType().getAsString();
 
         // if it's a std:: type and not explicitly user-specialized, pass it through
-        if (std::regex_match(name, regex("^(const\\s+|volatile\\s+)*(class |struct )?std::[^<]*$"))) {
-            output = handle_std(name);
+        if (std::regex_match(name, regex("^(const\\s+|volatile\\s+)*(class\\s+|struct\\s+)?std::[^<]*$"))) {
+            output = handle_std(name);a
             return true;
         }
         // or if the canonical type has std:: in it and it's not user-customized
@@ -909,7 +1189,7 @@ namespace {
             return;
         }
 
-	auto actual_include_string = get_include_for_record_decl(source_manager, base_type_record_decl);
+	auto actual_include_string = get_include_for_type_decl(source_manager, base_type_record_decl);
 
         if (print_logging) cerr << &wrapped_class << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
 	
@@ -948,7 +1228,8 @@ namespace {
         auto parameter_count = method->getNumParams();
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
-            if (annotation != "" && !has_annotation(param_decl, annotation)) {
+	    Annotations annotations(param_decl);
+            if (annotation != "" && !annotations.has(annotation)) {
                 if (print_logging) cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
                 continue;
             }
@@ -1044,6 +1325,38 @@ namespace {
     }
 
 
+    void print_specialization_info(const CXXRecordDecl * decl) {
+	    auto name = get_canonical_name_for_decl(decl);
+	    cerr << "*****" << endl;
+	    if (decl->isDependentType()) {
+		cerr << fmt::format("{} is a dependent type", name) << endl;
+	    }
+	    if (auto spec = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
+		fprintf(stderr, "decl is a ClassTemplateSpecializationDecl: %p\n", (void *)decl);
+		cerr << name << endl;
+
+		if (auto spec_tmpl = spec->getSpecializedTemplate()) {
+		    fprintf(stderr, "Specialized template: %p, %s\n", (void *)spec_tmpl, spec_tmpl->getQualifiedNameAsString().c_str());
+		    print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
+		} else {
+		    cerr << "no spec tmpl" << endl;
+		}
+	    
+
+		if (dyn_cast<ClassTemplatePartialSpecializationDecl>(decl)) {
+		    cerr << "It is also a partial specialization decl" << endl;
+		} else {
+		    cerr << "It is NOT a PARTIAL specialization decl" << endl;
+		}
+	    
+
+	    } else {
+		cerr << name << " is not a class template specialization decl" << endl;
+	    }
+	    cerr << "*****END" << endl;
+
+    }
+
 
 
     std::string get_method_string(SourceManager & source_manager,
@@ -1080,7 +1393,7 @@ namespace {
         for(CXXMethodDecl * method : klass->methods()) {
             CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
 	    bool skip = false;
-
+	    Annotations annotations(method);
 	    // check if method is a constructor
             if (constructor == nullptr) {
 		continue;
@@ -1096,7 +1409,7 @@ namespace {
 		skip = true;
             }
 
-            if (annotation != "" && !has_annotation(constructor, annotation)) {
+            if (annotation != "" && !annotations.has(annotation)) {
 		if (print_logging) cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
 		skip = true;
             } else {
@@ -1174,19 +1487,16 @@ namespace {
     class BidirectionalBindings {
     private:
         SourceManager & source_manager;
-        const CXXRecordDecl * starting_class;
         WrappedClass & wrapped_class;
 
     public:
         BidirectionalBindings(SourceManager & source_manager,
-                              const CXXRecordDecl * starting_class,
                               WrappedClass & wrapped_class) :
                 source_manager(source_manager),
-                starting_class(starting_class),
                 wrapped_class(wrapped_class) {}
 
-        std::string short_name(){return starting_class->getName();}
-	std::string canonical_name(){return get_canonical_name_for_decl(starting_class);}
+        std::string short_name(){return wrapped_class.class_name;}
+	std::string canonical_name(){return wrapped_class.class_name;}
 
         std::vector<const CXXMethodDecl *> get_all_virtual_methods_for_class(const CXXRecordDecl * klass) {
             std::vector<const CXXMethodDecl *> results;
@@ -1277,9 +1587,8 @@ namespace {
 
         void generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
             std::stringstream result;
-            auto annotations = get_annotations(starting_class);
-            auto matches = get_annotation_regex(starting_class, "v8toolkit_generate_(.*)");
-            if (has_annotation(starting_class, std::string(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING))) {
+            auto matches = wrapped_class.annotations.get_regex("v8toolkit_generate_(.*)");
+            if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
                 result << fmt::format("class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:\n", // {{ is escaped {
                                       short_name(), short_name(), short_name());
                 result << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n", short_name());
@@ -1287,7 +1596,7 @@ namespace {
                 bool got_constructor = false;
                 int constructor_parameter_count;
 		vector<QualType> constructor_parameters;
-                foreach_constructor(starting_class, [&](auto constructor_decl){
+                foreach_constructor(wrapped_class.decl, [&](auto constructor_decl){
                     if (got_constructor) { cerr << "ERROR: Got more than one constructor" << endl; return;}
                     got_constructor = true;
                     result << get_method_parameters(source_manager, wrapped_class, constructor_decl, true, true);
@@ -1296,7 +1605,7 @@ namespace {
 
                 }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
                 if (!got_constructor) {
-		    llvm::report_fatal_error(fmt::format("ERROR: Got no bidirectional constructor for {}", starting_class->getNameAsString()), false);
+		    llvm::report_fatal_error(fmt::format("ERROR: Got no bidirectional constructor for {}", wrapped_class.class_name), false);
 
                 }
                 result << fmt::format(") :\n");
@@ -1306,7 +1615,7 @@ namespace {
 
                 result << fmt::format("      {}({}),\n", short_name(), join(variable_names));
                 result << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", short_name()); // {{}} is escaped {}
-                result << handle_class(starting_class);
+                result << handle_class(wrapped_class.decl);
                 result << "};\n";
             } else {
 //                printf("Class %s not marked bidirectional\n", short_name().c_str());
@@ -1362,49 +1671,54 @@ namespace {
     private:
 
         SourceManager & source_manager;
-        std::vector<unique_ptr<WrappedClass>> & wrapped_classes;
-
-	
-        WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl, FOUND_METHOD found_method = FOUND_UNSPECIFIED) {
-            auto class_name = get_canonical_name_for_decl(decl);
-	    if (!decl->isThisDeclarationADefinition()) {
-		cerr << class_name << " is not a definition - getting definition..." << endl;
-		if (!decl->hasDefinition()) {
-		    llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
-		}
-		decl = decl->getDefinition();
-	    }
-	    
-            fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
-
-
-            fprintf(stderr, " -- class name %s\n", class_name.c_str());
-            for (auto & wrapped_class : wrapped_classes) {
-                if (wrapped_class->class_name == class_name) {
-		    fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
-                    return *wrapped_class;
-                }
-            }
-            wrapped_classes.emplace_back(std::make_unique<WrappedClass>(decl, source_manager, found_method));
-	    fprintf(stderr, "get or insert wrapped class returning new object: %p\n", (void*)wrapped_classes.back().get());
-            return *wrapped_classes.back();
-        }
 
         WrappedClass * top_level_class; // the class currently being wrapped
         std::set<std::string> names_used;
 
     public:
 
+	
 
-
-
-        ClassHandler(CompilerInstance &CI,
-                     std::vector<unique_ptr<WrappedClass>> & wrapped_classes) :
-            source_manager(CI.getSourceManager()),
-            wrapped_classes(wrapped_classes)
+	
+        ClassHandler(CompilerInstance &CI) :
+            source_manager(CI.getSourceManager())
         {}
 
+	virtual  void onEndOfTranslationUnit () override {
+	    cerr << fmt::format("at end of TU with {} definitions to process", definitions_to_process.size()) << endl;
 
+	    int definition_count = 0;
+	    for (auto wrapped_class_ptr : definitions_to_process) {
+		auto & wrapped_class = *wrapped_class_ptr;
+
+		// all the annotations and name aliases from forward decl's and 'using' typedefs may not have been available
+		// when the wrapped class was initially created, so get the full list now
+		wrapped_class.update_data();
+
+		
+		cerr << ++definition_count << endl;
+		print_specialization_info(wrapped_class.decl);
+		
+		/*
+		// skipping this to try to speed things up
+		if (!is_good_record_decl(klass)) {
+		//cerr << "skipping 'bad' record decl" << endl;
+		continue;
+		}
+		*/
+		if (wrapped_class.decl->isDependentType()) {
+		    cerr << wrapped_class.class_name << endl;
+		    llvm::report_fatal_error("Trying to post-process dependent type -- this should be filtered in matcher callback");
+		}
+		
+		
+		cerr << "class annotations: " << join(wrapped_class.annotations.get()) << endl;
+		
+		handle_class(wrapped_class);
+	    }
+	    
+	}
+	
 
         std::string handle_data_member(const CXXRecordDecl * containing_class, FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
             std::stringstream result;
@@ -1423,7 +1737,7 @@ namespace {
 //            full_field_name = std::regex_replace(full_field_name, regex, replacement);
 //            if (print_logging) cerr << full_field_name << endl;
 
-
+	    Annotations annotations(field);
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping data member %s because not supposed to be exported %d\n",
                        indentation.c_str(),
@@ -1450,7 +1764,7 @@ namespace {
 
             update_wrapped_class_for_type(source_manager, *top_level_class, field->getType());
 
-            if (has_annotation(field, V8TOOLKIT_READONLY_STRING)) {
+            if (annotations.has(V8TOOLKIT_READONLY_STRING)) {
                 result << fmt::format("{}class_wrapper.add_member_readonly(\"{}\", &{});\n", indentation,
                                       short_field_name, full_field_name);
             } else {
@@ -1518,8 +1832,9 @@ namespace {
             }
 	    if (print_logging) cerr << "Method passed all checks" << endl;
 
-            // If this
-            if (has_annotation(method, V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
+
+	    Annotations annotations(method);
+            if (annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
 		// cerr << "has extend wrapper string" << endl;
                 if (!method->isStatic()) {
 		            llvm::report_fatal_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()), false);
@@ -1566,17 +1881,28 @@ namespace {
             return result.str();
         }
 
+	
 
         void handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
                           bool top_level = true,
                           WrappedClass * derived_class = nullptr,
                           const std::string & indentation = "") {
 
-
+	    PrintLoggingGuard lg;
             if (top_level) {
 
+		if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
+		    lg.log();
+		}
 
 
+		if (!wrapped_class.should_be_wrapped()) {
+		    cerr << fmt::format("Skipping {}, should_be_wrapped reported false", wrapped_class.class_name) << endl;
+		    return;
+		}
+		
+		// if we've gotten this far, then the class passed the tests and should be included
+		wrapped_class.valid = true;
 		
 		top_level_class = &wrapped_class;
 
@@ -1601,9 +1927,6 @@ namespace {
 
                 if (dyn_cast<ClassTemplatePartialSpecializationDecl>(wrapped_class.decl)) {
                     cerr << "is class template partial specilziation decl" << endl;
-                }
-                if (dyn_cast<ClassTemplateSpecializationDecl>(wrapped_class.decl)) {
-                    cerr << "is class template specialization decl" << endl;
                 }
 
 
@@ -1640,11 +1963,11 @@ namespace {
 		//                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
 
 
-                if (print_logging) cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : " << get_include_for_record_decl(source_manager, wrapped_class.decl) << endl;
-                wrapped_class.include_files.insert(get_include_for_record_decl(source_manager, wrapped_class.decl));
+                if (print_logging) cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : " << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
+                wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
 
                 // if this is a bidirectional class, make a minimal wrapper for it
-                if (has_annotation(wrapped_class.decl, V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+                if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
 
 		    if (print_logging) cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
 
@@ -1661,7 +1984,7 @@ namespace {
 
 
 
-		    BidirectionalBindings bd(source_manager, wrapped_class.decl, wrapped_class);
+		    BidirectionalBindings bd(source_manager, wrapped_class);
 		    bd.generate_bindings(wrapped_classes);
 
 		    
@@ -1713,8 +2036,8 @@ namespace {
 	    if (print_logging) cerr << "About to process base class info" << endl;
 	    // if this is true and the type ends up with no base type, it's an error
 	    bool must_have_base_type = false;
-            auto annotation_base_types_to_ignore = get_annotation_regex(wrapped_class.decl, "^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
-            auto annotation_base_type_to_use = get_annotation_regex(wrapped_class.decl, "^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
+            auto annotation_base_types_to_ignore = wrapped_class.annotations.get_regex("^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
+            auto annotation_base_type_to_use = wrapped_class.annotations.get_regex("^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
             if (annotation_base_type_to_use.size() > 1) {
                 llvm::report_fatal_error("More than one base type specified to use for type");
             }
@@ -1786,10 +2109,10 @@ namespace {
 		//  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
 
                 cerr << "getting base type wrapped class object" << endl;
-                WrappedClass & current_base = get_or_insert_wrapped_class(record_decl);
+                WrappedClass & current_base = get_or_insert_wrapped_class(record_decl, source_manager);
 
-                auto  current_base_include = get_include_for_record_decl(source_manager, current_base.decl);
-                auto  current_include = get_include_for_record_decl(source_manager, wrapped_class.decl);
+                auto  current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
+                auto  current_include = get_include_for_type_decl(source_manager, wrapped_class.decl);
 		//                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
 
                 wrapped_class.include_files.insert(current_base_include);
@@ -1808,10 +2131,10 @@ namespace {
 		llvm::report_fatal_error("base_type_to_use specified but no base type found");
 	    }
 
-            std::vector<std::string> used_constructor_names;
+
 
 	    // Only process constructors on the top-level object
-            if (top_level) {
+            if (top_level && !wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
                 if (wrapped_class.decl->isAbstract()) {
                     if (print_logging) cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
                 } else {
@@ -1836,20 +2159,21 @@ namespace {
 //                            if (print_logging) cerr << "Skipping deleted constructor" << endl;
                             return;
                         }
-                        auto annotations = get_annotation_regex(constructor, V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
+			Annotations annotations(constructor);
+                        auto constructor_name_annotation = annotations.get_regex(V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
 //                        fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
-                        std::string constructor_name = class_name;
-                        if (!annotations.empty()) {
-                            constructor_name = annotations[0];
+                        std::string constructor_name = wrapped_class.name_alias;
+                        if (!constructor_name_annotation.empty()) {
+                            constructor_name = constructor_name_annotation[0];
                         }
                         if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
                             used_constructor_names.end()) {
-                            cerr << fmt::format("Error: because duplicate JS constructor function name {}",
+                            cerr << fmt::format("Error: because duplicate JS constructor function name: {}",
                                                 constructor_name.c_str()) << endl;
                             for (auto &name : used_constructor_names) {
-                                if (print_logging) cerr << name << endl;
+                                cerr << "Already used constructor name: " << name << endl;
                             }
-                            throw std::exception();
+			    llvm::report_fatal_error("Duplicate constructor name, see above.");
                         }
                         used_constructor_names.push_back(constructor_name);
 
@@ -1863,78 +2187,141 @@ namespace {
         }
 
 
+
+
+	
+
         /**
          * This runs per-match from MyASTConsumer, but always on the same ClassHandler object
          */
-        virtual void run(const MatchFinder::MatchResult &Result) {
+        virtual void run(const MatchFinder::MatchResult &Result) override {
 
 	    matched_classes_returned++;
 
-	    // cerr << endl << "### NEW MATCHER RESULT " << matched_classes_returned << " ###" << endl;
+	    if (matched_classes_returned % 1000 == 0) {
+		cerr << endl << "### MATCHER RESULT " << matched_classes_returned << " ###" << endl;
+	    }
 	    
-            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class with annotation")) {
+            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
 		auto class_name = get_canonical_name_for_decl(klass);
-		cerr << endl << "Got class definition with annotation: " << class_name << endl;
-				
-                // check attributes on class and make sure it's one we're interested in
-                if (!has_annotation(klass, V8TOOLKIT_ALL_STRING)) {
-		    cerr << "Skipping " << class_name << " because it doesn't have wrapped class annotation" << endl;
-                    return;
-                }
-		if (!is_good_record_decl(klass)) {
-		    cerr << "skipping 'bad' record decl" << endl;
-		    return;
-		}
+		
 		if (klass->isDependentType()) {
-		    cerr << "skipping dependent type" << endl;
+		    cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
 		    return;
 		}
-                handle_class(get_or_insert_wrapped_class(klass, FOUND_ANNOTATION));
 
+		auto name = get_canonical_name_for_decl(klass);
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+		    return;
+		}
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+		    return;
+		}
+
+		cerr << endl << "Got class definition: " << class_name << endl;
+		fprintf(stderr, "decl ptr: %p\n", (void *)klass);
+		
+		
+		if (!is_good_record_decl(klass)) {
+		    cerr << "SKIPPING BAD RECORD DECL" << endl;
+		}
+
+		cerr << "Storing it for later processing (unless dupe)" << endl;
+
+
+		
+		add_definition(get_or_insert_wrapped_class(klass, source_manager, FOUND_UNSPECIFIED));
             }
 
 	    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("forward declaration with annotation")) {
 		auto class_name = get_canonical_name_for_decl(klass);
 		cerr << "Got forward declaration with annotation: " << class_name << endl;
-		if (!is_good_record_decl(klass)) {
-		    cerr << "skipping 'bad' record decl" << endl;
-		    return;
-		}
-		if (klass->isDependentType()) {
-		    cerr << "skipping dependent type" << endl;
-		    return;
+		fprintf(stderr, "decl ptr: %p\n", (void *)klass);
+
+		cerr << get_include_for_type_decl(source_manager, klass) << endl;
+
+		print_specialization_info(klass);
+
+		print_vector(Annotations(klass).get(), "annotations directly on forward declaration");
+
+		/*
+		if (klass->getTemplateInstantiationPattern()) {
+		    auto pattern = klass->getTemplateInstantiationPattern();
+		    fprintf(stderr, "pattern decl ptr: %p, %s\n", (void *)pattern, get_canonical_name_for_decl(pattern).c_str());
+		    
+		} else {
+		    fprintf(stderr, "no instantiation pattern on this type\n");
 		}
 
-                // check attributes on class and make sure it's one we're interested in
-                if (!has_annotation(klass, V8TOOLKIT_ALL_STRING)) {
-		    cerr << "Skipping " << class_name << " because it doesn't have wrapped class annotation" << endl;
-                    return;
-                }
 
+		if (auto tmpl = klass->getDescribedClassTemplate()) {
+		    fprintf(stderr, "Described class template ptr: %p, %s\n", (void *)tmpl, tmpl->getQualifiedNameAsString().c_str());
+		} else {
+		    cerr << "no described class template" << endl;
+		}
+		
+		cerr << "forward declaration annotations" << endl;
+		cerr << join(Annotations(klass).get()) << endl;
+
+		*/
+
+		/* check to see if this has any annotations we should associate with its associated template */
+		auto described_tmpl = klass->getDescribedClassTemplate();
+		if (klass->isDependentType() && described_tmpl) {
+		    fprintf(stderr, "described template %p, %s\n", (void *)described_tmpl, described_tmpl->getQualifiedNameAsString().c_str());
+		    printf("Merging %d annotations with template %p\n", (int)Annotations(klass).get().size(), (void*)described_tmpl);
+		    annotations_for_class_templates[described_tmpl].merge(Annotations(klass));
+		}
+
+#if 0
+		// if theres no definition, it's possible the class only has specializations, so just skip this
                 if (!klass->hasDefinition()) {
-                    llvm::report_fatal_error(fmt::format("Class {} only has a forward declaration, no definition anywhere", class_name).c_str());
+		    return;
+                    //llvm::report_fatal_error(fmt::format("Class {} only has a forward declaration, no definition anywhere", class_name).c_str());
                 }
+
+		
                 // go from the forward declaration to the real type
                 klass = klass->getDefinition();
+
+
+		auto & wrapped_class = get_or_insert_wrapped_class(klass, source_manager, FOUND_ANNOTATION);
+
+		cerr << "class annotations" << endl;
+		cerr << join(wrapped_class.annotations.get()) << endl;
+
+		
+		if (!klass->isThisDeclarationADefinition()) {
+		    llvm::report_fatal_error("Got forward decl, called getDefinition, but it still wasn't a definition.. don't know how to handle that");
+		}
+		//		cerr << "definition declaration annotations" << endl;
+		//		cerr << join(Annotations(klass).get()) << endl;
+
 		if (!is_good_record_decl(klass)) {
 		    cerr << "skipping 'bad' record decl" << endl;
 		    return;
 		}
 		if (klass->isDependentType()) {
 		    cerr << "skipping dependent type" << endl;
+
 		    return;
 		}
+
+		if (!wrapped_class.should_be_wrapped()) {
+		    return;
+		}
+
 
                 if (klass == nullptr || !klass->isCompleteDefinition() || class_name != get_canonical_name_for_decl(klass)) {
                     llvm::report_fatal_error(fmt::format("Class {} - not sure what's going on with it couldn't get definition or name changed", class_name).c_str());
                 }
 
-		cerr << endl << "Got forward decl with annotation: " << get_canonical_name_for_decl(klass) << endl;
-                handle_class(get_or_insert_wrapped_class(klass, FOUND_ANNOTATION));
+                handle_class(wrapped_class);
+#endif
 
             }
 	    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
-		cerr << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass) << endl;
+		cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass) << endl;
 		if (!is_good_record_decl(klass)) {
 		    cerr << "skipping 'bad' record decl" << endl;
 		    return;
@@ -1944,14 +2331,70 @@ namespace {
 		    return;
 		}
 
-		// check to make sure it's not supposed to be ignored
-		if (has_annotation(klass, V8TOOLKIT_NONE_STRING)) {
+		auto name = get_canonical_name_for_decl(klass);
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+		    return;
+		}
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+		    return;
+		}
+
+		
+		if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
 		    cerr << "Skipping class because it's explicitly marked SKIP" << endl;
 		    return;
 		}
 
-                handle_class(get_or_insert_wrapped_class(klass, FOUND_INHERITANCE));
+		
+		print_specialization_info(klass);
+
+
+		if (!is_good_record_decl(klass)) {
+		    cerr << "SKIPPING BAD RECORD DECL" << endl;
+		}
+
+		add_definition(get_or_insert_wrapped_class(klass, source_manager, FOUND_INHERITANCE));
             }
+
+	    // only pick off the typedefNameDecl entries, but in 3.8, typedefNameDecl() matcher isn't available
+	    if (auto typedef_decl = Result.Nodes.getNodeAs<clang::TypedefNameDecl>("named decl")) {
+		auto qual_type = typedef_decl->getUnderlyingType();
+		auto record_decl = qual_type->getAsCXXRecordDecl();
+
+		// not interesting - it's for something like a primitive type like 'long'
+		if (!record_decl) {
+		    return;
+		}
+		auto name = get_canonical_name_for_decl(record_decl);
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+		    return;
+		}
+		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+		    return;
+		}
+
+		
+		cerr << endl << "^^^^^^^^^********* GOT TYPEDEF MATCHED" << endl;
+		cerr << "qualified name: " << typedef_decl->getQualifiedNameAsString() << endl;
+		fprintf(stderr, "record decl ptr: %p\n", (void *)record_decl);
+		cerr << "include file: " << get_include_for_type_decl(source_manager, typedef_decl) << endl;
+		cerr << "Annotations: " << join(Annotations(typedef_decl).get()) << endl;
+		
+		cerr << "Using type: " << get_type_string(qual_type) << endl;
+		
+		cerr << "Canonical name for type being used: " << name << endl;
+		
+		print_specialization_info(record_decl);
+		
+		annotations_for_record_decls[record_decl].merge(Annotations(typedef_decl));
+
+
+		if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
+		    fprintf(stderr, "Setting alias for %p to %s\n", (void *)record_decl, typedef_decl->getNameAsString().c_str());
+		    names_for_record_decls[record_decl] = typedef_decl->getNameAsString();
+		}
+
+	    }
 
 #ifdef TEMPLATE_INFO_ONLY
 
@@ -2056,7 +2499,7 @@ namespace {
 #endif
 		
 	    }
-#endif
+#endif // end TEMPLATE_INFO_ONLY
         }
     };
 
@@ -2073,9 +2516,8 @@ namespace {
     // the AST.
     class MyASTConsumer : public ASTConsumer {
     public:
-        MyASTConsumer(CompilerInstance &CI,
-                      std::vector<unique_ptr<WrappedClass>> & wrapped_classes) :
-                HandlerForClass(CI, wrapped_classes) {
+        MyASTConsumer(CompilerInstance &CI) :
+                HandlerForClass(CI) {
 
 #ifdef TEMPLATE_INFO_ONLY
 	    
@@ -2086,7 +2528,6 @@ namespace {
 			       &HandlerForClass);
 	    
 #else
-
 	    Matcher.addMatcher(cxxRecordDecl(
                 allOf(
                     anyOf(isStruct(), isClass()),
@@ -2097,14 +2538,22 @@ namespace {
 			  
 			  // mark a type you control with the wrapped class attribute
 			  allOf(isDefinition(),
-				cxxRecordDecl(hasAttr(attr::Annotate)).bind("class with annotation")),
+				unless(matchesName("^::std::")),
+				cxxRecordDecl(/*hasAttr(attr::Annotate)*/).bind("not std:: class")),
 			  
 			  // used for marking types not under your control with the wrapped class attribute
-			  allOf(unless(isDefinition()), cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
-			  
-			  
+			  allOf(unless(isDefinition()),
+				unless(matchesName("^::std::")),
+				cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
                     )
                 )), &HandlerForClass);
+
+			  Matcher.addMatcher(namedDecl(allOf(
+							     hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
+							      unless(matchesName("^::std::")),
+ 			                                      unless(matchesName("^::__")
+			   ))).bind("named decl"),
+			  &HandlerForClass);
 #endif
 
         }
@@ -2117,15 +2566,8 @@ namespace {
     private:
         ClassHandler HandlerForClass;
         MatchFinder Matcher;
+
     };
-
-
-
-
-
-
-
-
 
 
 
@@ -2134,6 +2576,7 @@ namespace {
     // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
     class PrintFunctionNamesAction : public PluginASTAction {
     public:
+	
         // open up output files
         PrintFunctionNamesAction() {
 
@@ -2141,6 +2584,7 @@ namespace {
 
         // This is called when all parsing is done
         void EndSourceFileAction() {
+
 
 #ifdef TEMPLATE_INFO_ONLY
 	    {
@@ -2203,14 +2647,10 @@ namespace {
             set<WrappedClass *> already_wrapped_classes;
 
 	    vector<vector<WrappedClass *>> classes_per_file;
-	    
-	    for (int i = wrapped_classes.size() - 1; i >= 0; i--) {
-		if (!wrapped_classes[i]->valid) {
-		    cerr << "Dropping 'invalid' class " << wrapped_classes[i]->class_name << endl;
-		    wrapped_classes.erase(wrapped_classes.begin() + i);
-		}
-	    }
 
+
+	    cerr << fmt::format("About to start writing out wrapped classes with {} potential classes", wrapped_classes.size()) << endl;
+	    
             bool found_match = true;
             while (found_match) {
                 found_match = false;
@@ -2222,14 +2662,15 @@ namespace {
                     WrappedClass &wrapped_class = **wrapped_class_iterator;
 
 		    if (!wrapped_class.valid) {
-			cerr << "Skipping 'invalid' class: " << wrapped_class.class_name << endl;
+			//			cerr << "Skipping 'invalid' class: " << wrapped_class.class_name << endl;
 			continue;
 		    }
 		    
+		    cerr << fmt::format("considering dumping class: {}", wrapped_class.class_name) << endl;
 
                     // if it has unmet dependencies or has already been mapped, skip it
                     if (!wrapped_class.ready_for_wrapping(already_wrapped_classes)) {
-			//                        printf("Skipping %s\n", wrapped_class.class_name.c_str());
+			printf("Skipping %s\n", wrapped_class.class_name.c_str());
                         continue;
                     }
                     already_wrapped_classes.insert(&wrapped_class);
@@ -2381,14 +2822,10 @@ namespace {
 
 
     protected:
-	// unique_ptr so references to the WrappedClass objects can be held and not invalidated
-        std::vector<unique_ptr<WrappedClass>> wrapped_classes;
-
-
         // The value returned here is used internally to run checks against
         std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                        llvm::StringRef) {
-            return llvm::make_unique<MyASTConsumer>(CI, wrapped_classes);
+            return llvm::make_unique<MyASTConsumer>(CI);
         }
 
         bool ParseArgs(const CompilerInstance &CI,
@@ -2413,6 +2850,7 @@ namespace {
         void PrintHelp(llvm::raw_ostream &ros) {
             ros << "Help for PrintFunctionNames plugin goes here\n";
         }
+	
     };
 }
 
