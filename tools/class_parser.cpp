@@ -120,7 +120,8 @@ namespace {
 	FOUND_ANNOTATION,
 	FOUND_INHERITANCE,
 	FOUND_GENERATED,
-	FOUND_BASE_CLASS // if the class is a base class of a wrapped type, the class must be wrapped
+	FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
+	FOUND_NEVER_WRAP
     };
 
     
@@ -503,7 +504,8 @@ namespace {
 	bool done = false;
 	bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
 	Annotations annotations;
-	
+	bool dumped = false; // this class has been dumped to file
+	set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
 	
 	FOUND_METHOD found_method;
 	
@@ -554,6 +556,9 @@ namespace {
 	    }
 
 	    if (found_method == FOUND_BASE_CLASS) {
+		return true;
+	    }
+	    if (found_method == FOUND_GENERATED) {
 		return true;
 	    }
 	    
@@ -792,10 +797,39 @@ namespace {
 	    definitions_to_process.push_back(&wrapped_class);
 	}
     }
+
+    
     
 
     std::vector<unique_ptr<WrappedClass>> wrapped_classes;
+
+    /*
+    vector<WrappedClass *> get_wrapped_class_regex(const string & regex_string) {
+	cerr << "Searching with regex: " << regex_string << endl;
+	vector<WrappedClass *> results;
+	for (auto & wrapped_class : wrapped_classes) {
+	    cerr << " -- " << wrapped_class->class_name << endl;
+	    if (regex_search(wrapped_class->class_name, regex(regex_string))) {
+		cerr << " -- ** MATCH ** " << endl;
+		results.push_back(wrapped_class.get());
+	    }
+	}
+	cerr << fmt::format("Returning {} results", results.size()) << endl;
+	return results;
+    }
+    */
+    
+    bool has_wrapped_class(const CXXRecordDecl * decl) {
+	auto class_name = get_canonical_name_for_decl(decl);
 	
+	for (auto & wrapped_class : wrapped_classes) {
+	    
+	    if (wrapped_class->class_name == class_name) {
+		return true;
+	    }
+	}
+	return false;
+    }
 	
     WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
 					       SourceManager & source_manager,
@@ -823,7 +857,7 @@ namespace {
             //fprintf(stderr, " -- class name %s\n", class_name.c_str());
             for (auto & wrapped_class : wrapped_classes) {
 
-                if (wrapped_class->class_name == class_name) {
+		if (wrapped_class->class_name == class_name) {
 
 		    // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
 		    //   if it is the base of a wrapped type
@@ -1239,9 +1273,16 @@ namespace {
 	auto actual_include_string = get_include_for_type_decl(source_manager, base_type_record_decl);
 
         if (print_logging) cerr << &wrapped_class << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
+
+	// if there's no wrapped type, it may be something like a std::function or STL container -- those are ok to not be wrapped
+	if (has_wrapped_class(base_type_record_decl)) {
+	    auto & used_wrapped_class = get_or_insert_wrapped_class(base_type_record_decl, source_manager, FOUND_UNSPECIFIED);
+	    wrapped_class.used_classes.insert(&used_wrapped_class);
+	}
+		
 	
         wrapped_class.include_files.insert(actual_include_string);
-
+	
 
 	
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
@@ -2027,17 +2068,32 @@ namespace {
 		    if (print_logging) cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
 
 		    auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", top_level_class->get_short_name());
+
 		    
 		    auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
+		    // auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
+		    WrappedClass * js_wrapped_class = nullptr;
+		    //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
+		    cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
 		    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name, source_manager);
-		    auto & bidirectional = *bidirectional_unique_ptr;
+		    js_wrapped_class = bidirectional_unique_ptr.get();
+		    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
+		    /*(  NEVER REUSE OLD CLASS BECAUSE WE WANT TO REBUILD IT FROM SCRATCH EACH TIME
+		    } else {
+			if (js_wrapped_classes.size() > 1) {
+			    llvm::report_fatal_error(fmt::format("Got more than one result when looking up wrapped class for {}", bidirectional_class_name).c_str());
+			}
+			cerr << "Using existing WrappedClass object for " << bidirectional_class_name << endl;
+			js_wrapped_class = js_wrapped_classes[0];
+			js_wrapped_class->found_method = FOUND_GENERATED;
+			
+		    }
+			*/
+		    auto & bidirectional = *js_wrapped_class;
 		    bidirectional.base_types.insert(top_level_class);
 		    top_level_class->derived_types.insert(&bidirectional);
 		    bidirectional.include_files.insert(generated_header_name);
 		    
-		    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
-
-
 
 		    BidirectionalBindings bd(source_manager, wrapped_class);
 		    bd.generate_bindings(wrapped_classes);
@@ -2591,11 +2647,12 @@ namespace {
 #else
 	    Matcher.addMatcher(cxxRecordDecl(
                 allOf(
+		      unless(isDerivedFrom("::v8toolkit::JSWrapper")), // JS-Classes will be completely regenerated
                     anyOf(isStruct(), isClass()),
                     anyOf( // order of these matters.   If a class matches more than one it will only be returned as the first
 			  
-			  allOf(isDefinition(), cxxRecordDecl(unless(isDerivedFrom("::v8toolkit::JSWrapper")),
-							      isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
+			  allOf(isDefinition(),
+				cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
 			  
 			  // mark a type you control with the wrapped class attribute
 			  allOf(isDefinition(),
@@ -2755,6 +2812,7 @@ namespace {
                     }
 
                     classes_for_this_file.push_back(&wrapped_class);
+		    wrapped_class.dumped = true;
                     declaration_count_this_file += wrapped_class.declaration_count;
                 }
             }
@@ -2793,6 +2851,21 @@ namespace {
             if (print_logging) cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
 	    cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
 
+	    cerr << "Classes used that were not wrapped" << endl;
+
+
+
+	    
+	    for ( auto & wrapped_class : wrapped_classes) {
+		if (!wrapped_class->dumped) { continue; }
+		for (auto used_class : wrapped_class->used_classes) {
+		    if (!used_class->dumped) {
+			cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->name_alias, used_class->name_alias) << endl;
+		    }
+		}
+		
+	    }
+	    
         }
 
         // takes a file number starting at 1 and incrementing 1 each time

@@ -79,6 +79,9 @@ public:
     }
 };
 
+
+class UnwrappedClassThatIsUsed {};
+
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
 V8TOOLKIT_USE_BASE_TYPE(FooParent)
@@ -92,6 +95,8 @@ public:
     using Using2 = Using;
     V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short &&);
 
+    UnwrappedClassThatIsUsed uctiu;
+    
     Test::MyTemplate<vector<int>> my_template_int;
     Test::MyTemplate<vector<char>> my_template_char;
 
