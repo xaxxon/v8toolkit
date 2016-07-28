@@ -1,19 +1,3 @@
-//
-//// this is supposed to be a copy of NONE
-//#define SKIP __attribute__((annotate("v8toolkit_generate_bindings_none")))
-//
-//// this is supposed to be a copy of ALL
-//#define EXPORT __attribute__((annotate("v8toolkit_generate_bindings_all")))
-//
-//#define NONE __attribute__((annotate("v8toolkit_generate_bindings_none")))
-//#define SOME __attribute__((annotate("v8toolkit_generate_bindings_some")))
-//#define EXCEPT __attribute__((annotate("v8toolkit_generate_bindings_except")))
-//#define ALL __attribute__((annotate("v8toolkit_generate_bindings_all")))
-//#define NOT_SPECIAL __attribute__((annotate("else")))
-//
-//
-//
-//#define V8TOOLKIT_BIDIRECTIONAL __attribute__((annotate("v8toolkit_generate_bidirectional")))
 
 #include <functional>
 #include <memory>
@@ -35,7 +19,7 @@ namespace v8toolkit {
 	class JSWrapper{};
 }
 
-#if 0
+
 class Uninteresting{};
 
 class OnlyUsedInTemplate{};
@@ -43,6 +27,7 @@ class OnlyUsedInTemplate{};
 template<class T, int i>
 class TemplatedClass{};
 
+#if 0
 class V8TOOLKIT_WRAPPED_CLASS FooParent {
 public:
 //    FooParent();
@@ -57,7 +42,6 @@ public:
 //    int fp_i;
 };
 
-#endif
 
 
 namespace v8toolkit {
@@ -67,7 +51,7 @@ namespace v8toolkit {
     class WrappedClassBase;
     
     template<class, class...>
-	class FlexibleParent : public WrappedClassBase {};
+	class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS FlexibleParent : public WrappedClassBase {};
     
 
 
@@ -95,3 +79,4 @@ template<
 */
 }
 
+#endif

@@ -496,7 +496,7 @@ public:
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
-		init_static_methods(function_template);
+	init_static_methods(function_template);
 
 //        function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
 		function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
@@ -714,8 +714,8 @@ public:
         
         
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
-		//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
-        if (!this->is_finalized()) {    
+	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
+	if (!this->is_finalized()) {    
             // printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object);
         }
@@ -1225,6 +1225,7 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 #endif
 		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
+		/** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
 	}
 };

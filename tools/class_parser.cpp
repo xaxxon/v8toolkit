@@ -102,8 +102,8 @@ using namespace clang::tooling;
 
 using namespace std;
 
-//#define PRINT_SKIPPED_EXPORT_REASONS true
-#define PRINT_SKIPPED_EXPORT_REASONS false
+#define PRINT_SKIPPED_EXPORT_REASONS true
+//#define PRINT_SKIPPED_EXPORT_REASONS false
 
 int classes_wrapped = 0;
 int methods_wrapped = 0;
@@ -119,7 +119,8 @@ namespace {
 	FOUND_UNSPECIFIED = 0,
 	FOUND_ANNOTATION,
 	FOUND_INHERITANCE,
-	FOUND_GENERATED
+	FOUND_GENERATED,
+	FOUND_BASE_CLASS // if the class is a base class of a wrapped type, the class must be wrapped
     };
 
     
@@ -499,13 +500,12 @@ namespace {
         set<string> wrapper_extension_methods;
         SourceManager & source_manager;
 	string my_include; // the include for getting my type
-	EXPORT_TYPE export_type;
 	bool done = false;
 	bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
 	Annotations annotations;
 	
 	
-	FOUND_METHOD found_method = FOUND_UNSPECIFIED;
+	FOUND_METHOD found_method;
 	
 	std::string get_short_name() const {
 	    if (decl == nullptr) {
@@ -547,10 +547,14 @@ namespace {
 	    auto b = found_method;
 	    auto c = join(annotations.get());
 	    cerr << fmt::format("In should be wrapped with class {}, found: {}, annotations: {}", a, b, c) << endl;
-	    
+
 	    if (annotations.has(V8TOOLKIT_NONE_STRING) &&
 		annotations.has(V8TOOLKIT_ALL_STRING)) {
 		llvm::report_fatal_error("type has both NONE_STRING and ALL_STRING - this makes no sense");
+	    }
+
+	    if (found_method == FOUND_BASE_CLASS) {
+		return true;
 	    }
 	    
 	    if (found_method == FOUND_INHERITANCE) {
@@ -577,12 +581,14 @@ namespace {
 		}
 	    }
 
-
-	    
-	    // THIS MUST BE THE FINAL CHECK
 	    if (base_types.size() > 1) {
 		llvm::report_fatal_error("trying to see if type should be wrapped but it has more than one base type -- unsupported");
 	    }
+
+	    /*
+	      // *** IF A TYPE SHOULD BE WRAPPED THAT FORCES ITS PARENT TYPE TO BE WRAPPED ***
+
+
 	    if (base_types.empty()) {
 		cerr << "no base typ so SHOULD BE WRAPPED" << endl;
 		return true;
@@ -592,7 +598,9 @@ namespace {
 		cerr << "base type is '" << base_type_wrapped_class.class_name << "'" << endl;
 		return base_type_wrapped_class.should_be_wrapped();
 	    }
+	    */
 
+	    return true;
 	}
 	
         bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const {
@@ -657,18 +665,18 @@ namespace {
 	    class_name(class_name),
 	    name_alias(class_name),
 	    source_manager(source_manager),
+	    valid(true), // explicitly generated, so must be valid
 	    found_method(FOUND_GENERATED)
 	{}
 
 
 	// for classes actually in the code being parsed
-        WrappedClass(const CXXRecordDecl * decl, SourceManager & source_manager, FOUND_METHOD found_method = FOUND_UNSPECIFIED) :
+        WrappedClass(const CXXRecordDecl * decl, SourceManager & source_manager, FOUND_METHOD found_method) :
 	    decl(decl),
 	    class_name(get_canonical_name_for_decl(decl)),
-	    name_alias(class_name),
+	    name_alias(decl->getNameAsString()),
 	    source_manager(source_manager),
 	    my_include(get_include_for_type_decl(source_manager, decl)),
-	    export_type(get_export_type(decl, EXPORT_UNSPECIFIED)),
 	    annotations(decl),
 	    found_method(found_method)
         {
@@ -791,7 +799,7 @@ namespace {
 	
     WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
 					       SourceManager & source_manager,
-					       FOUND_METHOD found_method = FOUND_UNSPECIFIED) {
+					       FOUND_METHOD found_method) {
 
 	    if (decl->isDependentType()) {
 		throw exception();
@@ -816,6 +824,12 @@ namespace {
             for (auto & wrapped_class : wrapped_classes) {
 
                 if (wrapped_class->class_name == class_name) {
+
+		    // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
+		    //   if it is the base of a wrapped type
+		    if (found_method == FOUND_BASE_CLASS) {
+			wrapped_class->found_method = FOUND_BASE_CLASS;
+		    }
 		    //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
                     return *wrapped_class;
                 }
@@ -1173,9 +1187,14 @@ namespace {
                                        // don't capture qualtype by ref since it is changed in this function
                                        QualType qual_type) {
 
+	bool print_logging = true;
+
+	cerr << "In update_wrapped_class_for_type" << endl;
 	if (print_logging) cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
+
+	// remove pointers
         while(!qual_type->getPointeeType().isNull()) {
             qual_type = qual_type->getPointeeType();
         }
@@ -1184,6 +1203,34 @@ namespace {
         if (print_logging) cerr << " to " << qual_type.getAsString() << endl;
         auto base_type_record_decl = qual_type->getAsCXXRecordDecl();
 
+
+
+	if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
+	    cerr << "IS A FUNCTION TYPE!!!!" << endl;
+
+	    // it feels strange, but the type int(bool) from std::function<int(bool)> is a FunctionProtoType
+	    if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
+		cerr << "IS A FUNCTION PROTOTYPE" << endl;
+
+		cerr << "Recursing on return type" << endl;
+		update_wrapped_class_for_type(source_manager, wrapped_class, function_prototype->getReturnType());
+		
+		for ( auto param : function_prototype->param_types()) {
+
+		    cerr << "Recursing on param type" << endl;
+		    update_wrapped_class_for_type(source_manager, wrapped_class, param);
+		}
+
+		
+	    } else {
+		cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+	    }
+		
+	} else {
+	    cerr << "is not a FUNCTION TYPE" << endl;
+	}
+
+	
        // primitive types don't have record decls
         if (base_type_record_decl == nullptr) {
             return;
@@ -1195,6 +1242,8 @@ namespace {
 	
         wrapped_class.include_files.insert(actual_include_string);
 
+
+	
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
             if (print_logging) cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
@@ -1691,12 +1740,14 @@ namespace {
 	    for (auto wrapped_class_ptr : definitions_to_process) {
 		auto & wrapped_class = *wrapped_class_ptr;
 
+
+		cerr << ++definition_count << endl;
+
 		// all the annotations and name aliases from forward decl's and 'using' typedefs may not have been available
 		// when the wrapped class was initially created, so get the full list now
 		wrapped_class.update_data();
 
 		
-		cerr << ++definition_count << endl;
 		print_specialization_info(wrapped_class.decl);
 		
 		/*
@@ -1720,9 +1771,9 @@ namespace {
 	}
 	
 
-        std::string handle_data_member(const CXXRecordDecl * containing_class, FieldDecl * field, EXPORT_TYPE parent_export_type, const std::string & indentation) {
+        std::string handle_data_member(const CXXRecordDecl * containing_class, FieldDecl * field, const std::string & indentation) {
             std::stringstream result;
-            auto export_type = get_export_type(field, parent_export_type);
+            auto export_type = get_export_type(field, EXPORT_ALL);
             auto short_field_name = field->getNameAsString();
             auto full_field_name = field->getQualifiedNameAsString();
 
@@ -1785,7 +1836,7 @@ namespace {
 
             std::string full_method_name(method->getQualifiedNameAsString());
             std::string short_method_name(method->getNameAsString());
-	    if (print_logging) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
+	    if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
 	    //            if (print_logging) cerr << "changing method name from " << full_method_name << " to ";
 //
 //            auto regex = std::regex(fmt::format("{}::{}$", containing_class->getName().str(), short_method_name));
@@ -1794,7 +1845,7 @@ namespace {
 //            if (print_logging) cerr << full_method_name << endl;
 
 
-            auto export_type = get_export_type(method, klass.export_type);
+            auto export_type = get_export_type(method, EXPORT_ALL);
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping method %s because not supposed to be exported %d\n",
@@ -1830,7 +1881,7 @@ namespace {
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
                 return "";
             }
-	    if (print_logging) cerr << "Method passed all checks" << endl;
+	    if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << "Method passed all checks" << endl;
 
 
 	    Annotations annotations(method);
@@ -1853,7 +1904,7 @@ namespace {
                        short_method_name.c_str());
                 return "";
             }
-	    //	    cerr << "Inserting short name" << endl;
+	    //cerr << "Inserting short name" << endl;
             top_level_class->names.insert(short_method_name);
 
 
@@ -1863,13 +1914,13 @@ namespace {
 
 
             if (method->isStatic()) {
-		// cerr << "method is static" << endl;
+		cerr << "method is static" << endl;
                 top_level_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(source_manager, *top_level_class, klass.decl, method),
                        short_method_name, full_method_name);
             } else {
-		// cerr << "Method is not static" << endl;
+		cerr << "Method is not static" << endl;
                 top_level_class->declaration_count++;
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_class_and_parameters(source_manager, *top_level_class, klass.decl, method),
@@ -1877,7 +1928,7 @@ namespace {
                 methods_wrapped++;
 
             }
-	    // cerr << "returning result" << endl;
+	    cerr << "returning result" << endl;
             return result.str();
         }
 
@@ -1888,6 +1939,10 @@ namespace {
                           WrappedClass * derived_class = nullptr,
                           const std::string & indentation = "") {
 
+
+	    // update the includes for the type for itself -- if it's a templated type, make sure it has includes for the types it is
+	    //   templated with
+	    update_wrapped_class_for_type(source_manager, wrapped_class, wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal());
 	    PrintLoggingGuard lg;
             if (top_level) {
 
@@ -2030,7 +2085,7 @@ namespace {
 
 	    if (print_logging) cerr << "About to process fields" << endl;
             for (FieldDecl * field : wrapped_class.decl->fields()) {
-                top_level_class->members.insert(handle_data_member(wrapped_class.decl, field, wrapped_class.export_type, indentation + "  "));
+                top_level_class->members.insert(handle_data_member(wrapped_class.decl, field, indentation + "  "));
             }
 
 	    if (print_logging) cerr << "About to process base class info" << endl;
@@ -2093,7 +2148,7 @@ namespace {
 
 
 		found_base_type = true;
-                auto record_decl = base_qual_type->getAsCXXRecordDecl();
+                auto base_record_decl = base_qual_type->getAsCXXRecordDecl();
 
 //                fprintf(stderr, "%s -- type class: %d\n", indentation.c_str(), base_qual_type->getTypeClass());
 //                cerr << indentation << "-- base type has a cxxrecorddecl" << (record_decl != nullptr) << endl;
@@ -2102,14 +2157,19 @@ namespace {
 //                cerr << indentation << "-- can be cast to attributed type: " << (dyn_cast<AttributedType>(base_qual_type) != nullptr) << endl;
 //                cerr << indentation << "-- can be cast to injected class name type: " << (dyn_cast<InjectedClassNameType>(base_qual_type) != nullptr) << endl;
 
-                // This is ok.  Not sure why.
-                if (record_decl == nullptr) {
+
+                if (base_record_decl == nullptr) {
                     llvm::report_fatal_error("Got null base type record decl - this should be caught ealier");
                 }
 		//  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
 
                 cerr << "getting base type wrapped class object" << endl;
-                WrappedClass & current_base = get_or_insert_wrapped_class(record_decl, source_manager);
+                WrappedClass & current_base = get_or_insert_wrapped_class(base_record_decl, source_manager, FOUND_BASE_CLASS);
+
+		// if the base type hasn't been independently processed, do that right now
+		if (!current_base.done) {
+		    handle_class(current_base, true);
+		}
 
                 auto  current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
                 auto  current_include = get_include_for_type_decl(source_manager, wrapped_class.decl);
@@ -2235,7 +2295,7 @@ namespace {
 
 	    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("forward declaration with annotation")) {
 		auto class_name = get_canonical_name_for_decl(klass);
-		cerr << "Got forward declaration with annotation: " << class_name << endl;
+		cerr << endl << "Got forward declaration with annotation: " << class_name << endl;
 		fprintf(stderr, "decl ptr: %p\n", (void *)klass);
 
 		cerr << get_include_for_type_decl(source_manager, klass) << endl;
@@ -2352,7 +2412,8 @@ namespace {
 		if (!is_good_record_decl(klass)) {
 		    cerr << "SKIPPING BAD RECORD DECL" << endl;
 		}
-
+		
+		cerr << "Storing it for later processing (unless dupe)" << endl;
 		add_definition(get_or_insert_wrapped_class(klass, source_manager, FOUND_INHERITANCE));
             }
 
