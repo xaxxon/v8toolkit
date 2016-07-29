@@ -1294,7 +1294,6 @@ std::string type_details(){
 		}
 		auto object = v8::Object::Cast(*value);
 		if (object->InternalFieldCount() <= 0) {
-		    assert(false);
 			throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
 		}
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));

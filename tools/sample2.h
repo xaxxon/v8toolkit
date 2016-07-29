@@ -27,7 +27,6 @@ class OnlyUsedInTemplate{};
 template<class T, int i>
 class TemplatedClass{};
 
-#if 0
 class V8TOOLKIT_WRAPPED_CLASS FooParent {
 public:
 //    FooParent();
@@ -79,4 +78,4 @@ template<
 */
 }
 
-#endif
+

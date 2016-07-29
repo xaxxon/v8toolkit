@@ -324,7 +324,7 @@ struct ParameterBuilder<T,
         > // end result_of
         >::value
         >> {
-    using NoRefT = std::remove_reference_t<T>;
+    using NoRefT = std::remove_const_t<std::remove_reference_t<T>>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
             throw InvalidCallException("Not enough javascript parameters for function call");

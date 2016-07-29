@@ -63,6 +63,8 @@ vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mix
 
 vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\""};
 
+string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n";
+
 // sometimes files sneak in that just shouldn't be
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
@@ -659,11 +661,18 @@ namespace {
         }
 
         std::set<string> get_derived_type_includes() {
+	    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
             set<string> results;
 	    results.insert(my_include);
             for (auto derived_type : derived_types) {
+
+		results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
+		
                 auto derived_includes = derived_type->get_derived_type_includes();
                 results.insert(derived_includes.begin(), derived_includes.end());
+
+		cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias, derived_type->class_name, join(derived_includes)) << endl;
+
             }
             return results;
         }
@@ -2097,22 +2106,14 @@ namespace {
 		    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name, source_manager);
 		    js_wrapped_class = bidirectional_unique_ptr.get();
 		    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
-		    /*(  NEVER REUSE OLD CLASS BECAUSE WE WANT TO REBUILD IT FROM SCRATCH EACH TIME
-		    } else {
-			if (js_wrapped_classes.size() > 1) {
-			    llvm::report_fatal_error(fmt::format("Got more than one result when looking up wrapped class for {}", bidirectional_class_name).c_str());
-			}
-			cerr << "Using existing WrappedClass object for " << bidirectional_class_name << endl;
-			js_wrapped_class = js_wrapped_classes[0];
-			js_wrapped_class->found_method = FOUND_GENERATED;
-			
-		    }
-			*/
+
 		    auto & bidirectional = *js_wrapped_class;
 		    bidirectional.base_types.insert(top_level_class);
-		    top_level_class->derived_types.insert(&bidirectional);
+
+		    cerr << fmt::format("Adding derived bidirectional type {} to base type: {}", bidirectional.class_name, wrapped_class.name_alias) << endl;
+		    wrapped_class.derived_types.insert(&bidirectional);
 		    bidirectional.include_files.insert(generated_header_name);
-		    
+		    bidirectional.my_include = generated_header_name;
 
 		    BidirectionalBindings bd(source_manager, wrapped_class);
 		    bd.generate_bindings(wrapped_classes);
@@ -2925,6 +2926,8 @@ namespace {
             set<string> already_included_this_file;
 	    already_included_this_file.insert(never_include_for_any_file.begin(), never_include_for_any_file.end());
 
+	    class_wrapper_file << header_for_every_class_wrapper_file << "\n";
+	    
 	    // first the ones that go in every file regardless of its contents
 	    for (auto & include : includes_for_every_class_wrapper_file) {
 		class_wrapper_file << fmt::format("#include {}\n", include);

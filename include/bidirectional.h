@@ -371,7 +371,7 @@ public:
 
 
 // turn on/off print statements for helping debug JS_ACCESS functionality
-#define JS_ACCESS_CORE_DEBUG true
+#define JS_ACCESS_CORE_DEBUG false
 
 /**
 * This code looks for a javascript method on the JavaScript object contained

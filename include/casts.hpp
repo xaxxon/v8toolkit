@@ -16,9 +16,12 @@
 
 namespace v8toolkit {
 
-
+    // if a value to send to a macro has a comma in it, use this instead so it is parsed as a comma character in the value
+    //   and not separating another parameter to the template
 #define V8_TOOLKIT_COMMA ,
 
+// Use this macro when you need to customize the template options to something more than <class T>
+//   For instance if you need to make it <vector<T>>
 #define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
 template<TEMPLATE> \
 struct CastToNative<TYPE>{ \
@@ -47,7 +50,7 @@ inline TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::
 
 
 
-
+    // Use this macro for types where you don't need to customize the template options
 #define CAST_TO_JS_PRIMITIVE_WITH_CONST(TYPE) \
 template<> struct CastToJS<const TYPE> { \
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \

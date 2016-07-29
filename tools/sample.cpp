@@ -6,11 +6,10 @@
 template<class T>
 class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
 
-    int main() {
-	NeedIncludeForTemplatedType<function<bool(Uninteresting&)>> uninteresting;
-    }
 
-#if 0
+
+
+
 //
 //int do_something(int i){return i;}
 //
@@ -182,7 +181,9 @@ int main() {
         f.templated_function<unsigned int>(5);
 	DerivedFromWrappedClassBase<int> dfwcb;
 	dfwcb.function_in_templated_class(5);
-    
+
+
+	NeedIncludeForTemplatedType<function<bool(Uninteresting&)>> uninteresting;
     //    DerivedFromWrappedClassBase<char>;
 }
-#endif
+
