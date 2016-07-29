@@ -121,13 +121,11 @@ CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class Firs
         return std::pair<FirstT, SecondT>(native_first, native_second);
 
     } else {
-        printf("cast to native std::pair got %s\n", stringify_value(isolate, value).c_str());
-        auto error = "CastToNative<std::pair<>> requires an array, but another type was provided";
-        isolate->ThrowException(v8::String::NewFromUtf8(isolate, error));
+	auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
+	std::cout << error << std::endl;
         throw v8toolkit::CastException(error);
     }
-}
-};
+}};
 
 
 
@@ -143,7 +141,7 @@ CAST_TO_NATIVE_WITH_CONST(std::vector<ElementType V8_TOOLKIT_COMMA Rest...>, cla
             v.push_back(CastToNative<ElementType>()(isolate, value));
         }
     } else {
-        isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires an array, but another type was provided"));
+	throw CastException(fmt::format("CastToNative<std::vector<T>> requires an array but instead got {}", stringify_value(isolate, value)));
     }
     return v;
 }};
@@ -161,8 +159,7 @@ struct CastToNative<v8::Local<v8::Function>> {
         if(value->IsFunction()) {
             return v8::Local<v8::Function>::Cast(value);
         } else {
-            isolate->ThrowException(v8::String::NewFromUtf8(isolate,"Function requires a v8::Function, but another type was provided"));
-            return v8::Local<v8::Function>();
+	    throw CastException(fmt::format("CastToNative<v8::Local<v8::Function>> requires a javascript function but instead got {}", stringify_value(isolate, value)));
         }
     }
 };
@@ -231,7 +228,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
                 std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
             }
         }
-        throw CastException("Cannot make unique ptr for type that is not wrapped and not copy constructible");
+        throw CastException(fmt::format("Cannot make unique ptr for type {}  that is not wrapped and not copy constructible", demangle<T>()));
     }
 };
 
@@ -242,9 +239,10 @@ CAST_TO_NATIVE_WITH_CONST(std::map<Key V8TOOLKIT_COMMA Value V8TOOLKIT_COMMA Arg
 //struct CastToNative<std::map<Key, Value, Args...>>
 {
         using MapType = std::map<Key, Value, Args...>;
-//    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	//    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	if (!value->IsObject()) {
-	    throw CastException("Javascript Object type must be passed in to convert to std::map");
+	    throw CastException(fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+					    stringify_value(isolate, value)));
 	}
 
 	auto context = isolate->GetCurrentContext();

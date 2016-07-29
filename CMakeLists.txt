@@ -17,6 +17,7 @@ set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location o
 file(GLOB HEADER_FILES
         include/*.h
 	include/*.hpp
+	tools/class_parser.h
 	)
 
 file(GLOB SOURCE_FILES
@@ -108,7 +109,7 @@ add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
 add_executable(exception_sample samples/exception_sample.cpp)
 add_dependencies(exception_sample v8toolkit_static)
 target_link_libraries(exception_sample ${V8_STATIC_LIBS})
-target_link_libraries(exception_sample v8toolkit)
+target_link_libraries(exception_sample v8toolkit cppformat)
 #add_custom_command(TARGET bidirectional_sample PRE_BUILD
 #        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js
 #        ${PROJECT_BINARY_DIR})
@@ -117,12 +118,12 @@ target_link_libraries(exception_sample v8toolkit)
 add_executable(thread_sample samples/thread_sample.cpp)
 add_dependencies(thread_sample v8toolkit_static)
 target_link_libraries(thread_sample ${V8_STATIC_LIBS})
-target_link_libraries(thread_sample v8toolkit)
+target_link_libraries(thread_sample v8toolkit cppformat)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
 add_dependencies(toolbox_sample v8toolkit_static)
 target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
-target_link_libraries(toolbox_sample v8toolkit)
+target_link_libraries(toolbox_sample v8toolkit cppformat)
 
 # This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET toolbox_sample PRE_BUILD
@@ -134,14 +135,13 @@ add_custom_command(TARGET toolbox_sample PRE_BUILD
 add_executable(javascript_sample samples/javascript_sample.cpp)
 add_dependencies(javascript_sample v8toolkit_static)
 target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
-target_link_libraries(javascript_sample v8toolkit)
-target_link_libraries(javascript_sample cppformat)
+target_link_libraries(javascript_sample v8toolkit cppformat)
+
 
 add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_static)
 target_link_libraries(sample ${V8_STATIC_LIBS})
-target_link_libraries(sample v8toolkit)
-target_link_libraries(sample cppformat)
+target_link_libraries(sample v8toolkit cppformat)
 
 # This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET sample PRE_BUILD

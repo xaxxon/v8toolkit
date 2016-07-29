@@ -139,6 +139,13 @@ namespace {
 	return decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString();
     }
 
+    // list of data (source code being processed) errors occuring during the run.   Clang API errors are still immediate fails with
+    //   llvm::report_fatal_error
+    vector<string> errors;
+    void data_error(const string & error) {
+	cerr << "DATA ERROR: " << error << endl;
+	errors.push_back(error);
+    }
 
     class PrintLoggingGuard {
 	bool logging = false;
@@ -212,7 +219,7 @@ namespace {
 	
         for (auto base : decl->bases()) {
 	    if (base.getType().getTypePtrOrNull() == nullptr) {
-		llvm::report_fatal_error("base type ptr was null");
+		llvm::report_fatal_error(fmt::format("base type ptr was null for {}", decl->getNameAsString()).c_str());
 	    }
             if (!is_good_record_decl(base.getType()->getAsCXXRecordDecl())) {
                 return false;
@@ -508,6 +515,7 @@ namespace {
 	set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
 	
 	FOUND_METHOD found_method;
+	bool force_no_constructors = false;
 	
 	std::string get_short_name() const {
 	    if (decl == nullptr) {
@@ -548,11 +556,11 @@ namespace {
 	    auto a = class_name;
 	    auto b = found_method;
 	    auto c = join(annotations.get());
-	    cerr << fmt::format("In should be wrapped with class {}, found: {}, annotations: {}", a, b, c) << endl;
+	    cerr << fmt::format("In should be wrapped with class {}, found_method: {}, annotations: {}", a, b, c) << endl;
 
 	    if (annotations.has(V8TOOLKIT_NONE_STRING) &&
 		annotations.has(V8TOOLKIT_ALL_STRING)) {
-		llvm::report_fatal_error("type has both NONE_STRING and ALL_STRING - this makes no sense");
+		data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
 	    }
 
 	    if (found_method == FOUND_BASE_CLASS) {
@@ -573,7 +581,7 @@ namespace {
 		    return false;
 		}
 		if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-		    llvm::report_fatal_error("Type was supposedly found by annotation, but annotation not found");
+		    llvm::report_fatal_error(fmt::format("Type was supposedly found by annotation, but annotation not found: {}", class_name));
 		}
 	    } else if (found_method == FOUND_UNSPECIFIED) {
 		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
@@ -587,7 +595,7 @@ namespace {
 	    }
 
 	    if (base_types.size() > 1) {
-		llvm::report_fatal_error("trying to see if type should be wrapped but it has more than one base type -- unsupported");
+		data_error(fmt::format("trying to see if type should be wrapped but it has more than one base type -- unsupported", class_name));
 	    }
 
 	    /*
@@ -702,7 +710,7 @@ namespace {
 	    auto pattern = this->decl->getTemplateInstantiationPattern();
 	    if (pattern && pattern != this->decl) {
 		if (!pattern->isDependentType()) {
-		    llvm::report_fatal_error("template instantiation class's pattern isn't dependent - this is not expected from my understanding");
+		    llvm::report_fatal_error(fmt::format("template instantiation class's pattern isn't dependent - this is not expected from my understanding: {}", class_name));
 		}
 	    }
 
@@ -741,7 +749,7 @@ namespace {
                 }
             };
             if (base_types.size() > 1) {
-		llvm::report_fatal_error(fmt::format("Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n", class_name), false);
+		data_error(fmt::format("Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n", class_name));
 
             }
             return base_types.size() ? (*base_types.begin())->class_name : "";
@@ -791,7 +799,7 @@ namespace {
     
     void add_definition(WrappedClass & wrapped_class) {
 	if (!wrapped_class.decl->isThisDeclarationADefinition()) {
-	    llvm::report_fatal_error("tried to add non-definition to definition list for post processing");
+	    llvm::report_fatal_error(fmt::format("tried to add non-definition to definition list for post processing: {}", wrapped_class.class_name).c_str());
 	}
 	if (std::find(definitions_to_process.begin(), definitions_to_process.end(), &wrapped_class) == definitions_to_process.end()) {
 	    definitions_to_process.push_back(&wrapped_class);
@@ -862,6 +870,11 @@ namespace {
 		    // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
 		    //   if it is the base of a wrapped type
 		    if (found_method == FOUND_BASE_CLASS) {
+
+			// if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
+			if (!wrapped_class->should_be_wrapped()) {
+			    wrapped_class->force_no_constructors = true;
+			}
 			wrapped_class->found_method = FOUND_BASE_CLASS;
 		    }
 		    //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
@@ -926,20 +939,20 @@ namespace {
                 auto annotation_string = attribute_attr->getAnnotation().str();
 
                 if (annotation_string == V8TOOLKIT_ALL_STRING) {
-                    if (found_export_specifier) { llvm::report_fatal_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
+                    if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name));}
 		    
                     export_type = EXPORT_ALL;
                     found_export_specifier = true;
                 } else if (annotation_string == "v8toolkit_generate_bindings_some") {
-                    if (found_export_specifier) { llvm::report_fatal_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
+                    if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name));}
                     export_type = EXPORT_SOME;
                     found_export_specifier = true;
                 } else if (annotation_string == "v8toolkit_generate_bindings_except") {
-                    if (found_export_specifier) { llvm::report_fatal_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
+                    if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
                     export_type = EXPORT_EXCEPT;
                     found_export_specifier = true;
                 } else if (annotation_string == V8TOOLKIT_NONE_STRING) {
-                    if (found_export_specifier) { llvm::report_fatal_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
+                    if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
                     export_type = EXPORT_NONE; // just for completeness
                     found_export_specifier = true;
                 }
@@ -955,7 +968,7 @@ namespace {
 //                cerr << "%^%^%^%^%^%^%^% " << get_canonical_name_for_decl(base_decl) << endl;
                 if (base_name == "class v8toolkit::WrappedClassBase") {
                     cerr << "FOUND WRAPPED CLASS BASE -- EXPORT_ALL" << endl;
-                    if (found_export_specifier) { llvm::report_fatal_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
+                    if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name).c_str());}
                     export_type = EXPORT_ALL;
                     found_export_specifier = true;
                 }
@@ -1137,7 +1150,7 @@ namespace {
 
             auto & template_arg_list = template_specialization_decl->getTemplateArgs();
             if (user_specified_template_parameters.size() > template_arg_list.size()) {
-                cerr << "ERROR: detected template parameters > actual list size" << endl;
+		llvm::report_fatal_error(fmt::format("ERROR: detected template parameters > actual list size for {}", qual_type_string).c_str());
             }
 
             auto template_types_to_handle = user_specified_template_parameters.size();
@@ -1687,15 +1700,18 @@ namespace {
                 int constructor_parameter_count;
 		vector<QualType> constructor_parameters;
                 foreach_constructor(wrapped_class.decl, [&](auto constructor_decl){
-                    if (got_constructor) { cerr << "ERROR: Got more than one constructor" << endl; return;}
-                    got_constructor = true;
+		    if (got_constructor) {
+			data_error(fmt::format("ERROR: Got more than one constructor for {}", wrapped_class.class_name));
+			return;
+		    }
+		    got_constructor = true;
                     result << get_method_parameters(source_manager, wrapped_class, constructor_decl, true, true);
                     constructor_parameter_count = constructor_decl->getNumParams();
 		    constructor_parameters = get_method_param_qual_types(constructor_decl);
 
                 }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
                 if (!got_constructor) {
-		    llvm::report_fatal_error(fmt::format("ERROR: Got no bidirectional constructor for {}", wrapped_class.class_name), false);
+		    data_error(fmt::format("ERROR: Got no bidirectional constructor for {}", wrapped_class.class_name));
 
                 }
                 result << fmt::format(") :\n");
@@ -1812,12 +1828,14 @@ namespace {
 	}
 	
 
-        std::string handle_data_member(const CXXRecordDecl * containing_class, FieldDecl * field, const std::string & indentation) {
+        std::string handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation) {
             std::stringstream result;
             auto export_type = get_export_type(field, EXPORT_ALL);
             auto short_field_name = field->getNameAsString();
             auto full_field_name = field->getQualifiedNameAsString();
 
+
+	    cerr << "Processing data member for: " << containing_class.name_alias << ": " << full_field_name << endl;
 //            if (containing_class != top_level_class_decl) {
 //                if (print_logging) cerr << "************";
 //            }
@@ -1843,10 +1861,10 @@ namespace {
             }
 
             if (top_level_class->names.count(short_field_name)) {
-                printf("WARNING: Skipping duplicate name %s/%s :: %s\n",
-                       top_level_class->class_name.c_str(),
-                        containing_class->getName().str().c_str(),
-                        short_field_name.c_str());
+                data_error(fmt::format("ERROR: duplicate name {}/{} :: {}\n",
+					     top_level_class->class_name,
+					     containing_class.class_name,
+					     short_field_name));
                 return "";
             }
             top_level_class->names.insert(short_field_name);
@@ -1929,7 +1947,7 @@ namespace {
             if (annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
 		// cerr << "has extend wrapper string" << endl;
                 if (!method->isStatic()) {
-		            llvm::report_fatal_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()), false);
+		    data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
 
                 }
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping", indentation) << endl;
@@ -1939,10 +1957,10 @@ namespace {
             }
 	    //	    cerr << "Checking if method name already used" << endl;
             if (top_level_class->names.count(short_method_name)) {
-                printf("Skipping duplicate name %s/%s :: %s\n",
-		       top_level_class->class_name.c_str(),
-		       klass.class_name.c_str(),
-                       short_method_name.c_str());
+                data_error(fmt::format("Skipping duplicate name {}/{} :: {}\n",
+					     top_level_class->class_name,
+					     klass.class_name,
+					     short_method_name));
                 return "";
             }
 	    //cerr << "Inserting short name" << endl;
@@ -1977,7 +1995,6 @@ namespace {
 
         void handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
                           bool top_level = true,
-                          WrappedClass * derived_class = nullptr,
                           const std::string & indentation = "") {
 
 
@@ -1999,6 +2016,8 @@ namespace {
 		
 		// if we've gotten this far, then the class passed the tests and should be included
 		wrapped_class.valid = true;
+
+		
 		
 		top_level_class = &wrapped_class;
 
@@ -2139,9 +2158,9 @@ namespace {
 		}
 	    }
 
-	    if (print_logging) cerr << "About to process fields" << endl;
+	    if (print_logging) cerr << "About to process fields for " << wrapped_class.name_alias << endl;
             for (FieldDecl * field : wrapped_class.decl->fields()) {
-                top_level_class->members.insert(handle_data_member(wrapped_class.decl, field, indentation + "  "));
+                top_level_class->members.insert(handle_data_member(wrapped_class, field, indentation + "  "));
             }
 
 	    if (print_logging) cerr << "About to process base class info" << endl;
@@ -2150,7 +2169,7 @@ namespace {
             auto annotation_base_types_to_ignore = wrapped_class.annotations.get_regex("^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
             auto annotation_base_type_to_use = wrapped_class.annotations.get_regex("^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
             if (annotation_base_type_to_use.size() > 1) {
-                llvm::report_fatal_error("More than one base type specified to use for type");
+                data_error(fmt::format("More than one base type specified to use for type", wrapped_class.class_name));
             }
 
 	    // if a base type to use is specified, then it must match an actual base type or error
@@ -2174,7 +2193,7 @@ namespace {
 
 		if (base_type_canonical_name == "class v8toolkit::WrappedClassBase" &&
 		    base_class.getAccessSpecifier() != AS_public) {
-		    llvm::report_fatal_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}", wrapped_class.class_name).c_str());
+		    data_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}", wrapped_class.class_name).c_str());
 		}
 		
 		cerr << "Base type: " << base_type_canonical_name <<  endl;
@@ -2224,7 +2243,11 @@ namespace {
 
 		// if the base type hasn't been independently processed, do that right now
 		if (!current_base.done) {
+		    cerr << fmt::format("interupting handle_class of {} to fully handle class of base type: {}", wrapped_class.class_name, current_base.class_name) << endl;
+		    auto top_level_class_backup = top_level_class;
+		    top_level_class = &current_base;
 		    handle_class(current_base, true);
+		    top_level_class = top_level_class_backup;
 		}
 
                 auto  current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
@@ -2239,12 +2262,12 @@ namespace {
                 //printf("%s now has %d base classes\n", current->class_name.c_str(), (int)current->base_types.size());
                 //printf("%s now has %d derived classes\n", current_base->class_name.c_str(), (int)current_base->derived_types.size());
 
-                handle_class(current_base, false, top_level_class, indentation + "  ");
+                handle_class(current_base, false, indentation + "  ");
             }
 
 	    if (print_logging) cerr << "done with base classes" << endl;
 	    if (must_have_base_type && !found_base_type) {
-		llvm::report_fatal_error("base_type_to_use specified but no base type found");
+		data_error(fmt::format("base_type_to_use specified but no base type found: {}", wrapped_class.class_name));
 	    }
 
 
@@ -2253,6 +2276,8 @@ namespace {
             if (top_level && !wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
                 if (wrapped_class.decl->isAbstract()) {
                     if (print_logging) cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
+		} else if (wrapped_class.force_no_constructors) {
+		    cerr << fmt::format("'force no constructors' set on {} so skipping making constructors", class_name) << endl;
                 } else {
 		    if (print_logging) cerr << "About to process constructors" << endl;
                     foreach_constructor(wrapped_class.decl, [&](auto constructor) {
@@ -2284,20 +2309,20 @@ namespace {
                         }
                         if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
                             used_constructor_names.end()) {
-                            cerr << fmt::format("Error: because duplicate JS constructor function name: {}",
-                                                constructor_name.c_str()) << endl;
+                            data_error(fmt::format("Error: because duplicate JS constructor function name: {}",
+							 constructor_name.c_str()));
                             for (auto &name : used_constructor_names) {
-                                cerr << "Already used constructor name: " << name << endl;
+                                cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
                             }
-			    llvm::report_fatal_error("Duplicate constructor name, see above.");
-                        }
-                        used_constructor_names.push_back(constructor_name);
+                        } else {
+			    used_constructor_names.push_back(constructor_name);
 
-                        top_level_class->constructors.insert(fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                              indentation, get_method_parameters(source_manager,
-                                                                                 *top_level_class,
-                                                                                 constructor), constructor_name));
-                    });
+			    top_level_class->constructors.insert(fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
+									     indentation, get_method_parameters(source_manager,
+														*top_level_class,
+														constructor), constructor_name));
+			}
+		    });
                 }
             }
         }
@@ -2754,6 +2779,17 @@ namespace {
 		return;
 	    }
 #endif
+
+
+
+	    if (!errors.empty()) {
+		cerr << "Errors detected:" << endl;
+		for(auto & error : errors) {
+		    cerr << error << endl;
+		}
+		llvm::report_fatal_error("Errors detected in source data");
+		exit(1);
+	    }
 
             // Write class wrapper data to a file
             int file_count = 1;

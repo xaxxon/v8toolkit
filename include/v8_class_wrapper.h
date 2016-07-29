@@ -12,6 +12,7 @@
 #include <utility>
 #include <assert.h>
 
+#include "wrapped_class_base.h"
 #include "v8toolkit.h"
 #include "casts.hpp"
 
@@ -144,9 +145,6 @@ template<class T, class Head, class... Tail>
 };
 
 
-// Inheriting from this gives hints to the system that you are a wrapped type
-//   However, it is not required, just simpler.
-class WrappedClassBase {};
 
 
 
