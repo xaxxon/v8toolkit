@@ -260,7 +260,11 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
 
 
 
-struct StuffBase{};
+struct StuffBase{
+    // virtual destructor makes sure derived class destructor is called to actually
+    //   delete the data
+    virtual ~StuffBase(){}
+};
 
 template<class T>
 struct Stuff : public StuffBase {
@@ -319,7 +323,7 @@ struct ParameterBuilder<T,
 
 template<class T>
 struct ParameterBuilder<T,
-        std::enable_if_t<!std::is_reference<std::result_of_t<
+    std::enable_if_t<!std::is_reference<std::result_of_t<
                 CastToNative<std::remove_reference_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
         > // end result_of
         >::value
@@ -350,6 +354,61 @@ struct ParameterBuilder<char *> {
     }
 };
 
+
+ template<template<class, class...> class Container, class... Rest>
+     struct ParameterBuilder<Container<char *, Rest...>, std::enable_if_t<!std::is_reference<std::result_of_t<
+     CastToNative<std::remove_reference_t<Container<char *, Rest...>>>(v8::Isolate*, v8::Local<v8::Value>)
+        > // end result_of
+        >::value
+        >> {
+     using ResultType = Container<char *>;
+     using IntermediaryType = std::result_of_t<CastToNative<char *>(v8::Isolate *, v8::Local<v8::Value>)>;
+     using DataHolderType = Container<IntermediaryType>;
+     ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
+	 if (i >= info.Length()) {
+	     throw InvalidCallException("Not enough javascript parameters for function call");
+	 }
+	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
+	 auto data_holder = stuff.get();
+	 
+	 stuffs.emplace_back(std::move(stuff));
+	 
+
+	 ResultType result;
+	 for (auto & str : data_holder) {
+	     result.push_back(str->c_str());
+	 }
+	 return result;
+     }
+ };
+
+ template<template<class, class...> class Container, class... Rest>
+     struct ParameterBuilder<Container<const char *, Rest...>,std::enable_if_t<!std::is_reference<std::result_of_t<
+     CastToNative<std::remove_reference_t<Container<const char *, Rest...>>>(v8::Isolate*, v8::Local<v8::Value>)
+        > // end result_of
+        >::value
+        >> {
+     using ResultType = Container<const char *>;
+     using IntermediaryType = std::result_of_t<CastToNative<const char *>(v8::Isolate *, v8::Local<v8::Value>)>;
+     using DataHolderType = Container<IntermediaryType>;
+     
+     ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
+	 if (i >= info.Length()) {
+	     throw InvalidCallException("Not enough javascript parameters for function call");
+	 }
+	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
+	 auto data_holder = stuff.get();
+	 
+	 stuffs.emplace_back(std::make_unique<Stuff<DataHolderType>>(std::move(stuff)));
+	 
+
+	 ResultType result;
+	 for (auto & str : *data_holder) {
+	     result.push_back(str.get());
+	 }
+	 return result;
+     }
+ };
 
 // const char *
 template<>

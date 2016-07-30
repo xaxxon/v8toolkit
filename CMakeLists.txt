@@ -5,8 +5,7 @@ set (CMAKE_CXX_STANDARD 14)
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
 ucm_set_runtime(STATIC)
-
-
+    
 
 set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
 

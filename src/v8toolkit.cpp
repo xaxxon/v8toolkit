@@ -27,6 +27,13 @@ void process_v8_flags(int & argc, char ** argv)
 }
 
 
+void expose_debug(const std::string & debug_name = "debug") {
+    static const char * EXPOSE_DEBUG_AS = "--expose-debug-as=";
+    std::string expose_debug_as(EXPOSE_DEBUG_AS);
+    expose_debug_as += debug_name;
+    v8::V8::SetFlagsFromString(expose_debug_as.c_str(), expose_debug_as.length());
+}
+    
 void expose_gc()
 {
     static const char * EXPOSE_GC = "--expose-gc";

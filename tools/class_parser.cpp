@@ -52,7 +52,7 @@ bool generate_v8classwrapper_sfinae = true;
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 20
+#define MAX_DECLARATIONS_PER_FILE 60
 
 // Any base types you want to always ignore -- v8toolkit::WrappedClassBase must remain, others may be added/changed
 vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "class Subscriber"};
@@ -63,7 +63,9 @@ vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mix
 
 vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\""};
 
-string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n";
+// error if bidirectional types don't make it in due to include file ordering
+// disable "fast_compile" so the V8ClassWrapper code can be generated 
+string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n#undef V8TOOLKIT_WRAPPER_FAST_COMPILE\n";
 
 // sometimes files sneak in that just shouldn't be
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
@@ -164,7 +166,26 @@ namespace {
 	}
     };
 
+    /*
+    std::string handle_std(const std::string & input) {
+        smatch matches;
+	string result = input;
+	// EricWF said to remove __[0-9] just to be safe for future updates
+        if (regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__[0-9]::)?)?(.*)"))) {
+	    // space before std:: is handled from const/volatile if needed
+	    result = matches[1].str() + "std::" + matches[2].str();
 
+	}
+
+	if (print_logging) cerr << "Stripping std from " << input << " results in " << result << endl;
+        return result;
+    }
+
+
+    bool has_std(const std::string & input) {
+        return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
+    }
+    */
     
     
     void print_vector(const vector<string> & vec, const string & header = "", const string & indentation = "", bool ignore_empty = true) {
@@ -524,6 +545,10 @@ namespace {
 		llvm::report_fatal_error(fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
 	    }
 	    return decl->getNameAsString();
+	}
+
+	bool is_template_specialization() {
+	    return dyn_cast<ClassTemplateSpecializationDecl>(decl);
 	}
 
 	
@@ -1006,22 +1031,8 @@ namespace {
 //        if (print_logging) cerr << fmt::format("Unrecognizable filename {}", filename);
 //        throw std::exception();
 //    }
+
 #if 0
-    std::string handle_std(const std::string & input) {
-        smatch matches;
-	// EricWF said to remove __[0-9] just to be safe for future updates
-        regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__[0-9]::)?)?(.*)"));
-        // space before std:: is handled from const/volatile if needed
-        auto result = matches[1].str() + "std::" + matches[2].str();
-
-        if (print_logging) cerr << "Stripping std from " << input << " results in " << result << endl;
-        return result;
-    }
-
-    bool has_std(const std::string & input) {
-        return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
-    }
-
 
 
     // Returns true if qual_type is a 'trivial' std:: type like
@@ -1276,8 +1287,6 @@ namespace {
 		    cerr << "Recursing on param type" << endl;
 		    update_wrapped_class_for_type(source_manager, wrapped_class, param);
 		}
-
-		
 	    } else {
 		cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
 	    }
@@ -1879,7 +1888,9 @@ namespace {
             top_level_class->names.insert(short_field_name);
 
 
-            top_level_class->declaration_count++;
+	    // made up number to represent the overhead of making a new wrapped class
+	    //   even before adding methods/members
+            top_level_class->declaration_count=3; 
 
             update_wrapped_class_for_type(source_manager, *top_level_class, field->getType());
 
@@ -2934,7 +2945,22 @@ namespace {
 		already_included_this_file.insert(include);
 	    }
 
+
+	    std::set<WrappedClass *> extern_templates;
+	    
             for (WrappedClass * wrapped_class : classes) {
+
+		for (auto derived_type : wrapped_class->derived_types) {
+		    extern_templates.insert(derived_type);
+		}
+
+		for (auto used_class : wrapped_class->used_classes) {
+		    if (used_class->should_be_wrapped()) {
+			extern_templates.insert(used_class);
+		    }
+		}
+
+		
 		if (print_logging) cerr << "Dumping " << wrapped_class->class_name << " to file " << class_wrapper_filename << endl;
 				    
 		//                printf("While dumping classes to file, %s has includes: ", wrapped_class->class_name.c_str());
@@ -2960,8 +2986,29 @@ namespace {
 		//                printf("\n");
             }
 
+	    // remove any types that are wrapped in this file since it will be explicitly instantiated here
+	    for (auto wrapped_class : classes) {
+		if (wrapped_class->is_template_specialization()) {
+		    class_wrapper_file << "template " << wrapped_class->class_name << ";" << endl;
+		}
+		class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
+		// if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
+		extern_templates.erase(wrapped_class);
+	    }
+	    
+	    for (auto extern_template : extern_templates) {
+		if (extern_template->is_template_specialization()) {
+		    class_wrapper_file << "extern template " << extern_template->class_name << ";\n";
+		}
+		class_wrapper_file << fmt::format("extern template class v8toolkit::V8ClassWrapper<{}>;\n", extern_template->class_name);
+	    }
+
+
+	    
             // Write function header
             class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist -- that's ok\n", file_count+1);
+	    
+
             if (file_count == 1) {
                 class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
 
@@ -2970,8 +3017,11 @@ namespace {
                                                   file_count);
             }
 
+
+
             // Print function body
             for (auto wrapped_class : classes) {
+		// each file is responsible for making explicit instantiatinos of its own types
                 class_wrapper_file << wrapped_class->get_wrapper_string();
             }
 

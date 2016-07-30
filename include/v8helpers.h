@@ -1,4 +1,4 @@
-#pragma once
+#pragma onceA
 
 #include <string>
 #include <map>
@@ -50,9 +50,7 @@ struct is_specialization : std::false_type {};
 template<template<typename...> class Ref, typename... Args>
 struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
 
-
-
-    /**
+/**
  * Returns a std::function type compatible with the lambda passed in
  */
 template<class T>
@@ -217,7 +215,7 @@ void process_v8_flags(int & argc, char ** argv);
 /**
 * exposes the garbage collector to javascript
 * same as passing --expose-gc as a command-line flag
-* To encourage javascript garbage collection run from c++, use: 
+* To encourage the javascript garbage collector to run from c++ code, use: 
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 */  
 void expose_gc();

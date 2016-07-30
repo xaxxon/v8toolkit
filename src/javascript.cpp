@@ -274,10 +274,30 @@ void Isolate::add_assert()
 }
 
 
+void Platform::expose_gc() {
+    assert(!Platform::initialized);
+    expose_gc_value = true;
+}
+
+void Platform::expose_debug_as(const std::string & debug_object_name) {
+    assert(!Platform::initialized);
+    expose_debug_value = true;
+    expose_debug_name = debug_object_name;    
+}
+
+    
+
 void Platform::init(int argc, char ** argv) 
 {
     assert(!initialized);
     process_v8_flags(argc, argv);
+
+    if (expose_gc_value) {
+	expose_gc();
+    }
+    if (expose_debug_value) {
+	expose_debug_as(expose_debug_name);
+    }
     
     // Initialize V8.
     v8::V8::InitializeICU();
@@ -322,5 +342,8 @@ bool Platform::initialized = false;
 std::unique_ptr<v8::Platform> Platform::platform;
 v8toolkit::ArrayBufferAllocator Platform::allocator;
 
-
+bool Platform::expose_gc_value = false;
+bool Platform::expose_debug_value = false;
+std::string Platform::expose_debug_name = "";
+    
 } // end v8toolkit namespace

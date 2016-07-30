@@ -573,12 +573,21 @@ class Platform {
 	static std::unique_ptr<v8::Platform> platform;
 	static v8toolkit::ArrayBufferAllocator allocator;
 	static bool initialized;
-
+	static bool expose_gc_value;
+	static bool expose_debug_value;
+	static std::string expose_debug_name;
 
 public:
+
+	static void expose_gc();
+
+	static void expose_debug_as(const std::string & debug_object_name);
+	
     /**
     * Initializes the v8 platform with default values and tells v8 to look
     *   for its .bin files in the given directory (often argv[0])
+    * Only useful if build with snapshot support which I recommend against for 
+    *   simplicity's sake
     */
     static void init(char * path_to_bin_files);
 
@@ -587,21 +596,21 @@ public:
     *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
     *    v8 .bin files
     */
-	static void init(int argc, char ** argv);
-
+    static void init(int argc, char ** argv);
+	
     /**
     * Shuts down V8.  Any subsequent V8 usage is probably undefined, so
     *   make sure everything is done before you call this.
     */
-	static void cleanup();
+    static void cleanup();
 
 
-	/**
+    /**
     * Creates a new Isolate wrapping a new v8::Isolate instance.
     * An Isolate will remain as long as the caller has a shared_ptr to the Isolate or any Contexts created from
     *   the Isolate still exist.
     */
-	static std::shared_ptr<Isolate> create_isolate();
+    static IsolatePtr create_isolate();
 };
 
 

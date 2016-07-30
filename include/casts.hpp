@@ -132,23 +132,6 @@ CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class Firs
 
 
 
-CAST_TO_NATIVE_WITH_CONST(std::vector<ElementType V8_TOOLKIT_COMMA Rest...>, class ElementType V8_TOOLKIT_COMMA class... Rest)
-{
-    auto context = isolate->GetCurrentContext();
-    std::vector<ElementType, Rest...> v;
-    if(value->IsArray()) {
-        auto array = v8::Local<v8::Object>::Cast(value);
-        auto array_length = get_array_length(isolate, array);
-        for(int i = 0; i < array_length; i++) {
-            auto value = array->Get(context, i).ToLocalChecked();
-            v.push_back(CastToNative<ElementType>()(isolate, value));
-        }
-    } else {
-	throw CastException(fmt::format("CastToNative<std::vector<T>> requires an array but instead got {}", stringify_value(isolate, value)));
-    }
-    return v;
-}};
-
 
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float){return static_cast<float>(value->ToNumber()->Value());}
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(double){return static_cast<double>(value->ToNumber()->Value());}
@@ -183,6 +166,44 @@ struct CastToNative<const char *> {
 };
 
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string){return std::string(*v8::String::Utf8Value(value));}
+
+
+//Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
+template<class ElementType>
+struct CastToNative<std::vector<ElementType>> {
+
+    using ResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
+
+    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+
+	auto context = isolate->GetCurrentContext();
+	ResultType v;
+	if(value->IsArray()) {
+	    auto array = v8::Local<v8::Object>::Cast(value);
+	    auto array_length = get_array_length(isolate, array);
+	    for(int i = 0; i < array_length; i++) {
+		auto value = array->Get(context, i).ToLocalChecked();
+		v.emplace_back(CastToNative<ElementType>()(isolate, value));
+	    }
+	} else {
+	    throw CastException(fmt::format("CastToNative<std::vector<T>> requires an array but instead got {}", stringify_value(isolate, value)));
+	}
+	return v;
+    }
+};
+
+//Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
+template<class ElementType>
+struct CastToNative<const std::vector<ElementType>> {
+
+    using NonConstResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
+
+    const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	return CastToNative<NonConstResultType>(isolate, value);
+    }
+};
+
+
 
 
 
