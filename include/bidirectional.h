@@ -104,26 +104,55 @@ namespace v8toolkit {
      */
  class EmptyFactoryBase {};
 
+
+
+
+/**
+ * Common Factory Inheritance goes:
+ * v8toolkit::CppFactory => custom user-defined Factory type for additional data/functions =>
+ *     v8toolkit::Factory => v8toolkit::Factory<BaseType> => Common base type for all factories
+ *
+ */
+
+/**
+ * Internal constructor parameters are parameters only on the Base type constructor that are not specified to
+ *   each instance of the derived type.  The value is fixed across all isntances of the specific derived type.
+ *
+ * External constructor parameters are parameers are all the parameters to the derived type (except an optional
+ *   first parameter of the factory object which will be automatically populated)
+ */
+
     
 /**
 * Base class for a Factory that creates a bidirectional "type" by name.  The object
 *   returned can be used as a class T regardless of whether it is a pure C++ type 
 *   or if it has been extended in javascript
 */
-    template<class Base, class TypeList = TypeList<>, class ParentType = EmptyFactoryBase>
+template<class Base, // The common base class type of object to be returned
+    class = TypeList<>, // List of parameters that may change per-instance created
+    class = EmptyFactoryBase, // Class for this Factory to inherit from
+    class = TypeList<> > // List of parameter types for ParentType constructor
 class Factory;
 
 
- template<class Base, class... ConstructorArgs, class ParentType>
-     class Factory<Base, TypeList<ConstructorArgs...>, ParentType> : public ParentType {
+ template<class Base, class... ConstructorArgs, class ParentType, class... ParentTs>
+     class Factory<Base, TypeList<ConstructorArgs...>, ParentType, TypeList<ParentTs...>> : public ParentType {
 public:
+     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
+     {}
+
+     Factory(const Factory &) = delete;
+     Factory(Factory &&) = default;
+     Factory & operator=(const Factory &) = delete;
+     Factory & operator=(Factory &&) = default;
+
 
     /**
      * Returns a pointer to a new object inheriting from type Base
      */
-    virtual Base * operator()(ConstructorArgs... constructor_args) const = 0;
+    virtual Base * operator()(ConstructorArgs&&... constructor_args) const = 0;
 
-    Base * create(ConstructorArgs... constructor_args) const {return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);}
+    Base * create(ConstructorArgs&&... constructor_args) const {return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);}
 
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
@@ -156,22 +185,58 @@ public:
 *   must match with the Factory it is associated with.  You can have it inherit from a type that inherits from v8toolkit::Factory
 *   but v8toolkit::Factory must be in the inheritance chain somewhere
 */
-    template<
+template<
 	class Base,
 	class Child,
 	class ExternalTypeList = TypeList<>,
 	template<class, class...> class ParentType = Factory,
-	class FactoryBase = EmptyFactoryBase>
-    class CppFactory;
+	class FactoryBase = EmptyFactoryBase,
+    class FactoryBaseTs = TypeList<>,
+    class = void>
+class CppFactory;
 
-    template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase>
-	class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase> :
-    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
+#define CPP_FACTORY_SFINAE_BODY \
+    std::is_constructible<Child, ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>&, ExternalConstructorParams...>::value
+
+
+// if the constructor wants a reference to the factory, automatically pass it in
+template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase, class... FactoryBaseTs>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase, TypeList<FactoryBaseTs...>, std::enable_if_t<CPP_FACTORY_SFINAE_BODY>> :
+    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>> {
+
 public:
-    virtual Base * operator()(ExternalConstructorParams... constructor_args) const override
+
+    CppFactory(FactoryBaseTs&&... factory_base_ts) :
+        ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>>(std::forward<FactoryBaseTs>(factory_base_ts)...)
+    {}
+
+    CppFactory(const CppFactory &) = delete;
+    CppFactory(CppFactory &&) = default;
+    CppFactory & operator=(const CppFactory &) = delete;
+    CppFactory & operator=(CppFactory &&) = default;
+
+    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
+        return new Child(*this, std::forward<ExternalConstructorParams>(constructor_args)...);
+    }
+};
+
+
+// if the constructor doesn't have a reference to this factory type as its first parameter, just pass all specified
+//   parameters "normally"
+template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase, class... FactoryBaseTs>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase, TypeList<FactoryBaseTs...>, std::enable_if_t<!CPP_FACTORY_SFINAE_BODY>> :
+    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>> {
+public:
+
+    CppFactory(FactoryBaseTs&&... factory_base_ts) :
+        ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>>(std::forward<FactoryBaseTs>(factory_base_ts)...)
+    {}
+
+
+    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override
     {
         // printf("CppFactory making a %s\n", typeid(Child).name());
-        return new Child(constructor_args...);
+        return new Child(std::forward<ExternalConstructorParams>(constructor_args)...);
     }
 };
 
@@ -204,8 +269,8 @@ public:
 class JSFactory;
 
 
-    // Begin real specialization
-    template<
+// Begin real specialization
+template<
 	class Base,
 	class JSWrapperClass,
 
@@ -213,8 +278,8 @@ class JSFactory;
 	class... ExternalConstructorParams,
 
 	template<class, class...> class ParentType,
-	class FactoryBase>
-    class JSFactory<
+    class FactoryBase>
+class JSFactory<
 	Base,
 	JSWrapperClass,
 
@@ -227,7 +292,8 @@ class JSFactory;
      // Verify Factory<...> is in the hierarchy somewhere (either immediate parent or any ancestor)
 	std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>, FactoryBase>, ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>>::value>>
 	
-	: public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> { // Begin JSFactory class
+	: public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>
+{ // Begin JSFactory class
 
 	using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase>;
     

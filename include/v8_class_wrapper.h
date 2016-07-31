@@ -130,16 +130,28 @@ template<class T, class Head, class... Tail>
     std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
     > : public TypeChecker<T, TypeList<Tail...>> {
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-    T * check(AnyBase * any_base) {
-        AnyPtr<Head> * any = nullptr;
-	std::cerr << fmt::format("In Type Checker<{}> seeing if it is a {}", demangle<T>(), demangle<Head>()) << std::endl;
+    T * check(AnyBase * any_base
 #ifdef ANYBASE_DEBUG
-	std::cerr << fmt::format("anybase debug type: {}", any_base->type_name) << std::endl;
+	      , bool first_call = true
 #endif
-        if((any = dynamic_cast<AnyPtr<Head> *>(any_base)) != nullptr) {
+	      ) {
+
+#ifdef ANYBASE_DEBUG
+	if (first_call) {
+	    std::cerr << fmt::format("Trying to find class match for anybase with type string: {}", any_base->type_name) << std::endl;
+	}
+#endif
+        if(AnyPtr<Head> * any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
+#ifdef ANYBASE_DEBUG
+	    std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
+#endif
             return static_cast<T*>(any->get());
         } else {
-            return SUPER::check(any_base);
+            return SUPER::check(any_base
+#ifdef ANYBASE_DEBUG
+				, false // recursive call isn't the first call
+#endif
+				);
         }
     }
 };
