@@ -45,14 +45,14 @@ class BidirectionalBase;
 * Any class inheriting from this (e.g. JSMyClass) must have the first two parameters of its constructor
 *   be a v8::Local<v8::Context>, v8::Local<v8::Object>
 */
-template<class T>
+template<class Base>
 class JSWrapper {
 protected:
     v8::Isolate *isolate;
     v8::Global<v8::Context> global_context;
     v8::Global<v8::Object> global_js_object;
     v8::Global<v8::FunctionTemplate> global_created_by;
-    using BASE_TYPE = T;
+    using BASE_TYPE = Base;
 
     /**
     * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
@@ -129,18 +129,17 @@ namespace v8toolkit {
 *   or if it has been extended in javascript
 */
 template<class Base, // The common base class type of object to be returned
-    class = TypeList<>, // List of parameters that may change per-instance created
-    class = EmptyFactoryBase, // Class for this Factory to inherit from
-    class = TypeList<> > // List of parameter types for ParentType constructor
+         class = TypeList<>, // List of parameters that may change per-instance created
+         class FactoryBase = EmptyFactoryBase> // base class of this factory class
 class Factory;
 
 
- template<class Base, class... ConstructorArgs, class ParentType, class... ParentTs>
-     class Factory<Base, TypeList<ConstructorArgs...>, ParentType, TypeList<ParentTs...>> : public ParentType {
+ template<class Base, class... ConstructorArgs, class FactoryBase>
+     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase> : public FactoryBase {
 public:
-     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
-     {}
-
+//     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
+//     {}
+     Factory() = default;
      Factory(const Factory &) = delete;
      Factory(Factory &&) = default;
      Factory & operator=(const Factory &) = delete;
@@ -188,27 +187,25 @@ public:
 template<
 	class Base,
 	class Child,
-	class ExternalTypeList = TypeList<>,
-	template<class, class...> class ParentType = Factory,
-	class FactoryBase = EmptyFactoryBase,
-    class FactoryBaseTs = TypeList<>,
+	class ExternalTypeList,
+    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
     class = void>
 class CppFactory;
 
 #define CPP_FACTORY_SFINAE_BODY \
-    std::is_constructible<Child, ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>&, ExternalConstructorParams...>::value
+    std::is_constructible<Child, Factory<Base, TypeList<ExternalConstructorParams...>> &, ExternalConstructorParams...>::value
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
-template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase, class... FactoryBaseTs>
-class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase, TypeList<FactoryBaseTs...>, std::enable_if_t<CPP_FACTORY_SFINAE_BODY>> :
-    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>> {
+template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<CPP_FACTORY_SFINAE_BODY>> :
+    public FactoryBase {
 
 public:
 
-    CppFactory(FactoryBaseTs&&... factory_base_ts) :
-        ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>>(std::forward<FactoryBaseTs>(factory_base_ts)...)
-    {}
+//    CppFactory(FactoryBaseTs&&... factory_base_ts) :
+//        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
+//    {}
 
     CppFactory(const CppFactory &) = delete;
     CppFactory(CppFactory &&) = default;
@@ -223,14 +220,14 @@ public:
 
 // if the constructor doesn't have a reference to this factory type as its first parameter, just pass all specified
 //   parameters "normally"
-template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase, class... FactoryBaseTs>
-class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase, TypeList<FactoryBaseTs...>, std::enable_if_t<!CPP_FACTORY_SFINAE_BODY>> :
-    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>> {
+template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
+class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<!CPP_FACTORY_SFINAE_BODY>> :
+    public FactoryBase {
 public:
 
-    CppFactory(FactoryBaseTs&&... factory_base_ts) :
-        ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase, TypeList<FactoryBaseTs...>>(std::forward<FactoryBaseTs>(factory_base_ts)...)
-    {}
+//    CppFactory(FactoryBaseTs&&... factory_base_ts) :
+//        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
+//    {}
 
 
     virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override
@@ -259,15 +256,11 @@ public:
 	class Base,
 	class JSWrapperClass,
 
-	class Internal = TypeList<>,
-	class External = TypeList<>,
-
-	template<class, class...> class ParentType = Factory,
-	class FactoryBase = EmptyFactoryBase,
-
-	class = void>
-class JSFactory;
-
+	class Internal,
+	class External,
+    class FactoryBase = Factory<Base, External, EmptyFactoryBase>>
+class JSFactory; // instance of undefined template means your inheritance is wrong and failing sfinae check
+    // sfinae check is almost certainly good
 
 // Begin real specialization
 template<
@@ -276,8 +269,6 @@ template<
 
 	class... InternalConstructorParams,
 	class... ExternalConstructorParams,
-
-	template<class, class...> class ParentType,
     class FactoryBase>
 class JSFactory<
 	Base,
@@ -285,17 +276,12 @@ class JSFactory<
 
 	TypeList<InternalConstructorParams...>,
 	TypeList<ExternalConstructorParams...>,
+    FactoryBase>
 
-	ParentType,
-	FactoryBase,
-
-     // Verify Factory<...> is in the hierarchy somewhere (either immediate parent or any ancestor)
-	std::enable_if_t<std::is_base_of<Factory<Base, TypeList<ExternalConstructorParams...>, FactoryBase>, ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>>::value>>
-	
-	: public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase>
+	: public FactoryBase
 { // Begin JSFactory class
 
-	using FactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase>;
+	using ThisFactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, FactoryBase>;
     
     
 protected:
@@ -310,7 +296,7 @@ protected:
     v8::Global<v8::Object> js_prototype;
 
     std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
-    mutable std::unique_ptr<JSWrapperClass> cpp_object_being_built;
+//    mutable std::unique_ptr<JSWrapperClass> cpp_object_being_built;
 
 
 public:
@@ -319,7 +305,7 @@ public:
      * Helper function for creating JSFactory objects from javascript
      */
     template<int starting_info_index, std::size_t... Is>
-    static std::unique_ptr<FactoryType> _create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<Is...>) {
+    static std::unique_ptr<ThisFactoryType> _create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<Is...>) {
 
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
@@ -335,12 +321,12 @@ public:
 
         // create unique_ptr with new factory
         return run_function<
-                std::unique_ptr<FactoryType>, // return type
+                std::unique_ptr<ThisFactoryType>, // return type
                 decltype(context),            // first parameter type for function
                 decltype(info[starting_info_index + 0]->ToObject()), // second parameter type for function
                 v8::Local<v8::Function>,
                 InternalConstructorParams...> // constructor params for function
-                (&std::make_unique<FactoryType, // specify exactly which make_unique to give a function pointer to
+                (&std::make_unique<ThisFactoryType, // specify exactly which make_unique to give a function pointer to
                          decltype(context),   // repeat types for make_unique
                          decltype(info[starting_info_index + 0]->ToObject()), // repeat types for make_unique
                          v8::Local<v8::Function>,
@@ -353,7 +339,10 @@ public:
 
     }
 
-    /**
+
+
+
+        /**
     * Takes a context to use while calling a javascript_function that returns an object
     *   inheriting from JSWrapper
     */
@@ -371,7 +360,7 @@ public:
         (void) this->js_prototype.Get(isolate)->SetPrototype(context, new_js_object->GetPrototype());
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
-        // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global;:Get()
+        // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
         this->make_jswrapper_object = [this, internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
 //            printf("Using JSFactory object at %p\n", (void*)this);
 
@@ -386,6 +375,7 @@ public:
             auto js_wrapper_class_cpp_object = std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
                                                     new_js_object,
                                                     this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
+                                                    *this,
                                                     std::forward<InternalConstructorParams>(internal_constructor_values)...,
                                                     std::forward<ExternalConstructorParams>(external_constructor_values)...);
 
@@ -410,25 +400,20 @@ public:
      * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
      *   extends the C++ functionality in javascript
      */
-    Base * operator()(ExternalConstructorParams&&... constructor_parameters) const {
+    virtual Base * operator()(ExternalConstructorParams&&... constructor_parameters) const override {
        return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
     }
 
 
-
-
-    //function<std::__1::unique_ptr<v8toolkit::JSFactory<Thing, JSThing, v8toolkit::TypeList<int>, v8toolkit::TypeList<const std::__1::basic_string<char> &>, Factory, void>, std::__1::default_delete<v8toolkit::JSFactory<Thing, JSThing, v8toolkit::TypeList<int>, v8toolkit::TypeList<const std::__1::basic_string<char> &>, Factory, void> > > (v8::Local<v8::Context>, v8::Local<v8::Object>, int &, type-parameter-0-1...)>
-    //         std::__1::unique_ptr<v8toolkit::JSFactory<Thing, JSThing, v8toolkit::TypeList<int>, v8toolkit::TypeList<const std::__1::basic_string<char> &>, Factory, void>, std::__1::default_delete<v8toolkit::JSFactory<Thing, JSThing, v8toolkit::TypeList<int>, v8toolkit::TypeList<const std::__1::basic_string<char> &>, Factory, void> > > (*)()>&
-
     template<int starting_info_index>
-    static std::unique_ptr<FactoryType> create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info) {
+    static std::unique_ptr<ThisFactoryType> create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info) {
 	    return _create_factory_from_javascript<starting_info_index>(info, std::index_sequence_for<InternalConstructorParams...>());
     }
     
     
     static void wrap_factory(v8::Isolate * isolate) {
-	V8ClassWrapper<FactoryType> & wrapper = V8ClassWrapper<FactoryType>::get_instance(isolate);
-        wrapper.add_method("create", &FactoryType::operator());
+	V8ClassWrapper<ThisFactoryType> & wrapper = V8ClassWrapper<ThisFactoryType>::get_instance(isolate);
+        wrapper.add_method("create", &ThisFactoryType::operator());
         wrapper.finalize();
     }
  };

@@ -1616,7 +1616,7 @@ namespace {
                 source_manager(source_manager),
                 wrapped_class(wrapped_class) {}
 
-        std::string short_name(){return wrapped_class.class_name;}
+        std::string short_name(){return wrapped_class.name_alias;}
 	std::string canonical_name(){return wrapped_class.class_name;}
 
         std::vector<const CXXMethodDecl *> get_all_virtual_methods_for_class(const CXXRecordDecl * klass) {

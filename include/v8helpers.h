@@ -25,8 +25,10 @@
 
 namespace v8toolkit {
 
+void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
+    
 #define V8TOOLKIT_COMMA ,
-
+  
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
@@ -221,9 +223,9 @@ void process_v8_flags(int & argc, char ** argv);
 void expose_gc();
 
 
-
-
-
+// calls a javascript function with no parameters and returns the value
+v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
+						     v8::Local<v8::Function> function);
 /**
 * Calls callable with each javascript "own property" in the object passed.
 */
@@ -418,6 +420,8 @@ v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) 
 
 template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
+    //    static_assert(!std::is_reference<T>::value, "cannot );
+    
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
     auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));

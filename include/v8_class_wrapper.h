@@ -83,7 +83,11 @@ template<class T>
 struct TypeCheckerBase {
   public:
       virtual ~TypeCheckerBase(){}
-      virtual T * check(AnyBase *) = 0;
+      virtual T * check(AnyBase *
+#ifdef ANYBASE_DEBUG
+			, bool first_call = true
+#endif
+			) const = 0;
 };
 
 // type to convert to, typelist of all types to check, sfinae helper type
@@ -93,19 +97,28 @@ struct TypeChecker;
 template<class T>
     struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
-    T * check(AnyBase * any_base) {
+    virtual T * check(AnyBase * any_base
+#ifdef ANYBASE_DEBUG
+		      , bool first_call = true
+#endif
+		      ) const override {
 	return nullptr;
     }
 };
 
 
+// Specialization for types that cannot possibly work -- casting const value to non-const return
 template<class T, class Head, class... Tail>
 struct TypeChecker<T, TypeList<Head, Tail...>,
     // if the type we want isn't const but the type being checked is, it cannot be a match
     std::enable_if_t<!std::is_const<T>::value && std::is_const<Head>::value>> : public TypeChecker<T, TypeList<Tail...>> {
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-    T * check(AnyBase * any_base) {
+    virtual T * check(AnyBase * any_base
+#ifdef ANYBASE_DEBUG
+		      , bool first_call = true
+#endif
+		      ) const override {
 
 #ifdef ANYBASE_DEBUG
 	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
@@ -128,13 +141,15 @@ template<class T, class Head, class... Tail>
 
     // if it's *not* the condition of the specialization above
     std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
-    > : public TypeChecker<T, TypeList<Tail...>> {
+                     > : public TypeChecker<T, TypeList<Tail...>> {
+    
+   
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-    T * check(AnyBase * any_base
+    virtual T * check(AnyBase * any_base
 #ifdef ANYBASE_DEBUG
 	      , bool first_call = true
 #endif
-	      ) {
+	      ) const override {
 
 #ifdef ANYBASE_DEBUG
 	if (first_call) {
@@ -209,7 +224,10 @@ template<class T, class Head, class... Tail>
      static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate){throw std::exception();}
      template<class BEHAVIOR>
      v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) {throw std::exception();}
-      T * cast(AnyBase * any_base){throw std::exception();}
+
+     T * cast(AnyBase * any_base){
+	 throw std::exception();
+     }
 
 
       	template<class R, class TBase, class... Args,
@@ -373,8 +391,11 @@ private:
 	    
 	    auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 	    auto attribute_data = (*attribute_data_getter)(cpp_object);
-	    
+
+	    // assign the new value to the c++ class data member
 	    attribute_data.member_reference = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
+
+	    // call any registered change callbacks
 	    attribute_data.class_wrapper.call_callbacks(self, *v8::String::Utf8Value(property), value);
 
 	}
@@ -426,7 +447,7 @@ private:
 	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects;
 	v8::Isolate * isolate;
 
-    // Stores a functor capable of converting compatible types into a <T> object
+	// Stores a functor capable of converting compatible types into a <T> object
 	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<T, std::remove_const_t<T>>>>();
         
 	/**
@@ -451,7 +472,6 @@ private:
 
 
 public:
-
     void register_callback(AttributeChangeCallback callback);
     
 
@@ -540,12 +560,12 @@ public:
     }
 	
 	
-	/**
-	* This wrapped class will inherit all the methods from the parent type (and its parent...)
-    *
-    * It is VERY important that the type being marked as the parent type has this type set with
-    *   set_compatible_types<>()
-	*/
+    /**
+     * This wrapped class will inherit all the methods from the parent type (and its parent...)
+     *
+     * It is VERY important that the type being marked as the parent type has this type set with
+     *   set_compatible_types<>()
+     */
     template<class ParentType>
     std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
     set_parent_type()
@@ -652,6 +672,7 @@ public:
 	using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
 	std::vector<StaticMethodAdder> static_method_adders;
 
+
 	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
 	//   the "this" pointer before any javascript parameters are passed in
 	using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
@@ -737,7 +758,9 @@ public:
     public:
 		AttributeHelperData(V8ClassWrapper<T> & class_wrapper, MemberType & member_reference) :
 			class_wrapper(class_wrapper), member_reference(member_reference)
-		{}
+		{
+		    //fprintf(stderr, "Creating AttributeHelperData with %p and %p\n", (void *)&class_wrapper, (void *)&member_reference);
+		}
 
 		V8ClassWrapper<T> & class_wrapper;
 		MemberType & member_reference;
@@ -769,7 +792,7 @@ public:
 					new AttributeHelperDataCreator<MEMBER_TYPE>(
 							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE> {
 
-			    return AttributeHelperData<MEMBER_TYPE>(*this, cpp_object->*member);
+							    return AttributeHelperData<MEMBER_TYPE>(*this, cpp_object->*member);
 			});
 		    
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
@@ -816,6 +839,18 @@ public:
 		});
 	    return *this;
 	}
+
+
+	/**
+	* Adds the ability to call the specified class instance function when the javascript is called as `my_object();`
+	*/
+	template<class R, class TBase, class... Args,
+			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
+	{
+	    return _add_method("unused name", method, true);
+	}
+    
     
     
 	template<class R, class TBase, class... Args,
@@ -954,38 +989,35 @@ public:
 	// Nothing may ever be removed from this vector, as things point into it
 	std::list<MethodAdderData> method_adders;
 
+	// makes a single function to be run when the wrapping javascript object is called with ()
+	MethodAdderData callable_adder;
 
     template<class M>
-    V8ClassWrapper<T> & _add_method(const std::string & method_name, M method)
+	V8ClassWrapper<T> & _add_method(const std::string & method_name, M method, bool add_as_callable_object_callback = false)
     {
         assert(this->finalized == false);
 
 		this->check_if_name_used(method_name);
 
 		
-    		method_adders.push_back({method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info)
+    		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info)
     		{
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("In add_method callback for %s for js object at %p / %p (this)\n", typeid(T).name(), *info.Holder(), *info.This());
-//                // print_v8_value_details(info.Holder());
-//                // print_v8_value_details(info.This());
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("holder: %s This: %s\n", *v8::String::Utf8Value(info.Holder()), *v8::String::Utf8Value(info.This()));
+		    auto isolate = info.GetIsolate();
 
-                auto isolate = info.GetIsolate();
-
-    			// get the behind-the-scenes c++ object
-                // However, Holder() refers to the most-derived object, so the prototype chain must be 
-                //   inspected to find the appropriate v8::Object with the T* in its internal field
+		    // get the behind-the-scenes c++ object
+		    // However, Holder() refers to the most-derived object, so the prototype chain must be 
+		    //   inspected to find the appropriate v8::Object with the T* in its internal field
     			auto holder = info.Holder();
-                v8::Local<v8::Object> self;
-                                
-                if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
-                for(auto & function_template : this->this_class_function_templates) {
-                    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
-                    if(!self.IsEmpty() && !self->IsNull()) {
-                        if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain\n");
-                        break;
-                    }
-                }
+			v8::Local<v8::Object> self;
+			
+			if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+			for(auto & function_template : this->this_class_function_templates) {
+			    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
+			    if(!self.IsEmpty() && !self->IsNull()) {
+				if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain\n");
+				break;
+			    }
+			}
                 //
                 // if(!compare_contents(isolate, holder, self)) {
                 //     printf("FOUND DIFFERENT OBJECT");
@@ -1024,13 +1056,21 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-        			CallCallable<decltype(bound_method)>()(bound_method, info);
+		    CallCallable<decltype(bound_method)>()(bound_method, info);
                 } catch(std::exception & e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
                 }
                 return;
-    		})});
+    		})};
+
+		if (add_as_callable_object_callback) {
+		    // can only set this once
+		    assert(!callable_adder.callback); 
+		    callable_adder = method_adder_data;
+		} else {
+		    method_adders.push_back(method_adder_data);
+		}
 
         return *this;
     }

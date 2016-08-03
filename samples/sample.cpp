@@ -40,6 +40,11 @@ public:
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
     void void_func() {}
+
+
+    int operator()(int x) {
+	return x + x_;
+    }
     
     // returns a new point object that should be managed by V8 GC
     Point * make_point(){return new Point();}
@@ -145,6 +150,7 @@ int main(int argc, char* argv[])
             // make the Point constructor function available to JS
             V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
             wrapped_point.add_method("thing", &Point::thing);
+	    wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
         
 
@@ -159,14 +165,15 @@ int main(int argc, char* argv[])
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
             wrapped_point.add_member("x", &Point::x_);
             int changed_x = 0;
-            wrapped_point.register_callback([&changed_x](v8::Isolate * isolate,
+	                wrapped_point.register_callback([&changed_x](v8::Isolate * isolate,
                                                          v8::Local<v8::Object> & object,
                                                          const std::string & property_name,
-                                                         const v8::Local<v8::Value> & value){
+                                                         const v8::Local<v8::Value> & value) {
                 auto point = CastToNative<Point*>()(isolate, object);
                 printf("%d,%d: property change callback: %s => %s\n",point->x_, point->y_, property_name.c_str(), *v8::String::Utf8Value(value));
                 changed_x++;
             });
+
             wrapped_point.add_member("y", &Point::y_);
 
             got_duplicate_name_exception = false;
@@ -179,7 +186,9 @@ int main(int argc, char* argv[])
 
 
             // if you register a function that returns an r-value, a copy will be made using the copy constsructor
-            wrapped_point.add_method("get_foo", &Point::get_foo).finalize();
+            wrapped_point.add_method("get_foo", &Point::get_foo);
+
+	    wrapped_point.finalize();
             
             // objects created from constructors won't have members/methods added after the constructor is added
             wrapped_point.add_constructor("Point", global_templ);
@@ -305,6 +314,11 @@ int main(int argc, char* argv[])
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
             (void)script->Run(context);
+
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"()=>42.2")).ToLocalChecked();
+	    assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
+	    
+	    
         });
         
     }

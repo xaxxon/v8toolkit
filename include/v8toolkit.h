@@ -32,8 +32,6 @@
 
 namespace v8toolkit {
 
-void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
-
 /* Use these to try to decrease the amount of template instantiations */
 #define CONTEXT_SCOPED_RUN(local_context) \
     v8::Isolate * _v8toolkit_internal_isolate = local_context->GetIsolate(); \

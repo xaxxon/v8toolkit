@@ -20,6 +20,17 @@ namespace v8toolkit {
     //   and not separating another parameter to the template
 #define V8_TOOLKIT_COMMA ,
 
+
+    // add inside CastToNative::operator() to have it handle 
+    //   with no parameters
+#define HANDLE_FUNCTION_VALUES \
+    { \
+	if (value->IsFunction()) { \
+	    value = call_simple_javascript_function(isolate, v8::Local<v8::Function>::Cast(value)); \
+	} \
+    }
+
+    
 // Use this macro when you need to customize the template options to something more than <class T>
 //   For instance if you need to make it <vector<T>>
 #define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
@@ -32,7 +43,9 @@ struct CastToNative<TYPE>{ \
 \
 template<TEMPLATE> \
 struct CastToNative<const TYPE> { \
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+	HANDLE_FUNCTION_VALUES;
+
 
 #define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
 template<> \
@@ -46,7 +59,8 @@ struct CastToNative<const TYPE>{ \
         return CastToNative<TYPE>()(isolate, value); \
     } \
 }; \
-inline TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const
+inline TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+    HANDLE_FUNCTION_VALUES;
 
 
 
@@ -61,7 +75,6 @@ struct CastToJS<TYPE> { \
 }; \
 inline v8::Local<v8::Value>  CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
 
-
 /**
 * Casts from a boxed Javascript type to a native type
 */
@@ -74,30 +87,31 @@ struct CastToNative<void> {
     void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {}
 };
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(bool){return static_cast<bool>(value->ToBoolean()->Value());}
+
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(bool)return static_cast<bool>(value->ToBoolean()->Value());}
 
 
 
 // integers
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long long){return static_cast<long long>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long long){return static_cast<unsigned long long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long long)return static_cast<long long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long long)return static_cast<unsigned long long>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long){return static_cast<long>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long){return static_cast<unsigned long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long)return static_cast<long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long)return static_cast<unsigned long>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(int) {return static_cast<int>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned int){return static_cast<unsigned int>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(int) return static_cast<int>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned int)return static_cast<unsigned int>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(short){return static_cast<short>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned short){return static_cast<unsigned short>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(short)return static_cast<short>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned short)return static_cast<unsigned short>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char){return static_cast<char>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned char){return static_cast<unsigned char>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char)return static_cast<char>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned char)return static_cast<unsigned char>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(wchar_t){return static_cast<wchar_t>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char16_t){return static_cast<char16_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(wchar_t)return static_cast<wchar_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char16_t)return static_cast<char16_t>(value->ToInteger()->Value());}
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char32_t){return static_cast<char32_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char32_t)return static_cast<char32_t>(value->ToInteger()->Value());}
 
 
 template<class Return, class... Params>
@@ -107,7 +121,7 @@ struct CastToNative<std::function<Return(Params...)>> {
 
 
 
-CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT) {
+CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT)
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
@@ -133,9 +147,9 @@ CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class Firs
 
 
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float){return static_cast<float>(value->ToNumber()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(double){return static_cast<double>(value->ToNumber()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long double){return static_cast<long double>(value->ToNumber()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float) return static_cast<float>(value->ToNumber()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(double) return static_cast<double>(value->ToNumber()->Value());}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long double) return static_cast<long double>(value->ToNumber()->Value());}
 
 
 
@@ -157,15 +171,21 @@ struct CastToNative<v8::Local<v8::Function>> {
 template<>
 struct CastToNative<char *> {
   std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+      HANDLE_FUNCTION_VALUES;
     return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
   }
 };
 template<>
 struct CastToNative<const char *> {
-  std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {return CastToNative<char *>()(isolate, value); }
+  std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+      HANDLE_FUNCTION_VALUES;
+      return CastToNative<char *>()(isolate, value);
+  }
 };
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string){return std::string(*v8::String::Utf8Value(value));}
+CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string)
+    return std::string(*v8::String::Utf8Value(value));
+}
 
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
@@ -175,7 +195,7 @@ struct CastToNative<std::vector<ElementType>> {
     using ResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
 
     ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-
+	HANDLE_FUNCTION_VALUES;
 	auto context = isolate->GetCurrentContext();
 	ResultType v;
 	if(value->IsArray()) {
@@ -199,6 +219,7 @@ struct CastToNative<const std::vector<ElementType>> {
     using NonConstResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
 
     const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	// HANDLE_FUNCTION_VALUES; -- no need for this here, since we call another CastToNative from here
 	return CastToNative<NonConstResultType>(isolate, value);
     }
 };
@@ -229,6 +250,7 @@ struct CastToNative<const std::vector<ElementType>> {
 template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
     std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	HANDLE_FUNCTION_VALUES;
         // if T is a user-defined type
         if (value->IsObject()) {
             auto object = value->ToObject();
@@ -244,6 +266,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_c
 template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value>> {
     std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	HANDLE_FUNCTION_VALUES;
         // if T is a user-defined type
         if (value->IsObject()) {
             auto object = value->ToObject();
@@ -259,9 +282,6 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
 
 CAST_TO_NATIVE_WITH_CONST(std::map<Key V8TOOLKIT_COMMA Value V8TOOLKIT_COMMA Args...>, class Key V8TOOLKIT_COMMA class Value V8TOOLKIT_COMMA class... Args)
 
-//template<class Key, class Value, class... Args>
-//struct CastToNative<std::map<Key, Value, Args...>>
-{
         using MapType = std::map<Key, Value, Args...>;
 	//    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	if (!value->IsObject()) {
