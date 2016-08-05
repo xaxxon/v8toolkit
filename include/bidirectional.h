@@ -135,7 +135,7 @@ class Factory;
 
 
  template<class Base, class... ConstructorArgs, class FactoryBase>
-     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase> : public FactoryBase {
+     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase> : public virtual FactoryBase {
 public:
 //     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
 //     {}
@@ -156,11 +156,11 @@ public:
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
      */
-    template <class U = Base, class... Args>
-    std::unique_ptr<U> get_unique(Args&&... args) const {
+    template <class U = Base>
+    std::unique_ptr<U> get_unique(ConstructorArgs&&... args) const {
 
 	// call operator() on the factory and put the results in a unique pointer
-        return std::unique_ptr<U>((*this)(std::forward<Args>(args)...));
+        return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(args)...));
     }
 
     /**
@@ -199,7 +199,7 @@ class CppFactory;
 // if the constructor wants a reference to the factory, automatically pass it in
 template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
 class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<CPP_FACTORY_SFINAE_BODY>> :
-    public FactoryBase {
+    public virtual FactoryBase {
 
 public:
 
@@ -207,6 +207,7 @@ public:
 //        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
 //    {}
 
+    CppFactory() = default;
     CppFactory(const CppFactory &) = delete;
     CppFactory(CppFactory &&) = default;
     CppFactory & operator=(const CppFactory &) = delete;
@@ -222,13 +223,17 @@ public:
 //   parameters "normally"
 template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
 class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<!CPP_FACTORY_SFINAE_BODY>> :
-    public FactoryBase {
+    public virtual FactoryBase {
 public:
 
 //    CppFactory(FactoryBaseTs&&... factory_base_ts) :
 //        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
 //    {}
-
+    CppFactory() = default;
+    CppFactory(const CppFactory &) = delete;
+    CppFactory(CppFactory &&) = default;
+    CppFactory & operator=(const CppFactory &) = delete;
+    CppFactory & operator=(CppFactory &&) = default;
 
     virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override
     {
@@ -278,7 +283,7 @@ class JSFactory<
 	TypeList<ExternalConstructorParams...>,
     FactoryBase>
 
-	: public FactoryBase
+	: public virtual FactoryBase
 { // Begin JSFactory class
 
 	using ThisFactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, FactoryBase>;
