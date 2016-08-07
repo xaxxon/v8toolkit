@@ -1012,7 +1012,7 @@ struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
     R(METHOD_CLASS::*method)(Args...) const;
     
     R operator()(Args... params){
-        return (object.*method)(params...); 
+        return (object.*method)(std::forward<Args>(params)...); 
     }
 };
 
@@ -1029,7 +1029,7 @@ struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
     R(METHOD_CLASS::*method)(Args...) const;
 
     R operator()(Args... params){
-        return (object.*method)(params...);
+        return (object.*method)(std::forward<Args>(params)...);
     }
 };
 

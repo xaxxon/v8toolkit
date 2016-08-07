@@ -193,7 +193,7 @@ template<
 class CppFactory;
 
 #define CPP_FACTORY_SFINAE_BODY \
-    std::is_constructible<Child, Factory<Base, TypeList<ExternalConstructorParams...>> &, ExternalConstructorParams...>::value
+    std::is_constructible<Child, Factory<Base, TypeList<ExternalConstructorParams...>, FactoryBase> &, ExternalConstructorParams...>::value
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
@@ -400,6 +400,7 @@ public:
         printf("Deleting JSFactory object at %p\n", (void*)this);
     }
 
+    
 
     /**
      * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
@@ -414,7 +415,7 @@ public:
     static std::unique_ptr<ThisFactoryType> create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info) {
 	    return _create_factory_from_javascript<starting_info_index>(info, std::index_sequence_for<InternalConstructorParams...>());
     }
-    
+
     
     static void wrap_factory(v8::Isolate * isolate) {
 	V8ClassWrapper<ThisFactoryType> & wrapper = V8ClassWrapper<ThisFactoryType>::get_instance(isolate);

@@ -499,8 +499,8 @@ public:
     * Creates a new v8::FunctionTemplate capabale of creating wrapped T objects based on previously added methods and members.
     * TODO: This needs to track all FunctionTemplates ever created so it can try to use them in GetInstanceByPrototypeChain
     */
-    v8::Local<v8::FunctionTemplate> make_function_template(v8::FunctionCallback callback = nullptr,
-							   const v8::Local<v8::Value> & data = v8::Local<v8::Value>());
+    v8::Local<v8::FunctionTemplate> make_wrapping_function_template(v8::FunctionCallback callback = nullptr,
+								    const v8::Local<v8::Value> & data = v8::Local<v8::Value>());
 
 
 
@@ -535,6 +535,13 @@ public:
 	* For each isolate you need to add constructors/methods/members separately.
 	*/
     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
+
+
+    /**
+     * Specify the name of the object which will be used for debugging statements as well as 
+     *   being the type returned from javascript typeof
+     */
+    V8ClassWrapper<T> & set_class_name(const std::string & name);
 
     
 
@@ -600,14 +607,12 @@ public:
 	{				
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
 	    
-	    // create a function template even if no javascript constructor will be used so 
-	    //   FunctionTemplate::InstanceTemplate can be populated.   That way if a javascript constructor is added
-	    //   later the FunctionTemplate will be ready to go
 	    auto constructor_template =
-		make_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
-				       v8::Local<v8::Value>());
+		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
+						v8::Local<v8::Value>());
 	    
 	    // Add the constructor function to the parent object template (often the global template)
+	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
 	    
 	    return *this;
@@ -710,8 +715,6 @@ public:
 	};
 
 
-	V8ClassWrapper<T> & set_class_name(const std::string & name);
-
 
 	template<class Callable>
 	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
@@ -738,6 +741,9 @@ public:
 
 		return *this;
 	}
+
+	    
+
 
     
     /**

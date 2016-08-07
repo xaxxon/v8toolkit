@@ -21,7 +21,8 @@
 
 
 /**
-How to run over complete code base using cmake + cotire
+How to run over complete code base using cmake + cotiregg1
+
 add_library(api-gen-template OBJECT ${YOUR_SOURCE_FILES})
 target_compile_options(api-gen-template
         PRIVATE -Xclang -ast-dump -fdiagnostics-color=never <== this isn't right yet, this just dumps the ast
@@ -61,7 +62,7 @@ vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "cla
 // Top level types that will be immediately discarded
 vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mixin$"};
 
-vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\""};
+vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8toolkit/v8_class_wrapper_impl.h>"};
 
 // error if bidirectional types don't make it in due to include file ordering
 // disable "fast_compile" so the V8ClassWrapper code can be generated 
@@ -934,9 +935,19 @@ namespace {
 	    if (wrapped_class->found_method == FOUND_INHERITANCE) {
 		continue;
 	    }
+	    if (!wrapped_class->should_be_wrapped()) {
+		continue;
+	    }
 	    sfinaes.emplace_back(wrapped_class->make_sfinae_to_match_wrapped_class());
 	    forward_declarations += wrapped_class->class_name + "; ";
 	}
+
+	// too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
+	if (sfinaes.size > 40 /* 40 is arbitrary */) {
+	    llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
+	}
+	
+	
 	for(int i = sfinaes.size() - 1; i >= 0; i--) {
 	    if (sfinaes[i] == "") {
 		sfinaes.erase(sfinaes.begin() + i);

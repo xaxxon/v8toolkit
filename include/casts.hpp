@@ -14,6 +14,8 @@
 #include <utility>
 #include "v8.h"
 
+#include "v8helpers.h"
+
 namespace v8toolkit {
 
     // if a value to send to a macro has a comma in it, use this instead so it is parsed as a comma character in the value
@@ -434,12 +436,21 @@ struct CastToJS<std::map<A, B, Rest...>> {
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
-        for(auto pair : map){
+        for(auto & pair : map){
             (void)object->Set(context, CastToJS<A>()(isolate, pair.first), CastToJS<B>()(isolate, pair.second));
         }
         return object;
     }
 };
+
+
+template<class A, class B, class... Rest>
+struct CastToJS<const std::map<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::map<A, B, Rest...> & map){
+	return CastToJS<std::map<A, B, Rest...>>()(isolate, map);
+    }
+};
+
 
 /**
 * supports maps containing any type also supported by CastToJS to javascript arrays

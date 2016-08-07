@@ -1,4 +1,4 @@
-#pragma onceA
+#pragma once
 
 #include <string>
 #include <map>
@@ -420,7 +420,7 @@ v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) 
 
 template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
-    //    static_assert(!std::is_reference<T>::value, "cannot );
+
     
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());

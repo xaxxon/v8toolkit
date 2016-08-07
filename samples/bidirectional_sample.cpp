@@ -11,7 +11,7 @@ using namespace v8toolkit;
 class Thing;
 class JSThing;
 
-using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>, v8toolkit::Factory, v8toolkit::EmptyFactoryBase>;
+using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
 
 static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
@@ -36,13 +36,14 @@ struct Thing {
 };
 
 struct JSThing : public Thing, public JSWrapper<Thing> {
-	JSThing(v8::Local<v8::Context> context,
-			v8::Local<v8::Object> js_object,
-			v8::Local<v8::FunctionTemplate> created_by,
-			int i, const std::string & j) :
-			Thing(i, j),
-			JSWrapper(context, js_object, created_by) {}
-
+    JSThing(v8::Local<v8::Context> context,
+	    v8::Local<v8::Object> js_object,
+	    v8::Local<v8::FunctionTemplate> created_by,
+	    JSThingFactory &,
+	    int i, const std::string & j) :
+	Thing(i, j),
+	JSWrapper(context, js_object, created_by) {}
+    
 	JS_ACCESS(std::string, get_string);
 	JS_ACCESS_CONST(std::string, get_string_const);
 };

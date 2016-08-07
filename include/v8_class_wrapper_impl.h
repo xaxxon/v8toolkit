@@ -50,35 +50,34 @@ namespace v8toolkit {
 	
 	
     /**
-     * Creates a new v8::FunctionTemplate capabale of creating wrapped T objects based on previously added methods and members.
+     * Creates a new v8::FunctionTemplate capable of creating wrapped T objects based on previously added methods and members.
      * TODO: This needs to track all FunctionTemplates ever created so it can try to use them in GetInstanceByPrototypeChain
      */
-
-
-    template<class T>     v8::Local<v8::FunctionTemplate>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::make_function_template(v8::FunctionCallback callback,
+    template<class T>
+	v8::Local<v8::FunctionTemplate>
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::make_wrapping_function_template(v8::FunctionCallback callback,
 												     const v8::Local<v8::Value> & data) {
 	assert(this->finalized == true);
 
+	printf("Making new wrapping function template for type %s\n", typeid(T).name());
+	
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
 	init_static_methods(function_template);
 
-	//        function_template->SetClassName(v8::String::NewFromUtf8(isolate, typeid(T).name()));
 	function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
 
 
-	// printf("Making function template for type %s\n", typeid(T).name());
         
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
-            // printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
+            printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
 
-	// printf("Adding this_class_function_template for %s\n", typeid(T).name());
+	printf("Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
     }
@@ -89,15 +88,13 @@ namespace v8toolkit {
      *   This is to keep the number of constructor function templates as small as possible because looking up
      *   which one created an object takes linear time based on the number that exist
      */
-
-
-    template<class T>     v8::Local<v8::FunctionTemplate>
+    template<class T> v8::Local<v8::FunctionTemplate>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_function_template()
 	{
 	    if (this_class_function_templates.empty()){
 		// printf("Making function template because there isn't one %s\n", typeid(T).name());
 		// this will store it for later use automatically
-		return make_function_template();
+		return make_wrapping_function_template();
 	    } else {
 		// printf("Not making function template because there is already one %s\n", typeid(T).name());
 		// return an arbitrary one, since they're all the same when used to call .NewInstance()
@@ -106,13 +103,25 @@ namespace v8toolkit {
 	}
 
 
+    /**
+     * Returns the embedded native object inside a javascript object or throws if none is present or its type cannot
+     *   be determined
+     */
     template<class T>  T *
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
+
+	if (object->InternalFieldCount() == 0) {
+	    throw CastException("Tried to get internal field from object with no internal fields");
+	} else if (object->InternalFieldCount() > 1) {
+	    throw CastException("Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit");
+	}
+	
 	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 
 	if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
 	return this->cast(static_cast<AnyBase *>(wrap->Value()));
     }
+
 	
 	
     /**
@@ -241,9 +250,9 @@ namespace v8toolkit {
         if (!std::is_const<T>::value) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();
         }
-
+	
         this->finalized = true;
-        get_function_template(); // force creation of a function template that doesn't call v8_constructo
+        get_function_template(); // force creation of a function template that doesn't call v8_constructor
         return *this;
     }
 
