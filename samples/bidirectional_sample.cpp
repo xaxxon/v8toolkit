@@ -31,7 +31,7 @@ struct Thing {
 	// test case for non-polymorphic types
 	NonPolymorphicType take_and_return_non_polymorphic(const NonPolymorphicType &) const {return NonPolymorphicType();}
 
-	int i = 42;
+	const int i = 42;
 	std::string j = "forty-two";
 };
 
@@ -39,7 +39,7 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
     JSThing(v8::Local<v8::Context> context,
 	    v8::Local<v8::Object> js_object,
 	    v8::Local<v8::FunctionTemplate> created_by,
-	    JSThingFactory &,
+	    JSThingFactory const &,
 	    int i, const std::string & j) :
 	Thing(i, j),
 	JSWrapper(context, js_object, created_by) {}

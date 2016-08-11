@@ -213,6 +213,8 @@ v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value
     return get_key_as<v8::Value>(context, get_value_as<v8::Object>(value), key);
 }
 
+
+
 v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
 						     v8::Local<v8::Function> function) {
 

@@ -942,11 +942,6 @@ namespace {
 	    forward_declarations += wrapped_class->class_name + "; ";
 	}
 
-	// too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
-	if (sfinaes.size() > 40 /* 40 is arbitrary */) {
-	    llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
-	}
-	
 	
 	for(int i = sfinaes.size() - 1; i >= 0; i--) {
 	    if (sfinaes[i] == "") {
@@ -954,6 +949,15 @@ namespace {
 	    }
 	}
 
+
+	// too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
+	if (sfinaes.size() > 40 /* 40 is arbitrary */) {
+	    cerr << join(sfinaes, " || ") << endl;
+	    llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
+	}
+	
+
+	
 	std::string sfinae = "";
 	if (!sfinaes.empty()) {
 	    sfinae = string("#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE ") + join(sfinaes, " || ") + "\n";
@@ -2372,7 +2376,7 @@ namespace {
 
 	    matched_classes_returned++;
 
-	    if (matched_classes_returned % 1000 == 0) {
+	    if (matched_classes_returned % 10000 == 0) {
 		cerr << endl << "### MATCHER RESULT " << matched_classes_returned << " ###" << endl;
 	    }
 	    

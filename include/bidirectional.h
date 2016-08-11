@@ -290,6 +290,9 @@ protected:
     std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
 //    mutable std::unique_ptr<JSWrapperClass> cpp_object_being_built;
 
+    // mutable so std::get<> can return non-const types - values should not be changed
+    mutable std::tuple<InternalConstructorParams...> internal_param_tuple;
+
 
 public:
 
@@ -332,6 +335,19 @@ public:
     }
 
 
+    template<std::size_t... Is>
+    std::unique_ptr<JSWrapperClass> call_operator_helper(v8::Local<v8::Object> new_js_object,
+                                ExternalConstructorParams&&... constructor_args,
+                                std::index_sequence<Is...>) const {
+//        return new Child(std::get<Is>(fixed_param_tuple)..., std::forward<ExternalConstructorParams>(constructor_args)...);
+
+        return std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
+                                         new_js_object,
+                                         this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
+                                         *this,
+                                         std::forward<InternalConstructorParams>(std::get<Is>(this->internal_param_tuple))...,
+                                         std::forward<ExternalConstructorParams>(constructor_args)...);
+    }
 
 
         /**
@@ -343,9 +359,13 @@ public:
         global_context(v8::Global<v8::Context>(isolate, context)),
         js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<JSWrapperClass>::get_instance(isolate).get_function_template())),
         js_new_object_constructor_function(v8::Global<v8::Function>(isolate, js_new_object_constructor_function)),
-        js_prototype(v8::Global<v8::Object>(isolate, prototype))
+        js_prototype(v8::Global<v8::Object>(isolate, prototype)),
+        internal_param_tuple(internal_constructor_values...)
+
     {
         printf("Created JSFactory object at %p\n", (void*)this);
+
+
 
         // Create a new object of the full wrapper type (i.e. JSMyType : MyType, JSWrapper<MyTYpe>)
         auto new_js_object = js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
@@ -363,14 +383,18 @@ public:
             v8::Local<v8::Object> new_js_object = this->js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
             (void)new_js_object->SetPrototype(context, this->js_prototype.Get(isolate));
 
-
+            auto js_wrapper_class_cpp_object =
+                call_operator_helper(new_js_object,
+                                     std::forward<ExternalConstructorParams>(external_constructor_values)...,
+                                     std::index_sequence_for<InternalConstructorParams...>());
+            /*
             auto js_wrapper_class_cpp_object = std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
                                                     new_js_object,
                                                     this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
                                                     *this,
                                                     std::forward<InternalConstructorParams>(internal_constructor_values)...,
                                                     std::forward<ExternalConstructorParams>(external_constructor_values)...);
-
+            */
             V8ClassWrapper<JSWrapperClass>::get_instance(isolate).template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, js_wrapper_class_cpp_object.get());
 
             v8toolkit::call_javascript_function_with_vars(context,

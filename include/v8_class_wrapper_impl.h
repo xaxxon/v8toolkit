@@ -59,7 +59,7 @@ namespace v8toolkit {
 												     const v8::Local<v8::Value> & data) {
 	assert(this->finalized == true);
 
-	printf("Making new wrapping function template for type %s\n", typeid(T).name());
+	// printf("Making new wrapping function template for type %s\n", typeid(T).name());
 	
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
@@ -73,11 +73,11 @@ namespace v8toolkit {
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
-            printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
+            //printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
 
-	printf("Adding this_class_function_template for %s\n", typeid(T).name());
+	// printf("Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
     }
@@ -161,7 +161,7 @@ namespace v8toolkit {
 
 	for (auto & adder : this->method_adders) {
 
-            std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
+            // std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
 
 	    // create a function template, set the lambda created above to be the handler
 	    auto function_template = v8::FunctionTemplate::New(this->isolate);
