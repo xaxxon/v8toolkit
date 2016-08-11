@@ -53,7 +53,7 @@ bool generate_v8classwrapper_sfinae = true;
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 60
+#define MAX_DECLARATIONS_PER_FILE 40
 
 // Any base types you want to always ignore -- v8toolkit::WrappedClassBase must remain, others may be added/changed
 vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "class Subscriber"};
@@ -943,7 +943,7 @@ namespace {
 	}
 
 	// too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
-	if (sfinaes.size > 40 /* 40 is arbitrary */) {
+	if (sfinaes.size() > 40 /* 40 is arbitrary */) {
 	    llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
 	}
 	
@@ -2177,6 +2177,11 @@ namespace {
 	    if (top_level) {
 		if (print_logging) cerr << "About to process methods" << endl;
 		for(CXXMethodDecl * method : wrapped_class.decl->methods()) {
+		    if (method->hasInheritedPrototype()) {
+			cerr << fmt::format("Skipping method {} because it has inherited prototype", method->getNameAsString()) << endl;
+			continue;
+		    }
+		    
 		    top_level_class->methods.insert(handle_method(wrapped_class, method, indentation + "  "));
 		}
 	    }
@@ -2296,13 +2301,17 @@ namespace {
 
 
 	    // Only process constructors on the top-level object
-            if (top_level && !wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
-                if (wrapped_class.decl->isAbstract()) {
-                    if (print_logging) cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
+            if (top_level) {
+		if (wrapped_class.found_method == FOUND_BASE_CLASS) {
+		    cerr << fmt::format("Not wrapping constructor for class only wrapped because it's base class of another wrapped type") << endl;
+		} else if (wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+		    cerr << fmt::format("Not wrapping because class has DO NOT WRAP CONSTRUCTORS annotation") << endl;
+		} else if (wrapped_class.decl->isAbstract()) {
+                    cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
 		} else if (wrapped_class.force_no_constructors) {
 		    cerr << fmt::format("'force no constructors' set on {} so skipping making constructors", class_name) << endl;
                 } else {
-		    if (print_logging) cerr << "About to process constructors" << endl;
+		    if (print_logging) cerr << fmt::format("About to process constructors for {} -- passed all checks to skip class constructors.", wrapped_class.class_name) << endl;
                     foreach_constructor(wrapped_class.decl, [&](auto constructor) {
 
 //                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), source_manager);
@@ -2314,18 +2323,18 @@ namespace {
 
 
                         if (constructor->isCopyConstructor()) {
-//                            fprintf(stderr,"Skipping copy constructor\n");
+                            fprintf(stderr,"Skipping copy constructor\n");
                             return;
                         } else if (constructor->isMoveConstructor()) {
-//                            fprintf(stderr,"Skipping move constructor\n");
+                            fprintf(stderr,"Skipping move constructor\n");
                             return;
                         } else if (constructor->isDeleted()) {
-//                            if (print_logging) cerr << "Skipping deleted constructor" << endl;
+                            if (print_logging) cerr << "Skipping deleted constructor" << endl;
                             return;
                         }
 			Annotations annotations(constructor);
                         auto constructor_name_annotation = annotations.get_regex(V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-//                        fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
+                        // fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
                         std::string constructor_name = wrapped_class.name_alias;
                         if (!constructor_name_annotation.empty()) {
                             constructor_name = constructor_name_annotation[0];
@@ -2338,6 +2347,7 @@ namespace {
                                 cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
                             }
                         } else {
+			    cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.class_name, constructor_name) << endl;
 			    used_constructor_names.push_back(constructor_name);
 
 			    top_level_class->constructors.insert(fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",

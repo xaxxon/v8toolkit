@@ -84,7 +84,7 @@ class UnwrappedClassThatIsUsed {};
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
 V8TOOLKIT_USE_BASE_TYPE(FooParent)
-    Foo : public FooParent, public Test::MyTemplate<vector<int>> {
+Foo : public FooParent, public Test::MyTemplate<vector<int>> {
     struct NestedFooStruct{};
 
     void foo_method(int*, int){}

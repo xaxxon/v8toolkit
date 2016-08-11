@@ -188,59 +188,46 @@ template<
 	class Base,
 	class Child,
 	class ExternalTypeList,
-    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
-    class = void>
+    class FixedParamsTypeList = TypeList<>, // parameters to be sent to the constructor that are known at factory creation time
+    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>>
 class CppFactory;
-
-#define CPP_FACTORY_SFINAE_BODY \
-    std::is_constructible<Child, Factory<Base, TypeList<ExternalConstructorParams...>, FactoryBase> &, ExternalConstructorParams...>::value
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
-template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
-class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<CPP_FACTORY_SFINAE_BODY>> :
-    public virtual FactoryBase {
+ template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase>
+    class CppFactory<Base,
+                    Child,
+                    TypeList<ExternalConstructorParams...>,
+                    TypeList<FixedParams...>, FactoryBase> :
+ public virtual FactoryBase {
+     
+     std::tuple<FixedParams...> fixed_param_tuple;
+     
+ public:
+     
+     
+     
+ CppFactory(FixedParams&&... fixed_param_values) :
+     fixed_param_tuple(fixed_param_values...)
+	 {}
+     
+     CppFactory(const CppFactory &) = delete;
+     CppFactory(CppFactory &&) = default;
+     CppFactory & operator=(const CppFactory &) = delete;
+     CppFactory & operator=(CppFactory &&) = default;
 
-public:
 
-//    CppFactory(FactoryBaseTs&&... factory_base_ts) :
-//        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
-//    {}
-
-    CppFactory() = default;
-    CppFactory(const CppFactory &) = delete;
-    CppFactory(CppFactory &&) = default;
-    CppFactory & operator=(const CppFactory &) = delete;
-    CppFactory & operator=(CppFactory &&) = default;
-
-    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
-        return new Child(*this, std::forward<ExternalConstructorParams>(constructor_args)...);
+    template<std::size_t... Is>
+	Base * call_operator_helper(ExternalConstructorParams&&... constructor_args, std::index_sequence<Is...>) const {
+	return new Child(std::get<Is>(fixed_param_tuple)..., std::forward<ExternalConstructorParams>(constructor_args)...);
+    }
+     
+     virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
+	 return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
+				     std::index_sequence_for<FixedParams...>());
     }
 };
 
-
-// if the constructor doesn't have a reference to this factory type as its first parameter, just pass all specified
-//   parameters "normally"
-template<class Base, class Child, class... ExternalConstructorParams, class FactoryBase>
-class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, FactoryBase, std::enable_if_t<!CPP_FACTORY_SFINAE_BODY>> :
-    public virtual FactoryBase {
-public:
-
-//    CppFactory(FactoryBaseTs&&... factory_base_ts) :
-//        ParentType(std::forward<FactoryBaseTs>(factory_base_ts)...)
-//    {}
-    CppFactory() = default;
-    CppFactory(const CppFactory &) = delete;
-    CppFactory(CppFactory &&) = default;
-    CppFactory & operator=(const CppFactory &) = delete;
-    CppFactory & operator=(CppFactory &&) = default;
-
-    virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override
-    {
-        // printf("CppFactory making a %s\n", typeid(Child).name());
-        return new Child(std::forward<ExternalConstructorParams>(constructor_args)...);
-    }
-};
 
 /**
 * Returns a JavaScript-extended object inheriting from Base.  It's Base type and
