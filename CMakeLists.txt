@@ -64,7 +64,7 @@ set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8.h inclu
 
 # extra directories for where v8 put libs for linux but not os x
 if (UNIX AND NOT APPLE)
-    link_directories(${V8_BASE_LIB_DIR}/obj.target/tools/gyp ${V8_BASE_STATIC_LIB_DIR}/obj.target/third_party/icu)
+#    link_directories(${V8_BASE_LIB_DIR}/obj.target/tools/gyp ${V8_BASE_STATIC_LIB_DIR}/obj.target/third_party/icu)
 endif()
 
 
@@ -96,7 +96,7 @@ set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(INSTALL_INCLUDE_DIR "include/v8toolkit" CACHE PATH "Installation directory for header files")
 
 install(FILES ${HEADER_FILES} DESTINATION ${INSTALL_INCLUDE_DIR})
-install(TARGETS v8toolkit_static DESTINATION ${INSTALL_LIB_DIR})
+install(TARGETS v8toolkit_static v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR})
 
 link_directories(${PROJECT_BINARY_DIR})
 
@@ -106,7 +106,7 @@ add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample
 #target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
 target_link_libraries(bidirectional_sample ${V8_SHARED_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit_shared)
-target_link_libraries(bidirectional_sample cppformat)
+target_link_libraries(bidirectional_sample fmt)
 
 add_custom_target(copy_bidirectional_sample_resources)
 add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
@@ -116,7 +116,7 @@ add_executable(exception_sample samples/exception_sample.cpp)
 add_dependencies(exception_sample v8toolkit_shared)
 #target_link_libraries(exception_sample ${V8_STATIC_LIBS})
 target_link_libraries(exception_sample ${V8_SHARED_LIBS})
-target_link_libraries(exception_sample v8toolkit_shared cppformat)
+target_link_libraries(exception_sample v8toolkit_shared fmt)
 #add_custom_command(TARGET bidirectional_sample PRE_BUILD
 #        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js
 #        ${PROJECT_BINARY_DIR})
@@ -126,13 +126,13 @@ add_executable(thread_sample samples/thread_sample.cpp)
 add_dependencies(thread_sample v8toolkit_shared)
 target_link_libraries(thread_sample ${V8_SHARED_LIBS})
 #target_link_libraries(thread_sample ${V8_STATIC_LIBS})
-target_link_libraries(thread_sample v8toolkit_shared cppformat)
+target_link_libraries(thread_sample v8toolkit_shared fmt)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
 add_dependencies(toolbox_sample v8toolkit_shared)
 target_link_libraries(toolbox_sample ${V8_SHARED_LIBS})
 #target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
-target_link_libraries(toolbox_sample v8toolkit_shared cppformat)
+target_link_libraries(toolbox_sample v8toolkit_shared fmt)
 
 # This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET toolbox_sample PRE_BUILD
@@ -145,14 +145,14 @@ add_executable(javascript_sample samples/javascript_sample.cpp)
 add_dependencies(javascript_sample v8toolkit_shared)
 #target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample ${V8_SHARED_LIBS})
-target_link_libraries(javascript_sample v8toolkit_shared cppformat pthread)
+target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
 
 
 add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_shared)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
-target_link_libraries(sample v8toolkit_shared cppformat)
+target_link_libraries(sample v8toolkit_shared fmt)
 
 # This only works when code is actually compiled, see above for how to make it work right
 add_custom_command(TARGET sample PRE_BUILD

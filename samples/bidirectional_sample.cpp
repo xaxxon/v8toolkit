@@ -39,7 +39,6 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
     JSThing(v8::Local<v8::Context> context,
 	    v8::Local<v8::Object> js_object,
 	    v8::Local<v8::FunctionTemplate> created_by,
-	    JSThingFactory const &,
 	    int i, const std::string & j) :
 	Thing(i, j),
 	JSWrapper(context, js_object, created_by) {}

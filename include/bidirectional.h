@@ -344,7 +344,6 @@ public:
         return std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
                                          new_js_object,
                                          this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
-                                         *this,
                                          std::forward<InternalConstructorParams>(std::get<Is>(this->internal_param_tuple))...,
                                          std::forward<ExternalConstructorParams>(constructor_args)...);
     }
@@ -373,7 +372,7 @@ public:
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
         // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
-        this->make_jswrapper_object = [this, internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+        this->make_jswrapper_object = [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
 //            printf("Using JSFactory object at %p\n", (void*)this);
 
 //            std::cerr << "In JSFactory constructor make_cpp_object lambda: " << sizeof...(InternalConstructorParams) << " : " << sizeof...(ExternalConstructorParams) << std::endl;

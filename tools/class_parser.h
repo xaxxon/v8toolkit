@@ -2,8 +2,8 @@
 #pragma once
 
 
-// This may be the wrong check - may need to do something like #ifndef __GNUC__
-#ifndef __GNUC__
+// this only works on clang
+#ifndef __clang__
 #ifndef __attribute__
 #define __attribute__(x) // only used by libclang plugin, so it only needs to exist under clang
 #endif
