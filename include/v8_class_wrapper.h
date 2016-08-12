@@ -335,11 +335,11 @@ private:
 	/// List of callbacks for when attributes change
 	std::vector<AttributeChangeCallback> attribute_callbacks;
 
-	V8ClassWrapper<T>() = delete;
-	V8ClassWrapper<T>(const V8ClassWrapper<T> &) = delete;
-	V8ClassWrapper<T>(const V8ClassWrapper<T> &&) = delete;
-	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &) = delete;
-	V8ClassWrapper<T>& operator=(const V8ClassWrapper<T> &&) = delete;
+	V8ClassWrapper() = delete;
+	V8ClassWrapper(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper(const V8ClassWrapper<T> &&) = delete;
+	V8ClassWrapper& operator=(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper& operator=(const V8ClassWrapper<T> &&) = delete;
 	
 	
 	/**
