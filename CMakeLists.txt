@@ -9,9 +9,6 @@ ucm_set_runtime(STATIC)
 
 set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
 
-# This line unused because no compiled boost libraries are currently being used
-#set(BOOST_LIB_DIR c:\\boost\\lib CACHE PATH "location of boost libraries if not in /usr/local/lib")
-
 
 file(GLOB HEADER_FILES
         include/*.h
@@ -62,14 +59,6 @@ set(V8_BASE_SHARED_LIB_DIR ${V8_BASE_SHARED_LIB_DIR_DEFAULT} CACHE PATH "full pa
 set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8.h including 'include' at the end")
 
 
-# extra directories for where v8 put libs for linux but not os x
-if (UNIX AND NOT APPLE)
-#    link_directories(${V8_BASE_LIB_DIR}/obj.target/tools/gyp ${V8_BASE_STATIC_LIB_DIR}/obj.target/third_party/icu)
-endif()
-
-
-
-#link_directories(${V8_BASE_STATIC_LIB_DIR})
 link_directories(${V8_BASE_SHARED_LIB_DIR})
 
 link_directories(${CPPFORMAT_BASE_DIR}\\lib)
@@ -80,13 +69,14 @@ include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${C
 # only use this against a shared-object-built V8
 #   library=shared snapshot=off
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
-# needs this one library linked statically -- apparently
+# even when v8 is build shared, still needs some statically linked libs
 target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
-#target_link_libraries(v8toolkit_shared cppformat)
+target_link_libraries(v8toolkit_shared fmt)
 
 #set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
+target_link_libraries(v8toolkit_static fmt)
 
 if (WIN32)
 	target_link_libraries(v8toolkit_static WinMM)

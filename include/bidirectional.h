@@ -348,7 +348,7 @@ public:
 						this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
 
 						// must const cast it since this method is const, so the tuple becomes const
-						std::forward<InternalConstructorParams>(std::get<Is>(this->internal_param_tuple))...,
+						std::forward<InternalConstructorParams>(std::get<Is>(const_cast<TupleType &>(this->internal_param_tuple)))...,
 						std::forward<ExternalConstructorParams>(constructor_args)...);
     }
 

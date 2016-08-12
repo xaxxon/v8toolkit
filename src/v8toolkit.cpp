@@ -13,7 +13,7 @@
 #include <mutex>
 #include <set>
 #include <map>
-
+#include <fmt/format.h>
 #include <boost/format.hpp>
 
 #include "./v8toolkit.h"

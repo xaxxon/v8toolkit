@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <fmt/format.h>
+
 #include "v8_class_wrapper.h"
 
 using namespace v8toolkit;

@@ -2,6 +2,9 @@
 #include <vector>
 #include <map>
 #include <string>
+
+#include <fmt/format.h>
+
 #include "javascript.h"
 
 using namespace v8toolkit;

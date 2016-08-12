@@ -2,6 +2,8 @@
 #include <map>
 #include <functional>
 
+#include <fmt/format.h>
+
 #include "bidirectional.h"
 #include "javascript.h"
 
