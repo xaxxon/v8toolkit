@@ -854,7 +854,7 @@ public:
     
     
 	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
 	    if (!std::is_const<T>::value) {
 		V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
