@@ -200,8 +200,9 @@ class CppFactory;
                     TypeList<ExternalConstructorParams...>,
                     TypeList<FixedParams...>, FactoryBase> :
  public virtual FactoryBase {
-     
-     std::tuple<FixedParams...> fixed_param_tuple;
+
+     using TupleType = std::tuple<FixedParams...>;
+     TupleType fixed_param_tuple;
      
  public:
      
@@ -219,7 +220,10 @@ class CppFactory;
 
     template<std::size_t... Is>
 	Base * call_operator_helper(ExternalConstructorParams&&... constructor_args, std::index_sequence<Is...>) const {
-	return new Child(std::get<Is>(fixed_param_tuple)..., std::forward<ExternalConstructorParams>(constructor_args)...);
+
+	// must const cast it since this method is const, so the tuple becomes const
+	return new Child(std::get<Is>(const_cast<TupleType&>(fixed_param_tuple))...,
+			 std::forward<ExternalConstructorParams>(constructor_args)...);
     }
      
      virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
@@ -288,10 +292,9 @@ protected:
     v8::Global<v8::Object> js_prototype;
 
     std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
-//    mutable std::unique_ptr<JSWrapperClass> cpp_object_being_built;
 
-    // mutable so std::get<> can return non-const types - values should not be changed
-    mutable std::tuple<InternalConstructorParams...> internal_param_tuple;
+    using TupleType = std::tuple<InternalConstructorParams...>;
+    TupleType internal_param_tuple;
 
 
 public:
@@ -339,13 +342,13 @@ public:
     std::unique_ptr<JSWrapperClass> call_operator_helper(v8::Local<v8::Object> new_js_object,
                                 ExternalConstructorParams&&... constructor_args,
                                 std::index_sequence<Is...>) const {
-//        return new Child(std::get<Is>(fixed_param_tuple)..., std::forward<ExternalConstructorParams>(constructor_args)...);
 
         return std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
                                          new_js_object,
                                          this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
-                                         *this,
-                                         std::forward<InternalConstructorParams>(std::get<Is>(this->internal_param_tuple))...,
+
+						// must const cast it since this method is const, so the tuple becomes const
+						std::forward<InternalConstructorParams>(std::get<Is>(const_cast<TupleType&>(this->internal_param_tuple)))...,
                                          std::forward<ExternalConstructorParams>(constructor_args)...);
     }
 
@@ -373,10 +376,9 @@ public:
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
         // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
-        this->make_jswrapper_object = [this, internal_constructor_values...](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+        this->make_jswrapper_object = [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
 //            printf("Using JSFactory object at %p\n", (void*)this);
 
-//            std::cerr << "In JSFactory constructor make_cpp_object lambda: " << sizeof...(InternalConstructorParams) << " : " << sizeof...(ExternalConstructorParams) << std::endl;
             auto context = this->global_context.Get(this->isolate);
 
             // Create a new javascript object for Base but then set its prototype to the subclass's prototype

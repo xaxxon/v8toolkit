@@ -1964,13 +1964,14 @@ namespace {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping destructor %s\n", indentation.c_str(), full_method_name.c_str());
                 return "";
             }
-            if (method->isPure()) {
-                if(!method->isVirtual()) {
-		    llvm::report_fatal_error("Got pure non-virtual method - not sure what that even means", false);
-		}
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
-                return "";
-            }
+	    // still want to keep the interface even if it's not implemented here
+            // if (method->isPure()) {
+            //     if(!method->isVirtual()) {
+	    // 	    llvm::report_fatal_error("Got pure non-virtual method - not sure what that even means", false);
+	    // 	}
+            //     if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
+            //     return "";
+            // }
             if (dyn_cast<CXXConversionDecl>(method)) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
                 return "";

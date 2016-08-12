@@ -61,7 +61,7 @@ template<class T>
 struct DestructorBehavior_Delete : DestructorBehavior {
 	void operator()(v8::Isolate * isolate, const void * void_object) const {
 		T* object = (T*)void_object;
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Deleting object at %p during V8 garbage collection\n", void_object);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Deleting object at %p during V8 garbage collection\n", void_object);
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
@@ -73,7 +73,7 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 */
 struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 	void operator()(v8::Isolate * isolate, const void * void_object) const {
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Not deleting object %p during V8 garbage collection\n", void_object);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Not deleting object %p during V8 garbage collection\n", void_object);
 	}
 };
 
@@ -371,7 +371,7 @@ private:
 		v8::Local<v8::Object> self = info.Holder();				   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Getter helper got cpp object: %p\n", cpp_object);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Getter helper got cpp object: %p\n", cpp_object);
 		// This function returns a reference to member in question
 		auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 		auto attribute_data = (*attribute_data_getter)(cpp_object);
@@ -420,16 +420,8 @@ private:
 		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
         
-//        using PB_TYPE = ParameterBuilder<0, decltype(constructor), TypeList<CONSTRUCTOR_PARAMETER_TYPES...>>;
-//        if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(args)) {
-//            // printf("v8_constructor for %s got %d parameters but needed %d parameters\n", typeid(T).name(), (int)args.Length(), (int)PB_TYPE::ARITY);
-//            isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Constructor parameter mismatch"));
-//            return;
-//        }
-//
-//		PB_TYPE()(constructor, args);
 		CallCallable<decltype(constructor)>()(constructor, args);
-		if (V8_CLASS_WRAPPER_DEBUG) printf("In v8_constructor and created new cpp object at %p\n", new_cpp_object);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
 		//   GC's the javascript object, there should be no c++ references to it
@@ -479,9 +471,9 @@ public:
 	template<class DestructorBehavior>
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
 	{
-//        if (V8_CLASS_WRAPPER_DEBUG) printf("Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
+//        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
 	    auto any = new AnyPtr<T>(cpp_object, typeid(T).name());
-//        if (V8_CLASS_WRAPPER_DEBUG) printf("inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
+//        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
 		
@@ -579,7 +571,7 @@ public:
     {
         assert(!is_finalized());
 	if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
-	    printf("Tried to set parent type of %s to unfinalized %s\n",
+	    fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
 		   demangle<T>().c_str(), demangle<ParentType>().c_str());
 		   
 	}
@@ -635,36 +627,36 @@ public:
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
 	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
 	if (!this->is_finalized()) {    
-            // printf("wrap existing cpp object cast to js %s\n", typeid(T).name());
+            // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object);
         }
                 
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
         //   This makes sure if the same object is returned multiple times, the javascript object is also the same
 		v8::Local<v8::Object> javascript_object;
 		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
-			if (V8_CLASS_WRAPPER_DEBUG) printf("Found existing javascript object for c++ object %p\n", existing_cpp_object);
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found existing javascript object for c++ object %p\n", existing_cpp_object);
 			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
 			
 		} else {
 		
-			if (V8_CLASS_WRAPPER_DEBUG) printf("Creating new javascript object for c++ object %p\n", existing_cpp_object);
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating new javascript object for c++ object %p\n", existing_cpp_object);
 		
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 		
             javascript_object = get_function_template()->GetFunction()->NewInstance();
-            // printf("New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
-            // printf("Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
+            // fprintf(stderr, "New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
+            // fprintf(stderr, "Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
             
 			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
 			
             this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
-//			if (V8_CLASS_WRAPPER_DEBUG) printf("Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
+//			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
 		}
-        if (V8_CLASS_WRAPPER_DEBUG) printf("Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
 		return v8::Local<v8::Value>::Cast(javascript_object);
 	}
 
@@ -703,7 +695,7 @@ public:
 
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
 											     callable);
-		    
+		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
 						       method_name.c_str(),
 						       static_method_function_template);
@@ -730,11 +722,13 @@ public:
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
-			auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-																					 callable);
-			constructor_function_template->Set(this->isolate,
-											   method_name.c_str(),
-											   static_method_function_template);
+		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
+											     callable);
+		    
+		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
+		    constructor_function_template->Set(this->isolate,
+						       method_name.c_str(),
+						       static_method_function_template);
 		};
 
 		this->static_method_adders.emplace_back(static_method_adder);
@@ -1016,32 +1010,32 @@ public:
     			auto holder = info.Holder();
 			v8::Local<v8::Object> self;
 			
-			if (V8_CLASS_WRAPPER_DEBUG) printf("Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
 			for(auto & function_template : this->this_class_function_templates) {
 			    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
 			    if(!self.IsEmpty() && !self->IsNull()) {
-				if (V8_CLASS_WRAPPER_DEBUG) printf("Found instance match in prototype chain\n");
+				if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found instance match in prototype chain\n");
 				break;
 			    }
 			}
                 //
                 // if(!compare_contents(isolate, holder, self)) {
-                //     printf("FOUND DIFFERENT OBJECT");
+                //     fprintf(stderr, "FOUND DIFFERENT OBJECT");
                 // }
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("Done looking for instance match in prototype chain\n");
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("Match: %s:\n", *v8::String::Utf8Value(self));
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("%s\n", stringify_value(isolate, self).c_str());
+//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Done looking for instance match in prototype chain\n");
+//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Match: %s:\n", *v8::String::Utf8Value(self));
+//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "%s\n", stringify_value(isolate, self).c_str());
 //                assert(!self.IsEmpty());
 
                 // void* pointer = instance->GetAlignedPointerFromInternalField(0);
 		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
+//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
                 auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
                 
 //			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
-//                if (V8_CLASS_WRAPPER_DEBUG) printf("binding with object %p\n", backing_object_pointer);
+//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "binding with object %p\n", backing_object_pointer);
     			auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
@@ -1104,7 +1098,7 @@ template<typename T, class>
 struct CastToJS {
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS from lvalue ref %s\n", typeid(T).name());
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS from lvalue ref %s\n", typeid(T).name());
 		return CastToJS<typename std::add_pointer<T>::type>()(isolate, &cpp_object);
 	}
 
@@ -1112,15 +1106,15 @@ struct CastToJS {
 	* If an rvalue is passed in, a copy must be made.
 	*/
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object){
-		if (V8_CLASS_WRAPPER_DEBUG) printf("In base cast to js struct with rvalue ref");
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Asked to convert rvalue type, so copying it first\n");
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In base cast to js struct with rvalue ref");
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Asked to convert rvalue type, so copying it first\n");
 
 		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
 		auto copy = new T(cpp_object);
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context, copy);
-        if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
         
         return result;
 	}
@@ -1142,20 +1136,20 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 
 	    assert(cpp_object != (void *)0xbebebebebebebebe);
 	    
-		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS from T* %s\n", demangle_typeid_name(typeid(T).name()).c_str());
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS from T* %s\n", demangle_typeid_name(typeid(T).name()).c_str());
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
 		// if the type is polymorphic and potentially bidirectional, check to see if it actually is
 		using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
-//		printf("Checking to see if object * is a JSWrapper *\n");
+//		fprintf(stderr, "Checking to see if object * is a JSWrapper *\n");
 		auto js_wrapper_t = dynamic_cast<const JSWrapperType *>(cpp_object);
 		if (js_wrapper_t) {
 		    return CastToJS<JSWrapperType>()(isolate, *js_wrapper_t);
 		}
 #endif
-		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
 		/** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
@@ -1177,7 +1171,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
-		if (V8_CLASS_WRAPPER_DEBUG) printf("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
 	}
@@ -1221,9 +1215,9 @@ std::string type_details(){
  */
  template<class T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value, int> = 0>
 	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		if (V8_CLASS_WRAPPER_DEBUG) printf("cast to native\n");
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "cast to native\n");
 		if(!value->IsObject()){
-			printf("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+			fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
 			throw CastException("No specialized CastToNative found and value was not a Javascript Object");
 		}
 		auto object = v8::Object::Cast(*value);
@@ -1237,7 +1231,7 @@ std::string type_details(){
 		T * t = nullptr;
 		std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
-//			printf("Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
+//			fprintf(stderr, "Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
 			throw CastException(fmt::format("Cannot convert {} to {} {}",
 							TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle<T>()));
 		}

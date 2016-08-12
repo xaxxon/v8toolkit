@@ -59,8 +59,8 @@ namespace v8toolkit {
 												     const v8::Local<v8::Value> & data) {
 	assert(this->finalized == true);
 
-	// printf("Making new wrapping function template for type %s\n", typeid(T).name());
-	
+	fprintf(stderr, "Making new wrapping function template for type %s\n", typeid(T).name());
+
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
         init_prototype_object_template(function_template->PrototypeTemplate());
@@ -69,15 +69,15 @@ namespace v8toolkit {
 	function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
 
 
-        
+
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
-            //printf("FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
+            fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", typeid(T).name());
             function_template->Inherit(parent_function_template);
         }
 
-	// printf("Adding this_class_function_template for %s\n", typeid(T).name());
+	fprintf(stderr, "Adding this_class_function_template for %s\n", typeid(T).name());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
     }
@@ -92,11 +92,11 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_function_template()
 	{
 	    if (this_class_function_templates.empty()){
-		// printf("Making function template because there isn't one %s\n", typeid(T).name());
+		// fprintf(stderr, "Making function template because there isn't one %s\n", typeid(T).name());
 		// this will store it for later use automatically
 		return make_wrapping_function_template();
 	    } else {
-		// printf("Not making function template because there is already one %s\n", typeid(T).name());
+		// fprintf(stderr, "Not making function template because there is already one %s\n", typeid(T).name());
 		// return an arbitrary one, since they're all the same when used to call .NewInstance()
 		return this_class_function_templates[0].Get(isolate);
 	    }
@@ -115,28 +115,28 @@ namespace v8toolkit {
 	} else if (object->InternalFieldCount() > 1) {
 	    throw CastException("Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit");
 	}
-	
+
 	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 
-	if (V8_CLASS_WRAPPER_DEBUG) printf("uncasted internal field: %p\n", wrap->Value());
+	if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
 	return this->cast(static_cast<AnyBase *>(wrap->Value()));
     }
 
-	
-	
+
+
     /**
      * Check to see if an object can be converted to type T, else return nullptr
      */
     template<class T>   T *
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::cast(AnyBase * any_base)
 	{
-	    if (V8_CLASS_WRAPPER_DEBUG) printf("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
+	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
 	    if(type_checker != nullptr) {
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Explicit compatible types set, using that\n");
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Explicit compatible types set, using that\n");
 		return type_checker->check(any_base);
 	    } else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
 		assert(false); // should not use this code path anymore
-		if (V8_CLASS_WRAPPER_DEBUG) printf("No explicit compatible types, but successfully cast to self-type\n");
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No explicit compatible types, but successfully cast to self-type\n");
 		return static_cast<AnyPtr<T>*>(any_base)->get();
 	    }
 	    // if it's already not const, it's ok to run it again
@@ -147,7 +147,7 @@ namespace v8toolkit {
 	    throw CastException("Could not determine type of object in V8ClassWrapper::cast().  Define ANYBASE_DEBUG for more information");
 	}
 
-	
+
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 	object_template->SetInternalFieldCount(1);
@@ -183,32 +183,32 @@ namespace v8toolkit {
 
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
-	    
+
 	for (auto & adder : this->static_method_adders) {
 	    adder(constructor_function_template);
 	}
     }
-	
 
-    
-	
+
+
+
     /**
      * Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
      * For each isolate you need to add constructors/methods/members separately.
      */
 
     template<class T>   	 V8ClassWrapper<T> &
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_instance(v8::Isolate * isolate) 
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_instance(v8::Isolate * isolate)
 	{
-	    if (V8_CLASS_WRAPPER_DEBUG) printf("isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
+	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
 	    if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
 		auto new_object = new V8ClassWrapper<T>(isolate);
-		if (V8_CLASS_WRAPPER_DEBUG) printf("Creating instance %p for isolate: %p\n", new_object, isolate);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
 	    }
-	    if (V8_CLASS_WRAPPER_DEBUG) printf("(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
-		
+	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+
 	    auto object = isolate_to_wrapper_map[isolate];
-	    if (V8_CLASS_WRAPPER_DEBUG) printf("Returning v8 wrapper: %p\n", object);
+	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Returning v8 wrapper: %p\n", object);
 	    return *object;
 	}
     
