@@ -58,9 +58,22 @@ public:
     
     static int get_instance_count(){ return instance_count; }
     static int instance_count;
+
+    // test for bug where using the same static method name on two classes
+    //   causes duplicate attribute error
+    static void static_method_same_name(){};
 };
 
 int Point::instance_count = 0;
+
+
+struct PointSubclass : public Point {
+    static void static_method_same_name(){};
+};
+
+struct PointSubclass2 : public Point {
+    static void static_method_same_name(){};
+};
 
 
 struct Line {
@@ -87,6 +100,9 @@ struct Line {
 
     void take_unique_int(unique_ptr<int> upl){unique_ptr<int> line(std::move(upl));}
     void take_unique_int_ref(unique_ptr<int> && upl){unique_ptr<int> line(std::move(upl));}
+
+
+    static void static_method_same_name(){};
 
 };
 
@@ -151,6 +167,7 @@ int main(int argc, char* argv[])
 
             // make the Point constructor function available to JS
             V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
+            wrapped_point.add_static_method("static_method_same_name", &Point::static_method_same_name);
             wrapped_point.add_method("thing", &Point::thing);
 	    wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
@@ -189,16 +206,32 @@ int main(int argc, char* argv[])
 
             // if you register a function that returns an r-value, a copy will be made using the copy constsructor
             wrapped_point.add_method("get_foo", &Point::get_foo);
+            wrapped_point.set_compatible_types<PointSubclass, PointSubclass2>();
+	        wrapped_point.finalize();
 
-	    wrapped_point.finalize();
-            
             // objects created from constructors won't have members/methods added after the constructor is added
             wrapped_point.add_constructor("Point", global_templ);
             wrapped_point.add_constructor<int,int>("Pii", global_templ);
 
 
 
+            auto & point_subclass = V8ClassWrapper<PointSubclass>::get_instance(isolate);
+            point_subclass.add_static_method("static_method_same_name", &PointSubclass::static_method_same_name);
+            point_subclass.set_parent_type<Point>();
+            point_subclass.finalize();
+            point_subclass.add_constructor<>("PointSubclass", global_templ);
+
+
+            auto & point_subclass2 = V8ClassWrapper<PointSubclass2>::get_instance(isolate);
+            point_subclass2.add_static_method("static_method_same_name", &PointSubclass2::static_method_same_name);
+            point_subclass2.set_parent_type<Point>();
+            point_subclass2.finalize();
+            point_subclass2.add_constructor<>("PointSubclass2", global_templ);
+
+
+
             V8ClassWrapper<Line> & wrapped_line = V8ClassWrapper<Line>::get_instance(isolate);
+            wrapped_line.add_static_method("static_method_same_name", &Line::static_method_same_name);
             wrapped_line.add_method("get_point", &Line::get_point);
             wrapped_line.add_method("get_rvalue_point", &Line::get_rvalue_point);
             wrapped_line.add_member("p", &Line::p);

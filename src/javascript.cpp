@@ -207,14 +207,22 @@ v8::Isolate * Isolate::get_isolate()
 
 std::shared_ptr<Context> Isolate::create_context()
 {
-    return operator()([this](){
-        auto ot = this->get_object_template();
-        auto context = v8::Context::New(this->isolate, NULL, ot);
+    ISOLATE_SCOPED_RUN(this->isolate);
+    v8::TryCatch tc(this->isolate);
+
+    auto ot = this->get_object_template();
+    auto context = v8::Context::New(this->isolate, NULL, ot);
+
+    if (tc.HasCaught()) {
+	throw V8ExecutionException(this->isolate, tc);
+    }
+
     
-        // can't use make_unique since the constructor is private
-        auto context_helper = new Context(shared_from_this(), context);
-        return std::unique_ptr<Context>(context_helper);
-    });
+    // can't use make_shared since the constructor is private
+    auto context_helper = new Context(shared_from_this(), context);
+
+    return std::shared_ptr<Context>(context_helper);
+	
 }
 
 v8::Local<v8::ObjectTemplate> Isolate::get_object_template()

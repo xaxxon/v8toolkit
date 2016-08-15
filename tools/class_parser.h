@@ -65,7 +65,9 @@
 #define V8TOOLKIT_CONSTRUCTOR(name) \
     __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX #name)))
 
-
+//#define V8TOOLKIT_USE_NAME_PREFIX "v8toolkit_use_name_"
+//#define V8TOOLKIT_USE_NAME(name) \
+//    __attribute__((annotate(V8TOOLKIT_USE_NAME_REFIX #name)))
 
 /**
  * For classes with multiple inheritance, allows you to specify type(s) not to use.

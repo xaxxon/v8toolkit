@@ -15,6 +15,24 @@ int y = 2;
 int y2 = 3;
 
 
+struct Thing {
+    static void name(){}
+};
+
+
+auto run_static_function_tests() {
+    auto i = Platform::create_isolate();
+    ISOLATE_SCOPED_RUN(*i);
+    V8ClassWrapper<Thing> & thing = i->wrap_class<Thing>();
+    thing.add_static_method("name", &Thing::name);
+    thing.finalize();
+    thing.add_constructor("Thing", *i);
+
+    ContextPtr context = i->create_context();
+    auto result = context->run("Thing.static_method();");
+
+}
+
 auto run_tests()
 {
     
@@ -510,6 +528,8 @@ int main(int argc, char ** argv) {
         printf("Nothing should have been destroyed yet after getting future results\n");
     }
     printf("The script, context, and isolate helpers should have all been destroyed\n");
+
+    run_static_function_tests();
 
     auto context = run_tests();
     printf("The script, context, and isolate helpers should have all been destroyed\n");

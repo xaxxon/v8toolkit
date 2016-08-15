@@ -33,6 +33,7 @@ cotire(api-gen-template)
 
 #include <vector>
 #include <string>
+#include <map>
 using namespace std;
 
 //////////////////////////////
@@ -71,13 +72,17 @@ string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n
 // sometimes files sneak in that just shouldn't be
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
+
+
+map<string, string> static_method_renames = {{"name", "get_name"}};
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <set>
 #include <regex>
 
-#include <cppformat/format.h>
+#include <fmt/ostream.h>
 
 
 #pragma clang diagnostic push
@@ -2011,6 +2016,11 @@ namespace {
             if (method->isStatic()) {
 		cerr << "method is static" << endl;
                 top_level_class->declaration_count++;
+
+                if (static_method_renames.find(short_method_name) != static_method_renames.end()) {
+                    short_method_name = static_method_renames[short_method_name];
+                }
+
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(source_manager, *top_level_class, klass.decl, method),
                        short_method_name, full_method_name);

@@ -7,7 +7,7 @@
 #include <set>
 #include <typeinfo>
 
-#include <cppformat/format.h>
+#include <fmt/ostream.h>
 
 
 // Everything in here is standalone and does not require any other v8toolkit files
@@ -343,13 +343,13 @@ auto reducer(const Container & container, Callable callable) ->
 #ifdef ANYBASE_DEBUG
     std::string type_name;
 #endif
-    AnyBase(char const *
+AnyBase(const std::string &&
 #ifdef ANYBASE_DEBUG
 	     type_name
 #endif
 	    )
 #ifdef ANYBASE_DEBUG
-    : type_name(type_name)
+: type_name(std::move(type_name))
 #endif
     {}
 };
@@ -360,7 +360,7 @@ auto reducer(const Container & container, Callable callable) ->
 
  template<class T>
      struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
- AnyPtr(T * data, char const * type_name) : AnyBase(type_name), data(data) {}
+ AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
     virtual ~AnyPtr(){}
     T* data;
     T * get() {return data;}
@@ -372,7 +372,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 template<class T>
 struct Any : public AnyBase {
- Any(T data, char const * type_name) : AnyBase(type_name), data(data) {}
+ Any(T data) : AnyBase(demangle<T>()), data(data) {}
     virtual ~Any(){}
     T data;
     T get() {return data;}

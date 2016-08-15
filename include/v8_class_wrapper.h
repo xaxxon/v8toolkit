@@ -124,7 +124,7 @@ struct TypeChecker<T, TypeList<Head, Tail...>,
 	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
 
         if(dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-	    std::cerr << "ERROR:::: But if I would have checked, it wuld have been a match!!!!!!" << std::endl;
+	    std::cerr << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?" << std::endl;
 	    assert(false);
         }
 #endif
@@ -440,7 +440,7 @@ private:
 	v8::Isolate * isolate;
 
 	// Stores a functor capable of converting compatible types into a <T> object
-	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<T, std::remove_const_t<T>>>>();
+	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>>>>();
         
 	/**
 	* Stores a function template with any methods from the parent already in place.
@@ -472,7 +472,7 @@ public:
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
 	{
 //        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
-	    auto any = new AnyPtr<T>(cpp_object, typeid(T).name());
+	    auto any = new AnyPtr<T>(cpp_object);
 //        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
@@ -540,7 +540,7 @@ public:
     /**
     * Species other types that can be substituted for T when calling a function expecting T
     *   but T is not being passsed.   Only available for classes derived from T.
-    * T is always compatible and should not be specified here.
+    * Every type is always compatible with itself and should not be specified here.
     * Not calling this means that only T objects will be accepted for things that want a T.
     * There is no automatic determination of inherited types by this library because I cannot
     *   figure out how.
@@ -553,7 +553,7 @@ public:
     {
         assert(!is_finalized());
 	// Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
-	type_checker.reset(new TypeChecker<T, TypeList<T, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>);
+	type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>);
 
         return *this;
     }
@@ -680,6 +680,14 @@ public:
 	
 	template<class R, class... Params>
 	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
+
+        static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
+                                                          "length", "name", "prototype"};
+
+        if (std::find(reserved_names.begin(), reserved_names.end(), method_name) !=
+            reserved_names.end()) {
+            throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
+        }
 
 		if (!std::is_const<T>::value) {
 			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
