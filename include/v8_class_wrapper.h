@@ -102,6 +102,9 @@ template<class T>
 		      , bool first_call = true
 #endif
 		      ) const override {
+#ifdef ANYBASE_DEBUG
+	std::cerr << fmt::format("Failed to find match for anybase with type string: {}", any_base->type_name) << std::endl;
+#endif	
 	return nullptr;
     }
 };
@@ -121,7 +124,7 @@ struct TypeChecker<T, TypeList<Head, Tail...>,
 		      ) const override {
 
 #ifdef ANYBASE_DEBUG
-	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+	//	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
 
         if(dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
 	    std::cerr << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?" << std::endl;
@@ -152,19 +155,19 @@ template<class T, class Head, class... Tail>
 	      ) const override {
 
 #ifdef ANYBASE_DEBUG
-	if (first_call) {
-	    std::cerr << fmt::format("Trying to find class match for anybase with type string: {}", any_base->type_name) << std::endl;
-	}
+	/* if (first_call) { */
+	/*     std::cerr << fmt::format("Trying to find class match for anybase with type string: {}", any_base->type_name) << std::endl; */
+	/* } */
 #endif
         if(AnyPtr<Head> * any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
 #ifdef ANYBASE_DEBUG
-	    std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
+	    //	    std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
 #endif
             return static_cast<T*>(any->get());
         } else {
             return SUPER::check(any_base
 #ifdef ANYBASE_DEBUG
-				, false // recursive call isn't the first call
+				, false // recursive call that isn't the first call
 #endif
 				);
         }
@@ -1237,7 +1240,7 @@ std::string type_details(){
 		// I don't know any way to determine if a type is
 		auto any_base = (v8toolkit::AnyBase *)wrap->Value();
 		T * t = nullptr;
-		std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
+		// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
 //			fprintf(stderr, "Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
 			throw CastException(fmt::format("Cannot convert {} to {} {}",

@@ -55,11 +55,11 @@ namespace v8toolkit {
 
 
 
-    /**
-* Helper function to run the callable inside contexts.
-* If the isolate is currently inside a context, it will use that context automatically
-*   otherwise no context::scope will be created
-*/
+/**
+ * Helper function to run the callable inside contexts.
+ * If the isolate is currently inside a context, it will use that context automatically
+ *   otherwise no context::scope will be created
+ */
 template<class T>
 auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T()>::type
 {
@@ -304,8 +304,11 @@ struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::valu
  */
 template<class T>
 struct ParameterBuilder<T,
-        std::enable_if_t<std::is_reference<std::result_of_t<
-                        CastToNative<std::remove_reference_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+    std::enable_if_t<std::is_reference<std::result_of_t<
+                              CastToNative<std::remove_const_t<
+                                               std::remove_reference_t<T>
+                                          >
+                              >(v8::Isolate*, v8::Local<v8::Value>)
                 > // end result_of
         >::value
         >> {
@@ -321,10 +324,13 @@ struct ParameterBuilder<T,
 
 template<class T>
 struct ParameterBuilder<T,
-    std::enable_if_t<!std::is_reference<std::result_of_t<
-                CastToNative<std::remove_reference_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+    std::enable_if_t<!std::is_reference<
+        std::result_of_t<
+            CastToNative<std::remove_const_t<
+                std::remove_reference_t<T>>>(v8::Isolate*, v8::Local<v8::Value>)
+
         > // end result_of
-        >::value
+       >::value
         >> {
     using NoRefT = std::remove_const_t<std::remove_reference_t<T>>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
@@ -355,7 +361,7 @@ struct ParameterBuilder<char *> {
 
  template<template<class, class...> class Container, class... Rest>
      struct ParameterBuilder<Container<char *, Rest...>, std::enable_if_t<!std::is_reference<std::result_of_t<
-     CastToNative<std::remove_reference_t<Container<char *, Rest...>>>(v8::Isolate*, v8::Local<v8::Value>)
+     CastToNative<std::remove_const_t<std::remove_reference_t<Container<char *, Rest...>>>>(v8::Isolate*, v8::Local<v8::Value>)
         > // end result_of
         >::value
         >> {
@@ -381,8 +387,9 @@ struct ParameterBuilder<char *> {
  };
 
  template<template<class, class...> class Container, class... Rest>
-     struct ParameterBuilder<Container<const char *, Rest...>,std::enable_if_t<!std::is_reference<std::result_of_t<
-     CastToNative<std::remove_reference_t<Container<const char *, Rest...>>>(v8::Isolate*, v8::Local<v8::Value>)
+     struct ParameterBuilder<Container<const char *, Rest...>,
+         std::enable_if_t<!std::is_reference<std::result_of_t<
+             CastToNative<std::remove_const_t<std::remove_reference_t<Container<const char *, Rest...>>>>(v8::Isolate*, v8::Local<v8::Value>)
         > // end result_of
         >::value
         >> {
