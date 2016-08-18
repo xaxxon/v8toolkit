@@ -1095,6 +1095,13 @@ bool get_file_contents(std::string filename, std::string & file_contents, time_t
 bool get_file_contents(std::string filename, std::string & file_contents);
 
 
+/**
+ * Before deleting an isolate using require, make sure to clean up
+ * its require cache or the program will crash while exiting
+ * @param isolate which isolate to delete the cache for
+ */
+void delete_require_cache_for_isolate(v8::Isolate * isolate);
+
 
 /**
 * adds 'require' method to javascript to emulate node require.

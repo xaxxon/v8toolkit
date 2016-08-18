@@ -42,6 +42,10 @@ assert(require_result.function() === "module.js function output");
 var require_result = require("module.js");
 assert(require_result.function() === "module.js function output");
 
+
+var module2_results = require("module2.js");
+assert(module2_results.function() === "module2.js function output");
+// printobj(module2_results);
 // printobj(module_list());
 
 // must return "yay" for this test

@@ -291,11 +291,16 @@ struct RequireResult {
     RequireResult(v8::Isolate * isolate, const time_t & time, v8::Local<v8::Value> result, std::unique_ptr<v8::ScriptOrigin> script_origin) :
             time(time), result(v8::Global<v8::Value>(isolate, result)), script_origin(std::move(script_origin))
     {}
+    // IF CRASHING IN RequireResult DESTRUCTOR, MAKE SURE TO CALL delete_require_cache_for_isolate BEFORE DESTROYING ISOLATE
 };
 
 typedef std::map<std::string, RequireResult> cached_isolate_modules_t; // a named module result
 static std::map<v8::Isolate *, cached_isolate_modules_t> require_results;
 
+void delete_require_cache_for_isolate(v8::Isolate * isolate) {
+    std::lock_guard<std::mutex> l(require_results_mutex);
+    require_results.erase(isolate);
+}
 
 cached_isolate_modules_t & get_loaded_modules(v8::Isolate * isolate)
 {
@@ -352,6 +357,8 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
         v8::Local<v8::Value> e = try_catch.Exception();
         // print_v8_value_details(e);
 
+
+	// This functionality causes the javascript to not be able to catch and understand the exception
         if(e->IsExternal()) {
             auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
             auto anyptr_exception_ptr = dynamic_cast<Any<std::exception_ptr> *>(anybase);
@@ -369,6 +376,38 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
 }
     
 
+
+v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
+                                    const std::string module_source,
+                                    const v8::ScriptOrigin & script_origin) {
+
+    auto isolate = context->GetIsolate();
+
+    v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
+    v8::Local<v8::String> parameter_names[] = {
+        v8::String::NewFromUtf8(isolate, "module"),
+        v8::String::NewFromUtf8(isolate, "exports")
+    };
+    auto maybe_module_function =
+        v8::ScriptCompiler::CompileFunctionInContext(context, &source, 2, &parameter_names[0], 0, nullptr);
+
+    // NEED PROPER ERROR HANDLING HERE
+    assert(!maybe_module_function.IsEmpty());
+    auto module_function = maybe_module_function.ToLocalChecked();
+
+    v8::Local<v8::Object> receiver = v8::Object::New(isolate);
+    v8::Local<v8::Value> module_params[2];
+    module_params[0] = v8::Object::New(isolate);
+    auto exports_object = v8::Object::New(isolate);
+    module_params[1] = exports_object;
+    add_variable(context, module_params[0]->ToObject(), "exports", exports_object);
+
+    (void)module_function->Call(context, context->Global(), 2, &module_params[0]);
+
+    return exports_object;
+}
+
+    
 
 /** Attempts to load the specified external resource.  
 * Attempts to load exact match filename in each path, then <filename>.js in each path, then <filename>.json in each path
@@ -391,6 +430,7 @@ bool require(
     const std::vector<std::string> & paths,
     bool track_file_modification_times, bool use_cache)
 {
+
     auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
@@ -440,9 +480,10 @@ bool require(
                 }
 
                 // Compile the source code.
-                v8::MaybeLocal<v8::Value> maybe_result;
                 auto script_origin =
-                        std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate, complete_filename.c_str()));
+                        std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate,
+                                                                                   complete_filename.c_str()),
+                v8::Integer::New(isolate, 1));
                                             
                 if (std::regex_search(filename, std::regex(".json$"))) {
                     v8::Local<v8::Script> script;
@@ -450,7 +491,7 @@ bool require(
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
                     if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents.c_str());
-                    maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate,file_contents.c_str()));
+                    auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate,file_contents.c_str()));
                     if (try_catch.HasCaught()) {
                         try_catch.ReThrow();
                         if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
@@ -459,30 +500,26 @@ bool require(
                 } else {
                     v8::Local<v8::Script> script;
                     v8::Local<v8::Value> error;
-                    if (!compile_source(context, file_contents, script, error, script_origin.get())) {
-                        isolate->ThrowException(error);
-                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
-                        return false;
-                    }
-                        
+                    result = execute_module(context, file_contents, *script_origin);
+//                    if (!compile_source(context, file_contents, script, error, script_origin.get())) {
+//                        isolate->ThrowException(error);
+//                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
+//                        return false;
+//                    }
+
                     // set up the module and exports stuff
-                    auto module_object = v8::Object::New(isolate);
                     // TODO: module object should also have "children" array, "filename" string, "id" string, "loaded" boolean, "parent" module object that first loaded this one
-                    auto exports_object = v8::Object::New(isolate);
-                    add_variable(context, module_object, "exports", exports_object);
-                    add_variable(context, context->Global(), "module", module_object);
-                    add_variable(context, context->Global(), "exports", exports_object);
-                    (void)context->Global()->Set(context, v8::String::NewFromUtf8(isolate, "global"), context->Global());
+//                    (void)context->Global()->Set(context, v8::String::NewFromUtf8(isolate, "global"), context->Global());
 
                     // return value of run doesn't matter, only what is hooked up to export variable
-		    (void)run_script(context, script);
+//		    (void)run_script(context, script);
                     //(void)script->Run(context);
-                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
-                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
-                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
+//                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
+//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
+//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
 		}
 
-                result = maybe_result.ToLocalChecked();
+
                 
                 // cache the result for subsequent requires of the same module in the same isolate
                 if (use_cache) {
@@ -521,6 +558,7 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 	});
 }
 
+    
 void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const std::vector<std::string> & paths) {
     
     // if there's no entry for cached results for this isolate, make one now

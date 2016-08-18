@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
     });
 
     // Dispose the isolate and tear down V8.
+    delete_require_cache_for_isolate(isolate);
     isolate->Dispose();
     v8::V8::Dispose();
     v8::V8::ShutdownPlatform();

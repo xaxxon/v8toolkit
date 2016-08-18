@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 project(v8toolkit)
 set (CMAKE_CXX_STANDARD 14)
 
@@ -119,16 +119,17 @@ target_link_libraries(thread_sample ${V8_SHARED_LIBS})
 target_link_libraries(thread_sample v8toolkit_shared fmt)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
-add_dependencies(toolbox_sample v8toolkit_shared)
+add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources)
 target_link_libraries(toolbox_sample ${V8_SHARED_LIBS})
 #target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
 target_link_libraries(toolbox_sample v8toolkit_shared fmt)
 
-# This only works when code is actually compiled, see above for how to make it work right
-add_custom_command(TARGET toolbox_sample PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/toolbox_sample.js
-        ${PROJECT_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/module.js
+add_custom_target(copy_toolbox_sample_resources)
+add_custom_command(TARGET copy_toolbox_sample_resources POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/samples/toolbox_sample.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/samples/module.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/samples/module2.js
         ${PROJECT_BINARY_DIR})
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
@@ -139,13 +140,13 @@ target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
 
 
 add_executable(sample samples/sample.cpp)
-add_dependencies(sample v8toolkit_shared)
+add_dependencies(sample v8toolkit_shared copy_sample_resources)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
 target_link_libraries(sample v8toolkit_shared fmt)
 
-# This only works when code is actually compiled, see above for how to make it work right
-add_custom_command(TARGET sample PRE_BUILD
+add_custom_target(copy_sample_resources)
+add_custom_command(TARGET copy_sample_resources POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/code.js
         ${PROJECT_BINARY_DIR})
 
