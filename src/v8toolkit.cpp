@@ -454,7 +454,7 @@ bool require(
                     if (REQUIRE_DEBUG_PRINTS) printf("Module not found at %s\n", complete_filename.c_str());
                     continue;
                 }
-                
+
                 // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
                 // This is read-only and per-isolate and the only way to add is to be in the isolate
                 if (use_cache) {

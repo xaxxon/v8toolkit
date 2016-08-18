@@ -222,7 +222,7 @@ class CppFactory;
 	Base * call_operator_helper(ExternalConstructorParams&&... constructor_args, std::index_sequence<Is...>) const {
 
 	// must const cast it since this method is const, so the tuple becomes const
-	return new Child(std::get<Is>(const_cast<TupleType&>(fixed_param_tuple))...,
+	return new Child(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType&>(fixed_param_tuple)))...,
 			 std::forward<ExternalConstructorParams>(constructor_args)...);
     }
      
