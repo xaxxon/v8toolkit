@@ -432,12 +432,13 @@ struct CastToJS<std::list<U, Rest...>> {
 */
 template<class A, class B, class... Rest>
 struct CastToJS<std::map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::map<A, B, Rest...> & map){
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::map<A, B, Rest...> & const_map){
+        auto & map = const_cast<std::map<A, B, Rest...> &>(const_map);
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto & pair : map){
-            (void)object->Set(context, CastToJS<A>()(isolate, std::forward<A>(pair.first)), CastToJS<B>()(isolate, std::forward<B>(pair.second)));
+            (void)object->Set(context, CastToJS<A>()(isolate, std::forward<A>(const_cast<A&>(pair.first))), CastToJS<B>()(isolate, std::forward<B>(const_cast<B&>(pair.second))));
         }
         return object;
     }
@@ -464,9 +465,9 @@ struct CastToJS<std::multimap<A, B, Rest...>> {
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto pair : map){
-            auto key = CastToJS<A>()(isolate, std::forward<A>(pair.first));
+            auto key = CastToJS<A>()(isolate, std::forward<A>(const_cast<A&>(pair.first)));
             // v8::Local<v8::String> key = v8::String::NewFromUtf8(isolate, "TEST");
-            auto value = CastToJS<B>()(isolate, std::forward<B>(pair.second));
+            auto value = CastToJS<B>()(isolate, std::forward<B>(const_cast<B&>(pair.second)));
             
             // check to see if a value with this key has already been added
             bool default_value = true;
@@ -494,12 +495,13 @@ struct CastToJS<std::multimap<A, B, Rest...>> {
 
 template<class T, class U>
 struct CastToJS<std::pair<T, U>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::pair<T, U> & pair){
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::pair<T, U> & const_pair){
+        auto & pair = const_cast<std::pair<T, U> &>(const_pair);
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
         (void)array->Set(context, 0, CastToJS<T>()(isolate, std::forward<T>(pair.first)));
-        (void)array->Set(context, 1, CastToJS<U>()(isolate, std::forward<U>(pair.second));
+        (void)array->Set(context, 1, CastToJS<U>()(isolate, std::forward<U>(pair.second)));
         return array;
     }
 //    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T, U> & pair){
