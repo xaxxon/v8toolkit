@@ -187,8 +187,8 @@ public:
 template<
 	class Base,
 	class Child,
+        class FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
 	class ExternalTypeList,
-    class FixedParamsTypeList = TypeList<>, // parameters to be sent to the constructor that are known at factory creation time
     class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>>
 class CppFactory;
 
@@ -197,8 +197,9 @@ class CppFactory;
  template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase>
     class CppFactory<Base,
                     Child,
+                    TypeList<FixedParams...>,
                     TypeList<ExternalConstructorParams...>,
-                    TypeList<FixedParams...>, FactoryBase> :
+     FactoryBase> :
  public virtual FactoryBase {
 
      using TupleType = std::tuple<FixedParams...>;
