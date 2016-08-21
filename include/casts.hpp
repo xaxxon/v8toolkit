@@ -400,7 +400,7 @@ struct CastToJS<std::vector<U, Rest...>> {
         auto array = v8::Array::New(isolate);
         auto size = vector.size();
         for(unsigned int i = 0; i < size; i++) {
-            (void)array->Set(context, i, CastToJS<U>()(isolate, std::forward<U>(vector[i])));
+            (void)array->Set(context, i, CastToJS<U>()(isolate, vector[i]));
         }
         return array;
     }
@@ -418,8 +418,8 @@ struct CastToJS<std::list<U, Rest...>> {
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
         int i = 0;
-        for (auto element : list) {
-            (void)array->Set(context, i, CastToJS<U>()(isolate, std::forward<U>(element)));
+        for (auto & element : list) {
+            (void)array->Set(context, i, CastToJS<U>()(isolate, element));
             i++;
         }
         return array;
@@ -438,7 +438,8 @@ struct CastToJS<std::map<A, B, Rest...>> {
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto & pair : map){
-            (void)object->Set(context, CastToJS<A>()(isolate, std::forward<A>(const_cast<A&>(pair.first))), CastToJS<B>()(isolate, std::forward<B>(const_cast<B&>(pair.second))));
+	    // Don't std::forward key/value values because they should never be std::move'd
+            (void)object->Set(context, CastToJS<A>()(isolate, const_cast<A&>(pair.first)), CastToJS<B>()(isolate, const_cast<B&>(pair.second)));
         }
         return object;
     }
@@ -465,9 +466,9 @@ struct CastToJS<std::multimap<A, B, Rest...>> {
         auto context = isolate->GetCurrentContext(); 
         auto object = v8::Object::New(isolate);
         for(auto pair : map){
-            auto key = CastToJS<A>()(isolate, std::forward<A>(const_cast<A&>(pair.first)));
+            auto key = CastToJS<A>()(isolate, const_cast<A&>(pair.first));
             // v8::Local<v8::String> key = v8::String::NewFromUtf8(isolate, "TEST");
-            auto value = CastToJS<B>()(isolate, std::forward<B>(const_cast<B&>(pair.second)));
+            auto value = CastToJS<B>()(isolate, const_cast<B&>(pair.second));
             
             // check to see if a value with this key has already been added
             bool default_value = true;
@@ -500,8 +501,8 @@ struct CastToJS<std::pair<T, U>> {
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
-        (void)array->Set(context, 0, CastToJS<T>()(isolate, std::forward<T>(pair.first)));
-        (void)array->Set(context, 1, CastToJS<U>()(isolate, std::forward<U>(pair.second)));
+        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
+	(void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
         return array;
     }
 //    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T, U> & pair){
@@ -531,7 +532,7 @@ struct CastTupleToJS<0, std::tuple<Args...>> {
         (void)array->Set(context,
                          array_position,
                          CastToJS<TuplePositionType>()(isolate,
-                                                       std::forward<TuplePositionType>(std::get<array_position>(tuple))));
+                                                       std::get<array_position>(tuple)));
         return array;
     }
 };
@@ -548,7 +549,7 @@ struct CastTupleToJS<position, std::tuple<Args...>> {
         (void)array->Set(context,
                          array_position,
                          CastToJS<TuplePositionType>()(isolate,
-                                                       std::forward<TuplePositionType>(std::get<array_position>(tuple))));
+                                                       std::get<array_position>(tuple)));
         return array;
     }
 };
