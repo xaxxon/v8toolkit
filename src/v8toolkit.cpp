@@ -619,9 +619,7 @@ void require_directory(v8::Local<v8::Context> context, std::string directory_nam
     
 }
 
-
-
-
+    
 void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 {
 	printf("Looking at prototype chain\n");

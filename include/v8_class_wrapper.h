@@ -555,6 +555,12 @@ public:
     set_compatible_types()
     {
         assert(!is_finalized());
+	
+	if (!std::is_const<T>::value) {
+	    using ConstT = std::add_const_t<T>;
+	    V8ClassWrapper<ConstT>::get_instance(isolate).template set_compatible_types<std::add_const_t<CompatibleTypes>...>();
+	}
+
 	// Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
 	type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>);
 
@@ -573,15 +579,23 @@ public:
     set_parent_type()
     {
         assert(!is_finalized());
+	if (!std::is_const<T>::value) {
+	    using ConstT = std::add_const_t<T>;
+	    using ConstParent = std::add_const_t<ParentType>;
+	    V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParent>();
+	}
+
+	
 	if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
 	    fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
 		   demangle<T>().c_str(), demangle<ParentType>().c_str());
 		   
 	}
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
-		ISOLATE_SCOPED_RUN(isolate);
-		global_parent_function_template =
-			v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
+	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
+	ISOLATE_SCOPED_RUN(isolate);
+	global_parent_function_template =
+	    v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
         return *this;
     }
     
