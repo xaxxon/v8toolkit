@@ -305,14 +305,13 @@ struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::valu
 template<class T>
 struct ParameterBuilder<T,
     std::enable_if_t<std::is_reference<std::result_of_t<
-                              CastToNative<std::remove_const_t<
-                                               std::remove_reference_t<T>
-                                          >
+                              CastToNative<
+                                           std::remove_reference_t<T>
                               >(v8::Isolate*, v8::Local<v8::Value>)
                 > // end result_of
         >::value
         >> {
-    using NoRefT = std::remove_const_t<std::remove_reference_t<T>>;
+    using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
             throw InvalidCallException("Not enough javascript parameters for function call");
@@ -326,18 +325,20 @@ template<class T>
 struct ParameterBuilder<T,
     std::enable_if_t<!std::is_reference<
         std::result_of_t<
-            CastToNative<std::remove_const_t<
-                std::remove_reference_t<T>>>(v8::Isolate*, v8::Local<v8::Value>)
+            CastToNative<
+                std::remove_reference_t<T>
+            >(v8::Isolate*, v8::Local<v8::Value>)
 
         > // end result_of
        >::value
         >> {
-    using NoRefT = std::remove_const_t<std::remove_reference_t<T>>;
+    using NoRefT = std::remove_reference_t<T>;
+    using NoConstRefT = std::remove_const_t<NoRefT>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
             throw InvalidCallException("Not enough javascript parameters for function call");
         }
-        stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
+        stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(info.GetIsolate(), info[i++])));
         return *static_cast<Stuff<NoRefT>&>(*stuff.back()).get();
     }
 };
@@ -389,7 +390,7 @@ struct ParameterBuilder<char *> {
  template<template<class, class...> class Container, class... Rest>
      struct ParameterBuilder<Container<const char *, Rest...>,
          std::enable_if_t<!std::is_reference<std::result_of_t<
-             CastToNative<std::remove_const_t<std::remove_reference_t<Container<const char *, Rest...>>>>(v8::Isolate*, v8::Local<v8::Value>)
+             CastToNative<std::remove_reference_t<Container<const char *, Rest...>>>(v8::Isolate*, v8::Local<v8::Value>)
         > // end result_of
         >::value
         >> {

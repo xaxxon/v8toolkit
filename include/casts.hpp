@@ -28,7 +28,7 @@ namespace v8toolkit {
 #define HANDLE_FUNCTION_VALUES \
     { \
 	if (value->IsFunction()) { \
-	    value = call_simple_javascript_function(isolate, v8::Local<v8::Function>::Cast(value)); \
+	    value = v8toolkit::call_simple_javascript_function(isolate, v8::Local<v8::Function>::Cast(value)); \
 	} \
     }
 
@@ -37,45 +37,45 @@ namespace v8toolkit {
 //   For instance if you need to make it <vector<T>>
 #define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
 template<TEMPLATE> \
-struct CastToNative<TYPE>{ \
+ struct v8toolkit::CastToNative<TYPE>{				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return CastToNative<const TYPE>()(isolate, value); \
+        return v8toolkit::CastToNative<const TYPE>()(isolate, value);	\
     } \
 }; \
 \
 template<TEMPLATE> \
-struct CastToNative<const TYPE> { \
+ struct v8toolkit::CastToNative<const TYPE> {				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
 	HANDLE_FUNCTION_VALUES;
 
 
 #define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
 template<> \
-struct CastToNative<TYPE> { \
+ struct v8toolkit::CastToNative<TYPE> {				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
 }; \
 \
 template<> \
-struct CastToNative<const TYPE>{ \
+ struct v8toolkit::CastToNative<const TYPE>{				\
     const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return CastToNative<TYPE>()(isolate, value); \
+        return v8toolkit::CastToNative<TYPE>()(isolate, value);	\
     } \
 }; \
-inline TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+ inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
     HANDLE_FUNCTION_VALUES;
 
 
 
     // Use this macro for types where you don't need to customize the template options
 #define CAST_TO_JS_PRIMITIVE_WITH_CONST(TYPE) \
-template<> struct CastToJS<const TYPE> { \
+    template<> struct v8toolkit::CastToJS<const TYPE> {		\
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \
 }; \
 template<> \
-struct CastToJS<TYPE> { \
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return CastToJS<const TYPE>()(isolate, value);} \
+ struct v8toolkit::CastToJS<TYPE> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
 }; \
-inline v8::Local<v8::Value>  CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
+ inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
 
 /**
 * Casts from a boxed Javascript type to a native type
