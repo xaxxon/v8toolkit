@@ -71,7 +71,11 @@ include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${C
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 # even when v8 is build shared, still needs some statically linked libs
 target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
-target_link_libraries(v8toolkit_shared fmt)
+
+# GCC doesn't need to link to this to make a shared object
+if (APPLE)
+  target_link_libraries(v8toolkit_shared fmt)
+endif()
 
 #set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
