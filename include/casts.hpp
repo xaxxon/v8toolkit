@@ -20,7 +20,7 @@ namespace v8toolkit {
 
     // if a value to send to a macro has a comma in it, use this instead so it is parsed as a comma character in the value
     //   and not separating another parameter to the template
-#define V8_TOOLKIT_COMMA ,
+#define V8TOOLKIT_COMMA ,
 
 
     // add inside CastToNative::operator() to have it handle 
@@ -66,17 +66,48 @@ template<> \
 
 
 
-    // Use this macro for types where you don't need to customize the template options
-#define CAST_TO_JS_PRIMITIVE_WITH_CONST(TYPE) \
-    template<> struct v8toolkit::CastToJS<const TYPE> {		\
+#define CAST_TO_JS_TEMPLATED(TYPE, TEMPLATE) \
+template<TEMPLATE> struct v8toolkit::CastToJS<const TYPE> {		\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const; \
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const && value) const { return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+template<TEMPLATE> \
+struct v8toolkit::CastToJS<TYPE> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE && value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+template<TEMPLATE> \
+struct v8toolkit::CastToJS<TYPE &> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+template<TEMPLATE> \
+struct v8toolkit::CastToJS<const TYPE &> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+template<TEMPLATE> \
+inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, TYPE const & value) const
+
+
+    
+#define CAST_TO_JS(TYPE)					\
+template<> struct v8toolkit::CastToJS<const TYPE> {		\
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \
 }; \
 template<> \
  struct v8toolkit::CastToJS<TYPE> {					\
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
 }; \
- inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
+template<> \
+ struct v8toolkit::CastToJS<TYPE &> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+ template<> \
+ struct v8toolkit::CastToJS<const TYPE &> {					\
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+}; \
+inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
 
+    
 /**
 * Casts from a boxed Javascript type to a native type
 */
@@ -123,7 +154,7 @@ struct CastToNative<std::function<Return(Params...)>> {
 
 
 
-CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8_TOOLKIT_COMMA SecondT>, class FirstT V8_TOOLKIT_COMMA class SecondT)
+CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8TOOLKIT_COMMA SecondT>, class FirstT V8TOOLKIT_COMMA class SecondT)
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
@@ -312,41 +343,41 @@ CAST_TO_NATIVE_WITH_CONST(std::map<Key V8TOOLKIT_COMMA Value V8TOOLKIT_COMMA Arg
 template<typename T, class = void>
 struct CastToJS;
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(bool){return v8::Boolean::New(isolate, value);}
+CAST_TO_JS(bool){return v8::Boolean::New(isolate, value);}
 
 //TODO: Should all these operator()'s be const?
 // integers
-CAST_TO_JS_PRIMITIVE_WITH_CONST(char){return v8::Integer::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned char){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(char){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(unsigned char){return v8::Integer::New(isolate, value);}
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(wchar_t){return v8::Number::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(char16_t){return v8::Integer::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(char32_t){return v8::Integer::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(short){return v8::Integer::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned short){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(wchar_t){return v8::Number::New(isolate, value);}
+CAST_TO_JS(char16_t){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(char32_t){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(short){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(unsigned short){return v8::Integer::New(isolate, value);}
 
 
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(int){return v8::Number::New(isolate, value);}
+CAST_TO_JS(int){return v8::Number::New(isolate, value);}
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned int){return v8::Number::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(long){return v8::Number::New(isolate, value);}
+CAST_TO_JS(unsigned int){return v8::Number::New(isolate, value);}
+CAST_TO_JS(long){return v8::Number::New(isolate, value);}
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned long){return v8::Number::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(long long){return v8::Number::New(isolate, static_cast<double>(value));}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(unsigned long long){return v8::Number::New(isolate, static_cast<double>(value));}
+CAST_TO_JS(unsigned long){return v8::Number::New(isolate, value);}
+CAST_TO_JS(long long){return v8::Number::New(isolate, static_cast<double>(value));}
+CAST_TO_JS(unsigned long long){return v8::Number::New(isolate, static_cast<double>(value));}
 
 
 
 // floats
-CAST_TO_JS_PRIMITIVE_WITH_CONST(float){return v8::Number::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(double){return v8::Number::New(isolate, value);}
-CAST_TO_JS_PRIMITIVE_WITH_CONST(long double){return v8::Number::New(isolate, value);}
+CAST_TO_JS(float){return v8::Number::New(isolate, value);}
+CAST_TO_JS(double){return v8::Number::New(isolate, value);}
+CAST_TO_JS(long double){return v8::Number::New(isolate, value);}
 
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
+CAST_TO_JS(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
 
-CAST_TO_JS_PRIMITIVE_WITH_CONST(char *){return v8::String::NewFromUtf8(isolate, value);}
+CAST_TO_JS(char *){return v8::String::NewFromUtf8(isolate, value);}
 
 template<class T>
 struct CastToJS<T**> {
@@ -390,20 +421,17 @@ struct CastToJS<v8::Global<v8::Value> &> {
 
 /**
 * supports vectors containing any type also supported by CastToJS to javascript arrays
-*/
-template<class U, class... Rest>
-struct CastToJS<std::vector<U, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<U, Rest...> vector){
-        // return CastToJS<std::vector<U, Rest...>*>()(isolate, &vector);
-        assert(isolate->InContext());
-        auto context = isolate->GetCurrentContext();
-        auto array = v8::Array::New(isolate);
-        auto size = vector.size();
-        for(unsigned int i = 0; i < size; i++) {
-            (void)array->Set(context, i, CastToJS<U>()(isolate, vector[i]));
-        }
-        return array;
+*/ 
+CAST_TO_JS_TEMPLATED(std::vector<T V8TOOLKIT_COMMA Rest...>, class T V8TOOLKIT_COMMA class... Rest) {
+// return CastToJS<std::vector<U, Rest...>*>()(isolate, &vector);
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto array = v8::Array::New(isolate);
+    auto size = value.size();
+    for(unsigned int i = 0; i < size; i++) {
+	(void)array->Set(context, i, CastToJS<decltype(value[0])>()(isolate, value[i]));
     }
+    return array;
 };
 
 
@@ -494,26 +522,13 @@ struct CastToJS<std::multimap<A, B, Rest...>> {
 };
 
 
-template<class T, class U>
-struct CastToJS<std::pair<T, U>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::pair<T, U> & const_pair){
-        auto & pair = const_cast<std::pair<T, U> &>(const_pair);
-        assert(isolate->InContext());
-        auto context = isolate->GetCurrentContext();
-        auto array = v8::Array::New(isolate);
-        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
-	(void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
-        return array;
-    }
-//    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T, U> & pair){
-//        assert(isolate->InContext());
-//        auto context = isolate->GetCurrentContext();
-//        auto array = v8::Array::New(isolate);
-//        (void)array->Set(context, 0, CastToJS<T>()(isolate, pair.first));
-//        (void)array->Set(context, 1, CastToJS<U>()(isolate, pair.second));
-//        return array;
-//    }
-
+CAST_TO_JS_TEMPLATED(std::pair<T V8TOOLKIT_COMMA U>, class T V8TOOLKIT_COMMA class U) {
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto array = v8::Array::New(isolate);
+    (void)array->Set(context, 0, CastToJS<decltype(value.first)>()(isolate, value.first));
+    (void)array->Set(context, 1, CastToJS<decltype(value.second)>()(isolate, value.second));
+    return array;
 };
 
 template<int position, class T>

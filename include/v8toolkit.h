@@ -32,6 +32,22 @@
 
 namespace v8toolkit {
 
+
+     /**
+     * Holds the c++ object to be embedded inside a javascript object along with additional debugging information
+     *   when requested
+     */
+ template<class T>
+ struct WrappedData {
+	// TODO: Don't leak this anyptr
+	AnyPtr<T> * native_object;
+	std::string native_object_type = demangle<T>();
+        WrappedData(AnyPtr<T> * native_object) : native_object(native_object) {}
+    };
+
+
+
+    
 /* Use these to try to decrease the amount of template instantiations */
 #define CONTEXT_SCOPED_RUN(local_context) \
     v8::Isolate * _v8toolkit_internal_isolate = local_context->GetIsolate(); \
@@ -506,9 +522,10 @@ struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> 
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                    run_function(function, info, std::forward<InitialArg>(initial_arg),
-                 std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...)));
+        info.GetReturnValue().
+	    Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+						  run_function(function, info, std::forward<InitialArg>(initial_arg),
+							       std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...)));
     }
 };
 

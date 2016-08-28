@@ -305,6 +305,7 @@ template<class T, class Head, class... Tail>
 };
 
 
+
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
 * Can provide a JS constructor method or wrap objects created in another c++ function
@@ -321,6 +322,10 @@ template<class T>
 class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 
 {
+ public:
+
+
+    
 private:
 
 
@@ -373,7 +378,8 @@ private:
 		auto isolate = info.GetIsolate();
 		v8::Local<v8::Object> self = info.Holder();				   
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+		WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Getter helper got cpp object: %p\n", cpp_object);
 		// This function returns a reference to member in question
 		auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
@@ -390,7 +396,8 @@ private:
 	    auto isolate = info.GetIsolate();
 	    v8::Local<v8::Object> self = info.Holder();		   
 	    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+	    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
 	    
 	    auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 	    auto attribute_data = (*attribute_data_getter)(cpp_object);
@@ -475,10 +482,11 @@ public:
 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
 	{
 //        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
-	    auto any = new AnyPtr<T>(cpp_object);
+	    WrappedData<T> * wrapped_data = new WrappedData<T>(new AnyPtr<T>(cpp_object));
+
 //        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
 		assert(js_object->InternalFieldCount() >= 1);
-	    js_object->SetInternalField(0, v8::External::New(isolate, static_cast<AnyBase*>(any)));
+	    js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
 		
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
@@ -967,7 +975,8 @@ public:
 
 
 				v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(holder->GetInternalField(0));
-				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+				WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
 
 
 				// the typelist and std::function parameters don't match because the first parameter doesn't come
@@ -1039,6 +1048,8 @@ public:
 			
 		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", demangle<T>().c_str(), demangle<M>().c_str());
 		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
+		    if (V8_CLASS_WRAPPER_DEBUG) dump_prototypes(isolate, holder);
+		    
 		    
 		    auto function_template_count = this->this_class_function_templates.size();
 		    int current_template_count = 0;
@@ -1070,7 +1081,8 @@ public:
 		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
-                auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrap->Value()));
+		    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+                auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
                 
 //			    assert(backing_object_pointer != nullptr);
     			// bind the object and method into a std::function then build the parameters for it and call it
@@ -1136,8 +1148,9 @@ class JSWrapper;
 template<typename T, class>
 struct CastToJS {
 
+    
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS from lvalue ref %s\n", typeid(T).name());
+	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS from lvalue ref %s\n", demangle<T>().c_str());
 		return CastToJS<typename std::add_pointer<T>::type>()(isolate, &cpp_object);
 	}
 
@@ -1289,9 +1302,9 @@ std::string type_details(){
 			throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
 		}
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+		auto wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
-		// I don't know any way to determine if a type is
-		auto any_base = (v8toolkit::AnyBase *)wrap->Value();
+		auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
 		T * t = nullptr;
 		// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {

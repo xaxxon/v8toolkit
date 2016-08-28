@@ -622,14 +622,20 @@ void require_directory(v8::Local<v8::Context> context, std::string directory_nam
     
 void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 {
-	printf("Looking at prototype chain\n");
+    fprintf(stderr, "Looking at prototype chain\n");
 	while (!object->IsNull()) {
-	    printf("%s:\n", *v8::String::Utf8Value(object));
+	    if (object->InternalFieldCount() == 1) {
+		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+		// the type of the class wrapper doesn't matter - it's just a pointer
+		auto wrapped_data = static_cast<WrappedData<int> *>(wrap->Value());
+		fprintf(stderr, "Prototype is wrapped object with debug string type name: %s\n", wrapped_data->native_object_type.c_str());
+	    }
+	    fprintf(stderr, "%s:\n", *v8::String::Utf8Value(object));
 	    // print_v8_value_details(foo);
-	    printf("%s\n", stringify_value(isolate, object).c_str());
+	    fprintf(stderr, "%s\n", stringify_value(isolate, object).c_str());
 	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());
 	}
-	printf("Done looking at prototype chain\n");
+	fprintf(stderr, "Done looking at prototype chain\n");
 }
 
 
