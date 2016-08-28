@@ -24,7 +24,7 @@
 namespace v8toolkit {
 
 
-#define V8_CLASS_WRAPPER_DEBUG false
+#define V8_CLASS_WRAPPER_DEBUG true
 
 /**
 * Design Questions:
@@ -802,6 +802,8 @@ public:
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
 	{
+
+	    using MEMBER_TYPE_REF = std::add_lvalue_reference_t<MEMBER_TYPE>;
 	    assert(this->finalized == false);
 	    
 	    if (!std::is_const<T>::value) {
@@ -814,15 +816,15 @@ public:
 	    member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 		    
 		    auto get_attribute_helper_data =
-					new AttributeHelperDataCreator<MEMBER_TYPE>(
-							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE> {
+					new AttributeHelperDataCreator<MEMBER_TYPE_REF>(
+							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE_REF> {
 
-							    return AttributeHelperData<MEMBER_TYPE>(*this, cpp_object->*member);
+							    return AttributeHelperData<MEMBER_TYPE_REF>(*this, cpp_object->*member);
 			});
 		    
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
-						      _getter_helper<MEMBER_TYPE>, 
-						      _setter_helper<MEMBER_TYPE>, 
+						      _getter_helper<MEMBER_TYPE_REF>, 
+						      _setter_helper<MEMBER_TYPE_REF>, 
 						      v8::External::New(isolate, get_attribute_helper_data));
 		});
 	    return *this;
@@ -1035,14 +1037,26 @@ public:
     			auto holder = info.Holder();
 			v8::Local<v8::Object> self;
 			
-			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", typeid(T).name(), typeid(M).name());
+		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", demangle<T>().c_str(), demangle<M>().c_str());
+		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
+		    
+		    auto function_template_count = this->this_class_function_templates.size();
+		    int current_template_count = 0;
 			for(auto & function_template : this->this_class_function_templates) {
+			    current_template_count++;
+			    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Checking function template %d / %d\n", current_template_count, (int)function_template_count);
 			    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
 			    if(!self.IsEmpty() && !self->IsNull()) {
 				if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found instance match in prototype chain\n");
 				break;
+			    } else {
+				if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No match on this one\n");
 			    }
 			}
+		    if (self.IsEmpty()) {
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No match in prototype chain after looking through all potential function templates\n");
+			assert(false);
+		    }
                 //
                 // if(!compare_contents(isolate, holder, self)) {
                 //     fprintf(stderr, "FOUND DIFFERENT OBJECT");
@@ -1217,6 +1231,31 @@ struct CastToJS<T&> {
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		return CastToJS<Pointer>()(isolate, &cpp_object);
+	}
+};
+template<typename T>
+struct CastToJS<T*&> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T*& cpp_object){
+		return CastToJS<T*>()(isolate, cpp_object);
+	}
+};
+
+template<typename T>
+struct CastToJS<T const *&> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const *& cpp_object){
+		return CastToJS<T const *>()(isolate, cpp_object);
+	}
+};
+template<typename T>
+struct CastToJS<T* const &> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const& cpp_object){
+		return CastToJS<T * const>()(isolate, cpp_object);
+	}
+};
+template<typename T>
+struct CastToJS<T const * const &> {
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * const & cpp_object){
+		return CastToJS<T const * const>()(isolate, cpp_object);
 	}
 };
 

@@ -864,6 +864,18 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
                                  _variable_setter<T>,
                                  v8::External::New(isolate, &variable));
 }
+
+
+ template<class T, class... Rest>
+     void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::unique_ptr<T, Rest...> & variable) {
+    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
+                                 _variable_getter<std::unique_ptr<T, Rest...>&>,
+                                 _variable_setter<std::unique_ptr<T, Rest...>&>,
+                                 v8::External::New(isolate, variable.get()));
+}
+
+
+ 
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
 * Allows reads to the variable.  Writes are ignored.

@@ -2356,8 +2356,8 @@ namespace {
                         }
                         if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
                             used_constructor_names.end()) {
-                            data_error(fmt::format("Error: because duplicate JS constructor function name: {}",
-							 constructor_name.c_str()));
+                            data_error(fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
+						   constructor_name.c_str(), wrapped_class.class_name));
                             for (auto &name : used_constructor_names) {
                                 cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
                             }

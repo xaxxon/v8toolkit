@@ -631,7 +631,21 @@ struct CastToJS<std::array<T, N>> {
 */
 template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const std::unique_ptr<T, Rest...> & unique_ptr) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
+	fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+        return CastToJS<T*>()(isolate, unique_ptr.release());
+    }
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+	fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+        return CastToJS<T*>()(isolate, unique_ptr.release());
+    }
+};
+
+
+template<class T, class... Rest>
+struct CastToJS<std::unique_ptr<T, Rest...> &> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
+	fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
         return CastToJS<T*>()(isolate, unique_ptr.get());
     }
 };
