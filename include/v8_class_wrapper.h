@@ -24,7 +24,7 @@
 namespace v8toolkit {
 
 
-#define V8_CLASS_WRAPPER_DEBUG true
+#define V8_CLASS_WRAPPER_DEBUG false
 
 /**
 * Design Questions:

@@ -1977,6 +1977,23 @@ namespace {
             //     if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
             //     return "";
             // }
+
+
+	    // If the function is wrapped in derived classes as well, you run into problems where you can't find the right type to
+	    //   cast the internal field to to find a match for the function type.   You may only get a Base* when you need to call void(Derived::*)()
+	    //   so if you only have the virtual function wrapped in Base, you'll always find the right type of object
+	    assert(method->isVirtual());
+	    assert(!method->isVirtual());
+	    if (method->isVirtual()) {
+		fprintf(stderr, "%s :: %s is virtual with %d overrides\n", klass.class_name.c_str(), full_method_name.c_str(), (int)method->size_overridden_methods());
+	    } else {
+		fprintf(stderr, "%s :: %s isn't virtual\n", klass.class_name.c_str(), full_method_name.c_str());
+	    }
+	    if (method->isVirtual() && method->size_overridden_methods()) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping derived-class override of base class virtual function %s\n", indentation.c_str(), full_method_name.c_str());
+                return "";		
+	    }
+	    
             if (dyn_cast<CXXConversionDecl>(method)) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
                 return "";
