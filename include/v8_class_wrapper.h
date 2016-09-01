@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <type_traits>
+#include <algorithm>
 
 #include <functional>
 #include <iostream>
@@ -709,8 +710,7 @@ public:
         static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
                                                           "length", "name", "prototype"};
 
-        if (std::find(reserved_names.begin(), reserved_names.end(), method_name) !=
-            reserved_names.end()) {
+        if (std::find(reserved_names.begin(), reserved_names.end(), method_name) != reserved_names.end()) {
             throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
         }
 
