@@ -361,7 +361,7 @@ public:
     JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Object> prototype, v8::Local<v8::Function> js_new_object_constructor_function, InternalConstructorParams&&... internal_constructor_values) :
         isolate(context->GetIsolate()),
         global_context(v8::Global<v8::Context>(isolate, context)),
-        js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<JSWrapperClass>::get_instance(isolate).get_function_template())),
+        js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<Base>::get_instance(isolate).get_function_template())),
         js_new_object_constructor_function(v8::Global<v8::Function>(isolate, js_new_object_constructor_function)),
         js_prototype(v8::Global<v8::Object>(isolate, prototype)),
         internal_param_tuple(internal_constructor_values...)
