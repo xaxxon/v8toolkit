@@ -122,7 +122,7 @@ namespace v8toolkit {
 	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 	WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 	if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrapped_data->native_object);
-	return this->cast(static_cast<AnyBase *>(wrap->Value()));
+	return this->cast(static_cast<AnyBase *>(wrapped_data->native_object));
     }
 
 

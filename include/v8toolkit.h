@@ -344,7 +344,6 @@ struct ParameterBuilder<T,
             CastToNative<
                 std::remove_reference_t<T>
             >(v8::Isolate*, v8::Local<v8::Value>)
-
         > // end result_of
        >::value
         >> {
@@ -354,7 +353,12 @@ struct ParameterBuilder<T,
         if (i >= info.Length()) {
             throw InvalidCallException("Not enough javascript parameters for function call");
         }
-        stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(info.GetIsolate(), info[i++])));
+
+	// if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
+	// IF YOU HAVE AN UNCOPYABLE TYPE SHOWING UP HERE make sure you haven't overridden the CastToNative type for it
+	//   to not return a reference - can be a problem with "shortcut" CastToNative implementations instead of
+	//   new MyType() constructors in javascript.
+	stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
         return *static_cast<Stuff<NoRefT>&>(*stuff.back()).get();
     }
 };

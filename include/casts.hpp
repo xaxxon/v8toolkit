@@ -44,8 +44,8 @@ template<TEMPLATE> \
 }; \
 \
 template<TEMPLATE> \
- struct v8toolkit::CastToNative<const TYPE> {				\
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+ struct v8toolkit::CastToNative<TYPE const> {				\
+    TYPE const operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
 	HANDLE_FUNCTION_VALUES;
 
 
@@ -253,7 +253,7 @@ struct CastToNative<const std::vector<ElementType>> {
 
     const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	// HANDLE_FUNCTION_VALUES; -- no need for this here, since we call another CastToNative from here
-	return CastToNative<NonConstResultType>(isolate, value);
+	return CastToNative<NonConstResultType>()(isolate, value);
     }
 };
 
