@@ -467,7 +467,8 @@ public:
     this->called_from_javascript = false; \
     if (call_native) { \
         if(JS_ACCESS_CORE_DEBUG) printf("Calling native version of %s\n", #name); \
-        return this->BASE_TYPE::name( __VA_ARGS__ ); \
+	/* See comment above for why static dispatch is used */		\
+        return this->BASE_TYPE::name( __VA_ARGS__ );			\
     } \
 	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE for %s, not calling native code\n", #name); \
     /*auto parameter_tuple = std::make_tuple( __VA_ARGS__ ); */ \
