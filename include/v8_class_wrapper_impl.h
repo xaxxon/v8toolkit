@@ -29,14 +29,26 @@ namespace v8toolkit {
       if (std::find(used_attribute_name_list.begin(),
 		    used_attribute_name_list.end(),
 		    name) != used_attribute_name_list.end()) {
-	
+
   	  throw DuplicateNameException(fmt::format("Cannot add method/static method/member named '{}' to class '{}', name already in use", name, class_name));
       }
       used_attribute_name_list.push_back(name);
     }
-    
-	
-    // takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
+
+	template<class T> void
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_static_name_used(const std::string & name) {
+		if (std::find(used_static_attribute_name_list.begin(),
+					  used_static_attribute_name_list.end(),
+					  name) != used_static_attribute_name_list.end()) {
+
+			throw DuplicateNameException(fmt::format("Cannot add method/static method/member named '{}' to class '{}', name already in use", name, class_name));
+		}
+		used_attribute_name_list.push_back(name);
+	}
+
+
+
+	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
     //   Useful because capturing lambdas don't have a traditional function pointer type
     template<class T> void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -231,9 +243,6 @@ namespace v8toolkit {
 	    //   if this line is to be added back
 	    // isolate_to_wrapper_map.erase(this->isolate);
 	}
-
-
-
 
 
     template<class T>  V8ClassWrapper<T> &

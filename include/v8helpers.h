@@ -44,14 +44,14 @@ std::string demangle(){
     return constness + volatility + demangled_name;
  }
 
-template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<std::remove_pointer_t<Destination>>::value, int> = 0>
+template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
     fprintf(stderr, "safe dynamic cast doing real cast\n");
     return dynamic_cast<Destination>(source);
 };
-template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<std::remove_pointer_t<Destination>>::value, int> = 0>
+template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");

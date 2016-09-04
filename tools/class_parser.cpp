@@ -772,7 +772,8 @@ namespace {
 	    //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
             for (WrappedClass * derived_class : derived_types) {
                 results.push_back(derived_class->class_name);
-                results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
+		// only use directly derived types now
+		//results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
             }
 	    //            printf("%s Returning %s\n", indent.c_str(), join(results).c_str());
             return join(results);
@@ -822,7 +823,7 @@ namespace {
                 result << fmt::format("{}  class_wrapper.set_parent_type<{}>();\n", indentation,
                                       get_base_class_string());
             }
-            result << fmt::format("{}  class_wrapper.finalize();\n", indentation);
+            result << fmt::format("{}  class_wrapper.finalize(true);\n", indentation);
 
             for(auto & constructor : constructors) {
                 result << constructor;
@@ -2147,44 +2148,43 @@ namespace {
 				wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
 
 
-				// NO LONGER NEED BIDIRECTIONAL TYPES WRAPPED - they use their base type wrapper
-//				// if this is a bidirectional class, make a minimal wrapper for it
-//				if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-//
-//					if (print_logging)
-//						cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
-//
-//					auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
-//															 top_level_class->get_short_name());
-//
-//
-//					auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
-//					// auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
-//					WrappedClass *js_wrapped_class = nullptr;
-//					//if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
-//					cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
-//					auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
-//																				   source_manager);
-//					js_wrapped_class = bidirectional_unique_ptr.get();
-//					wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
-//
-//					auto &bidirectional = *js_wrapped_class;
-//					bidirectional.base_types.insert(top_level_class);
-//
-//					cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-//										bidirectional.class_name, wrapped_class.name_alias) << endl;
-//					wrapped_class.derived_types.insert(&bidirectional);
-//					bidirectional.include_files.insert(generated_header_name);
-//					bidirectional.my_include = generated_header_name;
-//
-//					BidirectionalBindings bd(source_manager, wrapped_class);
-//					bd.generate_bindings(wrapped_classes);
-//
-//
-//				} else {
-//					if (print_logging)
-//						cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
-//				}
+				// if this is a bidirectional class, make a minimal wrapper for it
+				if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+
+					if (print_logging)
+						cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
+
+					auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
+										 top_level_class->get_short_name());
+
+
+					auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
+					// auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
+					WrappedClass *js_wrapped_class = nullptr;
+					//if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
+					cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
+					auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
+												       source_manager);
+					js_wrapped_class = bidirectional_unique_ptr.get();
+					wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
+
+					auto &bidirectional = *js_wrapped_class;
+					//bidirectional.base_types.insert(top_level_class);
+
+					cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
+										bidirectional.class_name, wrapped_class.name_alias) << endl;
+					//wrapped_class.derived_types.insert(&bidirectional);
+					bidirectional.include_files.insert(generated_header_name);
+					bidirectional.my_include = generated_header_name;
+
+					BidirectionalBindings bd(source_manager, wrapped_class);
+					bd.generate_bindings(wrapped_classes);
+
+
+				} else {
+					if (print_logging)
+						cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
+				}
 
 			} // end if top level class
             else {

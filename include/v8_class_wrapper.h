@@ -79,40 +79,47 @@ struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 };
 
 
-
+// Helper struct which can determine if an embedded CPP object is compatible with
+//   type T as well as casting an object of type T to its most derived type
 template<class T>
 struct TypeCheckerBase {
+protected:
+	v8::Isolate * isolate;
+
   public:
+	TypeCheckerBase(v8::Isolate * isolate) : isolate(isolate) {}
       virtual ~TypeCheckerBase(){}
-      virtual T * check(AnyBase *
-#ifdef ANYBASE_DEBUG
-			, bool first_call = true
-#endif
+
+    // returns nullptr if AnyBase cannot be converted to a compatible type
+    virtual T * check(AnyBase *, bool first_call = true
 			) const = 0;
 
-	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const = 0;
+    // returns cpp_object wrapped as its most derived type
+	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const = 0;
 
 };
+
+
 
 // type to convert to, typelist of all types to check, sfinae helper type
 template<class, class, class = void>
 struct TypeChecker;
 
+// Fallback when everything in the typelist has been tried
 template<class T>
     struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
-    virtual T * check(AnyBase * any_base
-#ifdef ANYBASE_DEBUG
-		      , bool first_call = true
-#endif
+		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
+    virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
 #ifdef ANYBASE_DEBUG
-	std::cerr << fmt::format("Failed to find match for anybase with type string: {}", any_base->type_name) << std::endl;
-#endif	
-	return nullptr;
+        std::cerr << fmt::format("Failed to find match for anybase with type string: {}", any_base->type_name)
+                  << std::endl;
+#endif
+        return nullptr;
     }
 
-    virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override;
+    virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
 };
 
 
@@ -123,26 +130,27 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
     std::enable_if_t<!std::is_const<T>::value && std::is_const<Head>::value>> : public TypeChecker<T, TypeList<Tail...>> {
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-    virtual T * check(AnyBase * any_base
-#ifdef ANYBASE_DEBUG
-		      , bool first_call = true
-#endif
-		      ) const override {
+
+	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
+
+
+    virtual T * check(AnyBase * any_base, bool first_call = true) const override {
 
 #ifdef ANYBASE_DEBUG
-	//	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
-
-        if(dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-	    std::cerr << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?" << std::endl;
-	    assert(false);
+        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
+            std::cerr
+                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
+                << std::endl;
+            assert(false);
         }
 #endif
-	
-	return SUPER::check(any_base);
+
+        return SUPER::check(any_base);
     }
 
-	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override {
-		return SUPER::wrap_as_most_derived(isolate, cpp_object);
+	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override {
+		return SUPER::wrap_as_most_derived(cpp_object);
 	}
 
 };
@@ -159,32 +167,11 @@ template<class T, class Head, class... Tail>
     
    
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-    virtual T * check(AnyBase * any_base
-#ifdef ANYBASE_DEBUG
-	      , bool first_call = true
-#endif
-	      ) const override {
+	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
-#ifdef ANYBASE_DEBUG
-	/* if (first_call) { */
-	/*     std::cerr << fmt::format("Trying to find class match for anybase with type string: {}", any_base->type_name) << std::endl; */
-	/* } */
-#endif
-        if(AnyPtr<Head> * any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
-#ifdef ANYBASE_DEBUG
-	    //	    std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
-#endif
-            return static_cast<T*>(any->get());
-        } else {
-            return SUPER::check(any_base
-#ifdef ANYBASE_DEBUG
-				, false // recursive call that isn't the first call
-#endif
-				);
-        }
-    }
+	virtual T * check(AnyBase * any_base, bool first_call = true) const override;
 
-	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override;
+	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
 };
 
 
@@ -302,6 +289,7 @@ template<class T, class Head, class... Tail>
 	 throw std::exception();
      }
 
+     T * get_cpp_object(v8::Local<v8::Object> object);
 
      
  V8ClassWrapper<T> & set_class_name(const std::string & name){throw std::exception();}
@@ -372,7 +360,8 @@ private:
 	 * List of names already in use for methods/static methods/accessors
 	 * Used to make sure duplicate names aren't requested
 	 */
-	std::vector<std::string> used_attribute_name_list;
+    std::vector<std::string> used_attribute_name_list;
+    std::vector<std::string> used_static_attribute_name_list;
 
 
 	void call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value);
@@ -380,8 +369,14 @@ private:
 	/**
 	 * Throws if name has already been checked by this function for this type in this isolate
 	 */
-	void check_if_name_used(const std::string & name);
-		
+    void check_if_name_used(const std::string & name);
+
+    /**
+     * static methods go on the constructor function, so it can have names which overlap with the per-instance object attributes
+     * @param name name of static method to check
+     */
+    void check_if_static_name_used(const std::string & name);
+
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
 	template<class VALUE_T> // type being returned
@@ -463,7 +458,7 @@ private:
 	v8::Isolate * isolate;
 
 	// Stores a functor capable of converting compatible types into a <T> object
-	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>>>>();
+	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>>>>(this->isolate);
         
 	/**
 	* Stores a function template with any methods from the parent already in place.
@@ -602,7 +597,7 @@ public:
 	}
 
 	// Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
-	type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>);
+	type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate));
 
         return *this;
     }
@@ -705,7 +700,7 @@ public:
 			v8::Context::Scope cs(context);
 
             if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
-                javascript_object = this->type_checker->wrap_as_most_derived(this->isolate, existing_cpp_object);
+                javascript_object = this->type_checker->wrap_as_most_derived(existing_cpp_object);
             } else {
                 javascript_object = get_function_template()->GetFunction()->NewInstance();
 
@@ -989,8 +984,8 @@ public:
 	}
 
 
-	v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) {
-		return this->type_checker->wrap_as_most_derived(isolate, cpp_object);
+	v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) {
+		return this->type_checker->wrap_as_most_derived(cpp_object);
 	}
 
 	template<class R, class Head, class... Tail>
@@ -1398,36 +1393,54 @@ std::string type_details(){
 
 	// If no more-derived option was found, wrap as this type
 	template<class T>
-	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const {
-		auto context = isolate->GetCurrentContext();
-		return v8toolkit::V8ClassWrapper<T>::get_instance(isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
+	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(T * cpp_object) const {
+		auto context = this->isolate->GetCurrentContext();
+		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
 	}
 
 
-	// if a more-derived type was found, pass it to that type to see if there's something even more derived
-	template<class T, class Head, class... Tail>
-	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
-		std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
-	::wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const {
+	template<class T, class Head, class... Tail> T *
+TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>::check(AnyBase * any_base, bool first_call) const {
 
-        // if they're the same, let it fall through to the empty typechecker TypeList base case
-        if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
-            using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
-
-            fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
-                    std::is_polymorphic<Head>::value);
-            fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
-                    std::is_polymorphic<MatchingConstT>::value);
-
-            if (std::is_const<T>::value == std::is_const<Head>::value) {
-                if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
-                    return v8toolkit::V8ClassWrapper<Head>::get_instance(isolate).wrap_as_most_derived(isolate,
-                                                                                                       derived);
-                }
-            }
-        }
-		return SUPER::wrap_as_most_derived(isolate, cpp_object);
+	if(AnyPtr<Head> * any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
+#ifdef ANYBASE_DEBUG
+		std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
+#endif
+		return static_cast<T*>(any->get());
+	} else if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
+		 return derived_result;
+	} else {
+		return SUPER::check(any_base, false);
 	}
+}
+
+
+
+
+// if a more-derived type was found, pass it to that type to see if there's something even more derived
+template<class T, class Head, class... Tail>
+v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+	std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
+::wrap_as_most_derived(T * cpp_object) const {
+
+	// if they're the same, let it fall through to the empty typechecker TypeList base case
+	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
+
+		fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
+				std::is_polymorphic<Head>::value);
+		fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
+				std::is_polymorphic<MatchingConstT>::value);
+
+		if (std::is_const<T>::value == std::is_const<Head>::value) {
+			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
+				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived);
+			}
+		}
+	}
+	return SUPER::wrap_as_most_derived(cpp_object);
+}
 
 
 
