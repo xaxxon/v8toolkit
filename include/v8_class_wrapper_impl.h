@@ -201,22 +201,23 @@ namespace v8toolkit {
      * Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
      * For each isolate you need to add constructors/methods/members separately.
      */
-
-    template<class T>   	 V8ClassWrapper<T> &
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_instance(v8::Isolate * isolate)
-	{
-	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
-	    if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
-		auto new_object = new V8ClassWrapper<T>(isolate);
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
-	    }
-	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
-
-	    auto object = isolate_to_wrapper_map[isolate];
-	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Returning v8 wrapper: %p\n", object);
-	    return *object;
-	}
-    
+//
+//    template<class T>   	 V8ClassWrapper<T> &
+//	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_instance(v8::Isolate * isolate)
+//	{
+//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
+//
+//        if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
+//		    auto new_object = new V8ClassWrapper<T>(isolate);
+//		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
+//	    }
+//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+//
+//	    auto object = isolate_to_wrapper_map[isolate];
+//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Returning v8 wrapper: %p\n", object);
+//	    return *object;
+//	}
+//
 
     /**
      * V8ClassWrapper objects shouldn't be deleted during the normal flow of your program unless the associated isolate
@@ -250,12 +251,14 @@ namespace v8toolkit {
      * Must be called before adding any constructors or using wrap_existing_object()
      */
     template<class T>  V8ClassWrapper<T> &
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::finalize() {
-
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::finalize(bool wrap_as_most_derived_flag) {
+        if (this->finalized) {
+            throw V8Exception(this->isolate, "Called ::finalize on wrapper that was already finalized");
+        }
         if (!std::is_const<T>::value) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();
         }
-	
+	    this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
         this->finalized = true;
         get_function_template(); // force creation of a function template that doesn't call v8_constructor
         return *this;
@@ -265,11 +268,11 @@ namespace v8toolkit {
     /**
      * returns whether finalize() has been called on this type for this isolate
      */
-    template<class T>  bool
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::is_finalized()
-	{
-	    return this->finalized;
-	}
+//    template<class T>  bool
+//	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::is_finalized()
+//	{
+//	    return this->finalized;
+//	}
 
 
 } // end namespace v8toolkit

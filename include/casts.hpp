@@ -154,7 +154,38 @@ struct CastToNative<std::function<Return(Params...)>> {
 
 
 
-CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8TOOLKIT_COMMA SecondT>, class FirstT V8TOOLKIT_COMMA class SecondT)
+    template<class FirstT, class SecondT>
+ struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
+    std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        HANDLE_FUNCTION_VALUES;
+        if (value->IsArray()) {
+            auto length = get_array_length(isolate, value);
+            if (length != 2) {
+                auto error = fmt::format("Array to std::pair must be length 2, but was {}", length);
+                isolate->ThrowException(v8::String::NewFromUtf8(isolate, error.c_str()));
+                throw v8toolkit::CastException(error);
+            }
+            auto context = isolate->GetCurrentContext();
+            auto array = get_value_as<v8::Array>(value);
+            auto first = array->Get(context, 0).ToLocalChecked();
+            auto second = array->Get(context, 1).ToLocalChecked();
+            return std::pair<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
+                                              v8toolkit::CastToNative<SecondT>()(isolate, second));
+
+        } else {
+            auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
+            std::cout << error << std::endl;
+            throw v8toolkit::CastException(error);
+        }
+
+
+    }
+};
+
+template<class FirstT, class SecondT>
+ struct v8toolkit::CastToNative<std::pair<FirstT, SecondT> const> {
+     std::pair<FirstT, SecondT> const operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	HANDLE_FUNCTION_VALUES;
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
@@ -166,9 +197,8 @@ CAST_TO_NATIVE_WITH_CONST(std::pair<FirstT V8TOOLKIT_COMMA SecondT>, class First
         auto array = get_value_as<v8::Array>(value);
         auto first = array->Get(context, 0).ToLocalChecked();
         auto second = array->Get(context, 1).ToLocalChecked();
-        const auto &native_first = v8toolkit::CastToNative<FirstT>()(isolate, first);
-        const auto &native_second = v8toolkit::CastToNative<SecondT>()(isolate, second);
-        return std::pair<FirstT, SecondT>(native_first, native_second);
+        return std::pair<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
+                                          v8toolkit::CastToNative<SecondT>()(isolate, second));
 
     } else {
 	auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));

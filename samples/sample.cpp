@@ -13,7 +13,8 @@ using namespace std;
 #define SAMPLE_DEBUG true
 
 struct FooParent {
-
+    // must be polymorphic for most derived type to be returned
+    virtual ~FooParent() {};
 };
 
 struct Foo : public FooParent {
@@ -284,8 +285,14 @@ int main(int argc, char* argv[])
             
             wrapped_line.add_constructor("Line", global_templ);
             
-        
+
+            auto & wrapped_fooparent = V8ClassWrapper<FooParent>::get_instance(isolate);
+            wrapped_fooparent.set_compatible_types<Foo>();
+            wrapped_fooparent.finalize(true);
+
+
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
+            wrapped_foo.set_parent_type<FooParent>();
             wrapped_foo.add_member("i", &Foo::i).finalize();
         
             v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
@@ -353,7 +360,17 @@ int main(int argc, char* argv[])
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"()=>42.2")).ToLocalChecked();
 	    assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
 	    
-	    
+	        Foo most_derived_foo_test;
+            v8::Local<v8::Object> most_derived_fooparent_js_object =
+                wrapped_fooparent.wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, &most_derived_foo_test);
+
+            // even though this is wrapped as a FooParent that doesn't have an 'i', it should actually be wrapped
+            //   as the most derived type of the actual cpp object inside, which is a Foo, which does have an 'i'
+            fprintf(stderr, "Testing most derived type return\n");
+            fprintf(stderr, "%s\n", stringify_value(isolate, most_derived_fooparent_js_object).c_str());
+            assert(!most_derived_fooparent_js_object->Get(context, v8::String::NewFromUtf8(isolate, "i")).ToLocalChecked()->IsUndefined());
+            fprintf(stderr, "Testing completed\n");
+
         });
         
     }

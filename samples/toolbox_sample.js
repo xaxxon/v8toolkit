@@ -1,18 +1,25 @@
-
+println("Bar");
 bar();
+println("foo5");
 foo(5);
+println("foo2");
 foo(2);
-assert(point_instance_count() === 1);
-
+println("assert point instance count 1");
+println(point_instance_count());
+assert(point_instance_count() == 1);
+println("exposed var 42");
+println(exposed_variable);
 assert(exposed_variable === 42);
 exposed_variable = 420;
+println("exposed var 420");
 assert(exposed_variable === 420);
 
 // This line should be ignored
 exposed_variable_readonly=4;
+println("exposed var still 420");
 assert(exposed_variable === 420);
 
-
+println("Lambda func 100 => 101");
 assert(lambda_function(100) == 101);
 
 println("Testing print functions:")

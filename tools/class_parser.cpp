@@ -2067,117 +2067,126 @@ namespace {
 	    PrintLoggingGuard lg;
             if (top_level) {
 
-		if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
-		    lg.log();
-		}
+				if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
+					lg.log();
+				}
 
 
-		if (!wrapped_class.should_be_wrapped()) {
-		    cerr << fmt::format("Skipping {}, should_be_wrapped reported false", wrapped_class.class_name) << endl;
-		    return;
-		}
-		
-		// if we've gotten this far, then the class passed the tests and should be included
-		wrapped_class.valid = true;
+				if (!wrapped_class.should_be_wrapped()) {
+					cerr << fmt::format("Skipping {}, should_be_wrapped reported false", wrapped_class.class_name)
+						 << endl;
+					return;
+				}
 
-		
-		
-		top_level_class = &wrapped_class;
-
-		
-                cerr << "**** In top-level handle_class with type: " << wrapped_class.class_name << endl;
+				// if we've gotten this far, then the class passed the tests and should be included
+				wrapped_class.valid = true;
 
 
-		for (auto & ignore_regex : types_to_ignore_regex) {
-		    if (std::regex_search(wrapped_class.class_name, std::regex(ignore_regex))) {
-			cerr << "skipping top level class because it is in types_to_ignore_regex list: " << wrapped_class.class_name << endl;
-			wrapped_class.valid = false;
-			return;
-		    }
-		}
-
-		
-		if (wrapped_class.done) {
-		    cerr << "Already processed top level class" << endl;
-		    return;
-		}
-		wrapped_class.done = true;
-
-                if (dyn_cast<ClassTemplatePartialSpecializationDecl>(wrapped_class.decl)) {
-                    cerr << "is class template partial specilziation decl" << endl;
-                }
+				top_level_class = &wrapped_class;
 
 
+				cerr << "**** In top-level handle_class with type: " << wrapped_class.class_name << endl;
 
-                if (wrapped_class.decl->getTypeForDecl()->isDependentType()) {
-                    if (print_logging) cerr << "Skipping dependent type top-level class" << endl;
-		    wrapped_class.valid = false;
-                    return;
-                }
-                const ClassTemplateSpecializationDecl * specialization = nullptr;
-                if ((specialization = dyn_cast<ClassTemplateSpecializationDecl>(wrapped_class.decl)) != nullptr) {
-                    auto specialized_template = specialization->getSpecializedTemplate();
-                    auto template_name = specialized_template->getNameAsString();
-                    if (template_name == "remove_reference") {
-                        cerr << wrapped_class.class_name << endl;
-                    }
-                    template_instantiations[template_name]++;
-                }
+
+				for (auto &ignore_regex : types_to_ignore_regex) {
+					if (std::regex_search(wrapped_class.class_name, std::regex(ignore_regex))) {
+						cerr << "skipping top level class because it is in types_to_ignore_regex list: "
+							 << wrapped_class.class_name << endl;
+						wrapped_class.valid = false;
+						return;
+					}
+				}
+
+
+				if (wrapped_class.done) {
+					cerr << "Already processed top level class" << endl;
+					return;
+				}
+				wrapped_class.done = true;
+
+				if (dyn_cast<ClassTemplatePartialSpecializationDecl>(wrapped_class.decl)) {
+					cerr << "is class template partial specilziation decl" << endl;
+				}
+
+
+				if (wrapped_class.decl->getTypeForDecl()->isDependentType()) {
+					if (print_logging) cerr << "Skipping dependent type top-level class" << endl;
+					wrapped_class.valid = false;
+					return;
+				}
+				const ClassTemplateSpecializationDecl *specialization = nullptr;
+				if ((specialization = dyn_cast<ClassTemplateSpecializationDecl>(wrapped_class.decl)) != nullptr) {
+					auto specialized_template = specialization->getSpecializedTemplate();
+					auto template_name = specialized_template->getNameAsString();
+					if (template_name == "remove_reference") {
+						cerr << wrapped_class.class_name << endl;
+					}
+					template_instantiations[template_name]++;
+				}
 
 
 #ifdef TEMPLATE_INFO_ONLY
-		return;
+				return;
 #endif
-                if (!is_good_record_decl(wrapped_class.decl)) {
-                    if (true || print_logging) cerr << "Skipping 'bad' CXXRecordDecl" << endl;
-		    wrapped_class.valid = false;
-                    return;
-                }
+				if (!is_good_record_decl(wrapped_class.decl)) {
+					if (true || print_logging) cerr << "Skipping 'bad' CXXRecordDecl" << endl;
+					wrapped_class.valid = false;
+					return;
+				}
 
 
-                classes_wrapped++;
-                names_used.clear();
+				classes_wrapped++;
+				names_used.clear();
 
-		//                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
+				//                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
 
 
-                if (print_logging) cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : " << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
-                wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
+				if (print_logging)
+					cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
+						 << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
+				wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
 
-                // if this is a bidirectional class, make a minimal wrapper for it
-                if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
 
-		    if (print_logging) cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
+				// NO LONGER NEED BIDIRECTIONAL TYPES WRAPPED - they use their base type wrapper
+//				// if this is a bidirectional class, make a minimal wrapper for it
+//				if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+//
+//					if (print_logging)
+//						cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
+//
+//					auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
+//															 top_level_class->get_short_name());
+//
+//
+//					auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
+//					// auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
+//					WrappedClass *js_wrapped_class = nullptr;
+//					//if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
+//					cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
+//					auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
+//																				   source_manager);
+//					js_wrapped_class = bidirectional_unique_ptr.get();
+//					wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
+//
+//					auto &bidirectional = *js_wrapped_class;
+//					bidirectional.base_types.insert(top_level_class);
+//
+//					cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
+//										bidirectional.class_name, wrapped_class.name_alias) << endl;
+//					wrapped_class.derived_types.insert(&bidirectional);
+//					bidirectional.include_files.insert(generated_header_name);
+//					bidirectional.my_include = generated_header_name;
+//
+//					BidirectionalBindings bd(source_manager, wrapped_class);
+//					bd.generate_bindings(wrapped_classes);
+//
+//
+//				} else {
+//					if (print_logging)
+//						cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
+//				}
 
-		    auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", top_level_class->get_short_name());
-
-		    
-		    auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
-		    // auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
-		    WrappedClass * js_wrapped_class = nullptr;
-		    //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
-		    cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
-		    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name, source_manager);
-		    js_wrapped_class = bidirectional_unique_ptr.get();
-		    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
-
-		    auto & bidirectional = *js_wrapped_class;
-		    bidirectional.base_types.insert(top_level_class);
-
-		    cerr << fmt::format("Adding derived bidirectional type {} to base type: {}", bidirectional.class_name, wrapped_class.name_alias) << endl;
-		    wrapped_class.derived_types.insert(&bidirectional);
-		    bidirectional.include_files.insert(generated_header_name);
-		    bidirectional.my_include = generated_header_name;
-
-		    BidirectionalBindings bd(source_manager, wrapped_class);
-		    bd.generate_bindings(wrapped_classes);
-
-		    
-                } else {
-                    if (print_logging) cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
-                }
-		
-            } // end if top level class
+			} // end if top level class
             else {
                 cerr << fmt::format("{} Handling class (NOT top level) {}", indentation, wrapped_class.class_name) << endl;
             }
@@ -3041,9 +3050,11 @@ namespace {
 
 	    // remove any types that are wrapped in this file since it will be explicitly instantiated here
 	    for (auto wrapped_class : classes) {
-		if (wrapped_class->is_template_specialization()) {
-		    class_wrapper_file << "template " << wrapped_class->class_name << ";" << endl;
-		}
+
+			// DO NOT EXPLICITLY INSTANTIATE THE WRAPPED TYPE
+//		if (wrapped_class->is_template_specialization()) {
+//		    class_wrapper_file << "template " << wrapped_class->class_name << ";" << endl;
+//		}
 		class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
 		// if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
 		extern_templates.erase(wrapped_class);

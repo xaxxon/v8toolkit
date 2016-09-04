@@ -89,6 +89,9 @@ struct TypeCheckerBase {
 			, bool first_call = true
 #endif
 			) const = 0;
+
+	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const = 0;
+
 };
 
 // type to convert to, typelist of all types to check, sfinae helper type
@@ -108,12 +111,14 @@ template<class T>
 #endif	
 	return nullptr;
     }
+
+    virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override;
 };
 
 
 // Specialization for types that cannot possibly work -- casting const value to non-const return
 template<class T, class Head, class... Tail>
-struct TypeChecker<T, TypeList<Head, Tail...>,
+struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
     // if the type we want isn't const but the type being checked is, it cannot be a match
     std::enable_if_t<!std::is_const<T>::value && std::is_const<Head>::value>> : public TypeChecker<T, TypeList<Tail...>> {
 
@@ -135,13 +140,18 @@ struct TypeChecker<T, TypeList<Head, Tail...>,
 	
 	return SUPER::check(any_base);
     }
+
+	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override {
+		return SUPER::wrap_as_most_derived(isolate, cpp_object);
+	}
+
 };
 
  
 // tests an AnyBase * against a list of types compatible with T
 //   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
-    struct TypeChecker<T, TypeList<Head, Tail...>,
+    struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     // if it's *not* the condition of the specialization above
     std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
@@ -173,6 +183,8 @@ template<class T, class Head, class... Tail>
 				);
         }
     }
+
+	virtual v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const override;
 };
 
 
@@ -227,7 +239,7 @@ template<class T, class Head, class... Tail>
  public:
      static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate){throw std::exception();}
      template<class BEHAVIOR>
-     v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) {throw std::exception();}
+     v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, bool force_wrap_this_type = false) {throw std::exception();}
 
      T * cast(AnyBase * any_base){
 	 throw std::exception();
@@ -265,10 +277,10 @@ template<class T, class Head, class... Tail>
  v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
  {throw std::exception();}
 
- void finalize(){throw std::exception();}
+ void finalize(bool wrap_as_most_derived = false){throw std::exception();}
 
      template<class MEMBER_TYPE, class MemberClass>
-	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
+	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member, bool = false)
  {throw std::exception();}
 
     template<class... CompatibleTypes>
@@ -295,7 +307,7 @@ template<class T, class Head, class... Tail>
  V8ClassWrapper<T> & set_class_name(const std::string & name){throw std::exception();}
 
      template<class MEMBER_TYPE, class MemberClass>
- V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member){throw std::exception();}
+ V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member, bool = false){throw std::exception();}
 
  v8::Local<v8::FunctionTemplate> get_function_template(){throw std::exception();}
 
@@ -473,6 +485,12 @@ private:
     */
     bool finalized = false;
 
+    /**
+     * Whether the type should try to determine the most derived type of a CPP object or just wrap it as the
+     * presented static type - takes longer to determine the most derived type, but may be necessary for having the
+     * appropriate attributes on the returned JS object
+     */
+    bool wrap_as_most_derived_flag = false;
 
 public:
     void register_callback(AttributeChangeCallback callback);
@@ -517,7 +535,7 @@ public:
 
     
     T * get_cpp_object(v8::Local<v8::Object> object);
-	
+
 	
 	/**
 	 * Check to see if an object can be converted to type T, else return nullptr
@@ -538,7 +556,20 @@ public:
 	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
 	* For each isolate you need to add constructors/methods/members separately.
 	*/
-    static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
+    static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
+
+        if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
+            auto new_object = new V8ClassWrapper<T>(isolate);
+            if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
+        }
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
+
+        auto object = isolate_to_wrapper_map[isolate];
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Returning v8 wrapper: %p\n", object);
+        return *object;
+
+    }
 
 
     /**
@@ -645,7 +676,7 @@ public:
     * \endcode
 	*/
 	template<class BEHAVIOR>
-	v8::Local<v8::Value> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object) 
+	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, bool force_wrap_this_type = false)
 	{
 		auto isolate = this->isolate;
         
@@ -654,7 +685,7 @@ public:
 	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
 	if (!this->is_finalized()) {    
             // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
-            return CastToJS<T>()(isolate, *existing_cpp_object);
+            return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
         }
                 
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
@@ -672,18 +703,24 @@ public:
 		
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
-		
-            javascript_object = get_function_template()->GetFunction()->NewInstance();
-            // fprintf(stderr, "New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
-            // fprintf(stderr, "Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
-            
-			initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
-			
-            this->existing_wrapped_objects.emplace(existing_cpp_object, v8::Global<v8::Object>(isolate, javascript_object));
-//			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
+
+            if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
+                javascript_object = this->type_checker->wrap_as_most_derived(this->isolate, existing_cpp_object);
+            } else {
+                javascript_object = get_function_template()->GetFunction()->NewInstance();
+
+                // fprintf(stderr, "New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
+                // fprintf(stderr, "Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
+
+                initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
+
+                this->existing_wrapped_objects.emplace(existing_cpp_object,
+                                                       v8::Global<v8::Object>(isolate, javascript_object));
+                //			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
+                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
+            }
 		}
-        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
-		return v8::Local<v8::Value>::Cast(javascript_object);
+		return javascript_object;
 	}
 
 
@@ -778,18 +815,22 @@ public:
     *   objects of the wrapped type can be created to make sure everything stays consistent
     * Must be called before adding any constructors or using wrap_existing_object()
     */
-	V8ClassWrapper<T> & finalize();
+	V8ClassWrapper<T> & finalize(bool wrap_as_most_derived = false);
 
     /**
     * returns whether finalize() has been called on this type for this isolate
     */
-	bool is_finalized();
+	bool is_finalized() {
+        return this->finalized;
+
+    }
 
 
     template<class MemberType>
     struct AttributeHelperData {
     public:
-		AttributeHelperData(V8ClassWrapper<T> & class_wrapper, MemberType & member_reference) :
+		AttributeHelperData(V8ClassWrapper<T> & class_wrapper,
+                            MemberType & member_reference) :
 			class_wrapper(class_wrapper), member_reference(member_reference)
 		{
 		    //fprintf(stderr, "Creating AttributeHelperData with %p and %p\n", (void *)&class_wrapper, (void *)&member_reference);
@@ -808,7 +849,8 @@ public:
     */
     // allow members from parent types of T
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member)
+	V8ClassWrapper<T> & add_member(std::string member_name,
+                                   MEMBER_TYPE MemberClass::* member)
 	{
 
 	    using MEMBER_TYPE_REF = std::add_lvalue_reference_t<MEMBER_TYPE>;
@@ -827,7 +869,8 @@ public:
 					new AttributeHelperDataCreator<MEMBER_TYPE_REF>(
 							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE_REF> {
 
-							    return AttributeHelperData<MEMBER_TYPE_REF>(*this, cpp_object->*member);
+							    return AttributeHelperData<MEMBER_TYPE_REF>(*this,
+                                                                            cpp_object->*member);
 			});
 		    
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
@@ -841,7 +884,8 @@ public:
 
 	// allow members from parent types of T
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member)
+	V8ClassWrapper<T> & add_member_readonly(std::string member_name,
+                                            MEMBER_TYPE MemberClass::* member)
 	{
 	    // make sure to be using the const version even if it's not passed in
 	    using ConstMemberType = typename std::add_const<MEMBER_TYPE>::type;
@@ -945,6 +989,10 @@ public:
 	}
 
 
+	v8::Local<v8::Object> wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) {
+		return this->type_checker->wrap_as_most_derived(isolate, cpp_object);
+	}
+
 	template<class R, class Head, class... Tail>
 	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, std::function<R(Head, Tail...)> method)
 	{
@@ -1036,38 +1084,43 @@ public:
 		this->check_if_name_used(method_name);
 
 		
-    		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info)
-    		{
-		    auto isolate = info.GetIsolate();
+    		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
+                auto isolate = info.GetIsolate();
 
-		    // get the behind-the-scenes c++ object
-		    // However, Holder() refers to the most-derived object, so the prototype chain must be 
-		    //   inspected to find the appropriate v8::Object with the T* in its internal field
-    			auto holder = info.Holder();
-			v8::Local<v8::Object> self;
-			
-		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", demangle<T>().c_str(), demangle<M>().c_str());
-		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
-		    if (V8_CLASS_WRAPPER_DEBUG) dump_prototypes(isolate, holder);
-		    
-		    
-		    auto function_template_count = this->this_class_function_templates.size();
-		    int current_template_count = 0;
-			for(auto & function_template : this->this_class_function_templates) {
-			    current_template_count++;
-			    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Checking function template %d / %d\n", current_template_count, (int)function_template_count);
-			    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
-			    if(!self.IsEmpty() && !self->IsNull()) {
-				if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found instance match in prototype chain\n");
-				break;
-			    } else {
-				if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No match on this one\n");
-			    }
-			}
-		    if (self.IsEmpty()) {
-			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No match in prototype chain after looking through all potential function templates\n");
-			assert(false);
-		    }
+                // get the behind-the-scenes c++ object
+                // However, Holder() refers to the most-derived object, so the prototype chain must be
+                //   inspected to find the appropriate v8::Object with the T* in its internal field
+                auto holder = info.Holder();
+                v8::Local<v8::Object> self;
+
+                if (V8_CLASS_WRAPPER_DEBUG)
+                    fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", demangle<T>().c_str(),
+                            demangle<M>().c_str());
+                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
+                if (V8_CLASS_WRAPPER_DEBUG) dump_prototypes(isolate, holder);
+
+
+                auto function_template_count = this->this_class_function_templates.size();
+                int current_template_count = 0;
+                for (auto &function_template : this->this_class_function_templates) {
+                    current_template_count++;
+                    if (V8_CLASS_WRAPPER_DEBUG)
+                        fprintf(stderr, "Checking function template %d / %d\n", current_template_count,
+                                (int) function_template_count);
+                    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
+                    if (!self.IsEmpty() && !self->IsNull()) {
+                        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found instance match in prototype chain\n");
+                        break;
+                    } else {
+                        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No match on this one\n");
+                    }
+                }
+                if (self.IsEmpty()) {
+                    if (V8_CLASS_WRAPPER_DEBUG)
+                        fprintf(stderr,
+                                "No match in prototype chain after looking through all potential function templates\n");
+                    assert(false);
+                }
                 //
                 // if(!compare_contents(isolate, holder, self)) {
                 //     fprintf(stderr, "FOUND DIFFERENT OBJECT");
@@ -1078,16 +1131,17 @@ public:
 //                assert(!self.IsEmpty());
 
                 // void* pointer = instance->GetAlignedPointerFromInternalField(0);
-		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+                auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
-		    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-                auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
-                
+                WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+                auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(
+                    static_cast<AnyBase *>(wrapped_data->native_object));
+
 //			    assert(backing_object_pointer != nullptr);
-    			// bind the object and method into a std::function then build the parameters for it and call it
+                // bind the object and method into a std::function then build the parameters for it and call it
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "binding with object %p\n", backing_object_pointer);
-    			auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
+                auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
 //                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
@@ -1100,20 +1154,20 @@ public:
 //                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
 //                    return; // return now so the exception can be thrown inside the javascript
 //                }
-            
+
                 // V8 does not support C++ exceptions, so all exceptions must be caught before control
                 //   is returned to V8 or the program will instantly terminate
                 try {
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-		    CallCallable<decltype(bound_method)>()(bound_method, info);
-                } catch(std::exception & e) {
+                    CallCallable<decltype(bound_method)>()(bound_method, info);
+                } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
                 }
                 return;
-    		})};
+            })};
 
 		if (add_as_callable_object_callback) {
 		    // can only set this once
@@ -1339,6 +1393,41 @@ std::string type_details(){
 			return get_object_from_embedded_cpp_object<T>(isolate, value);
 		}
 	};
+
+
+
+	// If no more-derived option was found, wrap as this type
+	template<class T>
+	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const {
+		auto context = isolate->GetCurrentContext();
+		return v8toolkit::V8ClassWrapper<T>::get_instance(isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
+	}
+
+
+	// if a more-derived type was found, pass it to that type to see if there's something even more derived
+	template<class T, class Head, class... Tail>
+	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+		std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
+	::wrap_as_most_derived(v8::Isolate * isolate, T * cpp_object) const {
+
+        // if they're the same, let it fall through to the empty typechecker TypeList base case
+        if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+            using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
+
+            fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
+                    std::is_polymorphic<Head>::value);
+            fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
+                    std::is_polymorphic<MatchingConstT>::value);
+
+            if (std::is_const<T>::value == std::is_const<Head>::value) {
+                if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
+                    return v8toolkit::V8ClassWrapper<Head>::get_instance(isolate).wrap_as_most_derived(isolate,
+                                                                                                       derived);
+                }
+            }
+        }
+		return SUPER::wrap_as_most_derived(isolate, cpp_object);
+	}
 
 
 
