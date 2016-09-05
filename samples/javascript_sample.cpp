@@ -24,12 +24,12 @@ auto run_static_function_tests() {
     auto i = Platform::create_isolate();
     ISOLATE_SCOPED_RUN(*i);
     V8ClassWrapper<Thing> & thing = i->wrap_class<Thing>();
-    thing.add_static_method("name", &Thing::name);
+    thing.add_static_method("get_name", &Thing::name);
     thing.finalize();
     thing.add_constructor("Thing", *i);
 
     ContextPtr context = i->create_context();
-    auto result = context->run("Thing.static_method();");
+    auto result = context->run("Thing.get_name();");
 
 }
 

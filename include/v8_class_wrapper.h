@@ -25,7 +25,7 @@
 namespace v8toolkit {
 
 
-#define V8_CLASS_WRAPPER_DEBUG false
+#define V8_CLASS_WRAPPER_DEBUG true
 
 /**
 * Design Questions:
@@ -753,7 +753,7 @@ public:
 		// must be set before finalization
 		assert(!this->finalized);
 
-		this->check_if_name_used(method_name);
+		this->check_if_static_name_used(method_name);
 
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
@@ -783,7 +783,7 @@ public:
 		// must be set before finalization
 		assert(!this->finalized);
 
-		this->check_if_name_used(method_name);
+		this->check_if_static_name_used(method_name);
 
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
@@ -1408,11 +1408,15 @@ std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>::ch
 		std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
 #endif
 		return static_cast<T*>(any->get());
-	} else if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
-		 return derived_result;
-	} else {
-		return SUPER::check(any_base, false);
 	}
+
+	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+	    if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
+		return derived_result;
+	    }
+	}
+
+	return SUPER::check(any_base, false);
 }
 
 

@@ -30,7 +30,7 @@ namespace v8toolkit {
 		    used_attribute_name_list.end(),
 		    name) != used_attribute_name_list.end()) {
 
-  	  throw DuplicateNameException(fmt::format("Cannot add method/static method/member named '{}' to class '{}', name already in use", name, class_name));
+  	  throw DuplicateNameException(fmt::format("Cannot add method/member named '{}' to class '{}', name already in use", name, class_name));
       }
       used_attribute_name_list.push_back(name);
     }
@@ -41,9 +41,9 @@ namespace v8toolkit {
 					  used_static_attribute_name_list.end(),
 					  name) != used_static_attribute_name_list.end()) {
 
-			throw DuplicateNameException(fmt::format("Cannot add method/static method/member named '{}' to class '{}', name already in use", name, class_name));
+			throw DuplicateNameException(fmt::format("Cannot add static method named '{}' to class '{}', name already in use", name, class_name));
 		}
-		used_attribute_name_list.push_back(name);
+		used_static_attribute_name_list.push_back(name);
 	}
 
 

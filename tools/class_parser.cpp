@@ -2169,11 +2169,11 @@ namespace {
 					wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
 
 					auto &bidirectional = *js_wrapped_class;
-					//bidirectional.base_types.insert(top_level_class);
+					bidirectional.base_types.insert(top_level_class);
 
 					cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
 										bidirectional.class_name, wrapped_class.name_alias) << endl;
-					//wrapped_class.derived_types.insert(&bidirectional);
+					wrapped_class.derived_types.insert(&bidirectional);
 					bidirectional.include_files.insert(generated_header_name);
 					bidirectional.my_include = generated_header_name;
 
