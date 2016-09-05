@@ -688,7 +688,7 @@ CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::m
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
-    for(auto pair : map){
+    for(auto & pair : map){
         auto key = CastToJS<A&>()(isolate, const_cast<A&>(pair.first));
         auto value = CastToJS<B&>()(isolate, const_cast<B&>(pair.second));
 
