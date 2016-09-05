@@ -461,7 +461,10 @@ struct CastToJS<v8::Global<v8::Value> &> {
 // CastToJS<std::pair<>>
 template<class T1, class T2>
 struct CastToJS<std::pair<T1, T2>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::pair<T1, T2> const & pair);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::pair<T1, T2> & pair);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::pair<T1, T2> && pair) {
+        this->operator()(isolate, pair);
+    }
 };
 template<class T1, class T2>
 struct CastToJS<std::pair<T1, T2> const> {
@@ -471,7 +474,10 @@ struct CastToJS<std::pair<T1, T2> const> {
 // CastToJS<std::vector<>>
 template<class T, class... Rest>
 struct CastToJS<std::vector<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> const & vector);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> & vector);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> && vector) {
+        return this->operator()(isolate, vector);
+    }
 };
 template<class T, class... Rest>
 struct CastToJS<std::vector<T, Rest...> const> {
@@ -481,7 +487,10 @@ struct CastToJS<std::vector<T, Rest...> const> {
 // CastToJS<std::list>
 template<class U, class... Rest>
 struct CastToJS<std::list<U, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::list<U, Rest...> const & list);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::list<U, Rest...> & list);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::list<U, Rest...> && list) {
+        return this->operator()(isolate, list);
+    }
 };
 template<class U, class... Rest>
 struct CastToJS<std::list<U, Rest...> const> {
@@ -491,7 +500,10 @@ struct CastToJS<std::list<U, Rest...> const> {
 // CastToJS<std::map>
 template<class A, class B, class... Rest>
 struct CastToJS<std::map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> const & map);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> & map);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> && map) {
+        return this->operator()(isolate, map);
+    }
 };
 template<class A, class B, class... Rest>
 struct CastToJS<std::map<A, B, Rest...> const> {
@@ -501,7 +513,10 @@ struct CastToJS<std::map<A, B, Rest...> const> {
 // CastToJS<std::multimap>
 template<class A, class B, class... Rest>
 struct CastToJS<std::multimap<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::multimap<A, B, Rest...> const & multimap);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::multimap<A, B, Rest...> & multimap);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::multimap<A, B, Rest...> && multimap) {
+        return this->operator()(isolate, multimap);
+    }
 };
 template<class A, class B, class... Rest>
 struct CastToJS<std::multimap<A, B, Rest...> const> {
@@ -512,7 +527,10 @@ struct CastToJS<std::multimap<A, B, Rest...> const> {
 // CastToJS<std::undordered:map>
 template<class A, class B, class... Rest>
 struct CastToJS<std::unordered_map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unordered_map<A, B, Rest...> const & unorderedmap);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unordered_map<A, B, Rest...> & unorderedmap);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unordered_map<A, B, Rest...> && unorderedmap) {
+        return this->operator()(isolate, unorderedmap);
+    }
 };
 template<class A, class B, class... Rest>
 struct CastToJS<std::unordered_map<A, B, Rest...> const> {
@@ -522,7 +540,10 @@ struct CastToJS<std::unordered_map<A, B, Rest...> const> {
 // CastToJS<std::deque>
 template<class T, class... Rest>
 struct CastToJS<std::deque<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::deque<T, Rest...> const & deque);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::deque<T, Rest...> & deque);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::deque<T, Rest...> && deque) {
+        return this->operator()(isolate, deque);
+    }
 };
 template<class T, class... Rest>
 struct CastToJS<std::deque<T, Rest...> const> {
@@ -532,7 +553,10 @@ struct CastToJS<std::deque<T, Rest...> const> {
 // CastToJS<std::array>
 template<class T, std::size_t N>
 struct CastToJS<std::array<T, N>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::array<T, N> const & arr);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::array<T, N> & arr);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::array<T, N> && arr) {
+        return this->operator()(isolate, arr);
+    }
 };
 template<class T, std::size_t N>
 struct CastToJS<std::array<T, N> const> {
@@ -550,31 +574,34 @@ template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...> &> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
 };
+template<class T, class... Rest>
+struct CastToJS<std::unique_ptr<T, Rest...> const &> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
+};
 
 // CastToJS<std::shared>
 template<class T>
 struct CastToJS<std::shared_ptr<T>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const std::shared_ptr<T> &shared_ptr);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::shared_ptr<T> & shared_ptr);
 };
 template<class T>
 struct CastToJS<std::shared_ptr<T> const> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const std::shared_ptr<T> &shared_ptr);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::shared_ptr<T> const & shared_ptr);
 };
 
 
 
 
-            template<class T, class... Rest>
-v8::Local<v8::Value>CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *isolate, std::vector<T, Rest...> const & vector) {
+template<class T, class... Rest>
+v8::Local<v8::Value>CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *isolate, std::vector<T, Rest...> & vector) {
 
     using VectorT = std::vector<T, Rest...>;
-// return CastToJS<std::vector<U, Rest...>*>()(isolate, &vector);
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
     auto size = vector.size();
     for (unsigned int i = 0; i < size; i++) {
-        (void) array->Set(context, i, CastToJS<typename VectorT::value_type>()(isolate, vector[i]));
+        (void) array->Set(context, i, CastToJS<typename VectorT::value_type &>()(isolate, vector[i]));
     }
     return array;
 }
@@ -582,7 +609,15 @@ v8::Local<v8::Value>CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *i
 
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::vector<T, Rest...> const>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> const & vector){
-    return CastToJS<std::vector<T, Rest...>>()(isolate, vector);
+    using VectorT = std::vector<T, Rest...>;
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto array = v8::Array::New(isolate);
+    auto size = vector.size();
+    for (unsigned int i = 0; i < size; i++) {
+        (void) array->Set(context, i, CastToJS<typename VectorT::value_type const &>()(isolate, vector[i]));
+    }
+    return array;
 }
 
 
@@ -591,7 +626,7 @@ CastToJS<std::vector<T, Rest...> const>::operator()(v8::Isolate * isolate, std::
 * supports lists containing any type also supported by CastToJS to javascript arrays
 */
 template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::list<T, Rest...>>::operator()(v8::Isolate * isolate, std::list<T, Rest...> const & list) {
+CastToJS<std::list<T, Rest...>>::operator()(v8::Isolate * isolate, std::list<T, Rest...> & list) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
@@ -616,8 +651,7 @@ CastToJS<std::list<T, Rest...> const>::operator()(v8::Isolate * isolate, std::li
 * supports maps containing any type also supported by CastToJS to javascript arrays
 */
 template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::map<A, B, Rest...> const & const_map) {
-    auto & map = const_cast<std::map<A, B, Rest...> &>(const_map);
+CastToJS<std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::map<A, B, Rest...> & map) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
@@ -631,8 +665,16 @@ CastToJS<std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::map<A,
 
 
 template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<const std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, const std::map<A, B, Rest...> & map){
-    return CastToJS<std::map<A, B, Rest...>>()(isolate, map);
+CastToJS<const std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::map<A, B, Rest...> const & map){
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto object = v8::Object::New(isolate);
+    for(auto & pair : map){
+        // Don't std::forward key/value values because they should never be std::move'd
+        // CastToJS as reference type because the storage is allocated - it shouldn't be treated like a temporary
+        (void)object->Set(context, CastToJS<A&>()(isolate, const_cast<A const &>(pair.first)), CastToJS<B const &>()(isolate, const_cast<B&>(pair.second)));
+    }
+    return object;
 }
 
 
@@ -642,14 +684,13 @@ CastToJS<const std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, const
 * All values are arrays, even if there is only one value in the array.
 */
 template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> const & map){
+CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> & map){
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
     for(auto pair : map){
-        auto key = CastToJS<A>()(isolate, const_cast<A&>(pair.first));
-        // v8::Local<v8::String> key = v8::String::NewFromUtf8(isolate, "TEST");
-        auto value = CastToJS<B>()(isolate, const_cast<B&>(pair.second));
+        auto key = CastToJS<A&>()(isolate, const_cast<A&>(pair.first));
+        auto value = CastToJS<B&>()(isolate, const_cast<B&>(pair.second));
 
         // check to see if a value with this key has already been added
         bool default_value = true;
@@ -676,20 +717,20 @@ CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::m
 
 
 template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<const std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> const & multimap){
+CastToJS<std::multimap<A, B, Rest...> const>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> const & multimap){
     return CastToJS<std::multimap<A, B, Rest...>>()(isolate, multimap);
 }
 
 
 
 template<class T1, class T2> v8::Local<v8::Value>
-CastToJS<std::pair<T1, T2>>::operator()(v8::Isolate *isolate, std::pair<T1, T2> const & pair) {
+CastToJS<std::pair<T1, T2>>::operator()(v8::Isolate *isolate, std::pair<T1, T2> & pair) {
 
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
-    (void) array->Set(context, 0, CastToJS<decltype(pair.first)>()(isolate, pair.first));
-    (void) array->Set(context, 1, CastToJS<decltype(pair.second)>()(isolate, pair.second));
+    (void) array->Set(context, 0, CastToJS<T1 &>()(isolate, pair.first));
+    (void) array->Set(context, 1, CastToJS<T2 &>()(isolate, pair.second));
     return array;
 }
 
@@ -715,7 +756,7 @@ struct CastTupleToJS<0, std::tuple<Args...>> {
 
         (void)array->Set(context,
                          array_position,
-                         CastToJS<TuplePositionType>()(isolate,
+                         CastToJS<TuplePositionType &>()(isolate,
                                                        std::get<array_position>(tuple)));
         return array;
     }
@@ -732,7 +773,7 @@ struct CastTupleToJS<position, std::tuple<Args...>> {
         auto array = CastTupleToJS<position - 1, std::tuple<Args...>>()(isolate, tuple);
         (void)array->Set(context,
                          array_position,
-                         CastToJS<TuplePositionType>()(isolate,
+                         CastToJS<TuplePositionType &>()(isolate,
                                                        std::get<array_position>(tuple)));
         return array;
     }
@@ -752,12 +793,23 @@ struct CastToJS<std::tuple<Args...>> {
 * supports unordered_maps containing any type also supported by CastToJS to javascript arrays
 */
 template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<std::unordered_map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> const & map){
+CastToJS<std::unordered_map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> & map){
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
     for(auto pair : map){
         (void)object->Set(context, CastToJS<A&>()(isolate, pair.first), CastToJS<B&>()(isolate, pair.second));
+    }
+    return object;
+}
+
+template<class A, class B, class... Rest> v8::Local<v8::Value>
+CastToJS<std::unordered_map<A, B, Rest...> const>::operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> const & map) {
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto object = v8::Object::New(isolate);
+    for (auto pair : map) {
+        (void) object->Set(context, CastToJS<A &>()(isolate, pair.first), CastToJS<B &>()(isolate, pair.second));
     }
     return object;
 }
@@ -768,7 +820,7 @@ CastToJS<std::unordered_map<A, B, Rest...>>::operator()(v8::Isolate * isolate, s
 * supports deques containing any type also supported by CastToJS to javascript arrays
 */
 template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::deque<T, Rest...>>::operator()(v8::Isolate * isolate, std::deque<T, Rest...> const & deque) {
+CastToJS<std::deque<T, Rest...>>::operator()(v8::Isolate * isolate, std::deque<T, Rest...> & deque) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
@@ -789,7 +841,7 @@ CastToJS<std::deque<T, Rest...> const>::operator()(v8::Isolate * isolate, std::d
 
 
     template<class T, std::size_t N> v8::Local<v8::Value>
-CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> const & arr) {
+CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> & arr) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
@@ -842,6 +894,11 @@ CastToJS<std::unique_ptr<T, Rest...> &>::operator()(v8::Isolate * isolate, std::
     fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.get());
 }
+template<class T, class... Rest> v8::Local<v8::Value>
+CastToJS<std::unique_ptr<T, Rest...> const &>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
+    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+    return CastToJS<T*>()(isolate, unique_ptr.get());
+}
 
 
 
@@ -853,12 +910,12 @@ CastToJS<std::unique_ptr<T, Rest...> &>::operator()(v8::Isolate * isolate, std::
 *   are lost.
 */
 template<class T> v8::Local<v8::Value>
-CastToJS<std::shared_ptr<T>>::operator()(v8::Isolate * isolate, const std::shared_ptr<T> & shared_ptr) {
+CastToJS<std::shared_ptr<T>>::operator()(v8::Isolate * isolate, std::shared_ptr<T> & shared_ptr) {
     return CastToJS<T*>()(isolate, shared_ptr.get());
 }
 
 template<class T> v8::Local<v8::Value>
-CastToJS<std::shared_ptr<T> const>::operator()(v8::Isolate * isolate, const std::shared_ptr<T> & shared_ptr) {
+CastToJS<std::shared_ptr<T> const>::operator()(v8::Isolate * isolate, std::shared_ptr<T> const & shared_ptr) {
     return CastToJS<T*>()(isolate, shared_ptr.get());
 }
 

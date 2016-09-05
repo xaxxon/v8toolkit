@@ -1,6 +1,6 @@
 #include <fstream>
 #include <memory>
-    
+
 #include "javascript.h"
 
 namespace v8toolkit {

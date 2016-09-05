@@ -1266,8 +1266,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 	    }
 	    assert(cpp_object != (void *)0xbebebebebebebebe);
 
-	    
-	    
+
 	    if (V8_CLASS_WRAPPER_DEBUG) std::cout << fmt::format("CastToJS from T* {}\n", demangle<T>()) << std::endl;
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
@@ -1276,18 +1275,52 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
 		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
 	}
+
  };
 
  template<typename T>
-     struct CastToJS<T* const> {
-     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
-	 return CastToJS<T*>()(isolate, cpp_object);
+     struct CastToJS<T * const> {
+     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object){
+
+         if (cpp_object == nullptr) {
+             return v8::Local<v8::Object>();
+         }
+         assert(cpp_object != (void *)0xbebebebebebebebe);
+
+         if (V8_CLASS_WRAPPER_DEBUG) std::cout << fmt::format("CastToJS from T* {}\n", demangle<T>()) << std::endl;
+         auto context = isolate->GetCurrentContext();
+         auto & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+
+         if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+
+         return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
      }
  };
 
 
+    template<typename T>
+    struct CastToJS<T const * const> {
+        v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object){
 
-template<typename T>
+            if (cpp_object == nullptr) {
+                return v8::Local<v8::Object>();
+            }
+            assert(cpp_object != (void *)0xbebebebebebebebe);
+
+            if (V8_CLASS_WRAPPER_DEBUG) std::cout << fmt::format("CastToJS from T* {}\n", demangle<T>()) << std::endl;
+            auto context = isolate->GetCurrentContext();
+            auto & class_wrapper = V8ClassWrapper<T const>::get_instance(isolate);
+
+            if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+
+            return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
+        }
+    };
+
+
+
+
+    template<typename T>
 struct CastToJS<T&> {
 	using Pointer = typename std::add_pointer_t<T>;
 
@@ -1297,26 +1330,26 @@ struct CastToJS<T&> {
 };
 template<typename T>
 struct CastToJS<T*&> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T*& cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
 		return CastToJS<T*>()(isolate, cpp_object);
 	}
 };
 
 template<typename T>
 struct CastToJS<T const *&> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const *& cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object){
 		return CastToJS<T const *>()(isolate, cpp_object);
 	}
 };
 template<typename T>
 struct CastToJS<T* const &> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const& cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object){
 		return CastToJS<T * const>()(isolate, cpp_object);
 	}
 };
 template<typename T>
 struct CastToJS<T const * const &> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * const & cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * const cpp_object){
 		return CastToJS<T const * const>()(isolate, cpp_object);
 	}
 };

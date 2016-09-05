@@ -564,7 +564,8 @@ struct CallCallable<std::function<ReturnType(Args...)>> {
 
 
     void operator()(std::function<ReturnType(Args...)> & function,
-                    const v8::FunctionCallbackInfo<v8::Value> & info, bool return_most_derived = false) {
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    bool return_most_derived = false) {
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
