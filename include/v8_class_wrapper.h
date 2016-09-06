@@ -669,6 +669,10 @@ public:
 	v8toolkit::V8ClassWrapper<T> & expose_static_methods(const std::string & js_name,
 							     v8::Local<v8::ObjectTemplate> parent_template) {
 	    assert(((void)"Type must be finalized before calling expose_static_methods", this->finalized) == true);
+
+        if (global_name_conflicts(js_name)) {
+            throw V8Exception(this->isolate, "name conflicts with global names (bug: this ignores if your parent template isn't the global object)");
+        }
 	    
 	    auto non_constructor_template =
 		make_wrapping_function_template([](const v8::FunctionCallbackInfo<v8::Value>& args)->void{

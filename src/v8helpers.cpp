@@ -278,9 +278,20 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
     }
 }
 
+bool global_name_conflicts(const std::string & name) {
+    if (std::find(reserved_global_names.begin(), reserved_global_names.end(), name) !=
+        reserved_global_names.end()) {
+        std::cerr << fmt::format("{} is a reserved js global name", name) << std::endl;
+        return true;
+    }
+}
+
+std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined", "Number", "String",
+    "Object", "Symbol", "Date", "Array", "Set", "WeakSet",
+    "Map", "WeakMap", "JSON"};
 
 
 
-    
+
 
 }

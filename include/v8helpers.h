@@ -466,4 +466,12 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 */
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
+/**
+ * Tests if the given name conflicts with a reserved javascript top-level name
+ * @param name value to check
+ * @return true if there is a conflict
+ */
+bool global_name_conflicts(const std::string & name);
+extern std::vector<std::string> reserved_global_names;
+
 } // End v8toolkit namespace
