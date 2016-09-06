@@ -647,7 +647,7 @@ public:
 	*   a new object of this type.
 	*/
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
+	v8toolkit::V8ClassWrapper<T>& add_constructor(const std::string & js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
 	{				
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
 	    
@@ -662,6 +662,28 @@ public:
 	    return *this;
 	}
 
+
+	/**
+	 * When you don't want a "constructor" but you still need something to attach the static method names to, use this
+	 */
+	v8toolkit::V8ClassWrapper<T> & expose_static_methods(const std::string & js_name,
+							     v8::Local<v8::ObjectTemplate> parent_template) {
+	    assert(((void)"Type must be finalized before calling expose_static_methods", this->finalized) == true);
+	    
+	    auto non_constructor_template =
+		make_wrapping_function_template([](const v8::FunctionCallbackInfo<v8::Value>& args)->void{
+			throw V8Exception(args.GetIsolate(), "You cannot create an object of this type");
+		    },
+		    v8::Local<v8::Value>());
+	    
+	    // Add the constructor function to the parent object template (often the global template)
+	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
+	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
+	    
+	    return *this;
+	    
+	}
+	
 
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
