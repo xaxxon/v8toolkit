@@ -7,6 +7,7 @@
 
 #include "javascript.h"
 
+using namespace std;
 using namespace v8toolkit;
 
 
@@ -323,9 +324,15 @@ void test_casts()
             add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
             c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
 
-            std::multimap<int, int> mm{{1,1},{1,2},{1,3},{2,4},{3,5},{3,6}};
+            std::multimap<string, int> mm{{"a",1},{"a",2},{"a",3},{"b",4},{"c",5},{"c",6}};
             add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
-            c->run("assert_contents(mm, {1: [1, 2, 3], 2: [4], 3: [5, 6]});");
+            c->run("assert_contents(mm, {a: [1, 2, 3], b: [4], c: [5, 6]});");
+            auto js_mm = c->run("mm");
+            auto reconstituted_mm = CastToNative<decltype(mm)>()(isolate, js_mm.Get(isolate));
+            assert(reconstituted_mm.size() == 6);
+            assert(reconstituted_mm.count("a") == 3);
+            assert(reconstituted_mm.count("b") == 1);
+            assert(reconstituted_mm.count("c") == 2);
 
             std::array<int, 3> a{{1,2,3}};
             add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));

@@ -23,7 +23,7 @@ namespace v8toolkit {
 #define V8TOOLKIT_COMMA ,
 
 
-    // add inside CastToNative::operator() to have it handle 
+    // add inside CastToNative::operator() to have it handle
     //   with no parameters
 #define HANDLE_FUNCTION_VALUES \
     { \
@@ -32,7 +32,7 @@ namespace v8toolkit {
 	} \
     }
 
-    
+
 // Use this macro when you need to customize the template options to something more than <class T>
 //   For instance if you need to make it <vector<T>>
 #define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
@@ -88,7 +88,7 @@ template<TEMPLATE> \
 inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, TYPE const & value) const
 
 
-    
+
 #define CAST_TO_JS(TYPE)					\
 template<> struct v8toolkit::CastToJS<const TYPE> {		\
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \
@@ -107,7 +107,7 @@ template<> \
 }; \
 inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
 
-    
+
 /**
 * Casts from a boxed Javascript type to a native type
 */
@@ -330,13 +330,11 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
 template<class Key, class Value, class... Args>
 struct CastToNative<std::map<Key, Value, Args...>> {
 
-    using ResultType = std::map<std::result_of_t<CastToNative<Key>(v8::Isolate *, v8::Local<v8::Value>)>,
-        std::result_of_t<CastToNative<Value>(v8::Isolate *, v8::Local<v8::Value>)>>;
+    using ResultType = std::map<Key, Value, Args...>;
 
     ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 
 
-        using MapType = std::map<Key, Value, Args...>;
         //    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         if (!value->IsObject()) {
             throw CastException(
@@ -346,7 +344,7 @@ struct CastToNative<std::map<Key, Value, Args...>> {
 
         auto context = isolate->GetCurrentContext();
 
-        MapType results;
+        ResultType results;
         for_each_own_property(context, value->ToObject(),
                               [isolate, &results](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
                                   results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
@@ -355,6 +353,35 @@ struct CastToNative<std::map<Key, Value, Args...>> {
         return results;
     }
 };
+
+
+template<class Key, class Value, class... Args>
+struct CastToNative<std::multimap<Key, Value, Args...>> {
+
+    using ResultType = std::multimap<Key, Value, Args...>;
+
+    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+
+        if (!value->IsObject()) {
+            throw CastException(
+                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+                            stringify_value(isolate, value)));
+        }
+
+        auto context = isolate->GetCurrentContext();
+
+        ResultType results;
+        for_each_own_property(context, value->ToObject(),
+                              [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
+                                  v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value){
+                                      results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
+                                                      v8toolkit::CastToNative<Value>()(isolate, sub_value));
+                                  });
+                              });
+        return results;
+    }
+};
+
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
 template<class Key, class Value, class... Args>
@@ -437,7 +464,7 @@ struct CastToJS<v8::Local<v8::Object>> {
 };
 
 
-    
+
 /**
 * Special passthrough type for objects that want to take javascript value objects directly
 */
@@ -748,7 +775,7 @@ template<class... Args>
 struct CastTupleToJS<0, std::tuple<Args...>> {
     v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple){
         constexpr int array_position = sizeof...(Args) - 0 - 1;
-        
+
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
