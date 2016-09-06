@@ -542,7 +542,7 @@ namespace {
 	Annotations annotations;
 	bool dumped = false; // this class has been dumped to file
 	set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
-	
+	bool has_static_method = false;
 	FOUND_METHOD found_method;
 	bool force_no_constructors = false;
 	
@@ -2042,6 +2042,7 @@ namespace {
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
                        get_method_return_type_and_parameters(source_manager, *top_level_class, klass.decl, method),
                        short_method_name, full_method_name);
+                klass.has_static_method = true;
             } else {
 		cerr << "Method is not static" << endl;
                 top_level_class->declaration_count++;
@@ -2062,133 +2063,135 @@ namespace {
                           const std::string & indentation = "") {
 
 
-	    // update the includes for the type for itself -- if it's a templated type, make sure it has includes for the types it is
-	    //   templated with
-	    update_wrapped_class_for_type(source_manager, wrapped_class, wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal());
-	    PrintLoggingGuard lg;
+            // update the includes for the type for itself -- if it's a templated type, make sure it has includes for the types it is
+            //   templated with
+            update_wrapped_class_for_type(source_manager, wrapped_class,
+                                          wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal());
+            PrintLoggingGuard lg;
             if (top_level) {
 
-				if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
-					lg.log();
-				}
+                if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
+                    lg.log();
+                }
 
 
-				if (!wrapped_class.should_be_wrapped()) {
-					cerr << fmt::format("Skipping {}, should_be_wrapped reported false", wrapped_class.class_name)
-						 << endl;
-					return;
-				}
+                if (!wrapped_class.should_be_wrapped()) {
+                    cerr << fmt::format("Skipping {}, should_be_wrapped reported false", wrapped_class.class_name)
+                         << endl;
+                    return;
+                }
 
-				// if we've gotten this far, then the class passed the tests and should be included
-				wrapped_class.valid = true;
-
-
-				top_level_class = &wrapped_class;
+                // if we've gotten this far, then the class passed the tests and should be included
+                wrapped_class.valid = true;
 
 
-				cerr << "**** In top-level handle_class with type: " << wrapped_class.class_name << endl;
+                top_level_class = &wrapped_class;
 
 
-				for (auto &ignore_regex : types_to_ignore_regex) {
-					if (std::regex_search(wrapped_class.class_name, std::regex(ignore_regex))) {
-						cerr << "skipping top level class because it is in types_to_ignore_regex list: "
-							 << wrapped_class.class_name << endl;
-						wrapped_class.valid = false;
-						return;
-					}
-				}
+                cerr << "**** In top-level handle_class with type: " << wrapped_class.class_name << endl;
 
 
-				if (wrapped_class.done) {
-					cerr << "Already processed top level class" << endl;
-					return;
-				}
-				wrapped_class.done = true;
+                for (auto &ignore_regex : types_to_ignore_regex) {
+                    if (std::regex_search(wrapped_class.class_name, std::regex(ignore_regex))) {
+                        cerr << "skipping top level class because it is in types_to_ignore_regex list: "
+                             << wrapped_class.class_name << endl;
+                        wrapped_class.valid = false;
+                        return;
+                    }
+                }
 
-				if (dyn_cast<ClassTemplatePartialSpecializationDecl>(wrapped_class.decl)) {
-					cerr << "is class template partial specilziation decl" << endl;
-				}
+
+                if (wrapped_class.done) {
+                    cerr << "Already processed top level class" << endl;
+                    return;
+                }
+                wrapped_class.done = true;
+
+                if (dyn_cast<ClassTemplatePartialSpecializationDecl>(wrapped_class.decl)) {
+                    cerr << "is class template partial specilziation decl" << endl;
+                }
 
 
-				if (wrapped_class.decl->getTypeForDecl()->isDependentType()) {
-					if (print_logging) cerr << "Skipping dependent type top-level class" << endl;
-					wrapped_class.valid = false;
-					return;
-				}
-				const ClassTemplateSpecializationDecl *specialization = nullptr;
-				if ((specialization = dyn_cast<ClassTemplateSpecializationDecl>(wrapped_class.decl)) != nullptr) {
-					auto specialized_template = specialization->getSpecializedTemplate();
-					auto template_name = specialized_template->getNameAsString();
-					if (template_name == "remove_reference") {
-						cerr << wrapped_class.class_name << endl;
-					}
-					template_instantiations[template_name]++;
-				}
+                if (wrapped_class.decl->getTypeForDecl()->isDependentType()) {
+                    if (print_logging) cerr << "Skipping dependent type top-level class" << endl;
+                    wrapped_class.valid = false;
+                    return;
+                }
+                const ClassTemplateSpecializationDecl *specialization = nullptr;
+                if ((specialization = dyn_cast<ClassTemplateSpecializationDecl>(wrapped_class.decl)) != nullptr) {
+                    auto specialized_template = specialization->getSpecializedTemplate();
+                    auto template_name = specialized_template->getNameAsString();
+                    if (template_name == "remove_reference") {
+                        cerr << wrapped_class.class_name << endl;
+                    }
+                    template_instantiations[template_name]++;
+                }
 
 
 #ifdef TEMPLATE_INFO_ONLY
-				return;
+                return;
 #endif
-				if (!is_good_record_decl(wrapped_class.decl)) {
-					if (true || print_logging) cerr << "Skipping 'bad' CXXRecordDecl" << endl;
-					wrapped_class.valid = false;
-					return;
-				}
+                if (!is_good_record_decl(wrapped_class.decl)) {
+                    if (true || print_logging) cerr << "Skipping 'bad' CXXRecordDecl" << endl;
+                    wrapped_class.valid = false;
+                    return;
+                }
 
 
-				classes_wrapped++;
-				names_used.clear();
+                classes_wrapped++;
+                names_used.clear();
 
-				//                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
-
-
-				if (print_logging)
-					cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
-						 << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
-				wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
+                //                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
 
 
-				// if this is a bidirectional class, make a minimal wrapper for it
-				if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-
-					if (print_logging)
-						cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
-
-					auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
-										 top_level_class->get_short_name());
+                if (print_logging)
+                    cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
+                         << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
+                wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
 
 
-					auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
-					// auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
-					WrappedClass *js_wrapped_class = nullptr;
-					//if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
-					cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
-					auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
-												       source_manager);
-					js_wrapped_class = bidirectional_unique_ptr.get();
-					wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
+                // if this is a bidirectional class, make a minimal wrapper for it
+                if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
 
-					auto &bidirectional = *js_wrapped_class;
-					bidirectional.base_types.insert(top_level_class);
+                    if (print_logging)
+                        cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
 
-					cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-										bidirectional.class_name, wrapped_class.name_alias) << endl;
-					wrapped_class.derived_types.insert(&bidirectional);
-					bidirectional.include_files.insert(generated_header_name);
-					bidirectional.my_include = generated_header_name;
-
-					BidirectionalBindings bd(source_manager, wrapped_class);
-					bd.generate_bindings(wrapped_classes);
+                    auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
+                                                             top_level_class->get_short_name());
 
 
-				} else {
-					if (print_logging)
-						cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
-				}
+                    auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
+                    // auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
+                    WrappedClass *js_wrapped_class = nullptr;
+                    //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
+                    cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
+                    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
+                                                                                   source_manager);
+                    js_wrapped_class = bidirectional_unique_ptr.get();
+                    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
 
-			} // end if top level class
+                    auto &bidirectional = *js_wrapped_class;
+                    bidirectional.base_types.insert(top_level_class);
+
+                    cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
+                                        bidirectional.class_name, wrapped_class.name_alias) << endl;
+                    wrapped_class.derived_types.insert(&bidirectional);
+                    bidirectional.include_files.insert(generated_header_name);
+                    bidirectional.my_include = generated_header_name;
+
+                    BidirectionalBindings bd(source_manager, wrapped_class);
+                    bd.generate_bindings(wrapped_classes);
+
+
+                } else {
+                    if (print_logging)
+                        cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
+                }
+
+            } // end if top level class
             else {
-                cerr << fmt::format("{} Handling class (NOT top level) {}", indentation, wrapped_class.class_name) << endl;
+                cerr << fmt::format("{} Handling class (NOT top level) {}", indentation, wrapped_class.class_name)
+                     << endl;
             }
 
             auto class_name = wrapped_class.decl->getQualifiedNameAsString();
@@ -2202,7 +2205,7 @@ namespace {
 
 //            fprintf(stderr,"%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
             // don't do the following code for inherited classes
-            if (top_level){
+            if (top_level) {
                 top_level_class->include_files.insert(get_include_string_for_fileid(source_manager, file_id));
             }
 
@@ -2214,74 +2217,82 @@ namespace {
 //                auto type = type_decl->getTypeForDecl();
 
 //
-	    // non-top-level methods handled by javascript prototype
-	    if (top_level) {
-		if (print_logging) cerr << "About to process methods" << endl;
-		for(CXXMethodDecl * method : wrapped_class.decl->methods()) {
-		    if (method->hasInheritedPrototype()) {
-			cerr << fmt::format("Skipping method {} because it has inherited prototype", method->getNameAsString()) << endl;
-			continue;
-		    }
-		    
-		    top_level_class->methods.insert(handle_method(wrapped_class, method, indentation + "  "));
-		}
-	    }
+            // non-top-level methods handled by javascript prototype
+            if (top_level) {
+                if (print_logging) cerr << "About to process methods" << endl;
+                for (CXXMethodDecl *method : wrapped_class.decl->methods()) {
+                    if (method->hasInheritedPrototype()) {
+                        cerr << fmt::format("Skipping method {} because it has inherited prototype",
+                                            method->getNameAsString()) << endl;
+                        continue;
+                    }
 
-	    if (print_logging) cerr << "About to process fields for " << wrapped_class.name_alias << endl;
-            for (FieldDecl * field : wrapped_class.decl->fields()) {
+                    top_level_class->methods.insert(handle_method(wrapped_class, method, indentation + "  "));
+                }
+            }
+
+            if (print_logging) cerr << "About to process fields for " << wrapped_class.name_alias << endl;
+            for (FieldDecl *field : wrapped_class.decl->fields()) {
                 top_level_class->members.insert(handle_data_member(wrapped_class, field, indentation + "  "));
             }
 
-	    if (print_logging) cerr << "About to process base class info" << endl;
-	    // if this is true and the type ends up with no base type, it's an error
-	    bool must_have_base_type = false;
-            auto annotation_base_types_to_ignore = wrapped_class.annotations.get_regex("^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
-            auto annotation_base_type_to_use = wrapped_class.annotations.get_regex("^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
+            if (print_logging) cerr << "About to process base class info" << endl;
+            // if this is true and the type ends up with no base type, it's an error
+            bool must_have_base_type = false;
+            auto annotation_base_types_to_ignore = wrapped_class.annotations.get_regex(
+                "^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
+            auto annotation_base_type_to_use = wrapped_class.annotations.get_regex(
+                "^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
             if (annotation_base_type_to_use.size() > 1) {
                 data_error(fmt::format("More than one base type specified to use for type", wrapped_class.class_name));
             }
 
-	    // if a base type to use is specified, then it must match an actual base type or error
-	    if (!annotation_base_type_to_use.empty()) {
-		must_have_base_type = true;
-	    }
+            // if a base type to use is specified, then it must match an actual base type or error
+            if (!annotation_base_type_to_use.empty()) {
+                must_have_base_type = true;
+            }
 
 
-	    print_vector(annotation_base_types_to_ignore, "base types to ignore");
-	    print_vector(annotation_base_type_to_use, "base type to use");
+            print_vector(annotation_base_types_to_ignore, "base types to ignore");
+            print_vector(annotation_base_type_to_use, "base type to use");
 
 
-	    bool found_base_type = false;
-	    if (print_logging) cerr << "About to process base classes" << endl;
+            bool found_base_type = false;
+            if (print_logging) cerr << "About to process base classes" << endl;
             for (auto base_class : wrapped_class.decl->bases()) {
 
                 auto base_qual_type = base_class.getType();
-		auto base_type_decl = base_qual_type->getAsCXXRecordDecl();
-		auto base_type_name = base_type_decl->getNameAsString();
-		auto base_type_canonical_name = get_canonical_name_for_decl(base_type_decl);
+                auto base_type_decl = base_qual_type->getAsCXXRecordDecl();
+                auto base_type_name = base_type_decl->getNameAsString();
+                auto base_type_canonical_name = get_canonical_name_for_decl(base_type_decl);
 
-		if (base_type_canonical_name == "class v8toolkit::WrappedClassBase" &&
-		    base_class.getAccessSpecifier() != AS_public) {
-		    data_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}", wrapped_class.class_name).c_str());
-		}
-		
-		cerr << "Base type: " << base_type_canonical_name <<  endl;
-                if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(), base_type_canonical_name) !=
-                        annotation_base_types_to_ignore.end()) {
-                    cerr << "Skipping base type because it was explicitly excluded in annotation on class: " << base_type_name << endl;
+                if (base_type_canonical_name == "class v8toolkit::WrappedClassBase" &&
+                    base_class.getAccessSpecifier() != AS_public) {
+                    data_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}",
+                                           wrapped_class.class_name).c_str());
+                }
+
+                cerr << "Base type: " << base_type_canonical_name << endl;
+                if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(),
+                              base_type_canonical_name) !=
+                    annotation_base_types_to_ignore.end()) {
+                    cerr << "Skipping base type because it was explicitly excluded in annotation on class: "
+                         << base_type_name << endl;
                     continue;
                 } else {
-		    cerr << "Base type was not explicitly excluded via annotation" << endl;
-		}
+                    cerr << "Base type was not explicitly excluded via annotation" << endl;
+                }
                 if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), base_type_canonical_name) !=
-		    base_types_to_ignore.end()) {
-                    cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: " << base_type_name << endl;
+                    base_types_to_ignore.end()) {
+                    cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: "
+                         << base_type_name << endl;
                     continue;
                 } else {
-		    cerr << "Base type was not explicitly excluded via global ignore list" << endl;
-		}
+                    cerr << "Base type was not explicitly excluded via global ignore list" << endl;
+                }
                 if (!annotation_base_type_to_use.empty() && annotation_base_type_to_use[0] != base_type_name) {
-                    cerr << "Skipping base type because it was not the one specified to use via annotation: " << base_type_name << endl;
+                    cerr << "Skipping base type because it was not the one specified to use via annotation: "
+                         << base_type_name << endl;
                     continue;
                 }
 
@@ -2290,8 +2301,7 @@ namespace {
                 }
 
 
-
-		found_base_type = true;
+                found_base_type = true;
                 auto base_record_decl = base_qual_type->getAsCXXRecordDecl();
 
 //                fprintf(stderr, "%s -- type class: %d\n", indentation.c_str(), base_qual_type->getTypeClass());
@@ -2305,23 +2315,25 @@ namespace {
                 if (base_record_decl == nullptr) {
                     llvm::report_fatal_error("Got null base type record decl - this should be caught ealier");
                 }
-		//  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
+                //  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
 
                 cerr << "getting base type wrapped class object" << endl;
-                WrappedClass & current_base = get_or_insert_wrapped_class(base_record_decl, source_manager, FOUND_BASE_CLASS);
+                WrappedClass &current_base = get_or_insert_wrapped_class(base_record_decl, source_manager,
+                                                                         FOUND_BASE_CLASS);
 
-		// if the base type hasn't been independently processed, do that right now
-		if (!current_base.done) {
-		    cerr << fmt::format("interupting handle_class of {} to fully handle class of base type: {}", wrapped_class.class_name, current_base.class_name) << endl;
-		    auto top_level_class_backup = top_level_class;
-		    top_level_class = &current_base;
-		    handle_class(current_base, true);
-		    top_level_class = top_level_class_backup;
-		}
+                // if the base type hasn't been independently processed, do that right now
+                if (!current_base.done) {
+                    cerr << fmt::format("interupting handle_class of {} to fully handle class of base type: {}",
+                                        wrapped_class.class_name, current_base.class_name) << endl;
+                    auto top_level_class_backup = top_level_class;
+                    top_level_class = &current_base;
+                    handle_class(current_base, true);
+                    top_level_class = top_level_class_backup;
+                }
 
-                auto  current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
-                auto  current_include = get_include_for_type_decl(source_manager, wrapped_class.decl);
-		//                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
+                auto current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
+                auto current_include = get_include_for_type_decl(source_manager, wrapped_class.decl);
+                //                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
 
                 wrapped_class.include_files.insert(current_base_include);
                 current_base.include_files.insert(current_include);
@@ -2334,25 +2346,32 @@ namespace {
                 handle_class(current_base, false, indentation + "  ");
             }
 
-	    if (print_logging) cerr << "done with base classes" << endl;
-	    if (must_have_base_type && !found_base_type) {
-		data_error(fmt::format("base_type_to_use specified but no base type found: {}", wrapped_class.class_name));
-	    }
+            if (print_logging) cerr << "done with base classes" << endl;
+            if (must_have_base_type && !found_base_type) {
+                data_error(
+                    fmt::format("base_type_to_use specified but no base type found: {}", wrapped_class.class_name));
+            }
 
 
 
-	    // Only process constructors on the top-level object
+            // Only process constructors on the top-level object
             if (top_level) {
-		if (wrapped_class.found_method == FOUND_BASE_CLASS) {
-		    cerr << fmt::format("Not wrapping constructor for class only wrapped because it's base class of another wrapped type") << endl;
-		} else if (wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
-		    cerr << fmt::format("Not wrapping because class has DO NOT WRAP CONSTRUCTORS annotation") << endl;
-		} else if (wrapped_class.decl->isAbstract()) {
+                if (wrapped_class.found_method == FOUND_BASE_CLASS) {
+                    cerr << fmt::format(
+                        "Not wrapping constructor for class only wrapped because it's base class of another wrapped type")
+                         << endl;
+                } else if (wrapped_class.annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+                    cerr << fmt::format("Not wrapping because class has DO NOT WRAP CONSTRUCTORS annotation") << endl;
+                } else if (wrapped_class.decl->isAbstract()) {
                     cerr << "Skipping all constructors because class is abstract: " << class_name << endl;
-		} else if (wrapped_class.force_no_constructors) {
-		    cerr << fmt::format("'force no constructors' set on {} so skipping making constructors", class_name) << endl;
+                } else if (wrapped_class.force_no_constructors) {
+                    cerr << fmt::format("'force no constructors' set on {} so skipping making constructors", class_name)
+                         << endl;
                 } else {
-		    if (print_logging) cerr << fmt::format("About to process constructors for {} -- passed all checks to skip class constructors.", wrapped_class.class_name) << endl;
+                    if (print_logging) cerr << fmt::format(
+                            "About to process constructors for {} -- passed all checks to skip class constructors.",
+                            wrapped_class.class_name) << endl;
+
                     foreach_constructor(wrapped_class.decl, [&](auto constructor) {
 
 //                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), source_manager);
@@ -2364,16 +2383,16 @@ namespace {
 
 
                         if (constructor->isCopyConstructor()) {
-                            fprintf(stderr,"Skipping copy constructor\n");
+                            fprintf(stderr, "Skipping copy constructor\n");
                             return;
                         } else if (constructor->isMoveConstructor()) {
-                            fprintf(stderr,"Skipping move constructor\n");
+                            fprintf(stderr, "Skipping move constructor\n");
                             return;
                         } else if (constructor->isDeleted()) {
                             if (print_logging) cerr << "Skipping deleted constructor" << endl;
                             return;
                         }
-			Annotations annotations(constructor);
+                        Annotations annotations(constructor);
                         auto constructor_name_annotation = annotations.get_regex(V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
                         // fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
                         std::string constructor_name = wrapped_class.name_alias;
@@ -2382,24 +2401,35 @@ namespace {
                         }
                         if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
                             used_constructor_names.end()) {
-                            data_error(fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
-						   constructor_name.c_str(), wrapped_class.class_name));
+                            data_error(
+                                fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
+                                            constructor_name.c_str(), wrapped_class.class_name));
                             for (auto &name : used_constructor_names) {
                                 cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
                             }
                         } else {
-			    cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.class_name, constructor_name) << endl;
-			    used_constructor_names.push_back(constructor_name);
+                            cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.class_name,
+                                                constructor_name) << endl;
+                            used_constructor_names.push_back(constructor_name);
 
-			    top_level_class->constructors.insert(fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-									     indentation, get_method_parameters(source_manager,
-														*top_level_class,
-														constructor), constructor_name));
-			}
-		    });
+                            top_level_class->constructors.insert(
+                                fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
+                                            indentation, get_method_parameters(source_manager,
+                                                                               *top_level_class,
+                                                                               constructor), constructor_name));
+                        }
+                    });
+
                 }
-            }
-        }
+                // if there's no constructor but there is a static method, then add the special command to expose
+                //   the static methods
+                if (top_level_class->constructors.empty() && top_level_class->has_static_method) {
+                    top_level_class->constructors.insert(
+                        fmt::format("{}  class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, wrapped_class.name_alias)
+                    );
+                }
+            } // if top level
+        } // end method
 
 
 
