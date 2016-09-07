@@ -82,6 +82,16 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
+
+map<string, string> cpp_to_js_type_conversions = {{"^(const)?\\s*(unsigned)?\\s*(char|short|int|long|long long)\\s*(const)?\\s*[*]?\\s*[&]?$", "Number"},
+						  {"^(const)?\\s*(bool)\\s*(const)?\\s*[*]?\\s*[&]?$", "Boolean"},
+						  {"^(const)?\\s*(char\\s*[*]|(std::)?string)\\s*(const)?\\s*\\s*[&]?$", "String"},
+						  {"^void$", "Undefined"}};
+
+// regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
+
+
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -117,7 +127,7 @@ using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
-
+using namespace clang::comments;
 using namespace std;
 
 #define PRINT_SKIPPED_EXPORT_REASONS true
@@ -171,6 +181,15 @@ namespace {
 	warnings.push_back(warning);
     }
 
+    QualType get_plain_type(QualType qual_type) {
+	auto type = qual_type.getNonReferenceType().getUnqualifiedType();
+	while(!type->getPointeeType().isNull()) {
+	    type = type->getPointeeType().getUnqualifiedType();
+	}
+	return type;
+    }
+
+    
     class PrintLoggingGuard {
         bool logging = false;
     public:
@@ -724,10 +743,10 @@ namespace {
             return results;
         }
 
-
+	
         WrappedClass(const WrappedClass &) = delete;
         WrappedClass & operator=(const WrappedClass &) = delete;
-
+	
         // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
         WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
             decl(nullptr),
@@ -738,47 +757,110 @@ namespace {
             found_method(FOUND_GENERATED)
         {}
 
+	
         std::string generate_js_stub() {
-            stringstream result;
-            result << fmt::format("class {} {{\n", this->name_alias);
+	    struct MethodParam {
+		string type = "";
+		string name = "";
+		string description = "no description available";
+		void convert_type() {
+		    for (auto & pair : cpp_to_js_type_conversions) {
+			if (regex_match(this->type, std::regex(pair.first))) {
+			    type = pair.second;
+			} else {
+			    regex_replace(type, std::regex("^(struct|class) "), "");
+			}
+		    }
+		}
+	    };
 
+	    stringstream result;
+	    result << fmt::format("class {} {{\n", this->name_alias);
+
+
+	    
             for (auto method_decl : this->wrapped_methods_decls) {
 
-                auto comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
-                if (comment != nullptr) {
-                    auto comment_text = get_source_for_source_range(
-                        this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
-                    result << "/**\n";
-                    result << comment_text << "\n";
-                    result << "*/\n";
-                }
-
-                result << "    ";
-
-
-
-                if (method_decl->isStatic()) {
-                    result << "static ";
-                }
-
-
-                vector<string> param_names;
-                auto parameter_count = method_decl->getNumParams();
-                for (unsigned int i = 0; i < parameter_count; i++) {
-                    auto param_decl = method_decl->getParamDecl(i);
+		
+		vector<MethodParam> parameters;
+		MethodParam return_value_info;
+		string method_description;
+		
+		auto parameter_count = method_decl->getNumParams();
+		for (unsigned int i = 0; i < parameter_count; i++) {
+		    MethodParam this_param;
+		    auto param_decl = method_decl->getParamDecl(i);
 		    auto parameter_name = param_decl->getNameAsString();
 		    if (parameter_name == "") {
 			data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
 						 this->name_alias, method_decl->getNameAsString(), i));
-			parameter_name = "unspecified_name_in_cpp_code";
+			parameter_name = fmt::format("unspecified-position-{}", parameters.size());
 		    }
-                    param_names.push_back(parameter_name);
-                }
+		    this_param.name = parameter_name;
+		    auto type = get_plain_type(param_decl->getType());
+		    this_param.type = type.getAsString();
+		    parameters.push_back(this_param);
+		}
 
+		return_value_info.type = get_plain_type(method_decl->getReturnType()).getAsString();
 
-                result << fmt::format("{}({}){{}}\n", method_decl->getNameAsString(), join(param_names));
+                auto comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
+                if (comment != nullptr) {
+		    
+                    auto comment_text = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+
+		    cerr << "FullComment: " << comment_text << endl;
+		    for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
+			auto child_comment_text = get_source_for_source_range(
+									      this->compiler_instance.getPreprocessor().getSourceManager(),
+									      (*i)->getSourceRange());
+			
+			if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
+			    cerr << "Is ParamCommandComment" << endl;
+			    auto command_param_name = param_command->getParamName(comment).str();
+			    if (param_command->hasParamName() && std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;}) != parameters.end()) {
+				auto & param_info = *std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;});
+				param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
+										     param_command->getParagraph()->getSourceRange());
+			    }
+			} else {
+			    cerr << "is not param command comment" << endl;
+			}
+			cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+		    }
+                } else {
+		    cerr << "No comment on " << method_decl->getNameAsString() << endl;
+		}
+
+		string indentation = "    ";
+		
+		result << fmt::format("{}/**\n", indentation);
+		for (auto & param : parameters) {
+		    param.convert_type(); // change to JS types
+		    result << fmt::format("{} * @param {} {{{}}} {}\n", indentation, param.name, param.type, param.description);
+		}
+		return_value_info.convert_type();
+		result << fmt::format("{} * @return {{{}}} {}\n", indentation, return_value_info.type, return_value_info.description);
+		result << fmt::format("{} */\n", indentation);
+		if (method_decl->isStatic()) {
+		    result << fmt::format("{}static ", indentation);
+		}
+		
+		result << fmt::format("{}{}(", indentation, method_decl->getNameAsString());
+		bool first_parameter = true;
+		for (auto & param : parameters) {
+		    if (!first_parameter) {
+			result << ", ";
+		    }
+		    first_parameter = false;
+		    result << fmt::format("{}", param.name);
+		}
+		result << fmt::format("){{}}\n\n");
+
             }
 
+	    
             result << fmt::format("}}\n");
             fprintf(stderr, "%s", result.str().c_str());
             return result.str();

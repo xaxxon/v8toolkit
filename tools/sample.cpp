@@ -118,7 +118,8 @@ public:
    virtual void fooparent_purevirtual_tobeoverridden();
    virtual char const_virtual(int) const;
 
-    /** Test comment for foo_int_method
+    /**
+     * Test comment for foo_int_method
      * @param a some string
      * @param b some character
      * @return some made up number
