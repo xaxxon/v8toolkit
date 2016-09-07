@@ -766,9 +766,9 @@ namespace {
 		void convert_type() {
 		    for (auto & pair : cpp_to_js_type_conversions) {
 			if (regex_match(this->type, std::regex(pair.first))) {
-			    type = pair.second;
+			    this->type = pair.second;
 			} else {
-			    regex_replace(type, std::regex("^(struct|class) "), "");
+			    this->type = regex_replace(type, std::regex("^(struct|class) "), "");
 			}
 		    }
 		}
