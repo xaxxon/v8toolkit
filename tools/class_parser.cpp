@@ -83,7 +83,7 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
 
-map<string, string> cpp_to_js_type_conversions = {{"^(const)?\\s*(unsigned)?\\s*(char|short|int|long|long long)\\s*(const)?\\s*[*]?\\s*[&]?$", "Number"},
+map<string, string> cpp_to_js_type_conversions = {{"^(const)?\\s*(unsigned)?\\s*(char|short|int|long|long long|float|double|long double)\\s*(const)?\\s*[*]?\\s*[&]?$", "Number"},
 						  {"^(const)?\\s*(bool)\\s*(const)?\\s*[*]?\\s*[&]?$", "Boolean"},
 						  {"^(const)?\\s*(char\\s*[*]|(std::)?string)\\s*(const)?\\s*\\s*[&]?$", "String"},
 						  {"^void$", "Undefined"}};
@@ -346,7 +346,7 @@ namespace {
 
     std::string get_source_for_source_range(SourceManager & sm, SourceRange source_range) {
         std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(source_range), sm, LangOptions(), 0);
-        if (text.at(text.size()-1) == ',')
+        if (!text.empty() && text.at(text.size()-1) == ',')
             return Lexer::getSourceText(CharSourceRange::getCharRange(source_range), sm, LangOptions(), 0);
         return text;
     }
@@ -804,30 +804,40 @@ namespace {
 
 		return_value_info.type = get_plain_type(method_decl->getReturnType()).getAsString();
 
-                auto comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
+                FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
                 if (comment != nullptr) {
-		    
+		    cerr << "**1" << endl;
                     auto comment_text = get_source_for_source_range(
                         this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
 
 		    cerr << "FullComment: " << comment_text << endl;
 		    for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-			auto child_comment_text = get_source_for_source_range(
-									      this->compiler_instance.getPreprocessor().getSourceManager(),
-									      (*i)->getSourceRange());
-			
-			if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-			    cerr << "Is ParamCommandComment" << endl;
-			    auto command_param_name = param_command->getParamName(comment).str();
-			    if (param_command->hasParamName() && std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;}) != parameters.end()) {
-				auto & param_info = *std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;});
-				param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
-										     param_command->getParagraph()->getSourceRange());
+			cerr << "**2.1" << endl;
+			    
+			auto child_comment_source_range = (*i)->getSourceRange();
+			if (child_comment_source_range.isValid()) {
+			    cerr << "**2.2" << endl;
+			    
+			    auto child_comment_text = get_source_for_source_range(
+										  this->compiler_instance.getPreprocessor().getSourceManager(),
+										  child_comment_source_range);
+			    
+			    if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
+				cerr << "Is ParamCommandComment" << endl;
+				auto command_param_name = param_command->getParamName(comment).str();
+				if (param_command->hasParamName() && std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;}) != parameters.end()) {
+				    auto & param_info = *std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;});
+				    if (param_command->getParagraph() != nullptr) {
+					cerr << "**3" << endl;
+					param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
+											     param_command->getParagraph()->getSourceRange());
+				    }
+				}
+			    } else {
+				cerr << "is not param command comment" << endl;
 			    }
-			} else {
-			    cerr << "is not param command comment" << endl;
+			    cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
 			}
-			cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
 		    }
                 } else {
 		    cerr << "No comment on " << method_decl->getNameAsString() << endl;
