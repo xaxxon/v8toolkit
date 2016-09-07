@@ -87,7 +87,10 @@ V8TOOLKIT_USE_BASE_TYPE(FooParent)
 Foo : public FooParent, public Test::MyTemplate<vector<int>> {
     struct NestedFooStruct{};
 
+
     void foo_method(int*, int){}
+
+
     double a;
 public:
     using Using=int;
@@ -106,14 +109,21 @@ public:
     
     template<class T2>
 	const T2& templated_function(const T2 & t){return t;};
-    
+
+
    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
 
    V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int); // This constructor gets different JS name - FooInt
    V8TOOLKIT_SKIP void foo_explicitly_skipped();
    virtual void fooparent_purevirtual_tobeoverridden();
    virtual char const_virtual(int) const;
-   int foo_int_method(char*, char){return 4;}
+
+    /** Test comment for foo_int_method
+     * @param a some string
+     * @param b some character
+     * @return some made up number
+     */
+   int foo_int_method(char* a, char b){return 4;}
    virtual void fooparent_virtual_tobeoverridden();
    static int foo_static_method(const int *){return 8;}
    const Using2 & using_return_type_test();

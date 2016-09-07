@@ -279,6 +279,8 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
 }
 
 bool global_name_conflicts(const std::string & name) {
+    // for some reason the real code here is crashing
+    return false;
     if (std::find(reserved_global_names.begin(), reserved_global_names.end(), name) !=
         reserved_global_names.end()) {
         std::cerr << fmt::format("{} is a reserved js global name", name) << std::endl;

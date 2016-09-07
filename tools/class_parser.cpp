@@ -1,4 +1,10 @@
+/**
 
+FOR COMMENT PARSING, LOOK AT ASTContext::getCommentForDecl
+
+http://clang.llvm.org/doxygen/classclang_1_1ASTContext.html#aa3ec454ca3698f73c421b08f6edcea92
+
+ */
 
 /**
  * This clang plugin looks for classes annotated with V8TOOLKIT_WRAPPED_CLASS and/or V8TOOLKIT_BIDIRECTIONAL_CLASS
@@ -99,6 +105,8 @@ map<string, string> static_method_renames = {{"name", "get_name"}};
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/AST/Comment.h"
 #include "llvm/Support/raw_ostream.h"
 
 #pragma clang diagnostic pop
@@ -126,15 +134,15 @@ namespace {
 
     // how was a wrapped class determined to be a wrapped class?
     enum FOUND_METHOD {
-	FOUND_UNSPECIFIED = 0,
-	FOUND_ANNOTATION,
-	FOUND_INHERITANCE,
-	FOUND_GENERATED,
-	FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
-	FOUND_NEVER_WRAP
+        FOUND_UNSPECIFIED = 0,
+        FOUND_ANNOTATION,
+        FOUND_INHERITANCE,
+        FOUND_GENERATED,
+        FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
+        FOUND_NEVER_WRAP
     };
 
-    
+
     enum EXPORT_TYPE {
         EXPORT_UNSPECIFIED = 0,
         EXPORT_NONE, // export nothing
@@ -144,32 +152,38 @@ namespace {
 
     EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED);
 
-    
+
     std::string get_canonical_name_for_decl(const TypeDecl * decl) {
-	return decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString();
+        return decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString();
     }
 
     // list of data (source code being processed) errors occuring during the run.   Clang API errors are still immediate fails with
     //   llvm::report_fatal_error
     vector<string> errors;
     void data_error(const string & error) {
-	cerr << "DATA ERROR: " << error << endl;
-	errors.push_back(error);
+        cerr << "DATA ERROR: " << error << endl;
+        errors.push_back(error);
+    }
+
+    vector<string> warnings;
+    void data_warning(const string & warning) {
+	cerr << "DATA WARNING: " << warning << endl;
+	warnings.push_back(warning);
     }
 
     class PrintLoggingGuard {
-	bool logging = false;
+        bool logging = false;
     public:
-	PrintLoggingGuard() = default;
-	~PrintLoggingGuard() {
-	    if (logging) {
-		print_logging--;
-	    }
-	}
-	void log(){
-	    print_logging++;
-	    logging = true;
-	}
+        PrintLoggingGuard() = default;
+        ~PrintLoggingGuard() {
+            if (logging) {
+                print_logging--;
+            }
+        }
+        void log(){
+            print_logging++;
+            logging = true;
+        }
     };
 
     /*
@@ -192,23 +206,23 @@ namespace {
         return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
     }
     */
-    
-    
+
+
     void print_vector(const vector<string> & vec, const string & header = "", const string & indentation = "", bool ignore_empty = true) {
 
-	if (ignore_empty && vec.empty()) {
-	    return;
-	}
-	
-	if (header != "") {
-	    cerr << indentation << header << endl;
-	}
-	for (auto & str : vec) {
-	    cerr << indentation << " - " << str << endl;
-	}
-	if (vec.empty()) {
-	    cerr << indentation << " * (EMPTY VECTOR)" << endl;
-	}
+        if (ignore_empty && vec.empty()) {
+            return;
+        }
+
+        if (header != "") {
+            cerr << indentation << header << endl;
+        }
+        for (auto & str : vec) {
+            cerr << indentation << " - " << str << endl;
+        }
+        if (vec.empty()) {
+            cerr << indentation << " * (EMPTY VECTOR)" << endl;
+        }
     }
 
     // joins a range of strings with commas (or whatever specified)
@@ -242,14 +256,14 @@ namespace {
             return false;
         }
 
-	if (!decl->isThisDeclarationADefinition()) {
-	    return true;
-	}
-	
+        if (!decl->isThisDeclarationADefinition()) {
+            return true;
+        }
+
         for (auto base : decl->bases()) {
-	    if (base.getType().getTypePtrOrNull() == nullptr) {
-		llvm::report_fatal_error(fmt::format("base type ptr was null for {}", decl->getNameAsString()).c_str());
-	    }
+            if (base.getType().getTypePtrOrNull() == nullptr) {
+                llvm::report_fatal_error(fmt::format("base type ptr was null for {}", decl->getNameAsString()).c_str());
+            }
             if (!is_good_record_decl(base.getType()->getAsCXXRecordDecl())) {
                 return false;
             }
@@ -260,12 +274,12 @@ namespace {
 
     // Finds where file_id is included, how it was included, and returns the string to duplicate
     //   that inclusion
-    std::string get_include_string_for_fileid(SourceManager & source_manager, FileID & file_id) {
-        auto include_source_location = source_manager.getIncludeLoc(file_id);
+    std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, FileID & file_id) {
+        auto include_source_location = compiler_instance.getPreprocessor().getSourceManager().getIncludeLoc(file_id);
 
         // If it's in the "root" file (file id 1), then there's no include for it
         if (include_source_location.isValid()) {
-            auto header_file = include_source_location.printToString(source_manager);
+            auto header_file = include_source_location.printToString(compiler_instance.getPreprocessor().getSourceManager());
 //            if (print_logging) cerr << "include source location: " << header_file << endl;
             //            wrapped_class.include_files.insert(header_file);
         } else {
@@ -275,7 +289,7 @@ namespace {
 
         bool invalid;
         // This gets EVERYTHING after the start of the filename in the include.  "asdf.h"..... or <asdf.h>.....
-        const char * text = source_manager.getCharacterData(include_source_location, &invalid);
+        const char * text = compiler_instance.getPreprocessor().getSourceManager().getCharacterData(include_source_location, &invalid);
         const char * text_end = text + 1;
         while(*text_end != '>' && *text_end != '"') {
             text_end++;
@@ -286,18 +300,18 @@ namespace {
     }
 
 
-    std::string get_include_for_source_location(SourceManager & source_manager, const SourceLocation & source_location) {
-        auto full_source_loc = FullSourceLoc(source_location, source_manager);
+    std::string get_include_for_source_location(CompilerInstance & compiler_instance, const SourceLocation & source_location) {
+        auto full_source_loc = FullSourceLoc(source_location, compiler_instance.getPreprocessor().getSourceManager());
 
         auto file_id = full_source_loc.getFileID();
-        return get_include_string_for_fileid(source_manager, file_id);
+        return get_include_string_for_fileid(compiler_instance, file_id);
     }
 
-    std::string get_include_for_type_decl(SourceManager & source_manager, const TypeDecl * type_decl) {
+    std::string get_include_for_type_decl(CompilerInstance & compiler_instance, const TypeDecl * type_decl) {
         if (type_decl == nullptr) {
             return "";
         }
-        return get_include_for_source_location(source_manager, type_decl->getLocStart());
+        return get_include_for_source_location(compiler_instance, type_decl->getLocStart());
     }
 
 
@@ -309,7 +323,7 @@ namespace {
 //            return Lexer::getSourceText(CharSourceRange::getCharRange(d->getSourceRange()), sm, LangOptions(), 0);
 //        return text;
 //    }
-#if 0
+
 
     std::string get_source_for_source_range(SourceManager & sm, SourceRange source_range) {
         std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(source_range), sm, LangOptions(), 0);
@@ -317,7 +331,7 @@ namespace {
             return Lexer::getSourceText(CharSourceRange::getCharRange(source_range), sm, LangOptions(), 0);
         return text;
     }
-
+#if 0
 
     vector<string> count_top_level_template_parameters(const std::string & source) {
         int open_angle_count = 0;
@@ -366,69 +380,69 @@ namespace {
 #endif
 
     class Annotations {
-	set<string> annotations;
+        set<string> annotations;
 
-	void get_annotations_for_decl(const Decl * decl) {
-	    if (!decl) { return; }
-	    for (auto attr : decl->getAttrs()) {
-		AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
-		if (annotation) {
-		    auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-		    auto annotation_string = attribute_attr->getAnnotation().str();
-		    //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
-		    annotations.emplace(annotation->getAnnotation().str());
-		}
-	    }
-	}
+        void get_annotations_for_decl(const Decl * decl) {
+            if (!decl) { return; }
+            for (auto attr : decl->getAttrs()) {
+                AnnotateAttr * annotation =  dyn_cast<AnnotateAttr>(attr);
+                if (annotation) {
+                    auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+                    auto annotation_string = attribute_attr->getAnnotation().str();
+                    //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
+                    annotations.emplace(annotation->getAnnotation().str());
+                }
+            }
+        }
 
-	
+
     public:
 
-	Annotations(const Decl * decl) {
-	    get_annotations_for_decl(decl);
-	}
-	
-	Annotations(const CXXRecordDecl * decl);
-	Annotations(const CXXMethodDecl * decl) {
-	    get_annotations_for_decl(decl);
-	    
-	}
+        Annotations(const Decl * decl) {
+            get_annotations_for_decl(decl);
+        }
 
-	Annotations() = default;
+        Annotations(const CXXRecordDecl * decl);
+        Annotations(const CXXMethodDecl * decl) {
+            get_annotations_for_decl(decl);
 
-	const vector<string> get() const {
-	    std::vector<string> results;
-	    
-	    for (auto & annotation : annotations) {
-		results.push_back(annotation);
-	    }
-	    return results;
-	}
+        }
 
-	std::vector<string> get_regex( const string & regex_string) const {
-	    auto regex = std::regex(regex_string);
-	    std::vector<string> results;
-	    
-	    for (auto & annotation : annotations) {
-		std::smatch matches;
-		if (std::regex_match(annotation, matches, regex)) {
-		    // printf("GOT %d MATCHES\n", (int)matches.size());
-		    if (matches.size() > 1) {
-			results.emplace_back(matches[1]);
-		    }
-		}
-	    }
-	    return results;
-	}
-    
-	bool has(const std::string & target) const {
-	    return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
-	}
+        Annotations() = default;
 
-	void merge(const Annotations & other) {
-	    cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size()) << endl;
-	    annotations.insert(other.annotations.begin(), other.annotations.end());
-	}
+        const vector<string> get() const {
+            std::vector<string> results;
+
+            for (auto & annotation : annotations) {
+                results.push_back(annotation);
+            }
+            return results;
+        }
+
+        std::vector<string> get_regex( const string & regex_string) const {
+            auto regex = std::regex(regex_string);
+            std::vector<string> results;
+
+            for (auto & annotation : annotations) {
+                std::smatch matches;
+                if (std::regex_match(annotation, matches, regex)) {
+                    // printf("GOT %d MATCHES\n", (int)matches.size());
+                    if (matches.size() > 1) {
+                        results.emplace_back(matches[1]);
+                    }
+                }
+            }
+            return results;
+        }
+
+        bool has(const std::string & target) const {
+            return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
+        }
+
+        void merge(const Annotations & other) {
+            cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size()) << endl;
+            annotations.insert(other.annotations.begin(), other.annotations.end());
+        }
     };
 
     map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
@@ -443,17 +457,17 @@ namespace {
     map<const CXXRecordDecl *, string> names_for_record_decls;
 
     Annotations::Annotations(const CXXRecordDecl * decl) {
-	auto name = get_canonical_name_for_decl(decl);
-	get_annotations_for_decl(decl);
-	cerr << "Making annotations object for " << name << endl;
-	if (auto spec_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
-	    cerr << fmt::format("{} is a template, getting any tmeplate annotations available", name) << endl;
-	    cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size() << " annotations available" << endl;
-	    merge(annotations_for_class_templates[spec_decl->getSpecializedTemplate()]);
-	} else {
-	    cerr << "Not a template" << endl;
-	}
-	
+        auto name = get_canonical_name_for_decl(decl);
+        get_annotations_for_decl(decl);
+        cerr << "Making annotations object for " << name << endl;
+        if (auto spec_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
+            cerr << fmt::format("{} is a template, getting any tmeplate annotations available", name) << endl;
+            cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size() << " annotations available" << endl;
+            merge(annotations_for_class_templates[spec_decl->getSpecializedTemplate()]);
+        } else {
+            cerr << "Not a template" << endl;
+        }
+
     }
 
 
@@ -461,321 +475,370 @@ namespace {
     struct ClassTemplate;
     vector<std::unique_ptr<ClassTemplate>> class_templates;
     struct ClassTemplate {
-	std::string name;
-	const ClassTemplateDecl * decl;
-	int instantiations = 0;
+        std::string name;
+        const ClassTemplateDecl * decl;
+        int instantiations = 0;
 
-	ClassTemplate(const ClassTemplateDecl * decl) : decl(decl) {
-	    name = decl->getQualifiedNameAsString();
-	    // cerr << fmt::format("Created class template for {}", name) << endl;
-	}
+        ClassTemplate(const ClassTemplateDecl * decl) : decl(decl) {
+            name = decl->getQualifiedNameAsString();
+            // cerr << fmt::format("Created class template for {}", name) << endl;
+        }
 
-	void instantiated(){ instantiations++; }
+        void instantiated(){ instantiations++; }
 
 
 
-	static ClassTemplate & get_or_create(const ClassTemplateDecl * decl) {
-	    for(auto & tmpl : class_templates) {
-		if (tmpl->decl == decl) {
-		    return *tmpl;
-		}
-	    }
-	    class_templates.emplace_back(make_unique<ClassTemplate>(decl));
-	    return *class_templates.back();
-	}
+        static ClassTemplate & get_or_create(const ClassTemplateDecl * decl) {
+            for(auto & tmpl : class_templates) {
+                if (tmpl->decl == decl) {
+                    return *tmpl;
+                }
+            }
+            class_templates.emplace_back(make_unique<ClassTemplate>(decl));
+            return *class_templates.back();
+        }
     };
 
     struct FunctionTemplate;
     vector<unique_ptr<FunctionTemplate>> function_templates;
     struct FunctionTemplate {
-	std::string name;
-	//const FunctionTemplateDecl * decl;
+        std::string name;
+        //const FunctionTemplateDecl * decl;
 
-	// not all functions instantiated because of a template are templated themselves
-       	const FunctionDecl * decl;
-	int instantiations = 0;
+        // not all functions instantiated because of a template are templated themselves
+        const FunctionDecl * decl;
+        int instantiations = 0;
 
-	FunctionTemplate(const FunctionDecl * decl) : decl(decl) {
-	    name = decl->getQualifiedNameAsString();
-	    //	    cerr << fmt::format("Created function template for {}", name) << endl;
-	}
+        FunctionTemplate(const FunctionDecl * decl) : decl(decl) {
+            name = decl->getQualifiedNameAsString();
+            //	    cerr << fmt::format("Created function template for {}", name) << endl;
+        }
 
-	void instantiated(){ instantiations++; }
-	
-	
-	static FunctionTemplate & get_or_create(const FunctionDecl * decl) {
+        void instantiated(){ instantiations++; }
 
-	    for(auto & tmpl : function_templates) {
-		if (tmpl->decl == decl) {
-		    return *tmpl;
-		}
-	    }
-	    function_templates.emplace_back(make_unique<FunctionTemplate>(decl));
-	    return *function_templates.back();
-	}
+
+        static FunctionTemplate & get_or_create(const FunctionDecl * decl) {
+
+            for(auto & tmpl : function_templates) {
+                if (tmpl->decl == decl) {
+                    return *tmpl;
+                }
+            }
+            function_templates.emplace_back(make_unique<FunctionTemplate>(decl));
+            return *function_templates.back();
+        }
     };
 
     // store all the constructor names used, since they all go into the same global object template used as for building contexts
     std::vector<std::string> used_constructor_names;
 
-    
-    struct WrappedClass {
-	CXXRecordDecl const * decl = nullptr;
 
-	// if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
-	CXXRecordDecl const * instantiation_pattern = nullptr;
+    struct WrappedClass {
+        CXXRecordDecl const * decl = nullptr;
+
+        // if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
+        CXXRecordDecl const * instantiation_pattern = nullptr;
         string class_name;
-	string name_alias; // if no alias, is equal to class_name
+        string name_alias; // if no alias, is equal to class_name
         set<string> include_files;
         int declaration_count = 0;
         set<string> methods;
+
+        set<CXXMethodDecl const *> wrapped_methods_decls;
         set<string> members;
         set<string> constructors;
         set<string> names;
         set<WrappedClass *> derived_types;
         set<WrappedClass *> base_types;
         set<string> wrapper_extension_methods;
-        SourceManager & source_manager;
-	string my_include; // the include for getting my type
-	bool done = false;
-	bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
-	Annotations annotations;
-	bool dumped = false; // this class has been dumped to file
-	set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
-	bool has_static_method = false;
-	FOUND_METHOD found_method;
-	bool force_no_constructors = false;
-	
-	std::string get_short_name() const {
-	    if (decl == nullptr) {
-		llvm::report_fatal_error(fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
-	    }
-	    return decl->getNameAsString();
-	}
+        CompilerInstance & compiler_instance;
+        string my_include; // the include for getting my type
+        bool done = false;
+        bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
+        Annotations annotations;
+        bool dumped = false; // this class has been dumped to file
+        set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
+        bool has_static_method = false;
+        FOUND_METHOD found_method;
+        bool force_no_constructors = false;
 
-	bool is_template_specialization() {
-	    return dyn_cast<ClassTemplateSpecializationDecl>(decl);
-	}
+        std::string get_short_name() const {
+            if (decl == nullptr) {
+                llvm::report_fatal_error(fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
+            }
+            return decl->getNameAsString();
+        }
 
-	
-	// all the correct annotations and name overrides may not be available when the WrappedObject is initially created 
-	void update_data() {
-	    cerr << "Updating wrapped class data for " << class_name << endl;
-	    string new_name = names_for_record_decls[decl];
-	    if (!new_name.empty()) {
-		cerr << "Got type alias: " << new_name << endl;
-		name_alias = new_name;
-	    } else {
-		cerr << "no type alias" << endl;
-	    }
-	    cerr << "Went from " << this->annotations.get().size() << " annotations to ";
-	    this->annotations = Annotations(this->decl);
-	    cerr << this->annotations.get().size() << endl;
-	}
-	
-	std::string make_sfinae_to_match_wrapped_class() const {
-	    
-	    // if it was found by annotation, there's no way for V8ClassWrapper to know about it other than
-	    //   explicit sfinae for the specific class.  Inheritance can be handled via a single std::is_base_of
-	    if (found_method == FOUND_ANNOTATION) {
-		return fmt::format("std::is_same<T, {}>::value", class_name);
-	    } else {
-		return "";
-	    }
-	}
+        bool is_template_specialization() {
+            return dyn_cast<ClassTemplateSpecializationDecl>(decl);
+        }
 
 
-	bool should_be_wrapped() const {
-	    auto a = class_name;
-	    auto b = found_method;
-	    auto c = join(annotations.get());
-	    cerr << fmt::format("In should be wrapped with class {}, found_method: {}, annotations: {}", a, b, c) << endl;
+        // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
+        void update_data() {
+            cerr << "Updating wrapped class data for " << class_name << endl;
+            string new_name = names_for_record_decls[decl];
+            if (!new_name.empty()) {
+                cerr << "Got type alias: " << new_name << endl;
+                name_alias = new_name;
+            } else {
+                cerr << "no type alias" << endl;
+            }
+            cerr << "Went from " << this->annotations.get().size() << " annotations to ";
+            this->annotations = Annotations(this->decl);
+            cerr << this->annotations.get().size() << endl;
+        }
 
-	    if (annotations.has(V8TOOLKIT_NONE_STRING) &&
-		annotations.has(V8TOOLKIT_ALL_STRING)) {
-		data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
-	    }
+        std::string make_sfinae_to_match_wrapped_class() const {
 
-	    if (found_method == FOUND_BASE_CLASS) {
-		return true;
-	    }
-	    if (found_method == FOUND_GENERATED) {
-		return true;
-	    }
-	    
-	    if (found_method == FOUND_INHERITANCE) {
-		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-		    cerr << "Found NONE_STRING" << endl;
-		    return false;
-		}
-	    } else if (found_method == FOUND_ANNOTATION) {
-		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-		    cerr << "Found NONE_STRING" << endl;
-		    return false;
-		}
-		if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-		    llvm::report_fatal_error(fmt::format("Type was supposedly found by annotation, but annotation not found: {}", class_name));
-		}
-	    } else if (found_method == FOUND_UNSPECIFIED) {
-		if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-		    cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
-		    return false;
-		}
-		if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-		    cerr << "didn't find all string on UNSPECIFIED" << endl;
-		    return false;
-		}
-	    }
-
-	    if (base_types.size() > 1) {
-		data_error(fmt::format("trying to see if type should be wrapped but it has more than one base type -- unsupported", class_name));
-	    }
-
-	    /*
-	      // *** IF A TYPE SHOULD BE WRAPPED THAT FORCES ITS PARENT TYPE TO BE WRAPPED ***
+            // if it was found by annotation, there's no way for V8ClassWrapper to know about it other than
+            //   explicit sfinae for the specific class.  Inheritance can be handled via a single std::is_base_of
+            if (found_method == FOUND_ANNOTATION) {
+                return fmt::format("std::is_same<T, {}>::value", class_name);
+            } else {
+                return "";
+            }
+        }
 
 
-	    if (base_types.empty()) {
-		cerr << "no base typ so SHOULD BE WRAPPED" << endl;
-		return true;
-	    } else {
-		cerr << "Checking should_be_wrapped for base type" << endl;
-		auto & base_type_wrapped_class = **base_types.begin();
-		cerr << "base type is '" << base_type_wrapped_class.class_name << "'" << endl;
-		return base_type_wrapped_class.should_be_wrapped();
-	    }
-	    */
+        bool should_be_wrapped() const {
+            auto a = class_name;
+            auto b = found_method;
+            auto c = join(annotations.get());
+            cerr << fmt::format("In should be wrapped with class {}, found_method: {}, annotations: {}", a, b, c) << endl;
 
-	    return true;
-	}
-	
+            if (annotations.has(V8TOOLKIT_NONE_STRING) &&
+                annotations.has(V8TOOLKIT_ALL_STRING)) {
+                data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
+            }
+
+            if (found_method == FOUND_BASE_CLASS) {
+                return true;
+            }
+            if (found_method == FOUND_GENERATED) {
+                return true;
+            }
+
+            if (found_method == FOUND_INHERITANCE) {
+                if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+                    cerr << "Found NONE_STRING" << endl;
+                    return false;
+                }
+            } else if (found_method == FOUND_ANNOTATION) {
+                if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+                    cerr << "Found NONE_STRING" << endl;
+                    return false;
+                }
+                if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
+                    llvm::report_fatal_error(fmt::format("Type was supposedly found by annotation, but annotation not found: {}", class_name));
+                }
+            } else if (found_method == FOUND_UNSPECIFIED) {
+                if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+                    cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
+                    return false;
+                }
+                if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
+                    cerr << "didn't find all string on UNSPECIFIED" << endl;
+                    return false;
+                }
+            }
+
+            if (base_types.size() > 1) {
+                data_error(fmt::format("trying to see if type should be wrapped but it has more than one base type -- unsupported", class_name));
+            }
+
+            /*
+              // *** IF A TYPE SHOULD BE WRAPPED THAT FORCES ITS PARENT TYPE TO BE WRAPPED ***
+
+
+            if (base_types.empty()) {
+            cerr << "no base typ so SHOULD BE WRAPPED" << endl;
+            return true;
+            } else {
+            cerr << "Checking should_be_wrapped for base type" << endl;
+            auto & base_type_wrapped_class = **base_types.begin();
+            cerr << "base type is '" << base_type_wrapped_class.class_name << "'" << endl;
+            return base_type_wrapped_class.should_be_wrapped();
+            }
+            */
+
+            return true;
+        }
+
         bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const {
 
 
-	    if (!valid) {
-		cerr << "'invalid' class" << endl;
-		return false;
-	    }
-
-	    
-            // don't double wrap yourself
-            if (find(dumped_classes.begin(), dumped_classes.end(), this) != dumped_classes.end()) {
-		printf("Already wrapped %s\n", class_name.c_str());
+            if (!valid) {
+                cerr << "'invalid' class" << endl;
                 return false;
             }
 
-	    if (!should_be_wrapped()) {
-		cerr << "should be wrapped returned false" << endl;
-		return false;
-	    }
-	    
-	    /*
-            // if all this class's directly derived types have been wrapped, then we're good since their
-            //   dependencies would have to be met for them to be wrapped
-            for (auto derived_type : derived_types) {
-                if (find(dumped_classes.begin(), dumped_classes.end(), derived_type) == dumped_classes.end()) {
-                    printf("Couldn't find %s\n", derived_type->class_name.c_str());
-                    return false;
-                }
+
+            // don't double wrap yourself
+            if (find(dumped_classes.begin(), dumped_classes.end(), this) != dumped_classes.end()) {
+                printf("Already wrapped %s\n", class_name.c_str());
+                return false;
             }
-	    */
+
+            if (!should_be_wrapped()) {
+                cerr << "should be wrapped returned false" << endl;
+                return false;
+            }
+
+            /*
+                // if all this class's directly derived types have been wrapped, then we're good since their
+                //   dependencies would have to be met for them to be wrapped
+                for (auto derived_type : derived_types) {
+                    if (find(dumped_classes.begin(), dumped_classes.end(), derived_type) == dumped_classes.end()) {
+                        printf("Couldn't find %s\n", derived_type->class_name.c_str());
+                        return false;
+                    }
+                }
+            */
             for (auto base_type : base_types) {
                 if (find(dumped_classes.begin(), dumped_classes.end(), base_type) == dumped_classes.end()) {
-		    printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
+                    printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
                     return false;
                 }
             }
 
-	    printf("Ready to wrap %s\n", class_name.c_str());
-	    
+            printf("Ready to wrap %s\n", class_name.c_str());
+
             return true;
         }
 
         std::set<string> get_derived_type_includes() {
-	    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
+            cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
             set<string> results;
-	    results.insert(my_include);
+            results.insert(my_include);
             for (auto derived_type : derived_types) {
 
-		results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
-		
+                results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
+
                 auto derived_includes = derived_type->get_derived_type_includes();
                 results.insert(derived_includes.begin(), derived_includes.end());
 
-		cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias, derived_type->class_name, join(derived_includes)) << endl;
+                cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias, derived_type->class_name, join(derived_includes)) << endl;
 
             }
             return results;
         }
 
 
-	WrappedClass(const WrappedClass &) = delete;
-	WrappedClass & operator=(const WrappedClass &) = delete;
-	
-	// for newly created classes --- used for bidirectional classes that don't actually exist in the AST
-	WrappedClass(const std::string class_name, SourceManager & source_manager) :
-	    decl(nullptr),
-	    class_name(class_name),
-	    name_alias(class_name),
-	    source_manager(source_manager),
-	    valid(true), // explicitly generated, so must be valid
-	    found_method(FOUND_GENERATED)
-	{}
+        WrappedClass(const WrappedClass &) = delete;
+        WrappedClass & operator=(const WrappedClass &) = delete;
+
+        // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
+        WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
+            decl(nullptr),
+            class_name(class_name),
+            name_alias(class_name),
+            compiler_instance(compiler_instance),
+            valid(true), // explicitly generated, so must be valid
+            found_method(FOUND_GENERATED)
+        {}
+
+        std::string generate_js_stub() {
+            stringstream result;
+            result << fmt::format("class {} {{\n", this->name_alias);
+
+            for (auto method_decl : this->wrapped_methods_decls) {
+
+                auto comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
+                if (comment != nullptr) {
+                    auto comment_text = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+                    result << "/**\n";
+                    result << comment_text << "\n";
+                    result << "*/\n";
+                }
+
+                result << "    ";
 
 
-	// for classes actually in the code being parsed
-        WrappedClass(const CXXRecordDecl * decl, SourceManager & source_manager, FOUND_METHOD found_method) :
-	    decl(decl),
-	    class_name(get_canonical_name_for_decl(decl)),
-	    name_alias(decl->getNameAsString()),
-	    source_manager(source_manager),
-	    my_include(get_include_for_type_decl(source_manager, decl)),
-	    annotations(decl),
-	    found_method(found_method)
+
+                if (method_decl->isStatic()) {
+                    result << "static ";
+                }
+
+
+                vector<string> param_names;
+                auto parameter_count = method_decl->getNumParams();
+                for (unsigned int i = 0; i < parameter_count; i++) {
+                    auto param_decl = method_decl->getParamDecl(i);
+		    auto parameter_name = param_decl->getNameAsString();
+		    if (parameter_name == "") {
+			data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
+						 this->name_alias, method_decl->getNameAsString(), i));
+			parameter_name = "unspecified_name_in_cpp_code";
+		    }
+                    param_names.push_back(parameter_name);
+                }
+
+
+                result << fmt::format("{}({}){{}}\n", method_decl->getNameAsString(), join(param_names));
+            }
+
+            result << fmt::format("}}\n");
+            fprintf(stderr, "%s", result.str().c_str());
+            return result.str();
+        }
+
+
+        // for classes actually in the code being parsed
+        WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
+            decl(decl),
+            class_name(get_canonical_name_for_decl(decl)),
+            name_alias(decl->getNameAsString()),
+            compiler_instance(compiler_instance),
+
+            my_include(get_include_for_type_decl(compiler_instance, decl)),
+            annotations(decl),
+            found_method(found_method)
         {
-	    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
-	    string using_name = names_for_record_decls[decl];
-	    if (!using_name.empty()) {
-		cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
-		name_alias = using_name;
-	    }
-
-	    
-	    cerr << "Top of WrappedClass constructor body" << endl;
-	    if (class_name == "") {
-		fprintf(stderr, "%p\n", (void *)decl);
-		llvm::report_fatal_error("Empty name string for decl");
-	    }
-
-	    auto pattern = this->decl->getTemplateInstantiationPattern();
-	    if (pattern && pattern != this->decl) {
-		if (!pattern->isDependentType()) {
-		    llvm::report_fatal_error(fmt::format("template instantiation class's pattern isn't dependent - this is not expected from my understanding: {}", class_name));
-		}
-	    }
-
-		    //	    instantiation_pattern = pattern;
-		    // annotations.merge(Annotations(instantiation_pattern));
+            fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
+            string using_name = names_for_record_decls[decl];
+            if (!using_name.empty()) {
+                cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
+                name_alias = using_name;
+            }
 
 
+            cerr << "Top of WrappedClass constructor body" << endl;
+            if (class_name == "") {
+                fprintf(stderr, "%p\n", (void *)decl);
+                llvm::report_fatal_error("Empty name string for decl");
+            }
 
-	    if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->decl)) {
-		annotations.merge(Annotations(specialization->getSpecializedTemplate()));
-	    }
-	    
-	     cerr << "Final wrapped class annotations: " << endl;
-	     print_vector(annotations.get());
-	}
+            auto pattern = this->decl->getTemplateInstantiationPattern();
+            if (pattern && pattern != this->decl) {
+                if (!pattern->isDependentType()) {
+                    llvm::report_fatal_error(fmt::format("template instantiation class's pattern isn't dependent - this is not expected from my understanding: {}", class_name));
+                }
+            }
+
+            //	    instantiation_pattern = pattern;
+            // annotations.merge(Annotations(instantiation_pattern));
+
+
+
+            if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->decl)) {
+                annotations.merge(Annotations(specialization->getSpecializedTemplate()));
+            }
+
+            cerr << "Final wrapped class annotations: " << endl;
+            print_vector(annotations.get());
+        }
 
         std::string get_derived_classes_string(int level = 0, const std::string indent = ""){
             vector<string> results;
-	    //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
+            //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
             for (WrappedClass * derived_class : derived_types) {
                 results.push_back(derived_class->class_name);
-		// only use directly derived types now
-		//results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
+                // only use directly derived types now
+                //results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
             }
-	    //            printf("%s Returning %s\n", indent.c_str(), join(results).c_str());
+            //            printf("%s Returning %s\n", indent.c_str(), join(results).c_str());
             return join(results);
         }
 
@@ -790,7 +853,7 @@ namespace {
                 }
             };
             if (base_types.size() > 1) {
-		data_error(fmt::format("Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n", class_name));
+                data_error(fmt::format("Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n", class_name));
 
             }
             return base_types.size() ? (*base_types.begin())->class_name : "";
@@ -837,18 +900,18 @@ namespace {
 
 
     std::vector<WrappedClass *> definitions_to_process;
-    
+
     void add_definition(WrappedClass & wrapped_class) {
-	if (!wrapped_class.decl->isThisDeclarationADefinition()) {
-	    llvm::report_fatal_error(fmt::format("tried to add non-definition to definition list for post processing: {}", wrapped_class.class_name).c_str());
-	}
-	if (std::find(definitions_to_process.begin(), definitions_to_process.end(), &wrapped_class) == definitions_to_process.end()) {
-	    definitions_to_process.push_back(&wrapped_class);
-	}
+        if (!wrapped_class.decl->isThisDeclarationADefinition()) {
+            llvm::report_fatal_error(fmt::format("tried to add non-definition to definition list for post processing: {}", wrapped_class.class_name).c_str());
+        }
+        if (std::find(definitions_to_process.begin(), definitions_to_process.end(), &wrapped_class) == definitions_to_process.end()) {
+            definitions_to_process.push_back(&wrapped_class);
+        }
     }
 
-    
-    
+
+
 
     std::vector<unique_ptr<WrappedClass>> wrapped_classes;
 
@@ -867,112 +930,112 @@ namespace {
 	return results;
     }
     */
-    
+
     bool has_wrapped_class(const CXXRecordDecl * decl) {
-	auto class_name = get_canonical_name_for_decl(decl);
-	
-	for (auto & wrapped_class : wrapped_classes) {
-	    
-	    if (wrapped_class->class_name == class_name) {
-		return true;
-	    }
-	}
-	return false;
-    }
-	
-    WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
-					       SourceManager & source_manager,
-					       FOUND_METHOD found_method) {
+        auto class_name = get_canonical_name_for_decl(decl);
 
-	    if (decl->isDependentType()) {
-		throw exception();
-	    }
+        for (auto & wrapped_class : wrapped_classes) {
 
-            auto class_name = get_canonical_name_for_decl(decl);
-
-	    if (!decl->isThisDeclarationADefinition()) {
-
-		cerr << class_name << " is not a definition - getting definition..." << endl;
-		if (!decl->hasDefinition()) {
-
-		    llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
-		}
-
-		decl = decl->getDefinition();
-	    }
-
-	    
-            //fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
-            //fprintf(stderr, " -- class name %s\n", class_name.c_str());
-            for (auto & wrapped_class : wrapped_classes) {
-
-		if (wrapped_class->class_name == class_name) {
-
-		    // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
-		    //   if it is the base of a wrapped type
-		    if (found_method == FOUND_BASE_CLASS) {
-
-			// if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
-			if (!wrapped_class->should_be_wrapped()) {
-			    wrapped_class->force_no_constructors = true;
-			}
-			wrapped_class->found_method = FOUND_BASE_CLASS;
-		    }
-		    //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
-                    return *wrapped_class;
-                }
+            if (wrapped_class->class_name == class_name) {
+                return true;
             }
+        }
+        return false;
+    }
 
-		auto up = std::make_unique<WrappedClass>(decl, source_manager, found_method);
+    WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
+                                               CompilerInstance & compiler_instance,
+                                               FOUND_METHOD found_method) {
 
-		wrapped_classes.emplace_back(std::move(up));
-
-	    //fprintf(stderr, "get or insert wrapped class returning new object: %p\n", (void*)wrapped_classes.back().get());
-            return *wrapped_classes.back();
+        if (decl->isDependentType()) {
+            throw exception();
         }
 
-    
+        auto class_name = get_canonical_name_for_decl(decl);
+
+        if (!decl->isThisDeclarationADefinition()) {
+
+            cerr << class_name << " is not a definition - getting definition..." << endl;
+            if (!decl->hasDefinition()) {
+
+                llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
+            }
+
+            decl = decl->getDefinition();
+        }
+
+
+        //fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
+        //fprintf(stderr, " -- class name %s\n", class_name.c_str());
+        for (auto & wrapped_class : wrapped_classes) {
+
+            if (wrapped_class->class_name == class_name) {
+
+                // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
+                //   if it is the base of a wrapped type
+                if (found_method == FOUND_BASE_CLASS) {
+
+                    // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
+                    if (!wrapped_class->should_be_wrapped()) {
+                        wrapped_class->force_no_constructors = true;
+                    }
+                    wrapped_class->found_method = FOUND_BASE_CLASS;
+                }
+                //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
+                return *wrapped_class;
+            }
+        }
+
+        auto up = std::make_unique<WrappedClass>(decl, compiler_instance, found_method);
+
+        wrapped_classes.emplace_back(std::move(up));
+
+        //fprintf(stderr, "get or insert wrapped class returning new object: %p\n", (void*)wrapped_classes.back().get());
+        return *wrapped_classes.back();
+    }
+
+
 
 
     string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>> & wrapped_classes) {
-	vector<string> sfinaes;
-	string forward_declarations = "#define V8TOOLKIT_V8CLASSWRAPPER_FORWARD_DECLARATIONS ";
-	for (auto & wrapped_class : wrapped_classes) {
-	    if (wrapped_class->found_method == FOUND_INHERITANCE) {
-		continue;
-	    }
-	    if (!wrapped_class->should_be_wrapped()) {
-		continue;
-	    }
-	    sfinaes.emplace_back(wrapped_class->make_sfinae_to_match_wrapped_class());
-	    forward_declarations += wrapped_class->class_name + "; ";
-	}
-
-	
-	for(int i = sfinaes.size() - 1; i >= 0; i--) {
-	    if (sfinaes[i] == "") {
-		sfinaes.erase(sfinaes.begin() + i);
-	    }
-	}
+        vector<string> sfinaes;
+        string forward_declarations = "#define V8TOOLKIT_V8CLASSWRAPPER_FORWARD_DECLARATIONS ";
+        for (auto & wrapped_class : wrapped_classes) {
+            if (wrapped_class->found_method == FOUND_INHERITANCE) {
+                continue;
+            }
+            if (!wrapped_class->should_be_wrapped()) {
+                continue;
+            }
+            sfinaes.emplace_back(wrapped_class->make_sfinae_to_match_wrapped_class());
+            forward_declarations += wrapped_class->class_name + "; ";
+        }
 
 
-	// too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
-	if (sfinaes.size() > 40 /* 40 is arbitrary */) {
-	    cerr << join(sfinaes, " || ") << endl;
-	    llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
-	}
-	
+        for(int i = sfinaes.size() - 1; i >= 0; i--) {
+            if (sfinaes[i] == "") {
+                sfinaes.erase(sfinaes.begin() + i);
+            }
+        }
 
-	
-	std::string sfinae = "";
-	if (!sfinaes.empty()) {
-	    sfinae = string("#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE ") + join(sfinaes, " || ") + "\n";
-	} // else if it's empty, leave it undefined
-	
-	forward_declarations += "\n";
-	return sfinae + "\n" + forward_declarations;
+
+        // too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
+        if (sfinaes.size() > 40 /* 40 is arbitrary */) {
+            cerr << join(sfinaes, " || ") << endl;
+            llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
+        }
+
+
+
+        std::string sfinae = "";
+        if (!sfinaes.empty()) {
+            sfinae = string("#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE ") + join(sfinaes, " || ") + "\n";
+        } // else if it's empty, leave it undefined
+
+        forward_declarations += "\n";
+        return sfinae + "\n" + forward_declarations;
     }
-    
+
 
 
 
@@ -995,7 +1058,7 @@ namespace {
 
                 if (annotation_string == V8TOOLKIT_ALL_STRING) {
                     if (found_export_specifier) { data_error(fmt::format("Found more than one export specifier on {}", name));}
-		    
+
                     export_type = EXPORT_ALL;
                     found_export_specifier = true;
                 } else if (annotation_string == "v8toolkit_generate_bindings_some") {
@@ -1030,7 +1093,7 @@ namespace {
             }
         }
 
-	//        printf("Returning export type: %d for %s\n", export_type, name.c_str());
+        //        printf("Returning export type: %d for %s\n", export_type, name.c_str());
         return export_type;
     }
 
@@ -1270,19 +1333,19 @@ namespace {
     // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
     //   then calls out to get how to include that most basic type definition
     //   and puts it in wrapped_class.include_files
-    void update_wrapped_class_for_type(SourceManager & source_manager,
+    void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
                                        WrappedClass & wrapped_class,
-                                       // don't capture qualtype by ref since it is changed in this function
+        // don't capture qualtype by ref since it is changed in this function
                                        QualType qual_type) {
 
-	bool print_logging = true;
+        bool print_logging = true;
 
-	cerr << "In update_wrapped_class_for_type" << endl;
-	if (print_logging) cerr << "Went from " << qual_type.getAsString();
+        cerr << "In update_wrapped_class_for_type" << endl;
+        if (print_logging) cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
 
-	// remove pointers
+        // remove pointers
         while(!qual_type->getPointeeType().isNull()) {
             qual_type = qual_type->getPointeeType();
         }
@@ -1293,50 +1356,50 @@ namespace {
 
 
 
-	if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
-	    cerr << "IS A FUNCTION TYPE!!!!" << endl;
+        if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
+            cerr << "IS A FUNCTION TYPE!!!!" << endl;
 
-	    // it feels strange, but the type int(bool) from std::function<int(bool)> is a FunctionProtoType
-	    if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
-		cerr << "IS A FUNCTION PROTOTYPE" << endl;
+            // it feels strange, but the type int(bool) from std::function<int(bool)> is a FunctionProtoType
+            if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
+                cerr << "IS A FUNCTION PROTOTYPE" << endl;
 
-		cerr << "Recursing on return type" << endl;
-		update_wrapped_class_for_type(source_manager, wrapped_class, function_prototype->getReturnType());
-		
-		for ( auto param : function_prototype->param_types()) {
+                cerr << "Recursing on return type" << endl;
+                update_wrapped_class_for_type(compiler_instance, wrapped_class, function_prototype->getReturnType());
 
-		    cerr << "Recursing on param type" << endl;
-		    update_wrapped_class_for_type(source_manager, wrapped_class, param);
-		}
-	    } else {
-		cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
-	    }
-		
-	} else {
-	    cerr << "is not a FUNCTION TYPE" << endl;
-	}
+                for ( auto param : function_prototype->param_types()) {
 
-	
-       // primitive types don't have record decls
+                    cerr << "Recursing on param type" << endl;
+                    update_wrapped_class_for_type(compiler_instance, wrapped_class, param);
+                }
+            } else {
+                cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+            }
+
+        } else {
+            cerr << "is not a FUNCTION TYPE" << endl;
+        }
+
+
+        // primitive types don't have record decls
         if (base_type_record_decl == nullptr) {
             return;
         }
 
-	auto actual_include_string = get_include_for_type_decl(source_manager, base_type_record_decl);
+        auto actual_include_string = get_include_for_type_decl(compiler_instance, base_type_record_decl);
 
         if (print_logging) cerr << &wrapped_class << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
 
-	// if there's no wrapped type, it may be something like a std::function or STL container -- those are ok to not be wrapped
-	if (has_wrapped_class(base_type_record_decl)) {
-	    auto & used_wrapped_class = get_or_insert_wrapped_class(base_type_record_decl, source_manager, FOUND_UNSPECIFIED);
-	    wrapped_class.used_classes.insert(&used_wrapped_class);
-	}
-		
-	
-        wrapped_class.include_files.insert(actual_include_string);
-	
+        // if there's no wrapped type, it may be something like a std::function or STL container -- those are ok to not be wrapped
+        if (has_wrapped_class(base_type_record_decl)) {
+            auto & used_wrapped_class = get_or_insert_wrapped_class(base_type_record_decl, compiler_instance, FOUND_UNSPECIFIED);
+            wrapped_class.used_classes.insert(&used_wrapped_class);
+        }
 
-	
+
+        wrapped_class.include_files.insert(actual_include_string);
+
+
+
         if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
             if (print_logging) cerr << "##!#!#!#!# Oh shit, it's a template type " << qual_type.getAsString() << endl;
 
@@ -1355,8 +1418,8 @@ namespace {
                     if (print_logging) cerr << "qual type is null" << endl;
                     continue;
                 }
-		if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
-                update_wrapped_class_for_type(source_manager, wrapped_class, template_arg_qual_type);
+                if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
+                update_wrapped_class_for_type(compiler_instance, wrapped_class, template_arg_qual_type);
             }
         } else {
             if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
@@ -1370,7 +1433,7 @@ namespace {
         auto parameter_count = method->getNumParams();
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
-	    Annotations annotations(param_decl);
+            Annotations annotations(param_decl);
             if (annotation != "" && !annotations.has(annotation)) {
                 if (print_logging) cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
                 continue;
@@ -1384,16 +1447,16 @@ namespace {
     vector<string> generate_variable_names(vector<QualType> qual_types, bool with_std_move = false) {
         vector<string> results;
         for (std::size_t i = 0; i < qual_types.size(); i++) {
-	    if (with_std_move && qual_types[i]->isRValueReferenceType()) {
-		results.push_back(fmt::format("std::move(var{})", i+1));
-	    } else {
-		results.push_back(fmt::format("var{}", i+1));
-	    }
+            if (with_std_move && qual_types[i]->isRValueReferenceType()) {
+                results.push_back(fmt::format("std::move(var{})", i+1));
+            } else {
+                results.push_back(fmt::format("var{}", i+1));
+            }
         }
         return results;
     }
 
-    std::string get_method_parameters(SourceManager & source_manager,
+    std::string get_method_parameters(CompilerInstance & compiler_instance,
                                       WrappedClass & wrapped_class,
                                       const CXXMethodDecl * method,
                                       bool add_leading_comma = false,
@@ -1422,86 +1485,86 @@ namespace {
             if (insert_variable_names) {
                 result << " " << var_names[count++];
             }
-            update_wrapped_class_for_type(source_manager, wrapped_class, param_qual_type);
+            update_wrapped_class_for_type(compiler_instance, wrapped_class, param_qual_type);
 
         }
         return result.str();
     }
 
-    std::string get_return_type(SourceManager & source_manager,
-                                      WrappedClass & wrapped_class,
-                                      const CXXMethodDecl * method) {
+    std::string get_return_type(CompilerInstance & compiler_instance,
+                                WrappedClass & wrapped_class,
+                                const CXXMethodDecl * method) {
         auto qual_type = method->getReturnType();
         auto result = get_type_string(qual_type);
 //        auto return_type_decl = qual_type->getAsCXXRecordDecl();
-//        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), source_manager);
-//        auto header_file = strip_path_from_filename(source_manager.getFilename(full_source_loc).str());
+//        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), compiler_instance);
+//        auto header_file = strip_path_from_filename(compiler_instance.getFilename(full_source_loc).str());
 //        if (print_logging) cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
 //        wrapped_class.include_files.insert(header_file);
 //
 
-        update_wrapped_class_for_type(source_manager, wrapped_class, qual_type);
+        update_wrapped_class_for_type(compiler_instance, wrapped_class, qual_type);
 
         return result;
 
     }
 
 
-    std::string get_method_return_type_class_and_parameters(SourceManager & source_manager,
+    std::string get_method_return_type_class_and_parameters(CompilerInstance & compiler_instance,
                                                             WrappedClass & wrapped_class,
                                                             const CXXRecordDecl * klass, const CXXMethodDecl * method) {
         std::stringstream results;
-        results << get_return_type(source_manager, wrapped_class, method);
+        results << get_return_type(compiler_instance, wrapped_class, method);
         results << ", " << get_canonical_name_for_decl(klass);
-        results << get_method_parameters(source_manager, wrapped_class, method, true);
+        results << get_method_parameters(compiler_instance, wrapped_class, method, true);
         return results.str();
     }
 
-    std::string get_method_return_type_and_parameters(SourceManager & source_manager,
+    std::string get_method_return_type_and_parameters(CompilerInstance & compiler_instance,
                                                       WrappedClass & wrapped_class,
                                                       const CXXRecordDecl * klass, const CXXMethodDecl * method) {
         std::stringstream results;
-        results << get_return_type(source_manager, wrapped_class, method);
-        results << get_method_parameters(source_manager, wrapped_class, method, true);
+        results << get_return_type(compiler_instance, wrapped_class, method);
+        results << get_method_parameters(compiler_instance, wrapped_class, method, true);
         return results.str();
     }
 
 
     void print_specialization_info(const CXXRecordDecl * decl) {
-	    auto name = get_canonical_name_for_decl(decl);
-	    cerr << "*****" << endl;
-	    if (decl->isDependentType()) {
-		cerr << fmt::format("{} is a dependent type", name) << endl;
-	    }
-	    if (auto spec = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
-		fprintf(stderr, "decl is a ClassTemplateSpecializationDecl: %p\n", (void *)decl);
-		cerr << name << endl;
+        auto name = get_canonical_name_for_decl(decl);
+        cerr << "*****" << endl;
+        if (decl->isDependentType()) {
+            cerr << fmt::format("{} is a dependent type", name) << endl;
+        }
+        if (auto spec = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
+            fprintf(stderr, "decl is a ClassTemplateSpecializationDecl: %p\n", (void *)decl);
+            cerr << name << endl;
 
-		if (auto spec_tmpl = spec->getSpecializedTemplate()) {
-		    fprintf(stderr, "Specialized template: %p, %s\n", (void *)spec_tmpl, spec_tmpl->getQualifiedNameAsString().c_str());
-		    print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
-		} else {
-		    cerr << "no spec tmpl" << endl;
-		}
-	    
+            if (auto spec_tmpl = spec->getSpecializedTemplate()) {
+                fprintf(stderr, "Specialized template: %p, %s\n", (void *)spec_tmpl, spec_tmpl->getQualifiedNameAsString().c_str());
+                print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
+            } else {
+                cerr << "no spec tmpl" << endl;
+            }
 
-		if (dyn_cast<ClassTemplatePartialSpecializationDecl>(decl)) {
-		    cerr << "It is also a partial specialization decl" << endl;
-		} else {
-		    cerr << "It is NOT a PARTIAL specialization decl" << endl;
-		}
-	    
 
-	    } else {
-		cerr << name << " is not a class template specialization decl" << endl;
-	    }
-	    cerr << "*****END" << endl;
+            if (dyn_cast<ClassTemplatePartialSpecializationDecl>(decl)) {
+                cerr << "It is also a partial specialization decl" << endl;
+            } else {
+                cerr << "It is NOT a PARTIAL specialization decl" << endl;
+            }
+
+
+        } else {
+            cerr << name << " is not a class template specialization decl" << endl;
+        }
+        cerr << "*****END" << endl;
 
     }
 
 
 
-    std::string get_method_string(SourceManager & source_manager,
+    std::string get_method_string(CompilerInstance & compiler_instance,
                                   WrappedClass & wrapped_class,
                                   const CXXMethodDecl * method) {
         std::stringstream result;
@@ -1511,7 +1574,7 @@ namespace {
 
         result << "(";
 
-        result << get_method_parameters(source_manager, wrapped_class, method);
+        result << get_method_parameters(compiler_instance, wrapped_class, method);
 
         result << ")";
 
@@ -1528,45 +1591,45 @@ namespace {
     template<class Callback>
     void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
                              const std::string & annotation = "") {
-	bool print_logging = false;
+        bool print_logging = false;
 
-	if (print_logging) cerr << "Enumerating constructors for " << klass->getNameAsString() << " with optional annotation: " << annotation << endl;
-	
+        if (print_logging) cerr << "Enumerating constructors for " << klass->getNameAsString() << " with optional annotation: " << annotation << endl;
+
         for(CXXMethodDecl * method : klass->methods()) {
             CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
-	    bool skip = false;
-	    Annotations annotations(method);
-	    // check if method is a constructor
+            bool skip = false;
+            Annotations annotations(method);
+            // check if method is a constructor
             if (constructor == nullptr) {
-		continue;
+                continue;
             }
 
-	    if (print_logging) cerr << "Checking constructor: " << endl;
+            if (print_logging) cerr << "Checking constructor: " << endl;
             if (constructor->getAccess() != AS_public) {
-		if (print_logging) cerr << "  Skipping non-public constructor" << endl;
-		skip = true;
+                if (print_logging) cerr << "  Skipping non-public constructor" << endl;
+                skip = true;
             }
             if (get_export_type(constructor) == EXPORT_NONE) {
-		if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
-		skip = true;
+                if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
+                skip = true;
             }
 
             if (annotation != "" && !annotations.has(annotation)) {
-		if (print_logging) cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
-		skip = true;
+                if (print_logging) cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
+                skip = true;
             } else {
-		if (skip) {
-		    if (print_logging) cerr << "  Annotation " << annotation << " found, but constructor skipped for reason(s) listed above" << endl;
-		}
-	    }
+                if (skip) {
+                    if (print_logging) cerr << "  Annotation " << annotation << " found, but constructor skipped for reason(s) listed above" << endl;
+                }
+            }
 
 
-	    if (skip) {
-		continue;
-	    } else {
-		if (print_logging) cerr << " Running callback on constructor" << endl;
-		callback(constructor);
-	    }
+            if (skip) {
+                continue;
+            } else {
+                if (print_logging) cerr << " Running callback on constructor" << endl;
+                callback(constructor);
+            }
         }
     }
     /*
@@ -1628,17 +1691,17 @@ namespace {
 
     class BidirectionalBindings {
     private:
-        SourceManager & source_manager;
+        CompilerInstance & compiler_instance;
         WrappedClass & wrapped_class;
 
     public:
-        BidirectionalBindings(SourceManager & source_manager,
+        BidirectionalBindings(CompilerInstance & compiler_instance,
                               WrappedClass & wrapped_class) :
-                source_manager(source_manager),
-                wrapped_class(wrapped_class) {}
+            compiler_instance(compiler_instance),
+            wrapped_class(wrapped_class) {}
 
         std::string short_name(){return wrapped_class.name_alias;}
-	std::string canonical_name(){return wrapped_class.class_name;}
+        std::string canonical_name(){return wrapped_class.class_name;}
 
         std::vector<const CXXMethodDecl *> get_all_virtual_methods_for_class(const CXXRecordDecl * klass) {
             std::vector<const CXXMethodDecl *> results;
@@ -1660,8 +1723,8 @@ namespace {
                     if (method->isVirtual() && !method->isPure()) {
                         // go through existing ones and check for match
                         if (std::find_if(results.begin(), results.end(), [&](auto found){
-                            if(get_method_string(source_manager, wrapped_class, method) ==
-                                    get_method_string(source_manager, wrapped_class, found)) {
+                            if(get_method_string(compiler_instance, wrapped_class, method) ==
+                               get_method_string(compiler_instance, wrapped_class, found)) {
 //                                printf("Found dupe: %s\n", get_method_string(method).c_str());
                                 return true;
                             }
@@ -1737,26 +1800,26 @@ namespace {
                 result << fmt::format("        v8::Local<v8::FunctionTemplate> created_by");
                 bool got_constructor = false;
                 int constructor_parameter_count;
-		vector<QualType> constructor_parameters;
+                vector<QualType> constructor_parameters;
                 foreach_constructor(wrapped_class.decl, [&](auto constructor_decl){
-		    if (got_constructor) {
-			data_error(fmt::format("ERROR: Got more than one constructor for {}", wrapped_class.class_name));
-			return;
-		    }
-		    got_constructor = true;
-                    result << get_method_parameters(source_manager, wrapped_class, constructor_decl, true, true);
+                    if (got_constructor) {
+                        data_error(fmt::format("ERROR: Got more than one constructor for {}", wrapped_class.class_name));
+                        return;
+                    }
+                    got_constructor = true;
+                    result << get_method_parameters(compiler_instance, wrapped_class, constructor_decl, true, true);
                     constructor_parameter_count = constructor_decl->getNumParams();
-		    constructor_parameters = get_method_param_qual_types(constructor_decl);
+                    constructor_parameters = get_method_param_qual_types(constructor_decl);
 
                 }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
                 if (!got_constructor) {
-		    data_error(fmt::format("ERROR: Got no bidirectional constructor for {}", wrapped_class.class_name));
+                    data_error(fmt::format("ERROR: Got no bidirectional constructor for {}", wrapped_class.class_name));
 
                 }
                 result << fmt::format(") :\n");
 
-		//                auto variable_names = generate_variable_names(constructor_parameter_count);
-		auto variable_names = generate_variable_names(constructor_parameters, true);
+                //                auto variable_names = generate_variable_names(constructor_parameter_count);
+                auto variable_names = generate_variable_names(constructor_parameters, true);
 
                 result << fmt::format("      {}({}),\n", short_name(), join(variable_names));
                 result << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", short_name()); // {{}} is escaped {}
@@ -1773,31 +1836,31 @@ namespace {
             auto bidirectional_class_filename = fmt::format("v8toolkit_generated_bidirectional_{}.h", short_name());
             bidirectional_class_file.open(bidirectional_class_filename, ios::out);
             if (!bidirectional_class_file) {
-		llvm::report_fatal_error(fmt::format("Could not open file: {}", bidirectional_class_filename), false);
-	    }
+                llvm::report_fatal_error(fmt::format("Could not open file: {}", bidirectional_class_filename), false);
+            }
 
-	    bidirectional_class_file << "#pragma once\n\n";
+            bidirectional_class_file << "#pragma once\n\n";
 
-	    // find corresponding wrapped class
-	    const WrappedClass * this_class = nullptr;
-	    for (auto & wrapped_class : wrapped_classes) {
-		if (wrapped_class->class_name == canonical_name()) {
-		    this_class = wrapped_class.get();
-		    break;
-		}
-	    }
-	    
-	    if (this_class == nullptr) {
-		llvm::report_fatal_error(fmt::format("couldn't find wrapped class for {}", short_name()), false);
-	    }
+            // find corresponding wrapped class
+            const WrappedClass * this_class = nullptr;
+            for (auto & wrapped_class : wrapped_classes) {
+                if (wrapped_class->class_name == canonical_name()) {
+                    this_class = wrapped_class.get();
+                    break;
+                }
+            }
 
-	    // This needs include files because the IMPLEMENTATION goes in the file.  If it were moved out, then the header file could
-	    //   rely soley on the primary type's includes 
-	    for (auto & include : this_class->include_files) {
-	        if (include == ""){continue;}
-		bidirectional_class_file << "#include " << include << "\n";
-	    }
-	    
+            if (this_class == nullptr) {
+                llvm::report_fatal_error(fmt::format("couldn't find wrapped class for {}", short_name()), false);
+            }
+
+            // This needs include files because the IMPLEMENTATION goes in the file.  If it were moved out, then the header file could
+            //   rely soley on the primary type's includes
+            for (auto & include : this_class->include_files) {
+                if (include == ""){continue;}
+                bidirectional_class_file << "#include " << include << "\n";
+            }
+
             bidirectional_class_file << result.str();
             bidirectional_class_file.close();
 
@@ -1814,7 +1877,7 @@ namespace {
 
     class ClassHandler : public MatchFinder::MatchCallback {
     private:
-
+        CompilerInstance & ci;
         SourceManager & source_manager;
 
         WrappedClass * top_level_class; // the class currently being wrapped
@@ -1822,50 +1885,51 @@ namespace {
 
     public:
 
-	
 
-	
+
+
         ClassHandler(CompilerInstance &CI) :
+            ci(CI),
             source_manager(CI.getSourceManager())
         {}
 
-	virtual  void onEndOfTranslationUnit () override {
-	    cerr << fmt::format("at end of TU with {} definitions to process", definitions_to_process.size()) << endl;
+        virtual  void onEndOfTranslationUnit () override {
+            cerr << fmt::format("at end of TU with {} definitions to process", definitions_to_process.size()) << endl;
 
-	    int definition_count = 0;
-	    for (auto wrapped_class_ptr : definitions_to_process) {
-		auto & wrapped_class = *wrapped_class_ptr;
+            int definition_count = 0;
+            for (auto wrapped_class_ptr : definitions_to_process) {
+                auto & wrapped_class = *wrapped_class_ptr;
 
 
-		cerr << ++definition_count << endl;
+                cerr << ++definition_count << endl;
 
-		// all the annotations and name aliases from forward decl's and 'using' typedefs may not have been available
-		// when the wrapped class was initially created, so get the full list now
-		wrapped_class.update_data();
+                // all the annotations and name aliases from forward decl's and 'using' typedefs may not have been available
+                // when the wrapped class was initially created, so get the full list now
+                wrapped_class.update_data();
 
-		
-		print_specialization_info(wrapped_class.decl);
-		
-		/*
-		// skipping this to try to speed things up
-		if (!is_good_record_decl(klass)) {
-		//cerr << "skipping 'bad' record decl" << endl;
-		continue;
-		}
-		*/
-		if (wrapped_class.decl->isDependentType()) {
-		    cerr << wrapped_class.class_name << endl;
-		    llvm::report_fatal_error("Trying to post-process dependent type -- this should be filtered in matcher callback");
-		}
-		
-		
-		cerr << "class annotations: " << join(wrapped_class.annotations.get()) << endl;
-		
-		handle_class(wrapped_class);
-	    }
-	    
-	}
-	
+
+                print_specialization_info(wrapped_class.decl);
+
+                /*
+                // skipping this to try to speed things up
+                if (!is_good_record_decl(klass)) {
+                //cerr << "skipping 'bad' record decl" << endl;
+                continue;
+                }
+                */
+                if (wrapped_class.decl->isDependentType()) {
+                    cerr << wrapped_class.class_name << endl;
+                    llvm::report_fatal_error("Trying to post-process dependent type -- this should be filtered in matcher callback");
+                }
+
+
+                cerr << "class annotations: " << join(wrapped_class.annotations.get()) << endl;
+
+                handle_class(wrapped_class);
+            }
+
+        }
+
 
         std::string handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation) {
             std::stringstream result;
@@ -1874,7 +1938,7 @@ namespace {
             auto full_field_name = field->getQualifiedNameAsString();
 
 
-	    cerr << "Processing data member for: " << containing_class.name_alias << ": " << full_field_name << endl;
+            cerr << "Processing data member for: " << containing_class.name_alias << ": " << full_field_name << endl;
 //            if (containing_class != top_level_class_decl) {
 //                if (print_logging) cerr << "************";
 //            }
@@ -1886,11 +1950,11 @@ namespace {
 //            full_field_name = std::regex_replace(full_field_name, regex, replacement);
 //            if (print_logging) cerr << full_field_name << endl;
 
-	    Annotations annotations(field);
+            Annotations annotations(field);
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping data member %s because not supposed to be exported %d\n",
-                       indentation.c_str(),
-                       short_field_name.c_str(), export_type);
+                                                         indentation.c_str(),
+                                                         short_field_name.c_str(), export_type);
                 return "";
             }
 
@@ -1901,19 +1965,19 @@ namespace {
 
             if (top_level_class->names.count(short_field_name)) {
                 data_error(fmt::format("ERROR: duplicate name {}/{} :: {}\n",
-					     top_level_class->class_name,
-					     containing_class.class_name,
-					     short_field_name));
+                                       top_level_class->class_name,
+                                       containing_class.class_name,
+                                       short_field_name));
                 return "";
             }
             top_level_class->names.insert(short_field_name);
 
 
-	    // made up number to represent the overhead of making a new wrapped class
-	    //   even before adding methods/members
-            top_level_class->declaration_count=3; 
+            // made up number to represent the overhead of making a new wrapped class
+            //   even before adding methods/members
+            top_level_class->declaration_count=3;
 
-            update_wrapped_class_for_type(source_manager, *top_level_class, field->getType());
+            update_wrapped_class_for_type(ci, *top_level_class, field->getType());
 
             if (annotations.has(V8TOOLKIT_READONLY_STRING)) {
                 result << fmt::format("{}class_wrapper.add_member_readonly(\"{}\", &{});\n", indentation,
@@ -1936,8 +2000,8 @@ namespace {
 
             std::string full_method_name(method->getQualifiedNameAsString());
             std::string short_method_name(method->getNameAsString());
-	    if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
-	    //            if (print_logging) cerr << "changing method name from " << full_method_name << " to ";
+            if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
+            //            if (print_logging) cerr << "changing method name from " << full_method_name << " to ";
 //
 //            auto regex = std::regex(fmt::format("{}::{}$", containing_class->getName().str(), short_method_name));
 //            auto replacement = fmt::format("{}::{}", top_level_class_decl->getName().str(), short_method_name);
@@ -1949,7 +2013,7 @@ namespace {
 
             if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping method %s because not supposed to be exported %d\n",
-                       indentation.c_str(), full_method_name.c_str(), export_type);
+                                                         indentation.c_str(), full_method_name.c_str(), export_type);
                 return "";
             }
 
@@ -1970,43 +2034,43 @@ namespace {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping destructor %s\n", indentation.c_str(), full_method_name.c_str());
                 return "";
             }
-	    // still want to keep the interface even if it's not implemented here
+            // still want to keep the interface even if it's not implemented here
             // if (method->isPure()) {
             //     if(!method->isVirtual()) {
-	    // 	    llvm::report_fatal_error("Got pure non-virtual method - not sure what that even means", false);
-	    // 	}
+            // 	    llvm::report_fatal_error("Got pure non-virtual method - not sure what that even means", false);
+            // 	}
             //     if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping pure virtual %s\n", indentation.c_str(), full_method_name.c_str());
             //     return "";
             // }
 
 
-	    // If the function is wrapped in derived classes as well, you run into problems where you can't find the right type to
-	    //   cast the internal field to to find a match for the function type.   You may only get a Base* when you need to call void(Derived::*)()
-	    //   so if you only have the virtual function wrapped in Base, you'll always find the right type of object
-	    assert(method->isVirtual());
-	    assert(!method->isVirtual());
-	    if (method->isVirtual()) {
-		fprintf(stderr, "%s :: %s is virtual with %d overrides\n", klass.class_name.c_str(), full_method_name.c_str(), (int)method->size_overridden_methods());
-	    } else {
-		fprintf(stderr, "%s :: %s isn't virtual\n", klass.class_name.c_str(), full_method_name.c_str());
-	    }
-	    if (method->isVirtual() && method->size_overridden_methods()) {
+            // If the function is wrapped in derived classes as well, you run into problems where you can't find the right type to
+            //   cast the internal field to to find a match for the function type.   You may only get a Base* when you need to call void(Derived::*)()
+            //   so if you only have the virtual function wrapped in Base, you'll always find the right type of object
+            assert(method->isVirtual());
+            assert(!method->isVirtual());
+            if (method->isVirtual()) {
+                fprintf(stderr, "%s :: %s is virtual with %d overrides\n", klass.class_name.c_str(), full_method_name.c_str(), (int)method->size_overridden_methods());
+            } else {
+                fprintf(stderr, "%s :: %s isn't virtual\n", klass.class_name.c_str(), full_method_name.c_str());
+            }
+            if (method->isVirtual() && method->size_overridden_methods()) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping derived-class override of base class virtual function %s\n", indentation.c_str(), full_method_name.c_str());
-                return "";		
-	    }
-	    
+                return "";
+            }
+
             if (dyn_cast<CXXConversionDecl>(method)) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping user-defined conversion operator", indentation) << endl;
                 return "";
             }
-	    if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << "Method passed all checks" << endl;
+            if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << "Method passed all checks" << endl;
 
 
-	    Annotations annotations(method);
+            Annotations annotations(method);
             if (annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
-		// cerr << "has extend wrapper string" << endl;
+                // cerr << "has extend wrapper string" << endl;
                 if (!method->isStatic()) {
-		    data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
+                    data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
 
                 }
                 if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("{}**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping", indentation) << endl;
@@ -2014,15 +2078,15 @@ namespace {
 
                 return "";
             }
-	    //	    cerr << "Checking if method name already used" << endl;
+            //	    cerr << "Checking if method name already used" << endl;
             if (top_level_class->names.count(short_method_name)) {
                 data_error(fmt::format("Skipping duplicate name {}/{} :: {}\n",
-					     top_level_class->class_name,
-					     klass.class_name,
-					     short_method_name));
+                                       top_level_class->class_name,
+                                       klass.class_name,
+                                       short_method_name));
                 return "";
             }
-	    //cerr << "Inserting short name" << endl;
+            //cerr << "Inserting short name" << endl;
             top_level_class->names.insert(short_method_name);
 
 
@@ -2032,7 +2096,7 @@ namespace {
 
 
             if (method->isStatic()) {
-		cerr << "method is static" << endl;
+                cerr << "method is static" << endl;
                 top_level_class->declaration_count++;
 
                 if (static_method_renames.find(short_method_name) != static_method_renames.end()) {
@@ -2040,23 +2104,25 @@ namespace {
                 }
 
                 result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_and_parameters(source_manager, *top_level_class, klass.decl, method),
-                       short_method_name, full_method_name);
+                                      get_method_return_type_and_parameters(ci, *top_level_class, klass.decl, method),
+                                      short_method_name, full_method_name);
+                klass.wrapped_methods_decls.insert(method);
                 klass.has_static_method = true;
             } else {
-		cerr << "Method is not static" << endl;
+                cerr << "Method is not static" << endl;
                 top_level_class->declaration_count++;
+                klass.wrapped_methods_decls.insert(method);
                 result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                       get_method_return_type_class_and_parameters(source_manager, *top_level_class, klass.decl, method),
-                       short_method_name, full_method_name);
+                                      get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl, method),
+                                      short_method_name, full_method_name);
                 methods_wrapped++;
 
             }
-	    cerr << "returning result" << endl;
+            cerr << "returning result" << endl;
             return result.str();
         }
 
-	
+
 
         void handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
                           bool top_level = true,
@@ -2065,7 +2131,7 @@ namespace {
 
             // update the includes for the type for itself -- if it's a templated type, make sure it has includes for the types it is
             //   templated with
-            update_wrapped_class_for_type(source_manager, wrapped_class,
+            update_wrapped_class_for_type(ci, wrapped_class,
                                           wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal());
             PrintLoggingGuard lg;
             if (top_level) {
@@ -2146,8 +2212,8 @@ namespace {
 
                 if (print_logging)
                     cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
-                         << get_include_for_type_decl(source_manager, wrapped_class.decl) << endl;
-                wrapped_class.include_files.insert(get_include_for_type_decl(source_manager, wrapped_class.decl));
+                         << get_include_for_type_decl(ci, wrapped_class.decl) << endl;
+                wrapped_class.include_files.insert(get_include_for_type_decl(this->ci, wrapped_class.decl));
 
 
                 // if this is a bidirectional class, make a minimal wrapper for it
@@ -2166,7 +2232,7 @@ namespace {
                     //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
                     cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
                     auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
-                                                                                   source_manager);
+                                                                                   this->ci);
                     js_wrapped_class = bidirectional_unique_ptr.get();
                     wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
 
@@ -2179,7 +2245,7 @@ namespace {
                     bidirectional.include_files.insert(generated_header_name);
                     bidirectional.my_include = generated_header_name;
 
-                    BidirectionalBindings bd(source_manager, wrapped_class);
+                    BidirectionalBindings bd(this->ci, wrapped_class);
                     bd.generate_bindings(wrapped_classes);
 
 
@@ -2197,20 +2263,20 @@ namespace {
             auto class_name = wrapped_class.decl->getQualifiedNameAsString();
 
             // prints out source for decl
-            //fprintf(stderr,"class at %s", decl2str(klass,  source_manager).c_str());
+            //fprintf(stderr,"class at %s", decl2str(klass,  this->ci).c_str());
 
-            auto full_source_loc = FullSourceLoc(wrapped_class.decl->getLocation(), source_manager);
+            auto full_source_loc = FullSourceLoc(wrapped_class.decl->getLocation(), this->source_manager);
 
             auto file_id = full_source_loc.getFileID();
 
 //            fprintf(stderr,"%sClass/struct: %s\n", indentation.c_str(), class_name.c_str());
             // don't do the following code for inherited classes
             if (top_level) {
-                top_level_class->include_files.insert(get_include_string_for_fileid(source_manager, file_id));
+                top_level_class->include_files.insert(get_include_string_for_fileid(this->ci, file_id));
             }
 
 //            fprintf(stderr,"%s Decl at line %d, file id: %d %s\n", indentation.c_str(), full_source_loc.getExpansionLineNumber(),
-//                   full_source_loc.getFileID().getHashValue(), source_manager.getBufferName(full_source_loc));
+//                   full_source_loc.getFileID().getHashValue(), this->ci.getBufferName(full_source_loc));
 
 //                auto type_decl = dyn_cast<TypeDecl>(klass);
 //                assert(type_decl);
@@ -2318,7 +2384,7 @@ namespace {
                 //  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
 
                 cerr << "getting base type wrapped class object" << endl;
-                WrappedClass &current_base = get_or_insert_wrapped_class(base_record_decl, source_manager,
+                WrappedClass &current_base = get_or_insert_wrapped_class(base_record_decl, this->ci,
                                                                          FOUND_BASE_CLASS);
 
                 // if the base type hasn't been independently processed, do that right now
@@ -2331,8 +2397,8 @@ namespace {
                     top_level_class = top_level_class_backup;
                 }
 
-                auto current_base_include = get_include_for_type_decl(source_manager, current_base.decl);
-                auto current_include = get_include_for_type_decl(source_manager, wrapped_class.decl);
+                auto current_base_include = get_include_for_type_decl(this->ci, current_base.decl);
+                auto current_include = get_include_for_type_decl(this->ci, wrapped_class.decl);
                 //                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
 
                 wrapped_class.include_files.insert(current_base_include);
@@ -2374,12 +2440,12 @@ namespace {
 
                     foreach_constructor(wrapped_class.decl, [&](auto constructor) {
 
-//                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), source_manager);
+//                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), this->ci);
 //                        fprintf(stderr,"%s %s constructor Decl at line %d, file id: %d %s\n", indentation.c_str(),
 //                                top_level_class_decl->getName().str().c_str(),
 //                                full_source_loc.getExpansionLineNumber(),
 //                                full_source_loc.getFileID().getHashValue(),
-//                                source_manager.getBufferName(full_source_loc));
+//                                this->ci.getBufferName(full_source_loc));
 
 
                         if (constructor->isCopyConstructor()) {
@@ -2414,7 +2480,7 @@ namespace {
 
                             top_level_class->constructors.insert(
                                 fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                            indentation, get_method_parameters(source_manager,
+                                            indentation, get_method_parameters(this->ci,
                                                                                *top_level_class,
                                                                                constructor), constructor_name));
                         }
@@ -2424,8 +2490,13 @@ namespace {
                 // if there's no constructor but there is a static method, then add the special command to expose
                 //   the static methods
                 if (top_level_class->constructors.empty() && top_level_class->has_static_method) {
+                    std::string static_name = wrapped_class.name_alias;
+                    auto static_name_annotation = top_level_class->annotations.get_regex(V8TOOLKIT_EXPOSE_STATIC_METHODS_AS_PREFIX "(.*)");
+                    if (!static_name_annotation.empty()) {
+                        static_name = static_name_annotation[0];
+                    }
                     top_level_class->constructors.insert(
-                        fmt::format("{}  class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, wrapped_class.name_alias)
+                        fmt::format("{}  class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, static_name)
                     );
                 }
             } // if top level
@@ -2434,92 +2505,92 @@ namespace {
 
 
 
-	
+
 
         /**
          * This runs per-match from MyASTConsumer, but always on the same ClassHandler object
          */
         virtual void run(const MatchFinder::MatchResult &Result) override {
 
-	    matched_classes_returned++;
+            matched_classes_returned++;
 
-	    if (matched_classes_returned % 10000 == 0) {
-		cerr << endl << "### MATCHER RESULT " << matched_classes_returned << " ###" << endl;
-	    }
-	    
-            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
-		auto class_name = get_canonical_name_for_decl(klass);
-		
-		if (klass->isDependentType()) {
-		    cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
-		    return;
-		}
-
-		auto name = get_canonical_name_for_decl(klass);
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
-		    return;
-		}
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
-		    return;
-		}
-
-		cerr << endl << "Got class definition: " << class_name << endl;
-		fprintf(stderr, "decl ptr: %p\n", (void *)klass);
-		
-		
-		if (!is_good_record_decl(klass)) {
-		    cerr << "SKIPPING BAD RECORD DECL" << endl;
-		}
-
-		cerr << "Storing it for later processing (unless dupe)" << endl;
-
-
-		
-		add_definition(get_or_insert_wrapped_class(klass, source_manager, FOUND_UNSPECIFIED));
+            if (matched_classes_returned % 10000 == 0) {
+                cerr << endl << "### MATCHER RESULT " << matched_classes_returned << " ###" << endl;
             }
 
-	    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("forward declaration with annotation")) {
-		auto class_name = get_canonical_name_for_decl(klass);
-		cerr << endl << "Got forward declaration with annotation: " << class_name << endl;
-		fprintf(stderr, "decl ptr: %p\n", (void *)klass);
+            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
+                auto class_name = get_canonical_name_for_decl(klass);
 
-		cerr << get_include_for_type_decl(source_manager, klass) << endl;
+                if (klass->isDependentType()) {
+                    cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
+                    return;
+                }
 
-		print_specialization_info(klass);
+                auto name = get_canonical_name_for_decl(klass);
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+                    return;
+                }
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+                    return;
+                }
 
-		print_vector(Annotations(klass).get(), "annotations directly on forward declaration");
-
-		/*
-		if (klass->getTemplateInstantiationPattern()) {
-		    auto pattern = klass->getTemplateInstantiationPattern();
-		    fprintf(stderr, "pattern decl ptr: %p, %s\n", (void *)pattern, get_canonical_name_for_decl(pattern).c_str());
-		    
-		} else {
-		    fprintf(stderr, "no instantiation pattern on this type\n");
-		}
+                cerr << endl << "Got class definition: " << class_name << endl;
+                fprintf(stderr, "decl ptr: %p\n", (void *)klass);
 
 
-		if (auto tmpl = klass->getDescribedClassTemplate()) {
-		    fprintf(stderr, "Described class template ptr: %p, %s\n", (void *)tmpl, tmpl->getQualifiedNameAsString().c_str());
-		} else {
-		    cerr << "no described class template" << endl;
-		}
-		
-		cerr << "forward declaration annotations" << endl;
-		cerr << join(Annotations(klass).get()) << endl;
+                if (!is_good_record_decl(klass)) {
+                    cerr << "SKIPPING BAD RECORD DECL" << endl;
+                }
 
-		*/
+                cerr << "Storing it for later processing (unless dupe)" << endl;
 
-		/* check to see if this has any annotations we should associate with its associated template */
-		auto described_tmpl = klass->getDescribedClassTemplate();
-		if (klass->isDependentType() && described_tmpl) {
-		    fprintf(stderr, "described template %p, %s\n", (void *)described_tmpl, described_tmpl->getQualifiedNameAsString().c_str());
-		    printf("Merging %d annotations with template %p\n", (int)Annotations(klass).get().size(), (void*)described_tmpl);
-		    annotations_for_class_templates[described_tmpl].merge(Annotations(klass));
-		}
+
+
+                add_definition(get_or_insert_wrapped_class(klass, this->ci, FOUND_UNSPECIFIED));
+            }
+
+            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("forward declaration with annotation")) {
+                auto class_name = get_canonical_name_for_decl(klass);
+                cerr << endl << "Got forward declaration with annotation: " << class_name << endl;
+                fprintf(stderr, "decl ptr: %p\n", (void *)klass);
+
+                cerr << get_include_for_type_decl(this->ci, klass) << endl;
+
+                print_specialization_info(klass);
+
+                print_vector(Annotations(klass).get(), "annotations directly on forward declaration");
+
+                /*
+                if (klass->getTemplateInstantiationPattern()) {
+                    auto pattern = klass->getTemplateInstantiationPattern();
+                    fprintf(stderr, "pattern decl ptr: %p, %s\n", (void *)pattern, get_canonical_name_for_decl(pattern).c_str());
+
+                } else {
+                    fprintf(stderr, "no instantiation pattern on this type\n");
+                }
+
+
+                if (auto tmpl = klass->getDescribedClassTemplate()) {
+                    fprintf(stderr, "Described class template ptr: %p, %s\n", (void *)tmpl, tmpl->getQualifiedNameAsString().c_str());
+                } else {
+                    cerr << "no described class template" << endl;
+                }
+
+                cerr << "forward declaration annotations" << endl;
+                cerr << join(Annotations(klass).get()) << endl;
+
+                */
+
+                /* check to see if this has any annotations we should associate with its associated template */
+                auto described_tmpl = klass->getDescribedClassTemplate();
+                if (klass->isDependentType() && described_tmpl) {
+                    fprintf(stderr, "described template %p, %s\n", (void *)described_tmpl, described_tmpl->getQualifiedNameAsString().c_str());
+                    printf("Merging %d annotations with template %p\n", (int)Annotations(klass).get().size(), (void*)described_tmpl);
+                    annotations_for_class_templates[described_tmpl].merge(Annotations(klass));
+                }
 
 #if 0
-		// if theres no definition, it's possible the class only has specializations, so just skip this
+                // if theres no definition, it's possible the class only has specializations, so just skip this
                 if (!klass->hasDefinition()) {
 		    return;
                     //llvm::report_fatal_error(fmt::format("Class {} only has a forward declaration, no definition anywhere", class_name).c_str());
@@ -2530,7 +2601,7 @@ namespace {
                 klass = klass->getDefinition();
 
 
-		auto & wrapped_class = get_or_insert_wrapped_class(klass, source_manager, FOUND_ANNOTATION);
+		auto & wrapped_class = get_or_insert_wrapped_class(klass, this->ci, FOUND_ANNOTATION);
 
 		cerr << "class annotations" << endl;
 		cerr << join(wrapped_class.annotations.get()) << endl;
@@ -2565,86 +2636,86 @@ namespace {
 #endif
 
             }
-	    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
-		cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass) << endl;
-		if (!is_good_record_decl(klass)) {
-		    cerr << "skipping 'bad' record decl" << endl;
-		    return;
-		}
-		if (klass->isDependentType()) {
-		    cerr << "skipping dependent type" << endl;
-		    return;
-		}
+            if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
+                cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass) << endl;
+                if (!is_good_record_decl(klass)) {
+                    cerr << "skipping 'bad' record decl" << endl;
+                    return;
+                }
+                if (klass->isDependentType()) {
+                    cerr << "skipping dependent type" << endl;
+                    return;
+                }
 
-		auto name = get_canonical_name_for_decl(klass);
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
-		    return;
-		}
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
-		    return;
-		}
-
-		
-		if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
-		    cerr << "Skipping class because it's explicitly marked SKIP" << endl;
-		    return;
-		}
-
-		
-		print_specialization_info(klass);
+                auto name = get_canonical_name_for_decl(klass);
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+                    return;
+                }
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+                    return;
+                }
 
 
-		if (!is_good_record_decl(klass)) {
-		    cerr << "SKIPPING BAD RECORD DECL" << endl;
-		}
-		
-		cerr << "Storing it for later processing (unless dupe)" << endl;
-		add_definition(get_or_insert_wrapped_class(klass, source_manager, FOUND_INHERITANCE));
+                if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
+                    cerr << "Skipping class because it's explicitly marked SKIP" << endl;
+                    return;
+                }
+
+
+                print_specialization_info(klass);
+
+
+                if (!is_good_record_decl(klass)) {
+                    cerr << "SKIPPING BAD RECORD DECL" << endl;
+                }
+
+                cerr << "Storing it for later processing (unless dupe)" << endl;
+                add_definition(get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE));
             }
 
-	    // only pick off the typedefNameDecl entries, but in 3.8, typedefNameDecl() matcher isn't available
-	    if (auto typedef_decl = Result.Nodes.getNodeAs<clang::TypedefNameDecl>("named decl")) {
-		auto qual_type = typedef_decl->getUnderlyingType();
-		auto record_decl = qual_type->getAsCXXRecordDecl();
+            // only pick off the typedefNameDecl entries, but in 3.8, typedefNameDecl() matcher isn't available
+            if (auto typedef_decl = Result.Nodes.getNodeAs<clang::TypedefNameDecl>("named decl")) {
+                auto qual_type = typedef_decl->getUnderlyingType();
+                auto record_decl = qual_type->getAsCXXRecordDecl();
 
-		// not interesting - it's for something like a primitive type like 'long'
-		if (!record_decl) {
-		    return;
-		}
-		auto name = get_canonical_name_for_decl(record_decl);
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
-		    return;
-		}
-		if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
-		    return;
-		}
-
-		
-		cerr << endl << "^^^^^^^^^********* GOT TYPEDEF MATCHED" << endl;
-		cerr << "qualified name: " << typedef_decl->getQualifiedNameAsString() << endl;
-		fprintf(stderr, "record decl ptr: %p\n", (void *)record_decl);
-		cerr << "include file: " << get_include_for_type_decl(source_manager, typedef_decl) << endl;
-		cerr << "Annotations: " << join(Annotations(typedef_decl).get()) << endl;
-		
-		cerr << "Using type: " << get_type_string(qual_type) << endl;
-		
-		cerr << "Canonical name for type being used: " << name << endl;
-		
-		print_specialization_info(record_decl);
-		
-		annotations_for_record_decls[record_decl].merge(Annotations(typedef_decl));
+                // not interesting - it's for something like a primitive type like 'long'
+                if (!record_decl) {
+                    return;
+                }
+                auto name = get_canonical_name_for_decl(record_decl);
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+                    return;
+                }
+                if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+                    return;
+                }
 
 
-		if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
-		    fprintf(stderr, "Setting alias for %p to %s\n", (void *)record_decl, typedef_decl->getNameAsString().c_str());
-		    names_for_record_decls[record_decl] = typedef_decl->getNameAsString();
-		}
+                cerr << endl << "^^^^^^^^^********* GOT TYPEDEF MATCHED" << endl;
+                cerr << "qualified name: " << typedef_decl->getQualifiedNameAsString() << endl;
+                fprintf(stderr, "record decl ptr: %p\n", (void *)record_decl);
+                cerr << "include file: " << get_include_for_type_decl(this->ci, typedef_decl) << endl;
+                cerr << "Annotations: " << join(Annotations(typedef_decl).get()) << endl;
 
-	    }
+                cerr << "Using type: " << get_type_string(qual_type) << endl;
+
+                cerr << "Canonical name for type being used: " << name << endl;
+
+                print_specialization_info(record_decl);
+
+                annotations_for_record_decls[record_decl].merge(Annotations(typedef_decl));
+
+
+                if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
+                    fprintf(stderr, "Setting alias for %p to %s\n", (void *)record_decl, typedef_decl->getNameAsString().c_str());
+                    names_for_record_decls[record_decl] = typedef_decl->getNameAsString();
+                }
+
+            }
 
 #ifdef TEMPLATE_INFO_ONLY
 
-	    if (const ClassTemplateSpecializationDecl * klass = Result.Nodes.getNodeAs<clang::ClassTemplateSpecializationDecl>("class")) {
+            if (const ClassTemplateSpecializationDecl * klass = Result.Nodes.getNodeAs<clang::ClassTemplateSpecializationDecl>("class")) {
 		auto class_name = get_canonical_name_for_decl(klass);
 
 		bool print_logging = false;
@@ -2750,7 +2821,7 @@ namespace {
     };
 
 
-    
+
 
 
 
@@ -2763,44 +2834,44 @@ namespace {
     class MyASTConsumer : public ASTConsumer {
     public:
         MyASTConsumer(CompilerInstance &CI) :
-                HandlerForClass(CI) {
+            HandlerForClass(CI) {
 
 #ifdef TEMPLATE_INFO_ONLY
-	    
-	    Matcher.addMatcher(decl(anyOf(
+
+            Matcher.addMatcher(decl(anyOf(
 					  classTemplateSpecializationDecl().bind("class"),
 					  cxxMethodDecl().bind("method")
 					  )),
 			       &HandlerForClass);
-	    
+
 #else
-	    Matcher.addMatcher(cxxRecordDecl(
+            Matcher.addMatcher(cxxRecordDecl(
                 allOf(
-		      unless(isDerivedFrom("::v8toolkit::JSWrapper")), // JS-Classes will be completely regenerated
+                    unless(isDerivedFrom("::v8toolkit::JSWrapper")), // JS-Classes will be completely regenerated
                     anyOf(isStruct(), isClass()),
                     anyOf( // order of these matters.   If a class matches more than one it will only be returned as the first
-			  
-			  allOf(isDefinition(),
-				cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
-			  
-			  // mark a type you control with the wrapped class attribute
-			  allOf(isDefinition(),
-				unless(matchesName("^::std::")),
-				cxxRecordDecl(/*hasAttr(attr::Annotate)*/).bind("not std:: class")),
-			  
-			  // used for marking types not under your control with the wrapped class attribute
-			  allOf(unless(isDefinition()),
-				unless(matchesName("^::std::")),
-				cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
+
+                        allOf(isDefinition(),
+                              cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
+
+                        // mark a type you control with the wrapped class attribute
+                        allOf(isDefinition(),
+                              unless(matchesName("^::std::")),
+                              cxxRecordDecl(/*hasAttr(attr::Annotate)*/).bind("not std:: class")),
+
+                        // used for marking types not under your control with the wrapped class attribute
+                        allOf(unless(isDefinition()),
+                              unless(matchesName("^::std::")),
+                              cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
                     )
                 )), &HandlerForClass);
 
-			  Matcher.addMatcher(namedDecl(allOf(
-							     hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
-							      unless(matchesName("^::std::")),
- 			                                      unless(matchesName("^::__")
-			   ))).bind("named decl"),
-			  &HandlerForClass);
+            Matcher.addMatcher(namedDecl(allOf(
+                hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
+                unless(matchesName("^::std::")),
+                unless(matchesName("^::__")
+                ))).bind("named decl"),
+                               &HandlerForClass);
 #endif
 
         }
@@ -2823,7 +2894,7 @@ namespace {
     // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
     class PrintFunctionNamesAction : public PluginASTAction {
     public:
-	
+
         // open up output files
         PrintFunctionNamesAction() {
 
@@ -2834,7 +2905,7 @@ namespace {
 
 
 #ifdef TEMPLATE_INFO_ONLY
-	    {
+            {
 		cerr << fmt::format("Class template instantiations") << endl;
 		vector<pair<string, int>> insts;
 		for (auto & class_template : class_templates) {
@@ -2885,30 +2956,43 @@ namespace {
 #endif
 
 
-
-	    if (!errors.empty()) {
-		cerr << "Errors detected:" << endl;
-		for(auto & error : errors) {
-		    cerr << error << endl;
-		}
-		llvm::report_fatal_error("Errors detected in source data");
-		exit(1);
+	    for (auto & warning : warnings) {
+		cerr << warning << endl;
 	    }
+
+	    
+
+            if (!errors.empty()) {
+                cerr << "Errors detected:" << endl;
+                for(auto & error : errors) {
+                    cerr << error << endl;
+                }
+                llvm::report_fatal_error("Errors detected in source data");
+                exit(1);
+            }
 
             // Write class wrapper data to a file
             int file_count = 1;
 
-	    // start at one so they are never considered "empty"
+            // start at one so they are never considered "empty"
             int declaration_count_this_file = 1;
             vector<WrappedClass*> classes_for_this_file;
 
             set<WrappedClass *> already_wrapped_classes;
 
-	    vector<vector<WrappedClass *>> classes_per_file;
+            vector<vector<WrappedClass *>> classes_per_file;
+
+            ofstream js_stub;
+
+            js_stub.open("apb-api.js", ios::out);
+            if (!js_stub) {
+                throw std::exception();
+            }
 
 
-	    cerr << fmt::format("About to start writing out wrapped classes with {} potential classes", wrapped_classes.size()) << endl;
-	    
+
+            cerr << fmt::format("About to start writing out wrapped classes with {} potential classes", wrapped_classes.size()) << endl;
+
             bool found_match = true;
             while (found_match) {
                 found_match = false;
@@ -2919,16 +3003,16 @@ namespace {
 
                     WrappedClass &wrapped_class = **wrapped_class_iterator;
 
-		    if (!wrapped_class.valid) {
-			//			cerr << "Skipping 'invalid' class: " << wrapped_class.class_name << endl;
-			continue;
-		    }
-		    
-		    cerr << fmt::format("considering dumping class: {}", wrapped_class.class_name) << endl;
+                    if (!wrapped_class.valid) {
+                        //			cerr << "Skipping 'invalid' class: " << wrapped_class.class_name << endl;
+                        continue;
+                    }
+
+                    cerr << fmt::format("considering dumping class: {}", wrapped_class.class_name) << endl;
 
                     // if it has unmet dependencies or has already been mapped, skip it
                     if (!wrapped_class.ready_for_wrapping(already_wrapped_classes)) {
-			printf("Skipping %s\n", wrapped_class.class_name.c_str());
+                        printf("Skipping %s\n", wrapped_class.class_name.c_str());
                         continue;
                     }
                     already_wrapped_classes.insert(&wrapped_class);
@@ -2943,7 +3027,7 @@ namespace {
                     if (!space_available) {
                         //printf("Actually writing file to disk\n");
                         //write_classes(file_count, classes_for_this_file, last_class);
-			classes_per_file.emplace_back(classes_for_this_file);
+                        classes_per_file.emplace_back(classes_for_this_file);
 
                         // reset for next file
                         classes_for_this_file.clear();
@@ -2952,60 +3036,65 @@ namespace {
                     }
 
                     classes_for_this_file.push_back(&wrapped_class);
-		    wrapped_class.dumped = true;
+                    js_stub << wrapped_class.generate_js_stub();
+                    wrapped_class.dumped = true;
                     declaration_count_this_file += wrapped_class.declaration_count;
                 }
             }
 
-	    // if the last file set isn't empty, add that, too
-	    if (!classes_for_this_file.empty()) {
-		classes_per_file.emplace_back(classes_for_this_file);
-	    }
 
-            if (already_wrapped_classes.size() != wrapped_classes.size()) {
-		cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
-				 already_wrapped_classes.size(), wrapped_classes.size()) << endl;
+            js_stub.close();
+
+
+            // if the last file set isn't empty, add that, too
+            if (!classes_for_this_file.empty()) {
+                classes_per_file.emplace_back(classes_for_this_file);
             }
 
-	    int total_file_count = classes_per_file.size();
-	    for (int i = 0; i < total_file_count; i++) {
-		write_classes(i + 1, classes_per_file[i], i == total_file_count - 1);
-	    }
-	    
+            if (already_wrapped_classes.size() != wrapped_classes.size()) {
+                cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
+                                    already_wrapped_classes.size(), wrapped_classes.size()) << endl;
+            }
 
-	    if (generate_v8classwrapper_sfinae) {
-		string sfinae_filename = fmt::format("v8toolkit_generated_v8classwrapper_sfinae.h", file_count);
-		ofstream sfinae_file;
-		
-		sfinae_file.open(sfinae_filename, ios::out);
-		if (!sfinae_file) {
-		    llvm::report_fatal_error(fmt::format( "Couldn't open {}", sfinae_filename).c_str());
-		}
+            int total_file_count = classes_per_file.size();
+            for (int i = 0; i < total_file_count; i++) {
+                write_classes(i + 1, classes_per_file[i], i == total_file_count - 1);
+            }
 
-		sfinae_file << "#pragma once\n\n";
-		
-		sfinae_file << get_sfinae_matching_wrapped_classes(wrapped_classes) << std::endl;
-		sfinae_file.close();
-	    }
+
+            if (generate_v8classwrapper_sfinae) {
+                string sfinae_filename = fmt::format("v8toolkit_generated_v8classwrapper_sfinae.h", file_count);
+                ofstream sfinae_file;
+
+                sfinae_file.open(sfinae_filename, ios::out);
+                if (!sfinae_file) {
+                    llvm::report_fatal_error(fmt::format( "Couldn't open {}", sfinae_filename).c_str());
+                }
+
+                sfinae_file << "#pragma once\n\n";
+
+                sfinae_file << get_sfinae_matching_wrapped_classes(wrapped_classes) << std::endl;
+                sfinae_file.close();
+            }
 
             if (print_logging) cerr << "Wrapped " << classes_wrapped << " classes with " << methods_wrapped << " methods" << endl;
-	    cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
+            cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
 
-	    cerr << "Classes used that were not wrapped" << endl;
+            cerr << "Classes used that were not wrapped" << endl;
 
 
 
-	    
-	    for ( auto & wrapped_class : wrapped_classes) {
-		if (!wrapped_class->dumped) { continue; }
-		for (auto used_class : wrapped_class->used_classes) {
-		    if (!used_class->dumped) {
-			cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->name_alias, used_class->name_alias) << endl;
-		    }
-		}
-		
-	    }
-	    
+
+            for ( auto & wrapped_class : wrapped_classes) {
+                if (!wrapped_class->dumped) { continue; }
+                for (auto used_class : wrapped_class->used_classes) {
+                    if (!used_class->dumped) {
+                        cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->name_alias, used_class->name_alias) << endl;
+                    }
+                }
+
+            }
+
         }
 
         // takes a file number starting at 1 and incrementing 1 each time
@@ -3013,7 +3102,7 @@ namespace {
         // and whether or not this is the last file to be written
         void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_one) {
 
-	    cerr << fmt::format("writing classes, file_count: {}, classes.size: {}, last_one: {}", file_count, classes.size(), last_one) << endl;
+            cerr << fmt::format("writing classes, file_count: {}, classes.size: {}, last_one: {}", file_count, classes.size(), last_one) << endl;
             // Open file
             string class_wrapper_filename = fmt::format("v8toolkit_generated_class_wrapper_{}.cpp", file_count);
             ofstream class_wrapper_file;
@@ -3024,47 +3113,47 @@ namespace {
                 throw std::exception();
             }
 
-	    // by putting in some "fake" includes, it will stop these from ever being put in since it will
-	    //   think they already are, even though they really aren't
+            // by putting in some "fake" includes, it will stop these from ever being put in since it will
+            //   think they already are, even though they really aren't
             set<string> already_included_this_file;
-	    already_included_this_file.insert(never_include_for_any_file.begin(), never_include_for_any_file.end());
+            already_included_this_file.insert(never_include_for_any_file.begin(), never_include_for_any_file.end());
 
-	    class_wrapper_file << header_for_every_class_wrapper_file << "\n";
-	    
-	    // first the ones that go in every file regardless of its contents
-	    for (auto & include : includes_for_every_class_wrapper_file) {
-		class_wrapper_file << fmt::format("#include {}\n", include);
-		already_included_this_file.insert(include);
-	    }
+            class_wrapper_file << header_for_every_class_wrapper_file << "\n";
+
+            // first the ones that go in every file regardless of its contents
+            for (auto & include : includes_for_every_class_wrapper_file) {
+                class_wrapper_file << fmt::format("#include {}\n", include);
+                already_included_this_file.insert(include);
+            }
 
 
-	    std::set<WrappedClass *> extern_templates;
-	    
+            std::set<WrappedClass *> extern_templates;
+
             for (WrappedClass * wrapped_class : classes) {
 
-		for (auto derived_type : wrapped_class->derived_types) {
-		    extern_templates.insert(derived_type);
-		}
+                for (auto derived_type : wrapped_class->derived_types) {
+                    extern_templates.insert(derived_type);
+                }
 
-		for (auto used_class : wrapped_class->used_classes) {
-		    if (used_class->should_be_wrapped()) {
-			extern_templates.insert(used_class);
-		    }
-		}
+                for (auto used_class : wrapped_class->used_classes) {
+                    if (used_class->should_be_wrapped()) {
+                        extern_templates.insert(used_class);
+                    }
+                }
 
-		
-		if (print_logging) cerr << "Dumping " << wrapped_class->class_name << " to file " << class_wrapper_filename << endl;
-				    
-		//                printf("While dumping classes to file, %s has includes: ", wrapped_class->class_name.c_str());
+
+                if (print_logging) cerr << "Dumping " << wrapped_class->class_name << " to file " << class_wrapper_filename << endl;
+
+                //                printf("While dumping classes to file, %s has includes: ", wrapped_class->class_name.c_str());
 
                 // Combine the includes needed for types in members/methods with the includes for the wrapped class's
                 //   derived types
                 auto include_files = wrapped_class->include_files;
                 auto base_type_includes = wrapped_class->get_derived_type_includes();
                 include_files.insert(base_type_includes.begin(), base_type_includes.end());
-		
+
                 for(auto & include_file : include_files) {
-		    //  printf("%s ", include_file.c_str());
+                    //  printf("%s ", include_file.c_str());
                     if (include_file != "" && already_included_this_file.count(include_file) == 0) {
 
                         // skip "internal looking" includes - look at 1 because 0 is < or "
@@ -3075,33 +3164,33 @@ namespace {
                         already_included_this_file.insert(include_file);
                     }
                 }
-		//                printf("\n");
+                //                printf("\n");
             }
 
-	    // remove any types that are wrapped in this file since it will be explicitly instantiated here
-	    for (auto wrapped_class : classes) {
+            // remove any types that are wrapped in this file since it will be explicitly instantiated here
+            for (auto wrapped_class : classes) {
 
-			// DO NOT EXPLICITLY INSTANTIATE THE WRAPPED TYPE
+                // DO NOT EXPLICITLY INSTANTIATE THE WRAPPED TYPE
 //		if (wrapped_class->is_template_specialization()) {
 //		    class_wrapper_file << "template " << wrapped_class->class_name << ";" << endl;
 //		}
-		class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
-		// if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
-		extern_templates.erase(wrapped_class);
-	    }
-	    
-	    for (auto extern_template : extern_templates) {
-		if (extern_template->is_template_specialization()) {
-		    class_wrapper_file << "extern template " << extern_template->class_name << ";\n";
-		}
-		class_wrapper_file << fmt::format("extern template class v8toolkit::V8ClassWrapper<{}>;\n", extern_template->class_name);
-	    }
+                class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
+                // if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
+                extern_templates.erase(wrapped_class);
+            }
+
+            for (auto extern_template : extern_templates) {
+                if (extern_template->is_template_specialization()) {
+                    class_wrapper_file << "extern template " << extern_template->class_name << ";\n";
+                }
+                class_wrapper_file << fmt::format("extern template class v8toolkit::V8ClassWrapper<{}>;\n", extern_template->class_name);
+            }
 
 
-	    
+
             // Write function header
             class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist -- that's ok\n", file_count+1);
-	    
+
 
             if (file_count == 1) {
                 class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
@@ -3115,7 +3204,7 @@ namespace {
 
             // Print function body
             for (auto wrapped_class : classes) {
-		// each file is responsible for making explicit instantiatinos of its own types
+                // each file is responsible for making explicit instantiatinos of its own types
                 class_wrapper_file << wrapped_class->get_wrapper_string();
             }
 
@@ -3167,9 +3256,9 @@ namespace {
         void PrintHelp(llvm::raw_ostream &ros) {
             ros << "Help for PrintFunctionNames plugin goes here\n";
         }
-	
+
     };
 }
 
 static FrontendPluginRegistry::Add<PrintFunctionNamesAction>
-        X("v8toolkit-generate-bindings", "generate v8toolkit bindings");
+    X("v8toolkit-generate-bindings", "generate v8toolkit bindings");

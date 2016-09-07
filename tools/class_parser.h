@@ -65,9 +65,14 @@
 #define V8TOOLKIT_CONSTRUCTOR(name) \
     __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX #name)))
 
-//#define V8TOOLKIT_USE_NAME_PREFIX "v8toolkit_use_name_"
-//#define V8TOOLKIT_USE_NAME(name) \
-//    __attribute__((annotate(V8TOOLKIT_USE_NAME_REFIX #name)))
+
+/**
+ * Use this to create a JavaScript constructor function with the specified name
+ */
+#define V8TOOLKIT_EXPOSE_STATIC_METHODS_AS_PREFIX "v8toolkit_expose_static_methods_as_"
+#define V8TOOLKIT_EXPOSE_STATIC_METHODS_AS(name) \
+    __attribute__((annotate(V8TOOLKIT_EXPOSE_STATIC_METHODS_AS_PREFIX #name)))
+
 
 /**
  * For classes with multiple inheritance, allows you to specify type(s) not to use.
