@@ -794,7 +794,7 @@ namespace {
 		    if (parameter_name == "") {
 			data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
 						 this->name_alias, method_decl->getNameAsString(), i));
-			parameter_name = fmt::format("unspecified-position-{}", parameters.size());
+			parameter_name = fmt::format("unspecified_position_{}", parameters.size());
 		    }
 		    this_param.name = parameter_name;
 		    auto type = get_plain_type(param_decl->getType());

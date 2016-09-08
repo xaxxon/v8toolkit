@@ -37,6 +37,9 @@ The plugin only works with clang, but the goal is for the generated code to work
 
 Check out the "tools" directory.   It will require some customization to get working, but it's really neat!
 
+Edit: now the clang plugin also uses doxygen docs in your c++ code to generate a stubbed out javascript 'library' with jsdoc, suitable
+for use with editors that can use that information for autocompletion, such as JetBrains IDEs such as CLion and WebStorm.
+
 ## Tutorial for using this library
 
 #### Install git
