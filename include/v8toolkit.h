@@ -961,6 +961,7 @@ void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8
 /**
 * Takes a local and creates a weak global reference callback for it
 * Useful for clearing out C++-allocated memory on javascript garbage collection of an associated javascript object
+ * Remember, this is not guaranteed to ever be called
 */
 template<class CALLBACK_FUNCTION>
 void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
@@ -975,13 +976,15 @@ void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javasc
     };
 
     auto callback_data = new SetWeakCallbackData(function, isolate, javascript_object);
+
+    // set the callback on the javascript_object to be called when it's garbage collected
     callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
-        [](const v8::WeakCallbackData<v8::Object, SetWeakCallbackData> & data){
+        [](const v8::WeakCallbackInfo<SetWeakCallbackData> & data) {
             SetWeakCallbackData * callback_data = data.GetParameter();
             callback_data->function();
             callback_data->global.Reset();
             delete callback_data;
-        });
+        }, v8::WeakCallbackType::kParameter);
 }
 
 

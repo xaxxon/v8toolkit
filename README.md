@@ -121,14 +121,12 @@ on how to do that: https://gist.github.com/jimporter/10442880
 
 git clone v8toolkit:  git clone https://github.com/xaxxon/v8toolkit.git 
 
-go into the v8toolkit directory
+Create a build directory (anywhere, but I prefer inside the directory v8toolkit was cloned into) and type:
+`cmake /path/to/v8toolkit`
 
-edit the Makefile so that V8_DIR=\<PATH_TO_V8_BASE_DIRECTORY> (under LINUX if compiling on Linux or in the `else` section if compiling on OS X)
+and then type: `make`
 
-To build the libray, on OS X, type `make tests`, on Linux, type `make tests LINUX=1`
-
-The library and some sample programs should build.   To confirm everything is working, `make run` will run the sample programs.
-
+You may need to customize the v8 header and v8 library directory locations
 
 
 #### Your First V8 program
