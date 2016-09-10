@@ -296,14 +296,16 @@ template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
     std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	HANDLE_FUNCTION_VALUES;
-        // if T is a user-defined type
+
+	// if it's an object, use the memory in the object
         if (value->IsObject()) {
             auto object = value->ToObject();
             if (object->InternalFieldCount() == 1) {
                 auto && result = CastToNative<T>()(isolate, value);
-                std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
+                return std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
             }
         }
+	// otherwise, make a new instance of the type to store in the unique ptr
         return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
     }
 };
@@ -317,7 +319,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
             auto object = value->ToObject();
             if (object->InternalFieldCount() == 1) {
                 auto && result = CastToNative<T>()(isolate, value);
-                std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
+                return std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
             }
         }
         throw CastException(fmt::format("Cannot make unique ptr for type {}  that is not wrapped and not copy constructible", demangle<T>()));
