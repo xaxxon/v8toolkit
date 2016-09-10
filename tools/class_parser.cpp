@@ -825,13 +825,22 @@ namespace {
 			    if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
 				cerr << "Is ParamCommandComment" << endl;
 				auto command_param_name = param_command->getParamName(comment).str();
-				if (param_command->hasParamName() && std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;}) != parameters.end()) {
-				    auto & param_info = *std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){return command_param_name == param.name;});
+
+				auto matching_param_iterator =
+				    std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){
+					    return command_param_name == param.name;
+					});
+				
+				if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
+				    
+				    auto & param_info = *matching_param_iterator;
 				    if (param_command->getParagraph() != nullptr) {
 					cerr << "**3" << endl;
 					param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
 											     param_command->getParagraph()->getSourceRange());
 				    }
+				} else {
+				    data_warning(fmt::format("method parameter comment name doesn't match any parameter {}", command_param_name));
 				}
 			    } else {
 				cerr << "is not param command comment" << endl;
