@@ -63,7 +63,7 @@ template<> \
 }; \
  inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
     HANDLE_FUNCTION_VALUES;
-
+    
 
 
 #define CAST_TO_JS_TEMPLATED(TYPE, TEMPLATE) \
@@ -154,9 +154,8 @@ struct CastToNative<std::function<Return(Params...)>> {
 
 
 
-    template<class FirstT, class SecondT>
- struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
-    std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+    template<template<class,class> class ContainerTemplate, class SecondT, class FirstT>
+    ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
         HANDLE_FUNCTION_VALUES;
         if (value->IsArray()) {
             auto length = get_array_length(isolate, value);
@@ -177,8 +176,12 @@ struct CastToNative<std::function<Return(Params...)>> {
             std::cout << error << std::endl;
             throw v8toolkit::CastException(error);
         }
+    }
 
-
+template<class FirstT, class SecondT>
+struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
+    std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
     }
 };
 
@@ -222,7 +225,9 @@ struct CastToNative<v8::Local<v8::Function>> {
         if(value->IsFunction()) {
             return v8::Local<v8::Function>::Cast(value);
         } else {
-	    throw CastException(fmt::format("CastToNative<v8::Local<v8::Function>> requires a javascript function but instead got '{}'", stringify_value(isolate, value)));
+            throw CastException(fmt::format(
+                    "CastToNative<v8::Local<v8::Function>> requires a javascript function but instead got '{}'",
+                    stringify_value(isolate, value)));
         }
     }
 };
@@ -249,6 +254,7 @@ struct CastToNative<const char *> {
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string)
     return std::string(*v8::String::Utf8Value(value));
 }
+
 
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
@@ -326,35 +332,56 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
     }
 };
 
+template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
+ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
+    //    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+    if (!value->IsObject()) {
+        throw CastException(
+                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+                            stringify_value(isolate, value)));
+    }
 
+    auto context = isolate->GetCurrentContext();
+
+    ContainerTemplate<Key, Value, Rest...> results;
+    for_each_own_property(context, value->ToObject(),
+                          [isolate, &results](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
+                              results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
+                                              v8toolkit::CastToNative<Value>()(isolate, value));
+                          });
+    return results;
+}
 
 template<class Key, class Value, class... Args>
 struct CastToNative<std::map<Key, Value, Args...>> {
-
-    using ResultType = std::map<Key, Value, Args...>;
-
-    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-
-
-        //    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        if (!value->IsObject()) {
-            throw CastException(
-                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
-                            stringify_value(isolate, value)));
-        }
-
-        auto context = isolate->GetCurrentContext();
-
-        ResultType results;
-        for_each_own_property(context, value->ToObject(),
-                              [isolate, &results](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
-                                  results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
-                                                  v8toolkit::CastToNative<Value>()(isolate, value));
-                              });
-        return results;
+    std::map<Key, Value, Args...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return map_type_helper<std::map, Key, Value, Args...>(isolate, value);
     }
 };
+
+template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
+ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+
+    if (!value->IsObject()) {
+        throw CastException(
+                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+                            stringify_value(isolate, value)));
+    }
+
+    auto context = isolate->GetCurrentContext();
+
+    ContainerTemplate<Key, Value, Rest...> results;
+    for_each_own_property(context, value->ToObject(),
+                          [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
+                              v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value){
+                                  results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
+                                                  v8toolkit::CastToNative<Value>()(isolate, sub_value));
+                              });
+                          });
+    return results;
+}
+
 
 
 template<class Key, class Value, class... Args>
@@ -363,24 +390,7 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
     using ResultType = std::multimap<Key, Value, Args...>;
 
     ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-
-        if (!value->IsObject()) {
-            throw CastException(
-                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
-                            stringify_value(isolate, value)));
-        }
-
-        auto context = isolate->GetCurrentContext();
-
-        ResultType results;
-        for_each_own_property(context, value->ToObject(),
-                              [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
-                                  v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value){
-                                      results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
-                                                      v8toolkit::CastToNative<Value>()(isolate, sub_value));
-                                  });
-                              });
-        return results;
+        return multimap_type_helper<std::multimap, Key, Value, Args...>(isolate, value);
     }
 };
 
@@ -951,4 +961,10 @@ CastToJS<std::shared_ptr<T> const>::operator()(v8::Isolate * isolate, std::share
 
 
 } // end namespace v8toolkit
+
+
+#ifdef V8TOOLKIT_ENABLE_EASTL_SUPPORT
+#include "casts_eastl.hpp"
+#endif
+
 #endif // CASTS_HPP

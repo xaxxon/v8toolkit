@@ -75,7 +75,6 @@ struct LTG {
     template<class R, class... Args>
     static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
 
-    // this version might not be necessary
     template<class R, class... Args>
     static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
 };
@@ -349,7 +348,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-#define ANYBASE_DEBUG
+//#define ANYBASE_DEBUG
 
 
  struct AnyBase

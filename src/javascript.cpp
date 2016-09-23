@@ -213,8 +213,9 @@ std::shared_ptr<Context> Isolate::create_context()
     auto ot = this->get_object_template();
     auto context = v8::Context::New(this->isolate, NULL, ot);
 
-    if (tc.HasCaught()) {
-	throw V8ExecutionException(this->isolate, tc);
+
+    if (tc.HasCaught() || context.IsEmpty()) {
+	    throw V8ExecutionException(this->isolate, tc);
     }
 
     

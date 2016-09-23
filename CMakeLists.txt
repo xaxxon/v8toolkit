@@ -5,7 +5,6 @@ set (CMAKE_CXX_STANDARD 14)
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
 ucm_set_runtime(STATIC)
-    
 
 set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
 
@@ -147,7 +146,7 @@ add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_shared copy_sample_resources)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
-target_link_libraries(sample v8toolkit_shared fmt)
+target_link_libraries(sample v8toolkit_shared fmt eastl)
 
 add_custom_target(copy_sample_resources)
 add_custom_command(TARGET copy_sample_resources POST_BUILD

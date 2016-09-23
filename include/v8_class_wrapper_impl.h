@@ -13,15 +13,15 @@ namespace v8toolkit {
 
     template<class T>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {
-	this->isolate_to_wrapper_map.emplace(isolate, this);
-    }
+		this->isolate_to_wrapper_map.emplace(isolate, this);
+	}
 
     template<class T> void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value) {
-	for (auto & callback : attribute_callbacks) {
-	    callback(isolate, object, property_name, value);
+		for (auto &callback : attribute_callbacks) {
+			callback(isolate, object, property_name, value);
+		}
 	}
-    }
 
 
     template<class T> void

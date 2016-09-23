@@ -4,11 +4,28 @@
 #include <stdio.h>
 
 #include <fmt/format.h>
+#define V8TOOLKIT_ENABLE_EASTL_SUPPORT
+#define EA_HAVE_CPP11_INITIALIZER_LIST 1
+#include <EASTL/fixed_string.h>
 
 #include "v8_class_wrapper.h"
 
 using namespace v8toolkit;
 using namespace std;
+
+
+
+// EA STL requirements
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
+
 
 #define SAMPLE_DEBUG true
 
@@ -43,7 +60,7 @@ public:
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
     void void_func() {}
-
+    eastl::fixed_string<char, 32, true, eastl::allocator> fixed_string;
 
     int operator()(int x) {
 	return x + x_;
@@ -184,6 +201,7 @@ int main(int argc, char* argv[])
 
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
             wrapped_point.add_member("x", &Point::x_);
+            wrapped_point.add_member("fixed_string", &Point::fixed_string);
             int changed_x = 0;
 	                wrapped_point.register_callback([&changed_x](v8::Isolate * isolate,
                                                          v8::Local<v8::Object> & object,

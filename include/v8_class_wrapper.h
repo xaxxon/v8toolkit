@@ -15,6 +15,8 @@
 
 #include "wrapped_class_base.h"
 #include "v8toolkit.h"
+
+
 #include "casts.hpp"
 
 
@@ -25,7 +27,7 @@
 namespace v8toolkit {
 
 
-#define V8_CLASS_WRAPPER_DEBUG true
+#define V8_CLASS_WRAPPER_DEBUG false
 
 /**
 * Design Questions:
@@ -1400,6 +1402,7 @@ std::string type_details(){
  */
  template<class T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value, int> = 0>
 	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "cast to native\n");
 		if(!value->IsObject()){
 			fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));

@@ -833,7 +833,7 @@ namespace {
 				
 				if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
 				    
-				    auto & param_info = *matching_param_iterator;
+				  auto & param_info = *matching_param_iterator;
 				    if (param_command->getParagraph() != nullptr) {
 					cerr << "**3" << endl;
 					param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
