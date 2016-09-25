@@ -385,13 +385,25 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 
     auto isolate = context->GetIsolate();
 
+   /*
+    * printf("Executing module with script origin resource name , line offset: %d, column offset %d, source: %s\n",
+        *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
+           script_origin.ResourceColumnOffset()->Value(), module_source.c_str());
+    */
+
+
     v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
     v8::Local<v8::String> parameter_names[] = {
         v8::String::NewFromUtf8(isolate, "module"),
         v8::String::NewFromUtf8(isolate, "exports")
     };
+    v8::TryCatch try_catch(isolate);
     auto maybe_module_function =
         v8::ScriptCompiler::CompileFunctionInContext(context, &source, 2, &parameter_names[0], 0, nullptr);
+    if (try_catch.HasCaught()) {
+        ReportException(isolate, &try_catch);
+        assert(false);
+    }
 
     // NEED PROPER ERROR HANDLING HERE
     assert(!maybe_module_function.IsEmpty());
@@ -485,7 +497,9 @@ bool require(
                 auto script_origin =
                         std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate,
                                                                                    complete_filename.c_str()),
-                v8::Integer::New(isolate, 1));
+                                                           v8::Integer::New(isolate, 0),
+                                                           v8::Integer::New(isolate, 0)
+                        );
                                             
                 if (std::regex_search(filename, std::regex(".json$"))) {
                     v8::Local<v8::Script> script;

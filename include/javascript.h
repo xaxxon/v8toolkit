@@ -576,13 +576,17 @@ class Platform {
 	static bool expose_gc_value;
 	static bool expose_debug_value;
 	static std::string expose_debug_name;
-
+	static int memory_size_in_mb; // used for Isolate::CreateParams::constraints::set_max_old_space_size()
 public:
+
+	// how to increase max memory available to javascript
+	//	Isolate::CreateParams::constraints::set_max_old_space_size().
+
 
 	static void expose_gc();
 
 	static void expose_debug_as(const std::string & debug_object_name);
-	
+	static void set_max_memory(int memory_size_in_mb);
     /**
     * Initializes the v8 platform with default values and tells v8 to look
     *   for its .bin files in the given directory (often argv[0])

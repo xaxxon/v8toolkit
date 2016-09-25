@@ -288,6 +288,12 @@ void Platform::expose_gc() {
     expose_gc_value = true;
 }
 
+
+void Platform::set_max_memory(int new_memory_size_in_mb) {
+    Platform::memory_size_in_mb = new_memory_size_in_mb;
+}
+
+
 void Platform::expose_debug_as(const std::string & debug_object_name) {
     assert(!Platform::initialized);
     expose_debug_value = true;
@@ -339,6 +345,9 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 {
     assert(initialized);
     v8::Isolate::CreateParams create_params;
+    if (Platform::memory_size_in_mb > 0) {
+        create_params.constraints.set_max_old_space_size(Platform::memory_size_in_mb);
+    }
     create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) &Platform::allocator;
 
     // can't use make_shared since the constructor is private
@@ -354,5 +363,6 @@ v8toolkit::ArrayBufferAllocator Platform::allocator;
 bool Platform::expose_gc_value = false;
 bool Platform::expose_debug_value = false;
 std::string Platform::expose_debug_name = "";
+int Platform::memory_size_in_mb = -1;
     
 } // end v8toolkit namespace

@@ -63,7 +63,7 @@ template<> \
 }; \
  inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
     HANDLE_FUNCTION_VALUES;
-    
+
 
 
 #define CAST_TO_JS_TEMPLATED(TYPE, TEMPLATE) \

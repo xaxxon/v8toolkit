@@ -22,6 +22,7 @@ struct Thing {
 
 
 auto run_static_function_tests() {
+    Platform::set_max_memory(2000);
     auto i = Platform::create_isolate();
     ISOLATE_SCOPED_RUN(*i);
     V8ClassWrapper<Thing> & thing = i->wrap_class<Thing>();
