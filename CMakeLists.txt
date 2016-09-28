@@ -69,7 +69,7 @@ include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${C
 #   library=shared snapshot=off
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
+target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase boost_system boost_chrono)
 
 # GCC doesn't need to link to this to make a shared object
 if (APPLE)
@@ -153,6 +153,13 @@ add_custom_command(TARGET copy_sample_resources POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/code.js
         ${PROJECT_BINARY_DIR})
 
+
+# DEBUGGER SAMPLE
+add_executable(debugger_sample samples/debugger_sample.cpp)
+add_dependencies(debugger_sample v8toolkit_shared)
+target_link_libraries(debugger_sample ${V8_SHARED_LIBS} v8toolkit_shared fmt)
+
+
 add_custom_target(samples)
 add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample)
 
@@ -160,3 +167,5 @@ add_custom_target(run_samples)
 add_dependencies(run_samples samples)
 add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
+
+

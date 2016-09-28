@@ -111,7 +111,7 @@ namespace v8toolkit {
 		// this will store it for later use automatically
 		return make_wrapping_function_template();
 	    } else {
-		fprintf(stderr, "Not making function template because there is already one %s\n", demangle<T>().c_str());
+		// fprintf(stderr, "Not making function template because there is already one %s\n", demangle<T>().c_str());
 		// return an arbitrary one, since they're all the same when used to call .NewInstance()
 		return this_class_function_templates[0].Get(isolate);
 	    }
@@ -125,16 +125,17 @@ namespace v8toolkit {
     template<class T>  T *
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
 
-	if (object->InternalFieldCount() == 0) {
-	    throw CastException("Tried to get internal field from object with no internal fields");
-	} else if (object->InternalFieldCount() > 1) {
-	    throw CastException("Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit");
-	}
+        if (object->InternalFieldCount() == 0) {
+            throw CastException("Tried to get internal field from object with no internal fields");
+        } else if (object->InternalFieldCount() > 1) {
+            throw CastException(
+                    "Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit");
+        }
 
-	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-	WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-	if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrapped_data->native_object);
-	return this->cast(static_cast<AnyBase *>(wrapped_data->native_object));
+        auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+        WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrapped_data->native_object);
+        return this->cast(static_cast<AnyBase *>(wrapped_data->native_object));
     }
 
 

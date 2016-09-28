@@ -10,8 +10,9 @@
 namespace v8toolkit {
 
 class Isolate;
-class Script;
 
+class Script;
+using ScriptPtr = std::shared_ptr<Script>;
 
 
 /**
@@ -44,11 +45,23 @@ private:
     
     /// constructor should only be called by an Isolate
 	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
-    
+
+    /// stores the list of scripts
+    std::vector<ScriptPtr> scripts;
+
+    /// whether shutdown has been called on the context
+    bool shutting_down = false;
 	
 public:
 
 	virtual ~Context();
+
+    /**
+     * Allows for possible destruction of the Context once all Script objects are released.  This clears out
+     * all internal references to scripts to stop any circular references.  The context will have diminished
+     * functionality after shutdown is called on it.
+     */
+    void shutdown();
 	
     /**
     * Implicit cast to v8::Isolate *
@@ -289,20 +302,13 @@ using ContextPtr = std::shared_ptr<Context>;
 * Helper class for a v8::Script object.  As long as a Script shared_ptr is around,
 *   the associated Context will be maintined (which keeps the Isolate around, too)
 */
-class Script;
-using ScriptPtr = std::shared_ptr<Script>;
-class Script : public std::enable_shared_from_this<Script> 
+class Script : public std::enable_shared_from_this<Script>
 {
     friend class Context;
     
 private:
- Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin) :
-    context_helper(context_helper),
-	isolate(*context_helper),
-	script(v8::Global<v8::Script>(isolate, script)),
-	script_origin(std::move(script_origin))
-    {}
-    
+    Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin);
+
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
@@ -351,11 +357,11 @@ public:
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
 
         return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
-        
+
 			return (*this->context_helper)([this, script](){
 				return std::make_pair(this->run(), script);
             });
-        
+
 		}, shared_from_this());
 
     }
@@ -366,26 +372,14 @@ public:
     *   until after the thread completes.
     * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
     */
-	std::thread run_thread()
-	{
-        // Holds on to a shared_ptr to the Script inside the thread object to make sure
-        //   it isn't destroyed until the thread completes
-		// return type must be specified for Visual Studio 2015.2
-		// https://connect.microsoft.com/VisualStudio/feedback/details/1557383/nested-generic-lambdas-fails-to-compile-c
-        return std::thread([this](auto script_helper)->void{ 
-            (*this)([this]{
-                this->run();
-            });
-        }, shared_from_this());
-    }
-    
+	std::thread run_thread();
+
+
     /**
     * Same as run_thread, but the thread is automatically detached.   The Script
     *   object is still protected for the lifetime of the 
     */
-    void run_detached(){
-        run_thread().detach();
-    }    
+    void run_detached();
 }; 
 
 

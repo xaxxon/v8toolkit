@@ -1348,13 +1348,14 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
 
 
-    template<typename T>
+template<typename T>
 struct CastToJS<T&> {
 	using Pointer = typename std::add_pointer_t<T>;
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		return CastToJS<Pointer>()(isolate, &cpp_object);
 	}
+
 };
 template<typename T>
 struct CastToJS<T*&> {

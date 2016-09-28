@@ -9,6 +9,12 @@ Context::Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context>
     isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
 {}
 
+void Context::shutdown() {
+    this->scripts.clear();
+    this->shutting_down = true;
+}
+
+
 
 v8::Local<v8::Context> Context::get_context(){
     return context.Get(isolate);
@@ -62,7 +68,7 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     auto script_origin = std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate, filename.c_str()));
     v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source,  script_origin.get());
     if (compiled_script.IsEmpty()) {
-	throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
+        throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
     return std::shared_ptr<Script>(new Script(shared_from_this(), compiled_script.ToLocalChecked(), std::move(script_origin)));
 }
@@ -356,7 +362,34 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 }
 
 
-bool Platform::initialized = false;
+Script::Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin) :
+    context_helper(context_helper),
+    isolate(*context_helper),
+    script(v8::Global<v8::Script>(isolate, script)),
+    script_origin(std::move(script_origin))
+{}
+
+std::thread Script::run_thread()
+{
+    // Holds on to a shared_ptr to the Script inside the thread object to make sure
+    //   it isn't destroyed until the thread completes
+    // return type must be specified for Visual Studio 2015.2
+    // https://connect.microsoft.com/VisualStudio/feedback/details/1557383/nested-generic-lambdas-fails-to-compile-c
+    return std::thread([this](auto script_helper)->void{
+        (*this)([this]{
+            this->run();
+        });
+    }, shared_from_this());
+}
+
+
+void Script::run_detached(){
+    run_thread().detach();
+}
+
+
+
+    bool Platform::initialized = false;
 std::unique_ptr<v8::Platform> Platform::platform;
 v8toolkit::ArrayBufferAllocator Platform::allocator;
 

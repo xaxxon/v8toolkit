@@ -50,14 +50,28 @@ CAST_TO_NATIVE_WITH_CONST(eastl::fixed_string<CharType V8TOOLKIT_COMMA Length V8
 CAST_TO_JS_TEMPLATED(eastl::fixed_string<CharType V8TOOLKIT_COMMA Length V8TOOLKIT_COMMA Overflow V8TOOLKIT_COMMA Allocator>, class CharType V8TOOLKIT_COMMA int Length V8TOOLKIT_COMMA bool Overflow V8TOOLKIT_COMMA class Allocator){
     return v8::String::NewFromUtf8(isolate, value.c_str());
 }
-//
-//template<class CharType, int Length, bool Overflow, class Allocator>
-//struct CastToNative<eastl::fixed_string<CharType, Length, Overflow, Allocator>> {
-//    using ResultType = eastl::fixed_string<CharType, Length, Overflow, Allocator>;
-//    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-//        return ResultType(*v8::String::Utf8Value(value));
-//    }
-//};
+
+
+// CastToJS<eastl::vector<>>
+template<class T, class... Rest>
+struct CastToJS<eastl::vector<T, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> && vector) {
+        return this->operator()(isolate, vector);
+    }
+};
+template<class T, class... Rest>
+struct CastToJS<eastl::vector<T, Rest...> const> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector) {
+        return CastToJS<eastl::vector<T, Rest...>>()(isolate, vector);
+    }
+};
+
+
+template<class T, class... Rest>
+v8::Local<v8::Value>CastToJS<eastl::vector<T, Rest...>>::operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector) {
+    return cast_to_js_vector_helper<eastl::vector, T, Rest...>(isolate, vector);
+}
 
 
 
