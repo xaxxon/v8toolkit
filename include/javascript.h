@@ -5,6 +5,12 @@
 #include <future>
 #include <functional>
 
+#include <boost/uuid/uuid.hpp>            // uuid class
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
+
+
+
 #include "v8_class_wrapper.h"
 
 namespace v8toolkit {
@@ -51,7 +57,10 @@ private:
 
     /// whether shutdown has been called on the context
     bool shutting_down = false;
-	
+
+	/// unique identifier for each context
+	boost::uuids::uuid uuid;
+
 public:
 
 	virtual ~Context();
@@ -62,6 +71,12 @@ public:
      * functionality after shutdown is called on it.
      */
     void shutdown();
+
+	/**
+	 * Returns all the scripts associated with this context
+	 * @return a vector of all the scripts associated with this context
+	 */
+    std::vector<ScriptPtr> const & get_scripts() const;
 	
     /**
     * Implicit cast to v8::Isolate *
@@ -307,14 +322,20 @@ class Script : public std::enable_shared_from_this<Script>
     friend class Context;
     
 private:
-    Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin);
+    Script(std::shared_ptr<Context> context_helper,
+           v8::Local<v8::Script> script,
+           std::unique_ptr<v8::ScriptOrigin> script_origin,
+           std::string const & script_source,
+           std::string const & source_location = "");
 
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
     std::unique_ptr<v8::ScriptOrigin> script_origin;
-    
+    std::string source_code;
+    std::string source_location; // url or any identifier
+	boost::uuids::uuid uuid;
 public:
     
 	Script() = delete;
@@ -327,6 +348,10 @@ public:
         printf("Done deleting Script\n");
 #endif
     }
+
+    std::string const & get_source_code() const;
+    std::string const & get_source_location() const;
+	boost::uuids::uuid const & get_uuid() const;
     
     /**
     * Allows implicit conversion to a v8::Global<v8::Script>

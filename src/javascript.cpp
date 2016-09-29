@@ -70,7 +70,9 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     if (compiled_script.IsEmpty()) {
         throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
-    return std::shared_ptr<Script>(new Script(shared_from_this(), compiled_script.ToLocalChecked(), std::move(script_origin)));
+    auto new_script = std::shared_ptr<Script>(new Script(shared_from_this(), compiled_script.ToLocalChecked(), std::move(script_origin), javascript_source, filename));
+    this->scripts.push_back(new_script);
+    return new_script;
 }
 
 
@@ -137,7 +139,12 @@ v8::Global<v8::Value> Context::run_from_file(const std::string & filename)
 	return compile_from_file(filename)->run();
 }
 
-std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>> 
+std::vector<ScriptPtr> const & Context::get_scripts() const {
+    return this->scripts;
+}
+
+
+    std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>
 Context::run_async(const std::string & source, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
@@ -362,12 +369,23 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 }
 
 
-Script::Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script, std::unique_ptr<v8::ScriptOrigin> script_origin) :
+Script::Script(std::shared_ptr<Context> context_helper,
+               v8::Local<v8::Script> script,
+               std::unique_ptr<v8::ScriptOrigin> script_origin,
+               std::string const & source_code,
+               std::string const & source_location) :
     context_helper(context_helper),
     isolate(*context_helper),
     script(v8::Global<v8::Script>(isolate, script)),
-    script_origin(std::move(script_origin))
-{}
+    script_origin(std::move(script_origin)),
+    source_code(source_code),
+    source_location(source_location)
+{
+    // if no location provided, create a unique identification string
+    if (this->source_location == "") {
+        this->source_location = boost::uuids::to_string(boost::uuids::uuid());
+    }
+}
 
 std::thread Script::run_thread()
 {
@@ -386,6 +404,19 @@ std::thread Script::run_thread()
 void Script::run_detached(){
     run_thread().detach();
 }
+
+std::string const & Script::get_source_code() const {
+    return this->source_code;
+}
+
+std::string const & Script::get_source_location() const {
+    return this->source_location;
+}
+boost::uuids::uuid const & Script::get_uuid() const {
+    return this->uuid;
+}
+
+
 
 
 

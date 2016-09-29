@@ -1355,6 +1355,9 @@ struct CastToJS<T&> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
 		return CastToJS<Pointer>()(isolate, &cpp_object);
 	}
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object){
+        return CastToJS<Pointer>()(isolate, &cpp_object);
+    }
 
 };
 template<typename T>
