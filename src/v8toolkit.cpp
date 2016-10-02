@@ -28,7 +28,14 @@ void process_v8_flags(int & argc, char ** argv)
 }
 
 
-void expose_debug(const std::string & debug_name = "debug") {
+void expose_debug(const std::string & debug_name) {
+
+    // turn on debugging -- THIS IS WRONG?
+//    static const char * EXPOSE_DEBUG = "--debug";
+//    std::string expose_debug(EXPOSE_DEBUG);
+//    v8::V8::SetFlagsFromString(expose_debug.c_str(), expose_debug.length());
+
+    // expose debug object to javascript
     static const char * EXPOSE_DEBUG_AS = "--expose-debug-as=";
     std::string expose_debug_as(EXPOSE_DEBUG_AS);
     expose_debug_as += debug_name;

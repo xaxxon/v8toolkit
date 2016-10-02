@@ -50,11 +50,11 @@ namespace v8toolkit {
 
 /* Use these to try to decrease the amount of template instantiations */
 #define CONTEXT_SCOPED_RUN(local_context) \
-    v8::Isolate * _v8toolkit_internal_isolate = local_context->GetIsolate(); \
+    v8::Isolate * _v8toolkit_internal_isolate = (local_context)->GetIsolate(); \
     v8::Locker _v8toolkit_internal_locker(_v8toolkit_internal_isolate);                \
     v8::Isolate::Scope _v8toolkit_internal_isolate_scope(_v8toolkit_internal_isolate); \
     v8::HandleScope _v8toolkit_internal_handle_scope(_v8toolkit_internal_isolate);     \
-    v8::Context::Scope _v8toolkit_internal_context_scope(local_context);
+    v8::Context::Scope _v8toolkit_internal_context_scope((local_context));
 
 #define GLOBAL_CONTEXT_SCOPED_RUN(isolate, global_context) \
     v8::Locker _v8toolkit_internal_locker(isolate);                \
@@ -65,9 +65,9 @@ namespace v8toolkit {
     v8::Context::Scope _v8toolkit_internal_context_scope(_v8toolkit_internal_local_context);
 
 #define ISOLATE_SCOPED_RUN(isolate) \
-    v8::Locker _v8toolkit_internal_locker(isolate);                \
-    v8::Isolate::Scope _v8toolkit_internal_isolate_scope(isolate); \
-    v8::HandleScope _v8toolkit_internal_handle_scope(isolate);
+    v8::Locker _v8toolkit_internal_locker((isolate));                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope((isolate)); \
+    v8::HandleScope _v8toolkit_internal_handle_scope((isolate));
 
 
 

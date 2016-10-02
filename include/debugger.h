@@ -5,10 +5,12 @@
 #include <websocketpp/server.hpp>
 
 #include <string>
+#include <sstream>
 #include <fmt/ostream.h>
 
-#include "javascript.h"
 
+
+#include "javascript.h"
 class Debugger;
 
 template<class T>
@@ -114,16 +116,25 @@ std::ostream& operator<<(std::ostream& os, const FrameResourceTree & frame_resou
     return os;
 }
 
+struct ScriptSource {
+    ScriptSource(v8toolkit::Script const & script);
+    std::string source;
+};
+std::ostream& operator<<(std::ostream& os, const ScriptSource & script_source) {
+    os << fmt::format("{{\"scriptSource\":{}}}", script_source.source);
+    return os;
+}
+
 
 struct Debugger_ScriptParsed {
-    Debugger_ScriptParsed(v8toolkit::Script const & script);
+    Debugger_ScriptParsed(Debugger const & debugger, v8toolkit::Script const & script);
 
-    std::string script_id;
+    int64_t script_id;
     std::string url; // optional
     int start_line = 0;
     int start_column = 0;
-    int end_line=1;
-    int end_column=4; // length of last line of script
+    int end_line;
+    int end_column; // length of last line of script
     bool is_content_script; // optional
     std::string source_map_url;
     bool has_source_url = false;
@@ -131,9 +142,9 @@ struct Debugger_ScriptParsed {
     std::string get_name() const {return "Debugger.scriptParsed";}
 };
 std::ostream& operator<<(std::ostream& os, const Debugger_ScriptParsed & script_parsed) {
-    os << fmt::format("{{\"scriptId\":\"{}\",\"url\":\"{}\",\"startLine\":{},\"startColumn\":{},\"endLine\":{},\"endColumn\":{}}}",
+    os << fmt::format("{{\"scriptId\":\"{}\",\"url\":\"{}\",\"startLine\":{},\"startColumn\":{}"/*,\"endLine\":{},\"endColumn\":{}*/"}}",
                       script_parsed.script_id, script_parsed.url, script_parsed.start_line,
-                      script_parsed.start_column, script_parsed.end_line, script_parsed.end_column);
+                      script_parsed.start_column/*, script_parsed.end_line, script_parsed.end_column*/);
     return os;
 }
 
@@ -156,6 +167,56 @@ std::ostream& operator<<(std::ostream& os, const Page_Content & content) {
     return os;
 }
 
+// https://chromedevtools.github.io/debugger-protocol-viewer/tot/Runtime/#type-RemoteObject
+struct RemoteObject {
+    RemoteObject(v8::Isolate * isolate, v8::Local<v8::Value> value);
+    // object, function, undefined, string, number, boolean, symbol
+    std::string type;
+    std::string value_string;
+    std::string subtype; // optional - only used for object types
+    std::string className; // constructor name
+    std::string description; // string representation of the value
+    bool exception_thrown = false;
+};
+std::ostream& operator<<(std::ostream& os, const RemoteObject & remote_object) {
+    os << fmt::format("{{\"result\":{{\"type\":\"{}\",\"value\":{},\"description\":\"{}\"}},\"wasThrown\":{}}}", remote_object.type, remote_object.value_string, remote_object.description, remote_object.exception_thrown);
+    return os;
+}
+
+struct Location {
+    Location(v8::Local<v8::Value> location);
+    int column_number;
+    int line_number;
+    int64_t script_id;
+};
+std::ostream& operator<<(std::ostream& os, const Location & location) {
+    os << fmt::format("{{\"scriptId\":\"{}\",\"line_number\":\"{}\",\"columnNumber\":{}}}",
+                      location.script_id, location.line_number, location.column_number);
+    return os;
+}
+
+
+struct Breakpoint {
+    std::string breakpoint_id;
+    std::vector<Location> locations;
+};
+std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
+    std::stringstream locations;
+    locations << "[";
+    bool first = true;
+    for (auto const & location : breakpoint.locations) {
+        if (!first) {
+            locations << ",";
+        }
+        first = false;
+        locations << location;
+    }
+    locations << "]";
+
+    os << fmt::format("{{\"breakpointId\":\"{}\",\"locations\":{}}}", breakpoint.breakpoint_id, locations.str());
+    return os;
+}
+
 
 class Debugger {
     using DebugServerType = websocketpp::server<websocketpp::config::asio>;
@@ -169,7 +230,6 @@ class Debugger {
     v8toolkit::ContextPtr context;
 
     std::string frame_id = "12345.1";
-    std::string base_url = "https://dummy_base_url"; // set this from constructor
 
 public:
     Debugger(v8toolkit::ContextPtr & context, unsigned short port);
@@ -178,7 +238,7 @@ public:
     void helper(websocketpp::connection_hdl hdl);
 
     std::string const & get_frame_id() const;
-    std::string const & get_base_url() const;
-    v8toolkit::Context const & get_context() const;
+    std::string get_base_url() const;
+    v8toolkit::Context & get_context() const;
 
 };

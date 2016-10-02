@@ -156,8 +156,12 @@ add_custom_command(TARGET copy_sample_resources POST_BUILD
 
 # DEBUGGER SAMPLE
 add_executable(debugger_sample samples/debugger_sample.cpp)
-add_dependencies(debugger_sample v8toolkit_shared)
+add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources)
 target_link_libraries(debugger_sample ${V8_SHARED_LIBS} v8toolkit_shared fmt)
+add_custom_target(copy_debugger_resources)
+add_custom_command(TARGET copy_debugger_resources POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/debugger_sample.js
+        ${PROJECT_BINARY_DIR})
 
 
 add_custom_target(samples)

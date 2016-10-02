@@ -15,6 +15,8 @@
 
 namespace v8toolkit {
 
+extern boost::uuids::random_generator uuid_generator;
+
 class Isolate;
 
 class Script;
@@ -33,6 +35,8 @@ class Context : public std::enable_shared_from_this<Context>
 public:
 
 private:
+	std::atomic<int> script_id_counter;
+
 	Context() = delete;
 	Context(const Context &) = delete;
 	Context(Context &&) = default;
@@ -55,11 +59,13 @@ private:
     /// stores the list of scripts
     std::vector<ScriptPtr> scripts;
 
+	ScriptPtr get_script(std::string const & string);
+
     /// whether shutdown has been called on the context
     bool shutting_down = false;
 
 	/// unique identifier for each context
-	boost::uuids::uuid uuid;
+	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
 
 public:
 
@@ -77,36 +83,43 @@ public:
 	 * @return a vector of all the scripts associated with this context
 	 */
     std::vector<ScriptPtr> const & get_scripts() const;
-	
+
+
+	/**
+	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
+	 * @return the global context object
+	 */
+	v8::Global<v8::Context> const & get_global_context() const;
+
     /**
     * Implicit cast to v8::Isolate *
     */
-	inline operator v8::Isolate*(){return this->isolate;}
+	inline operator v8::Isolate*() const {return this->isolate;}
     
     /**
     * Implicit cast to v8::Local<v8::Context>
     */
-	inline operator v8::Local<v8::Context>(){return this->context.Get(isolate);}
+	inline operator v8::Local<v8::Context>() const {return this->context.Get(isolate);}
     
     /**
     * Implicit cast to v8::Global<v8::Context>
     */
-	inline operator v8::Global<v8::Context>(){return v8::Global<v8::Context>(isolate, this->context.Get(isolate));}
+	inline operator v8::Global<v8::Context>() const {return v8::Global<v8::Context>(isolate, this->context.Get(isolate));}
 	
 	/**
     * Returns a Local copy of the associated v8::Context
     */ 
-	v8::Local<v8::Context> get_context();
+	v8::Local<v8::Context> get_context() const;
     
     /**
     * Returns the v8::Isolate * this context is associated with
     */ 
-	v8::Isolate * get_isolate();
+	v8::Isolate * get_isolate() const;
     
     /**
     * Returns the Isolate wrapping the isolate this context is associated with
     */
-	std::shared_ptr<Isolate> get_isolate_helper();
+	std::shared_ptr<Isolate> get_isolate_helper() const;
 	
 	/**
     * Compiles the contents of the passed in string as javascripts
@@ -307,7 +320,11 @@ public:
 	*/
 	template<class T>
 	v8::Local<v8::Value> wrap_object(T* object);
-	
+
+	boost::uuids::uuid const & get_uuid() const;
+	std::string get_uuid_string() const;
+
+
 };
 
 using ContextPtr = std::shared_ptr<Context>;
@@ -324,7 +341,6 @@ class Script : public std::enable_shared_from_this<Script>
 private:
     Script(std::shared_ptr<Context> context_helper,
            v8::Local<v8::Script> script,
-           std::unique_ptr<v8::ScriptOrigin> script_origin,
            std::string const & script_source,
            std::string const & source_location = "");
 
@@ -332,10 +348,8 @@ private:
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
-    std::unique_ptr<v8::ScriptOrigin> script_origin;
     std::string source_code;
     std::string source_location; // url or any identifier
-	boost::uuids::uuid uuid;
 public:
     
 	Script() = delete;
@@ -351,9 +365,9 @@ public:
 
     std::string const & get_source_code() const;
     std::string const & get_source_location() const;
-	boost::uuids::uuid const & get_uuid() const;
-    
-    /**
+	int64_t get_script_id() const;
+
+	/**
     * Allows implicit conversion to a v8::Global<v8::Script>
     */
     inline operator v8::Global<v8::Script>&(){return script;}
@@ -405,6 +419,10 @@ public:
     *   object is still protected for the lifetime of the 
     */
     void run_detached();
+
+
+	v8::Local<v8::UnboundScript> get_unbound_script() const;
+
 }; 
 
 
@@ -580,6 +598,12 @@ public:
         }
         return maybe.ToLocalChecked();
     }
+
+	/**
+	 * Returns the debug context for the isolate
+	 * @return the debug context for the isolate
+	 */
+	ContextPtr get_debug_context();
 };
 
 using IsolatePtr = std::shared_ptr<Isolate>;

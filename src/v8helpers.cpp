@@ -66,6 +66,30 @@ void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context>
 }
 
 
+std::string get_type_string_for_value(v8::Local<v8::Value> value) {
+
+    // object, function, undefined, string, number, boolean, symbol
+    if (value->IsUndefined()) {
+        return "undefined";
+    } else if (value->IsFunction()) {
+        return "function";
+    } else if (value->IsString()) {
+        return "string";
+    } else if (value->IsNumber()) {
+        return "number";
+    } else if (value->IsBoolean()) {
+        return "boolean";
+    } else if (value->IsSymbol()) {
+        return "symbol";
+    } else if (value->IsObject()) {
+        return "object";
+    } else {
+        assert(false);
+    }
+    return "UNKNOWN VALUE TYPE";
+}
+
+
 
 void print_v8_value_details(v8::Local<v8::Value> local_value) {
     
@@ -129,6 +153,9 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
 {
     static std::vector<v8::Local<v8::Value>> processed_values;
 
+    if (value.IsEmpty()) {
+        return "<Empty v8::Local<v8::Value>>";
+    }
 
     if (top_level) {
         processed_values.clear();

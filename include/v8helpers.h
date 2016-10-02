@@ -222,6 +222,15 @@ void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Va
 */
 void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
 
+
+/**
+ * Returns a string corresponding to the type of the value passed
+ * @param value the value whose type to return a string version of
+ * @return a string for the type of value
+ */
+std::string get_type_string_for_value(v8::Local<v8::Value> value);
+
+
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
 */
@@ -235,7 +244,7 @@ void process_v8_flags(int & argc, char ** argv);
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 */  
 void expose_gc();
-
+void expose_debug(const std::string & debug_name);
 
 // calls a javascript function with no parameters and returns the value
 v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
