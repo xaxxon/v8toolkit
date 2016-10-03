@@ -4,13 +4,11 @@
 ## Next Major Feature: Instructions/code for debugging your JavaScript from Chrome's javascript debugger
 
 I am currently implementing the necessary functionality to connect to your application with Chrome's 
-javascript debugger and set breakpoints and inspect your javascript code as it is running.  It's a lot
-of work to implement the interface, but things are going well so far.  The beginnings of the code can be
+javascript debugger.  The beginnings of the code can be
 found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last is the most 
-interesting from a user perspective)  I expect to have the debugger minimally functional by 10/10/16.
-Additional functionality will be added as needed.
+interesting from a user perspective).
 
-Minimal functionality includes: 
+Minimal functionality will include: 
 
 * Viewing code (done)
 * Add/remove breakpoints (done)
