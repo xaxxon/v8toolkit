@@ -44,6 +44,7 @@ void Debugger::on_open(websocketpp::connection_hdl hdl) {
 void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServerType::message_ptr msg) {
     std::smatch matches;
     std::string message = msg->get_payload();
+    std::cerr << "Got debugger message: " << message << std::endl;
     nlohmann::json json = json::parse(msg->get_payload());
     v8::Isolate * isolate = this->get_context().get_isolate();
     GLOBAL_CONTEXT_SCOPED_RUN(isolate, this->context->get_global_context());
@@ -72,6 +73,7 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             this->debug_server.send(hdl, response, websocketpp::frame::opcode::TEXT);
 
         } else if (method_name == "Debugger.getScriptSource") {
+            // the URL for the script comes from Debugger.scriptParsed
             std::cerr << msg->get_payload() << std::endl;
             std::cerr << json << std::endl;
             std::string script_id_string = json["params"]["scriptId"];
@@ -84,18 +86,32 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             }
         } else if (method_name == "Debugger.setBreakpointByUrl") {
             std::string url = json["params"]["url"];
-            int line = json["params"]["lineNumber"];
-            std::cerr << fmt::format("{} {}", url, line) << std::endl;
+            int line_number = json["params"]["lineNumber"];
+            std::cerr << fmt::format("set breakpoint on url: {} line: {}", url, line_number) << std::endl;
+
+            v8toolkit::ScriptPtr script_to_break;
+            for (v8toolkit::ScriptPtr const & script : context->get_scripts()) {
+                std::cerr << fmt::format("Comparing {} and {}", script->get_source_location(), url) << std::endl;
+                if (script->get_source_location() == url) {
+                    script_to_break = script;
+                    break;
+                }
+            }
+            assert(script_to_break);
 
             auto debug_context = this->context->get_isolate_helper()->get_debug_context();
             v8::Context::Scope context_scope(*debug_context);
-            v8::Local<v8::Value> result = debug_context->run(fmt::format("Debug.setBreakPointByScriptIdAndPosition(\"{}\");", url)).Get(isolate);
-//            auto result = debug_context->run(fmt::format("Debug.scripts();", url));
-            std::cerr << "debug context execution result: " << v8toolkit::stringify_value(isolate, result) << std::endl;
-           auto number = v8toolkit::call_simple_javascript_function(isolate, v8toolkit::get_key_as<v8::Function>(*debug_context, result->ToObject(), "number"));
-           // auto number = v8toolkit::get_key_as(*debug_context, result->ToObject(), "")
-            std::cerr << v8toolkit::stringify_value(isolate, number) << std::endl;
+            v8::Local<v8::Value> result =
+                    debug_context->run(fmt::format("Debug.setScriptBreakPointById({}, {});", script_to_break->get_script_id(), line_number)).Get(isolate);
+            std::cerr << v8toolkit::stringify_value(isolate, result) << std::endl;
 
+            int64_t number = result->ToNumber()->Value();
+//            auto result = debug_context->run(fmt::format("Debug.scripts();", url));
+           //auto number = v8toolkit::call_simple_javascript_function(isolate, v8toolkit::get_key_as<v8::Function>(*debug_context, result->ToObject(), "number"));
+           // auto number = v8toolkit::get_key_as(*debug_context, result->ToObject(), "")
+            this->debug_server.send(hdl,
+                                    make_response(message_id, Breakpoint(*script_to_break, line_number)),
+                                    websocketpp::frame::opcode::TEXT);
 
         } else if (method_name == "Runtime.evaluate") {
             auto json_params = json["params"];
@@ -103,7 +119,79 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             std::string expression = json_params["expression"];
             CONTEXT_SCOPED_RUN(this->get_context().get_context());
             auto result = this->get_context().run(expression);
-            this->debug_server.send(hdl, make_response(message_id, RemoteObject(isolate, result.Get(isolate))), websocketpp::frame::opcode::TEXT);
+            this->debug_server.send(hdl, make_response(message_id, RemoteObject(isolate, result.Get(isolate))),
+                                    websocketpp::frame::opcode::TEXT);
+        } else if (method_name == "Debugger.removeBreakpoint") {
+            std::string breakpoint_url = json["params"]["breakpointId"];
+            static std::regex breakpoint_id_regex("^(.*):(\\d+):(\\d+)$");
+            std::smatch matches;
+            if (!std::regex_match(breakpoint_url, matches, breakpoint_id_regex)) {
+                assert(false);
+            }
+            std::string url = matches[1];
+            int line_number = std::stoi(matches[2]);
+            int column_number = std::stoi(matches[3]);
+
+            // should probably call findBreakPoint
+            // scriptBreakPoints() returns all breakpoints
+            auto debug_context = this->context->get_isolate_helper()->get_debug_context();
+            v8::Context::Scope context_scope(*debug_context);
+            v8::Local<v8::Value> result =
+                    debug_context->run( fmt::format(R"V0G0N(
+                    (
+                            function(){{
+                                var matching_breakpoints = 0;
+                                var comparisons = "comparisons:";
+                                var line_number = {};
+                                var column_number = {};
+                                let scripts = Debug.scriptBreakPoints().forEach(function(current_breakpoint){{
+                                    comparisons += ""+current_breakpoint.line() + line_number + current_breakpoint.column() + column_number;
+                                    if(current_breakpoint.line() == line_number && (!current_breakpoint.column() || current_breakpoint.column() == column_number)){{
+                                        matching_breakpoints++;
+                                        Debug.findBreakPoint(current_breakpoint.number(), true); // true disables the breakpoint
+                                    }}
+                                }});
+                                return matching_breakpoints;
+                            }})();
+            )V0G0N", line_number, column_number)).Get(isolate);
+            std::cerr << "breakpoints removed: " <<  v8toolkit::stringify_value(isolate, result) << std::endl;
+
+            // result of scriptBreakPoints():
+            // [{active_: true,
+            //   break_points_: [
+            //     {active_: true,
+            //      actual_location: {
+            //          column: 4,
+            //          line: 4,
+            //          script_id: 55},
+            //      condition_: null,
+            //      script_break_point_: ,
+            //      source_position_: 46}
+            //    ], // end break_points
+            //   column_: undefined,
+            //   condition_: undefined,
+            //   groupId_: undefined,
+            //   line_: 4,
+            //   number_: 1,
+            //   position_alignment_: 0,
+            //   script_id_: 55,
+            //   type_: 0
+            //  }, {...additional breakpoints...}
+            // ]
+
+
+            this->debug_server.send(hdl, make_response(message_id, ""), websocketpp::frame::opcode::TEXT);
+
+
+        } else if (method_name == "Debugger.pause") {
+
+        } else if (method_name == "Debugger.setSkipAllPauses") {
+
+        } else if (method_name == "setBreakpointsActive") {
+            // active: true/false
+
+
+
         } else {
             this->debug_server.send(hdl, response, websocketpp::frame::opcode::TEXT);
         }
@@ -122,8 +210,8 @@ RemoteObject::RemoteObject(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
     this->type = v8toolkit::get_type_string_for_value(value);
     this->value_string = v8toolkit::stringify_value(isolate, value);
-    this->subtype;
-    this->className;
+//    this->subtype;
+//    this->className;
     this->description = *v8::String::Utf8Value(value);
 }
 
@@ -150,8 +238,8 @@ FrameResourceTree::FrameResourceTree(Debugger const & debugger) : page_frame(deb
 PageFrame::PageFrame(Debugger const & debugger) :
         frame_id(debugger.get_frame_id()),
         network_loader_id(debugger.get_frame_id()),
-        security_origin(debugger.get_base_url()),
-        url(debugger.get_base_url() + "/")
+        security_origin(fmt::format("v8toolkit://{}", debugger.get_base_url())),
+        url(fmt::format("v8toolkit://{}/", debugger.get_base_url()))
 {}
 
 std::string const & Debugger::get_frame_id() const {
@@ -170,12 +258,23 @@ Runtime_ExecutionContextCreated::Runtime_ExecutionContextCreated(Debugger const 
 {}
 Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const & debugger, v8toolkit::Script const & script) :
     script_id(script.get_script_id()),
-    url(debugger.get_base_url() + "/" + script.get_source_location())
+    url(script.get_source_location())
 {}
 
 ScriptSource::ScriptSource(v8toolkit::Script const & script) :
     source(nlohmann::basic_json<>(script.get_source_code()).dump())
 {}
+
+Location::Location(int64_t script_id, int line_number, int column_number) :
+    script_id(script_id),
+    line_number(line_number),
+    column_number(column_number)
+{}
+
+Breakpoint::Breakpoint(v8toolkit::Script const & script, int line_number, int column_number) {
+    this->breakpoint_id = fmt::format("{}:{}:{}",script.get_source_location(), line_number, column_number);
+    this->locations.emplace_back(Location(script.get_script_id(), line_number, column_number));
+}
 
 
 void debug_event_callback(v8::Debug::EventDetails const & event_details) {

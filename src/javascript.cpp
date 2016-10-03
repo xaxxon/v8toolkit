@@ -92,7 +92,7 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     auto new_script = std::shared_ptr<Script>(new Script(shared_from_this(),
                                                          compiled_script.ToLocalChecked(),
                                                          javascript_source,
-                                                         boost::uuids::to_string(this->uuid) + "/" + filename));
+                                                         fmt::format("v8toolkit://{}/{}",boost::uuids::to_string(this->uuid), filename)));
     this->scripts.push_back(new_script);
     return new_script;
 }

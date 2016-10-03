@@ -6,7 +6,9 @@ using namespace v8toolkit;
 int main(int, char**) {
     Platform::expose_debug_as("v8debug");
     Platform::init(0, nullptr);
-    auto context = Platform::create_isolate()->create_context();
+    auto isolate = Platform::create_isolate();
+    isolate->add_print();
+    auto context = isolate->create_context();
 
     auto script = context->compile("a = 1;\r\na+=1;", "hard-coded-text-a.js");
     auto script2 = context->compile("b = 2;\r\nb+=2;", "hard-coded-text-b.js");
@@ -20,7 +22,8 @@ int main(int, char**) {
     // The debugger javascript application is served from chrome, but then it connects to our websocket
     Debugger debugger(context, 9002);
     for (;;) {
+        script3->run();
         debugger.poll();
-        usleep(250000);
+        usleep(1000000);
     }
 }

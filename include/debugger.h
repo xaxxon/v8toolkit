@@ -184,19 +184,20 @@ std::ostream& operator<<(std::ostream& os, const RemoteObject & remote_object) {
 }
 
 struct Location {
-    Location(v8::Local<v8::Value> location);
-    int column_number;
-    int line_number;
+    Location(int64_t script_id, int line_number, int column_number);
     int64_t script_id;
+    int line_number;
+    int column_number;
 };
 std::ostream& operator<<(std::ostream& os, const Location & location) {
-    os << fmt::format("{{\"scriptId\":\"{}\",\"line_number\":\"{}\",\"columnNumber\":{}}}",
+    os << fmt::format("{{\"scriptId\":\"{}\",\"lineNumber\":{},\"columnNumber\":{}}}",
                       location.script_id, location.line_number, location.column_number);
     return os;
 }
 
 
 struct Breakpoint {
+    Breakpoint(v8toolkit::Script const & script, int line_number, int column_number = 0);
     std::string breakpoint_id;
     std::vector<Location> locations;
 };
@@ -217,8 +218,36 @@ std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
     return os;
 }
 
+struct CallFrame {
+    std::string call_frame_id;
+    std::string function_name;
+    Location location;
+    std::vector<Scope> scope_chain; // ?
+    RemoteObject javascript_this; // attribute name is just 'this'
+};
+std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
+    assert(false);
+}
 
-class Debugger {
+struct Debugger_Paused {
+    std::vector<CallFrame> call_frames;
+    std::string reason;
+    std::vector<std::string> hit_breakpoints;
+};
+std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
+    assert(false);
+}
+
+struct Debugger_Resumed {
+    // No fields
+};
+std::ostream& operator<<(std::ostream& os, const Debugger_Resumed & resumed) {
+    assert(false);
+}
+
+
+
+        class Debugger {
     using DebugServerType = websocketpp::server<websocketpp::config::asio>;
 
     DebugServerType debug_server;

@@ -1,5 +1,7 @@
 
-function c(){}
+function c(){
+    let c=10;
+}
 
 function b(some_number){
     some_number += 5;
@@ -12,3 +14,6 @@ function a(){
     b(some_var);
 
 }
+
+a();
+// println("In debugger_sample.js");
