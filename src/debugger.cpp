@@ -36,10 +36,6 @@ void Debugger::helper(websocketpp::connection_hdl hdl) {
 
 }
 
-void Debugger::on_open(websocketpp::connection_hdl hdl) {
-
-}
-
 
 void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServerType::message_ptr msg) {
     std::smatch matches;
@@ -292,12 +288,63 @@ void debug_event_callback(v8::Debug::EventDetails const & event_details) {
 
 }
 
+void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_details) {
+    DebugEventCallbackData * callback_data =
+            static_cast<DebugEventCallbackData *>(v8::External::Cast(*event_details.GetCallbackData())->Value());
+    Debugger & debugger = *callback_data->debugger;
+    callback_data->debugger->send_message("");
+}
+
+void Debugger::on_open(websocketpp::connection_hdl hdl) {
+    assert(this->connections.size() == 0);
+    this->connections.insert(hdl);
+}
+
+
+void Debugger::on_close(websocketpp::connection_hdl hdl) {
+    assert(this->connections.size() == 1);
+    this->connections.erase(hdl);
+    assert(this->connections.size() == 0);
+
+}
+
+
+bool Debugger::websocket_validation_handler(websocketpp::connection_hdl hdl) {
+    // only allow one connection
+    return this->connections.size() == 0;
+}
+
+void Debugger::send_message(std::string const & message) {
+    if (!this->connections.empty()) {
+        this->debug_server.send(*this->connections.begin(), message, websocketpp::frame::opcode::TEXT);
+    }
+
+}
+
+
+
 Debugger::Debugger(v8toolkit::ContextPtr & context,
                    unsigned short port) :
         context(context),
-        port(port) {
+        port(port)
+{
 
-    assert(v8::Debug::SetDebugEventListener(context->get_isolate(), debug_event_callback));
+    v8::Isolate * isolate = context->get_isolate();
+
+    GLOBAL_CONTEXT_SCOPED_RUN(isolate, context->get_global_context());
+    auto data = v8::External::New(isolate, new DebugEventCallbackData(this));
+    v8::Debug::SetDebugEventListener(context->get_isolate(), debug_event_callback, data);
+
+    // only allow one connection
+    this->debug_server.set_validate_handler(bind(&Debugger::websocket_validation_handler, this,  websocketpp::lib::placeholders::_1));
+
+    // store the connection so events can be sent back to the client without the client sending something first
+    this->debug_server.set_open_handler(bind(&Debugger::on_open, this,  websocketpp::lib::placeholders::_1));
+
+    // note that the client disconnected
+    this->debug_server.set_close_handler(bind(&Debugger::on_close, this,  websocketpp::lib::placeholders::_1));
+
+    // handle websocket messages from the client
     this->debug_server.set_message_handler(bind(&Debugger::on_message, this, websocketpp::lib::placeholders::_1,websocketpp::lib::placeholders::_2));
     this->debug_server.set_open_handler(websocketpp::lib::bind(&Debugger::on_open, this, websocketpp::lib::placeholders::_1));
     this->debug_server.set_http_handler(websocketpp::lib::bind(&Debugger::on_http, this, websocketpp::lib::placeholders::_1));

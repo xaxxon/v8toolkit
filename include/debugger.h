@@ -8,6 +8,7 @@
 #include <sstream>
 #include <fmt/ostream.h>
 
+#include <v8-debug.h>
 
 
 #include "javascript.h"
@@ -218,6 +219,9 @@ std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
     return os;
 }
 
+
+struct Scope {};
+
 struct CallFrame {
     std::string call_frame_id;
     std::string function_name;
@@ -247,18 +251,35 @@ std::ostream& operator<<(std::ostream& os, const Debugger_Resumed & resumed) {
 
 
 
-        class Debugger {
+class Debugger {
     using DebugServerType = websocketpp::server<websocketpp::config::asio>;
 
     DebugServerType debug_server;
     unsigned short port = 0;
 
+    using WebSocketConnections = std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>>;
+    WebSocketConnections connections;
+    void send_message(std::string const & message);
+
+
+    bool websocket_validation_handler(websocketpp::connection_hdl hdl);
+
     void on_open(websocketpp::connection_hdl hdl);
+    void on_close(websocketpp::connection_hdl hdl);
     void on_message(websocketpp::connection_hdl hdl, DebugServerType::message_ptr msg);
     void on_http(websocketpp::connection_hdl hdl);
     v8toolkit::ContextPtr context;
 
     std::string frame_id = "12345.1";
+
+
+    struct DebugEventCallbackData {
+        DebugEventCallbackData(Debugger * debugger) : debugger(debugger) {}
+        Debugger * debugger;
+    };
+
+
+    static void debug_event_callback(v8::Debug::EventDetails const & event_details);
 
 public:
     Debugger(v8toolkit::ContextPtr & context, unsigned short port);
@@ -269,5 +290,7 @@ public:
     std::string const & get_frame_id() const;
     std::string get_base_url() const;
     v8toolkit::Context & get_context() const;
+
+
 
 };
