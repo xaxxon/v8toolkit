@@ -183,10 +183,11 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
 
         } else if (method_name == "Debugger.setSkipAllPauses") {
 
-        } else if (method_name == "setBreakpointsActive") {
+        } else if (method_name == "Debugger.setBreakpointsActive") {
             // active: true/false
 
-
+        } else if (method_name == "Debugger.resume") {
+            this->paused_on_breakpoint = false;
 
         } else {
             this->debug_server.send(hdl, response, websocketpp::frame::opcode::TEXT);
@@ -317,6 +318,10 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
     if (debug_event_type == v8::DebugEvent::Break) {
         // send message to debugger notifying that breakpoint was hit
         //    callback_data->debugger->send_message(make_method(Debugger_Paused()));
+
+        // cannot handle hitting a breakpoint while stopped at a breakpoint
+        //   not sure what that would even mean
+        assert(debugger.paused_on_breakpoint == false);
 
         debugger.paused_on_breakpoint = true;
         int loop_counter = 0;
