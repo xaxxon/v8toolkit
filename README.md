@@ -1,7 +1,25 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
    
-## Next Major Feature: Instructions/code for integrated debugging
+## Next Major Feature: Instructions/code for debugging your JavaScript from Chrome's javascript debugger
+
+I am currently implementing the necessary functionality to connect to your application with Chrome's 
+javascript debugger and set breakpoints and inspect your javascript code as it is running.  It's a lot
+of work to implement the interface, but things are going well so far.  The beginnings of the code can be
+found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last is the most 
+interesting from a user perspective)  I expect to have the debugger minimally functional by 10/10/16.
+Additional functionality will be added as needed.
+
+Minimal functionality includes: 
+
+* Viewing code (done)
+* Add/remove breakpoints (done)
+* Step over/into/out
+* Notification on breakpoint being hit (in progress)
+* Resuming execution
+* Evaluating arbitrary code (in progress)
+
+
 
 ## Recent Feature: Automatic class binding generator
 
