@@ -234,9 +234,12 @@ std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
 }
 
 struct Debugger_Paused {
+    Debugger_Paused();
     std::vector<CallFrame> call_frames;
     std::string reason;
     std::vector<std::string> hit_breakpoints;
+
+    static std::string get_name(){return "Debugger.paused";}
 };
 std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
     assert(false);
@@ -280,6 +283,8 @@ class Debugger {
 
 
     static void debug_event_callback(v8::Debug::EventDetails const & event_details);
+
+    bool paused_on_breakpoint = false;
 
 public:
     Debugger(v8toolkit::ContextPtr & context, unsigned short port);

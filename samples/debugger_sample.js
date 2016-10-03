@@ -9,9 +9,11 @@ function b(some_number){
 }
 
 function a(){
+    println("Beginning of a()");
     let some_var = 5;
     some_var += 5;
     b(some_var);
+    println("End of a()");
 
 }
 

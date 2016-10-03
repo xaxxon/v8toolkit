@@ -1026,6 +1026,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 * printobj - prints a bunch of information about an object - format highly susceptible to frequent change
 */
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
+void add_print(const v8::Local<v8::Context> context, std::function<void(const std::string &)> callback = [](const std::string & s){printf("%s", s.c_str());});
 
 /**
 * Adds an assert method that calls assert.h assert() on failure.  This is different than the add_assert() in javascript.h that throws an exception on failure

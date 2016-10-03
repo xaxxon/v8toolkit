@@ -267,6 +267,11 @@ Location::Location(int64_t script_id, int line_number, int column_number) :
     column_number(column_number)
 {}
 
+Debugger_Paused::Debugger_Paused() {
+
+}
+
+
 Breakpoint::Breakpoint(v8toolkit::Script const & script, int line_number, int column_number) {
     this->breakpoint_id = fmt::format("{}:{}:{}",script.get_source_location(), line_number, column_number);
     this->locations.emplace_back(Location(script.get_script_id(), line_number, column_number));
@@ -288,11 +293,55 @@ void debug_event_callback(v8::Debug::EventDetails const & event_details) {
 
 }
 
+
+/**
+ * Returning from this function resumes javascript execution
+ */
 void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_details) {
+    v8::Isolate * isolate = event_details.GetIsolate();
     DebugEventCallbackData * callback_data =
             static_cast<DebugEventCallbackData *>(v8::External::Cast(*event_details.GetCallbackData())->Value());
     Debugger & debugger = *callback_data->debugger;
-    callback_data->debugger->send_message("");
+
+    std::cerr << "GOT DEBUG EVENT CALLBACK WITH EVENT TYPE " << event_details.GetEvent() << std::endl;
+
+    v8::Local<v8::Object> event_data = event_details.GetEventData();
+    std::cerr << v8toolkit::stringify_value(isolate, event_data) << std::endl;
+
+    v8::Local<v8::Object> execution_state = event_details.GetExecutionState();
+    std::cerr << v8toolkit::stringify_value(isolate, execution_state) << std::endl;
+
+    v8::DebugEvent debug_event_type = event_details.GetEvent();
+
+
+    if (debug_event_type == v8::DebugEvent::Break) {
+        // send message to debugger notifying that breakpoint was hit
+        //    callback_data->debugger->send_message(make_method(Debugger_Paused()));
+
+        debugger.paused_on_breakpoint = true;
+        int loop_counter = 0;
+        while (debugger.paused_on_breakpoint) {
+            debugger.debug_server.poll_one();
+            usleep(250000);
+            if (++loop_counter % 40 == 0) {
+                printf("Still waiting for resume from break command from debugger afater %d second\n", loop_counter / 4);
+            }
+        }
+    }
+    printf("Resuming from breakpoint\n");
+
+    /* GetEventData() when a breakpoint is hit returns:
+     * {break_points_hit_: [{active_: true, actual_location: {column: 4, line: 13, script_id: 55}, condition_: null, script_break_point_: {active_: true, break_points_: [], column_: undefined, condition_: undefined, groupId_: undefined, line_: 13, number_: 1, position_alignment_: 0, script_id_: 55, type_: 0}, source_position_: 175}], frame_: {break_id_: 8, details_: {break_id_: 8, details_: [392424216, {}, function a(){
+    println("Beginning of a()");
+    let some_var = 5;
+    some_var += 5;
+    b(some_var);
+    println("End of a()");
+
+}, {sourceColumnStart_: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 4, undefined, undefined, undefined, undefined, undefined, undefined, undefined]}, 0, 1, 175, false, false, 0, "some_var", 5]}, index_: 0, type_: "frame"}}
+
+     */
+
 }
 
 void Debugger::on_open(websocketpp::connection_hdl hdl) {
@@ -318,7 +367,6 @@ void Debugger::send_message(std::string const & message) {
     if (!this->connections.empty()) {
         this->debug_server.send(*this->connections.begin(), message, websocketpp::frame::opcode::TEXT);
     }
-
 }
 
 
@@ -332,6 +380,9 @@ Debugger::Debugger(v8toolkit::ContextPtr & context,
     v8::Isolate * isolate = context->get_isolate();
 
     GLOBAL_CONTEXT_SCOPED_RUN(isolate, context->get_global_context());
+    v8toolkit::add_print(v8::Debug::GetDebugContext(isolate));
+
+
     auto data = v8::External::New(isolate, new DebugEventCallbackData(this));
     v8::Debug::SetDebugEventListener(context->get_isolate(), debug_event_callback, data);
 
