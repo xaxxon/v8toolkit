@@ -242,6 +242,53 @@ struct Debugger_Paused {
     static std::string get_name(){return "Debugger.paused";}
 };
 std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
+    /*
+     {"method":"Debugger.paused",
+     "params":{
+        "callFrames":[
+            {
+                "callFrameId":"{\"ordinal\":0,\"injectedScriptId\":2}",
+                 "functionName":"",
+                 "functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":38},
+                 "location":{"scriptId":"70","lineNumber":1,"columnNumber":0},
+                 "scopeChain":[
+                    {
+                        "type":"local",
+                        "object":{
+                            "type":"object",
+                            "className":"Object",
+                            "description":"Object",
+                            "objectId":"{\"injectedScriptId\":2,\"id\":1}"
+                        },
+                        "startLocation":{
+                            "scriptId":"70",
+                            "lineNumber":0,
+                            "columnNumber":38
+                        },
+                        "endLocation":{
+                            "scriptId":"70",
+                            "lineNumber":517,
+                            "columnNumber":126
+                        }
+                    },
+                    {"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":2}"}}
+                ],
+                "this":{
+                    "type":"object",
+                    "className":"Window",
+                    "description":"Window",
+                    "objectId":"{\"injectedScriptId\":2,\"id\":3}"
+                }
+            },
+            // another call frame on this line, same as above
+            {"callFrameId":"{\"ordinal\":1,\"injectedScriptId\":2}","functionName":"","functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":0},"location":{"scriptId":"70","lineNumber":517,"columnNumber":127},"scopeChain":[{"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":4}"}}],"this":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":5}"}}],
+            "reason":"other",
+            "hitBreakpoints":[
+                "https://ssl.gstatic.com/sites/p/2a2c4f/system/js/jot_min_view__en.js:1:0"
+            ]
+        }
+     }
+     */
     assert(false);
 }
 
