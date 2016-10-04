@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['mapperhelper',['MapperHelper',['../namespacev8toolkit.html#structv8toolkit_1_1MapperHelper',1,'v8toolkit']]],
-  ['mapperhelper_3c_20container_3c_20data_2c_20addparams_2e_2e_2e_20_3e_2c_20callable_20_3e',['MapperHelper&lt; Container&lt; Data, AddParams... &gt;, Callable &gt;',['../structv8toolkit_1_1MapperHelper_3_01Container_3_01Data_00_01AddParams_8_8_8_01_4_00_01Callable_01_4.html',1,'v8toolkit']]],
-  ['mapperhelper_3c_20std_3a_3amap_3c_20key_2c_20value_2c_20addparams_2e_2e_2e_20_3e_2c_20callable_20_3e',['MapperHelper&lt; std::map&lt; Key, Value, AddParams... &gt;, Callable &gt;',['../structv8toolkit_1_1MapperHelper_3_01std_1_1map_3_01Key_00_01Value_00_01AddParams_8_8_8_01_4_00_01Callable_01_4.html',1,'v8toolkit']]]
+  ['invalidcallexception',['InvalidCallException',['../classv8toolkit_1_1InvalidCallException.html',1,'v8toolkit']]],
+  ['is_5fspecialization',['is_specialization',['../structv8toolkit_1_1is__specialization.html',1,'v8toolkit']]],
+  ['is_5fspecialization_3c_20ref_3c_20args_2e_2e_2e_20_3e_2c_20ref_20_3e',['is_specialization&lt; Ref&lt; Args... &gt;, Ref &gt;',['../structv8toolkit_1_1is__specialization_3_01Ref_3_01Args_8_8_8_01_4_00_01Ref_01_4.html',1,'v8toolkit']]],
+  ['isolate',['Isolate',['../classv8toolkit_1_1Isolate.html',1,'v8toolkit']]]
 ];
