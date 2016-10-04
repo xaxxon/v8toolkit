@@ -6,6 +6,40 @@
 
 namespace v8toolkit {
 
+
+std::string demangle_typeid_name(const std::string & mangled_name) {
+
+#ifdef V8TOOLKIT_DEMANGLE_NAMES
+//    printf("Starting name demangling\n");
+    std::string result;
+    int status;
+    auto demangled_name_needs_to_be_freed = abi::__cxa_demangle(mangled_name.c_str(), nullptr, 0, &status);
+    result = demangled_name_needs_to_be_freed;
+
+    if (demangled_name_needs_to_be_freed == nullptr) {
+	return mangled_name;
+    }
+    
+    if (status == 0) {
+        result = demangled_name_needs_to_be_freed;
+    } else {
+        // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
+        //-1: A memory allocation failiure occurred.
+        //-2: mangled_name is not a valid name under the C++ ABI mangling rules.
+        //-3: One of the arguments is invalid.
+        result = mangled_name;
+    }
+    if (demangled_name_needs_to_be_freed) {
+        free(demangled_name_needs_to_be_freed);
+    }
+    return result;
+
+#else
+    return mangled_name;
+#endif
+}
+
+
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array) {
     auto context = isolate->GetCurrentContext();
     return array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value(); 
@@ -29,6 +63,30 @@ void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context>
     auto global_object = context->Global();
     (void)global_object->Set(context, v8::String::NewFromUtf8(isolate, alias_name.c_str()), global_object);
     
+}
+
+
+std::string get_type_string_for_value(v8::Local<v8::Value> value) {
+
+    // object, function, undefined, string, number, boolean, symbol
+    if (value->IsUndefined()) {
+        return "undefined";
+    } else if (value->IsFunction()) {
+        return "function";
+    } else if (value->IsString()) {
+        return "string";
+    } else if (value->IsNumber()) {
+        return "number";
+    } else if (value->IsBoolean()) {
+        return "boolean";
+    } else if (value->IsSymbol()) {
+        return "symbol";
+    } else if (value->IsObject()) {
+        return "object";
+    } else {
+        assert(false);
+    }
+    return "UNKNOWN VALUE TYPE";
 }
 
 
@@ -95,6 +153,9 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
 {
     static std::vector<v8::Local<v8::Value>> processed_values;
 
+    if (value.IsEmpty()) {
+        return "<Empty v8::Local<v8::Value>>";
+    }
 
     if (top_level) {
         processed_values.clear();
@@ -182,6 +243,83 @@ v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Objec
 v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value> value, std::string key) {
     return get_key_as<v8::Value>(context, get_value_as<v8::Object>(value), key);
 }
+
+
+
+v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
+						     v8::Local<v8::Function> function) {
+
+    v8::Local<v8::Context> context(isolate->GetCurrentContext());
+    v8::TryCatch tc(isolate);
+
+    auto maybe_result = function->Call(context, context->Global(), 0, nullptr);
+    if(tc.HasCaught() || maybe_result.IsEmpty()) {
+	ReportException(isolate, &tc);
+	printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+	throw InvalidCallException(*v8::String::Utf8Value(tc.Exception()));
+    }
+    return maybe_result.ToLocalChecked();
+}
+
+
+// copied from shell_cc example
+void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
+    v8::HandleScope handle_scope(isolate);
+    v8::String::Utf8Value exception(try_catch->Exception());
+    const char* exception_string = *exception;
+    v8::Local<v8::Message> message = try_catch->Message();
+    if (message.IsEmpty()) {
+        // V8 didn't provide any extra information about this error; just
+        // print the exception.
+        fprintf(stderr, "%s\n", exception_string);
+    } else {
+        // Print (filename):(line number): (message).
+        v8::String::Utf8Value filename(message->GetScriptOrigin().ResourceName());
+        v8::Local<v8::Context> context(isolate->GetCurrentContext());
+        const char* filename_string = *filename;
+        int linenum = message->GetLineNumber(context).FromJust();
+        fprintf(stderr, "%s:%i: %s\n", filename_string, linenum, exception_string);
+        // Print line of source code.
+        v8::String::Utf8Value sourceline(
+                message->GetSourceLine(context).ToLocalChecked());
+        const char* sourceline_string = *sourceline;
+        fprintf(stderr, "%s\n", sourceline_string);
+        // Print wavy underline (GetUnderline is deprecated).
+        int start = message->GetStartColumn(context).FromJust();
+        for (int i = 0; i < start; i++) {
+            fprintf(stderr, " ");
+        }
+        int end = message->GetEndColumn(context).FromJust();
+        for (int i = start; i < end; i++) {
+            fprintf(stderr, "^");
+        }
+        fprintf(stderr, "\n");
+        v8::Local<v8::Value> stack_trace_string;
+        if (try_catch->StackTrace(context).ToLocal(&stack_trace_string) &&
+            stack_trace_string->IsString() &&
+            v8::Local<v8::String>::Cast(stack_trace_string)->Length() > 0) {
+            v8::String::Utf8Value stack_trace(stack_trace_string);
+            const char* stack_trace_string = *stack_trace;
+            fprintf(stderr, "%s\n", stack_trace_string);
+        }
+    }
+}
+
+bool global_name_conflicts(const std::string & name) {
+    // for some reason the real code here is crashing
+    return false;
+    if (std::find(reserved_global_names.begin(), reserved_global_names.end(), name) !=
+        reserved_global_names.end()) {
+        std::cerr << fmt::format("{} is a reserved js global name", name) << std::endl;
+        return true;
+    }
+}
+
+std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined", "Number", "String",
+    "Object", "Symbol", "Date", "Array", "Set", "WeakSet",
+    "Map", "WeakMap", "JSON"};
+
+
 
 
 

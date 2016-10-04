@@ -1,0 +1,1 @@
+clang++ sample.cpp -Xclang -ast-dump -c

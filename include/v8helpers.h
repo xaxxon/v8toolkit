@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <map>
 #include <vector>
@@ -5,21 +7,110 @@
 #include <set>
 #include <typeinfo>
 
-#include <cppformat/format.h>
+#include <fmt/ostream.h>
 
 
 // Everything in here is standalone and does not require any other v8toolkit files
 #include <libplatform/libplatform.h>
 #include <v8.h>
 
+// if it can be determined safely that cxxabi.h is available, include it for name demangling
+#if defined __has_include
+#if __has_include(<cxxabi.h>)
+#  define V8TOOLKIT_DEMANGLE_NAMES
+#  include <cxxabi.h>
+#endif
+#endif
+
 
 namespace v8toolkit {
 
+void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
+    
+#define V8TOOLKIT_COMMA ,
+  
+/**
+ * Returns a demangled version of the typeid(T).name() passed in if it knows how,
+ *   otherwise returns the mangled name exactly as passed in
+ */
+std::string demangle_typeid_name(const std::string & mangled_name);
+
+template<class T>
+std::string demangle(){
+    auto demangled_name =  demangle_typeid_name(typeid(T).name());
+    std::string constness = std::is_const<T>::value ? "const " : "";
+    std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+
+    return constness + volatility + demangled_name;
+ }
+
+template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<Source>::value, int> = 0>
+Destination safe_dynamic_cast(Source * source) {
+    static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
+    static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
+    fprintf(stderr, "safe dynamic cast doing real cast\n");
+    return dynamic_cast<Destination>(source);
+};
+template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
+Destination safe_dynamic_cast(Source * source) {
+    static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
+    static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
+    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
+    return nullptr;
+};
+
+
+
+template<typename Test, template<typename...> class Ref>
+struct is_specialization : std::false_type {};
+
+template<template<typename...> class Ref, typename... Args>
+struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
+
+/**
+ * Returns a std::function type compatible with the lambda passed in
+ */
+template<class T>
+struct LTG {
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+};
+
+
 template <class... > struct TypeList {};
 
-// This function is not defined and can only be called inside decltype()
+// for use inside a decltype only
 template <class R, class... Ts>
 auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
+
+// for use inside a decltype only
+template <class R, class Head, class... Tail>
+auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
+
+// for use inside a decltype only
+template <class... Ts>
+auto get_typelist_for_variables(Ts... ts) -> TypeList<Ts...>;
+
+template <class... Ts>
+auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {
+    return std::tuple<Ts...>(std::forward<Ts>(ts)...);
+}
+
+
+template<bool... b> struct static_any;
+
+template<bool... tail>
+struct static_any<true, tail...> : std::true_type {};
+
+template<bool... tail>
+struct static_any<false, tail...> : static_any<tail...> {};
+
+template<>
+struct static_any<> : std::false_type {};
+
 
 
 template <bool... b> struct static_all_of;
@@ -37,7 +128,7 @@ template <> struct static_all_of<> : std::true_type {};
 
 
 
-#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, typeid(thing).name()).c_str()
+#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
 
 // thrown when data cannot be converted properly
 class CastException : public std::exception {
@@ -49,8 +140,45 @@ public:
     virtual const char * what() const noexcept override {return reason.c_str();}
 };
 
+ 
+/**
+* General purpose exception for invalid uses of the v8toolkit API
+*/
+class InvalidCallException : public std::exception {
+private:
+    std::string message;
 
-    /**
+public:
+    InvalidCallException(const std::string & message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
+};
+
+/**
+ * Thrown when trying to register a function/method/member with the same name as
+ * something else already registered
+ */
+class DuplicateNameException : public std::exception {
+private:
+    std::string message;
+
+public:
+    DuplicateNameException(const std::string & message) : message(message) {}
+    virtual const char * what() const noexcept override {return message.c_str();}
+};
+
+
+ class UndefinedPropertyException : public std::exception {
+ private:
+     std::string message;
+
+ public:
+ UndefinedPropertyException(const std::string & message) : message(message) {}
+     virtual const char * what() const noexcept override {return message.c_str();}
+     
+
+ };
+
+/**
 * prints out a ton of info about a v8::Value
 */
 void print_v8_value_details(v8::Local<v8::Value> local_value);
@@ -94,6 +222,15 @@ void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Va
 */
 void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
 
+
+/**
+ * Returns a string corresponding to the type of the value passed
+ * @param value the value whose type to return a string version of
+ * @return a string for the type of value
+ */
+std::string get_type_string_for_value(v8::Local<v8::Value> value);
+
+
 /**
 * parses v8-related flags and removes them, adjusting argc as needed
 */
@@ -103,15 +240,15 @@ void process_v8_flags(int & argc, char ** argv);
 /**
 * exposes the garbage collector to javascript
 * same as passing --expose-gc as a command-line flag
-* To encourage javascript garbage collection run from c++, use: 
+* To encourage the javascript garbage collector to run from c++ code, use: 
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 */  
 void expose_gc();
+void expose_debug(const std::string & debug_name);
 
-
-
-
-
+// calls a javascript function with no parameters and returns the value
+v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
+						     v8::Local<v8::Function> function);
 /**
 * Calls callable with each javascript "own property" in the object passed.
 */
@@ -179,6 +316,8 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
     Results operator()(std::map<Key, Value, AddParams...> container, Callable callable)
     {
         Results results;
+
+
         for (auto && element : container) {
             results.insert(callable(std::forward<decltype(element)>(element)));
         }
@@ -216,15 +355,35 @@ auto reducer(const Container & container, Callable callable) ->
 *   a AnyBase* on the other side and then dynamic_cast to any child types to 
 *   determine the type of the object actually stored.
 */
-struct AnyBase
+
+// if this is defined, AnyBase will store the actual typename but this is only needed for debugging
+//#define ANYBASE_DEBUG
+
+
+ struct AnyBase
 {
     virtual ~AnyBase();
+#ifdef ANYBASE_DEBUG
+    std::string type_name;
+#endif
+AnyBase(const std::string &&
+#ifdef ANYBASE_DEBUG
+	     type_name
+#endif
+	    )
+#ifdef ANYBASE_DEBUG
+: type_name(std::move(type_name))
+#endif
+    {}
 };
 
+ template<class T, class = void>
+ struct AnyPtr;
 
-template<class T>
-struct AnyPtr : public AnyBase {
-    AnyPtr(T * data) : data(data) {}
+
+ template<class T>
+     struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
+ AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
     virtual ~AnyPtr(){}
     T* data;
     T * get() {return data;}
@@ -236,7 +395,7 @@ struct AnyPtr : public AnyBase {
 */
 template<class T>
 struct Any : public AnyBase {
-    Any(T data) : data(data) {}
+ Any(T data) : AnyBase(demangle<T>()), data(data) {}
     virtual ~Any(){}
     T data;
     T get() {return data;}
@@ -267,14 +426,11 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Tried to get value as %s\n", typeid(T).name());
+        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
         print_v8_value_details(value);
-        printf("Throwing exception\n");
-        throw "Bad Cast";
+	throw v8toolkit::CastException("Couldn't cast value to requested type");
     }
 }
-
-
 
 
 template<class T>
@@ -287,11 +443,14 @@ v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) 
 
 template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
+
+    
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
     auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-    if(get_maybe.IsEmpty()) {
-        throw "no such key";
+
+    if(get_maybe.IsEmpty() || get_maybe.ToLocalChecked()->IsUndefined()) {
+	throw UndefinedPropertyException(key);
     }
     return get_value_as<T>(get_maybe.ToLocalChecked());
 }
@@ -315,9 +474,12 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 */
 std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
 
-
-
-
-
+/**
+ * Tests if the given name conflicts with a reserved javascript top-level name
+ * @param name value to check
+ * @return true if there is a conflict
+ */
+bool global_name_conflicts(const std::string & name);
+extern std::vector<std::string> reserved_global_names;
 
 } // End v8toolkit namespace

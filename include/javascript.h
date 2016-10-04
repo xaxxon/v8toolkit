@@ -5,14 +5,22 @@
 #include <future>
 #include <functional>
 
+#include <boost/uuid/uuid.hpp>            // uuid class
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
+
+
+
 #include "v8_class_wrapper.h"
 
 namespace v8toolkit {
-	
+
+extern boost::uuids::random_generator uuid_generator;
+
 class Isolate;
+
 class Script;
-
-
+using ScriptPtr = std::shared_ptr<Script>;
 
 
 /**
@@ -27,6 +35,8 @@ class Context : public std::enable_shared_from_this<Context>
 public:
 
 private:
+	std::atomic<int> script_id_counter;
+
 	Context() = delete;
 	Context(const Context &) = delete;
 	Context(Context &&) = default;
@@ -45,53 +55,83 @@ private:
     
     /// constructor should only be called by an Isolate
 	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
-    
-	
+
+    /// stores the list of scripts
+    std::vector<ScriptPtr> scripts;
+
+	ScriptPtr get_script(std::string const & string);
+
+    /// whether shutdown has been called on the context
+    bool shutting_down = false;
+
+	/// unique identifier for each context
+	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
+
 public:
 
 	virtual ~Context();
-	
+
+    /**
+     * Allows for possible destruction of the Context once all Script objects are released.  This clears out
+     * all internal references to scripts to stop any circular references.  The context will have diminished
+     * functionality after shutdown is called on it.
+     */
+    void shutdown();
+
+	/**
+	 * Returns all the scripts associated with this context
+	 * @return a vector of all the scripts associated with this context
+	 */
+    std::vector<ScriptPtr> const & get_scripts() const;
+
+
+	/**
+	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
+	 * @return the global context object
+	 */
+	v8::Global<v8::Context> const & get_global_context() const;
+
     /**
     * Implicit cast to v8::Isolate *
     */
-	inline operator v8::Isolate*(){return this->isolate;}
+	inline operator v8::Isolate*() const {return this->isolate;}
     
     /**
     * Implicit cast to v8::Local<v8::Context>
     */
-	inline operator v8::Local<v8::Context>(){return this->context.Get(isolate);}
+	inline operator v8::Local<v8::Context>() const {return this->context.Get(isolate);}
     
     /**
     * Implicit cast to v8::Global<v8::Context>
     */
-	inline operator v8::Global<v8::Context>(){return v8::Global<v8::Context>(isolate, this->context.Get(isolate));}
+	inline operator v8::Global<v8::Context>() const {return v8::Global<v8::Context>(isolate, this->context.Get(isolate));}
 	
 	/**
     * Returns a Local copy of the associated v8::Context
     */ 
-	v8::Local<v8::Context> get_context();
+	v8::Local<v8::Context> get_context() const;
     
     /**
     * Returns the v8::Isolate * this context is associated with
     */ 
-	v8::Isolate * get_isolate();
+	v8::Isolate * get_isolate() const;
     
     /**
     * Returns the Isolate wrapping the isolate this context is associated with
     */
-	std::shared_ptr<Isolate> get_isolate_helper();
+	std::shared_ptr<Isolate> get_isolate_helper() const;
 	
 	/**
     * Compiles the contents of the passed in string as javascripts
     * Throws v8toolkit::CompilationError on compilation error
     */
-	std::shared_ptr<Script> compile(const std::string & source);
+	std::shared_ptr<Script> compile(const std::string & source, const std::string & filename = "Unspecified");
     
 	/**
     * Compiles the contents of the passed in v8::String as javascript
     * Throws v8toolkit::CompilationError on compilation error
     */
-	std::shared_ptr<Script> compile(const v8::Local<v8::String> script);
+	std::shared_ptr<Script> compile(const v8::Local<v8::String> source, const std::string & filename = "Unspecified");
     
     /**
     * Loads the contents of the given file as javascript
@@ -207,11 +247,10 @@ public:
     * Calls v8toolkit::scoped_run with the associated isolate and context data
     */
 	template<class Callable>
-	auto operator()(Callable && callable) -> typename std::result_of<Callable()>::type
+	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+        GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable();
 	}
 
     /**
@@ -221,9 +260,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*)>
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable(isolate);
 	}
 
     /**
@@ -233,9 +271,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*, v8::Local<v8::Context>)>::type
 	{
-        v8::Locker l(isolate);
-		v8::HandleScope hs(isolate);
-		return v8toolkit::scoped_run(isolate, context.Get(isolate), callable);
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		return callable(isolate, context.Get(isolate));
 	}
 	
 	/**
@@ -245,18 +282,15 @@ public:
 	template<class Function>
 	void add_function(std::string name, Function function)
 	{
-		operator()([&](){
-			v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
-		});
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
 	}
     
     template<class T>
     void add_variable(std::string name, v8::Local<T> variable)
     {
-		operator()([&](){
-			v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
-		});
-        
+		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
+		v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
     }
 	
 	/**
@@ -286,7 +320,17 @@ public:
 	*/
 	template<class T>
 	v8::Local<v8::Value> wrap_object(T* object);
-	
+
+	boost::uuids::uuid const & get_uuid() const;
+	std::string get_uuid_string() const;
+
+    /**
+     * Returns the script corresponding to the given id or throws
+     * @param script_id script id to find
+     * @return script with given script_id
+     */
+    Script const & get_script_by_id(int64_t script_id);
+
 };
 
 using ContextPtr = std::shared_ptr<Context>;
@@ -296,23 +340,22 @@ using ContextPtr = std::shared_ptr<Context>;
 * Helper class for a v8::Script object.  As long as a Script shared_ptr is around,
 *   the associated Context will be maintined (which keeps the Isolate around, too)
 */
-class Script;
-using ScriptPtr = std::shared_ptr<Script>;
-class Script : public std::enable_shared_from_this<Script> 
+class Script : public std::enable_shared_from_this<Script>
 {
     friend class Context;
     
 private:
-    Script(std::shared_ptr<Context> context_helper, v8::Local<v8::Script> script) :
-        context_helper(context_helper),
-        isolate(*context_helper),
-        script(v8::Global<v8::Script>(isolate, script)) {}
-    
+    Script(std::shared_ptr<Context> context_helper,
+           v8::Local<v8::Script> script,
+           std::string const & script_source,
+           std::string const & source_location = "");
+
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
-    
+    std::string source_code;
+    std::string source_location; // url or any identifier
 public:
     
 	Script() = delete;
@@ -325,8 +368,12 @@ public:
         printf("Done deleting Script\n");
 #endif
     }
-    
-    /**
+
+    std::string const & get_source_code() const;
+    std::string const & get_source_location() const;
+	int64_t get_script_id() const;
+
+	/**
     * Allows implicit conversion to a v8::Global<v8::Script>
     */
     inline operator v8::Global<v8::Script>&(){return script;}
@@ -355,11 +402,11 @@ public:
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
 
         return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
-        
+
 			return (*this->context_helper)([this, script](){
 				return std::make_pair(this->run(), script);
             });
-        
+
 		}, shared_from_this());
 
     }
@@ -370,26 +417,18 @@ public:
     *   until after the thread completes.
     * Remember, letting the std::thread go out of scope without joinin/detaching is very bad.
     */
-	std::thread run_thread()
-	{
-        // Holds on to a shared_ptr to the Script inside the thread object to make sure
-        //   it isn't destroyed until the thread completes
-		// return type must be specified for Visual Studio 2015.2
-		// https://connect.microsoft.com/VisualStudio/feedback/details/1557383/nested-generic-lambdas-fails-to-compile-c
-        return std::thread([this](auto script_helper)->void{ 
-            (*this)([this]{
-                this->run();
-            });
-        }, shared_from_this());
-    }
-    
+	std::thread run_thread();
+
+
     /**
     * Same as run_thread, but the thread is automatically detached.   The Script
     *   object is still protected for the lifetime of the 
     */
-    void run_detached(){
-        run_thread().detach();
-    }    
+    void run_detached();
+
+
+	v8::Local<v8::UnboundScript> get_unbound_script() const;
+
 }; 
 
 
@@ -480,7 +519,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
+	    ISOLATE_SCOPED_RUN(isolate);
+	    return callable();
 	}
 
 	/**
@@ -490,7 +530,8 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*)>::type
 	{
-		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
+	    ISOLATE_SCOPED_RUN(isolate);
+	    return callable(isolate);
 	}
 
 	/**
@@ -563,6 +604,12 @@ public:
         }
         return maybe.ToLocalChecked();
     }
+
+	/**
+	 * Returns the debug context for the isolate
+	 * @return the debug context for the isolate
+	 */
+	ContextPtr get_debug_context();
 };
 
 using IsolatePtr = std::shared_ptr<Isolate>;
@@ -575,12 +622,25 @@ class Platform {
 	static std::unique_ptr<v8::Platform> platform;
 	static v8toolkit::ArrayBufferAllocator allocator;
 	static bool initialized;
-
-
+	static bool expose_gc_value;
+	static bool expose_debug_value;
+	static std::string expose_debug_name;
+	static int memory_size_in_mb; // used for Isolate::CreateParams::constraints::set_max_old_space_size()
 public:
+
+	// how to increase max memory available to javascript
+	//	Isolate::CreateParams::constraints::set_max_old_space_size().
+
+
+	static void expose_gc();
+
+	static void expose_debug_as(const std::string & debug_object_name);
+	static void set_max_memory(int memory_size_in_mb);
     /**
     * Initializes the v8 platform with default values and tells v8 to look
     *   for its .bin files in the given directory (often argv[0])
+    * Only useful if build with snapshot support which I recommend against for 
+    *   simplicity's sake
     */
     static void init(char * path_to_bin_files);
 
@@ -589,21 +649,21 @@ public:
     *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
     *    v8 .bin files
     */
-	static void init(int argc, char ** argv);
-
+    static void init(int argc, char ** argv);
+	
     /**
     * Shuts down V8.  Any subsequent V8 usage is probably undefined, so
     *   make sure everything is done before you call this.
     */
-	static void cleanup();
+    static void cleanup();
 
 
-	/**
+    /**
     * Creates a new Isolate wrapping a new v8::Isolate instance.
     * An Isolate will remain as long as the caller has a shared_ptr to the Isolate or any Contexts created from
     *   the Isolate still exist.
     */
-	static std::shared_ptr<Isolate> create_isolate();
+    static IsolatePtr create_isolate();
 };
 
 
@@ -611,7 +671,7 @@ template<class T>
 v8::Local<v8::Value> Context::wrap_object(T* object)
 {
 	auto & class_wrapper = V8ClassWrapper<T>::get_instance(this->get_isolate());
-	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone<T>>(this->get_context(), object);
+	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(this->get_context(), object);
 }
 
 
