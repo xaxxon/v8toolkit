@@ -324,6 +324,12 @@ public:
 	boost::uuids::uuid const & get_uuid() const;
 	std::string get_uuid_string() const;
 
+    /**
+     * Returns the script corresponding to the given id or throws
+     * @param script_id script id to find
+     * @return script with given script_id
+     */
+    Script const & get_script_by_id(int64_t script_id);
 
 };
 

@@ -268,7 +268,10 @@ Location::Location(int64_t script_id, int line_number, int column_number) :
     column_number(column_number)
 {}
 
-Debugger_Paused::Debugger_Paused() {
+Debugger_Paused::Debugger_Paused(Debugger const & debugger, int64_t script_id, int line_number, int column_number) {
+    v8toolkit::Script const & script = debugger.get_context().get_script_by_id(script_id);
+
+    this->hit_breakpoints.emplace_back(fmt::format("\"{}:{}:{}\"", script.get_source_location(), line_number, column_number));
 
 }
 
@@ -300,6 +303,7 @@ void debug_event_callback(v8::Debug::EventDetails const & event_details) {
  */
 void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_details) {
     v8::Isolate * isolate = event_details.GetIsolate();
+    v8::Local<v8::Context> debug_context = v8::Debug::GetDebugContext(isolate);
     DebugEventCallbackData * callback_data =
             static_cast<DebugEventCallbackData *>(v8::External::Cast(*event_details.GetCallbackData())->Value());
     Debugger & debugger = *callback_data->debugger;
@@ -314,10 +318,19 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
 
     v8::DebugEvent debug_event_type = event_details.GetEvent();
 
-
+    // If this notification corresponds to a breakpoint being hit
     if (debug_event_type == v8::DebugEvent::Break) {
+
+        v8::Local<v8::Array> hit_breakpoints_array = v8toolkit::get_key_as<v8::Array>(debug_context, event_data, "break_points_hit_");
+        assert(hit_breakpoints_array->Length() == 1); // don't know how to handle anything else
+        v8::Local<v8::Value> breakpoint_info = hit_breakpoints_array->Get(debug_context, 0).ToLocalChecked();
+        v8::Local<v8::Value> breakpoint_location = v8toolkit::get_key(debug_context, breakpoint_info, "actual_location");
+        int64_t script_id = v8toolkit::get_key_as<v8::Number>(debug_context, breakpoint_location, "script_id")->Value();
+        int64_t line_number = v8toolkit::get_key_as<v8::Number>(debug_context, breakpoint_location, "line")->Value();
+        int64_t column_number = v8toolkit::get_key_as<v8::Number>(debug_context, breakpoint_location, "column")->Value();
+
         // send message to debugger notifying that breakpoint was hit
-        //    callback_data->debugger->send_message(make_method(Debugger_Paused()));
+        callback_data->debugger->send_message(make_method(Debugger_Paused(debugger, script_id, line_number, column_number)));
 
         // cannot handle hitting a breakpoint while stopped at a breakpoint
         //   not sure what that would even mean
@@ -336,7 +349,21 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
     printf("Resuming from breakpoint\n");
 
     /* GetEventData() when a breakpoint is hit returns:
-     * {break_points_hit_: [{active_: true, actual_location: {column: 4, line: 13, script_id: 55}, condition_: null, script_break_point_: {active_: true, break_points_: [], column_: undefined, condition_: undefined, groupId_: undefined, line_: 13, number_: 1, position_alignment_: 0, script_id_: 55, type_: 0}, source_position_: 175}], frame_: {break_id_: 8, details_: {break_id_: 8, details_: [392424216, {}, function a(){
+     * {
+     *      break_points_hit_: [{active_: true, actual_location: {column: 4, line: 13, script_id: 55}, condition_: null,
+     *      script_break_point_: {
+     *          active_: true,
+     *          break_points_: [],
+     *          column_: undefined,
+     *          condition_: undefined,
+     *          groupId_: undefined,
+     *          line_: 13,
+     *          number_: 1,
+     *          position_alignment_: 0,
+     *          script_id_: 55,
+     *          type_: 0
+ *          },
+ *          source_position_: 175}], frame_: {break_id_: 8, details_: {break_id_: 8, details_: [392424216, {}, function a(){
     println("Beginning of a()");
     let some_var = 5;
     some_var += 5;

@@ -163,12 +163,22 @@ std::vector<ScriptPtr> const & Context::get_scripts() const {
     return this->scripts;
 }
 
+Script const & Context::get_script_by_id(int64_t script_id) {
+    for (::v8toolkit::ScriptPtr const & script : this->scripts) {
+        if (script->get_script_id() == script_id) {
+            return *script;
+        }
+    }
+    throw InvalidCallException(fmt::format("no script found with id {}", script_id));
+}
+
+
 v8::Global<v8::Context> const & Context::get_global_context() const {
     return this->context;
 }
 
 
-    std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>
+std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>
 Context::run_async(const std::string & source, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes

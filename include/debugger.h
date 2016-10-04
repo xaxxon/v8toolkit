@@ -234,62 +234,77 @@ std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
 }
 
 struct Debugger_Paused {
-    Debugger_Paused();
+    Debugger_Paused(Debugger const & debugger, int64_t script_id, int line_number, int column_number = 0);
     std::vector<CallFrame> call_frames;
-    std::string reason;
+
+    // XHR, DOM, EventListener, exception, assert, debugCommand, promiseRejection, other.
+    std::string reason = "other";
     std::vector<std::string> hit_breakpoints;
 
     static std::string get_name(){return "Debugger.paused";}
 };
 std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
     /*
-     {"method":"Debugger.paused",
-     "params":{
-        "callFrames":[
-            {
-                "callFrameId":"{\"ordinal\":0,\"injectedScriptId\":2}",
-                 "functionName":"",
-                 "functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":38},
-                 "location":{"scriptId":"70","lineNumber":1,"columnNumber":0},
-                 "scopeChain":[
-                    {
-                        "type":"local",
-                        "object":{
-                            "type":"object",
-                            "className":"Object",
-                            "description":"Object",
-                            "objectId":"{\"injectedScriptId\":2,\"id\":1}"
+     {
+         "method":"Debugger.paused",
+         "params":{
+            "callFrames":[
+                {
+                    "callFrameId":"{\"ordinal\":0,\"injectedScriptId\":2}",
+                     "functionName":"",
+                     "functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":38},
+                     "location":{"scriptId":"70","lineNumber":1,"columnNumber":0},
+                     "scopeChain":[
+                        {
+                            "type":"local",
+                            "object":{
+                                "type":"object",
+                                "className":"Object",
+                                "description":"Object",
+                                "objectId":"{\"injectedScriptId\":2,\"id\":1}"
+                            },
+                            "startLocation":{
+                                "scriptId":"70",
+                                "lineNumber":0,
+                                "columnNumber":38
+                            },
+                            "endLocation":{
+                                "scriptId":"70",
+                                "lineNumber":517,
+                                "columnNumber":126
+                            }
                         },
-                        "startLocation":{
-                            "scriptId":"70",
-                            "lineNumber":0,
-                            "columnNumber":38
-                        },
-                        "endLocation":{
-                            "scriptId":"70",
-                            "lineNumber":517,
-                            "columnNumber":126
-                        }
-                    },
-                    {"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":2}"}}
-                ],
-                "this":{
-                    "type":"object",
-                    "className":"Window",
-                    "description":"Window",
-                    "objectId":"{\"injectedScriptId\":2,\"id\":3}"
-                }
-            },
-            // another call frame on this line, same as above
-            {"callFrameId":"{\"ordinal\":1,\"injectedScriptId\":2}","functionName":"","functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":0},"location":{"scriptId":"70","lineNumber":517,"columnNumber":127},"scopeChain":[{"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":4}"}}],"this":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":5}"}}],
+                        {"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":2}"}}
+                    ],
+                    "this":{
+                        "type":"object",
+                        "className":"Window",
+                        "description":"Window",
+                        "objectId":"{\"injectedScriptId\":2,\"id\":3}"
+                    }
+                },
+                // another call frame on this line, same as above
+                {"callFrameId":"{\"ordinal\":1,\"injectedScriptId\":2}","functionName":"","functionLocation":{"scriptId":"70","lineNumber":0,"columnNumber":0},"location":{"scriptId":"70","lineNumber":517,"columnNumber":127},"scopeChain":[{"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":4}"}}],"this":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":2,\"id\":5}"}}
+            ], // end callFrames
             "reason":"other",
             "hitBreakpoints":[
                 "https://ssl.gstatic.com/sites/p/2a2c4f/system/js/jot_min_view__en.js:1:0"
-            ]
-        }
-     }
+            ] // end hitBreakpoints
+        } // end params
+     } // end message
      */
-    assert(false);
+    // callFrames array should be populated, but not implemented yet, don't know how, not sure if absolutely req'd
+    os << fmt::format("{{\"callFrames\":[],\"reason\":\"{}\",\"hitBreakpoints\":[", paused.reason);
+    bool first = true;
+    for (auto const & breakpoint : paused.hit_breakpoints) {
+        if (!first) {
+            os << ",";
+        }
+        first = false;
+        os << breakpoint;
+    }
+    os << "]}";
+    return os;
 }
 
 struct Debugger_Resumed {

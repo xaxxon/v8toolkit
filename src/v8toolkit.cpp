@@ -106,7 +106,7 @@ std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
 
 
 // Returns the values in a FunctionCallbackInfo object breaking out first-level arrays into their
-//   contained values (but not subsequent arrays for no particular reason)
+//   contained values (but not subsequent arrays)
 std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<v8::Value>& args, int depth) {
     std::vector<v8::Local<v8::Value>> values;
     
