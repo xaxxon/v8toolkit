@@ -19,6 +19,10 @@ Minimal functionality will include:
 
 (done) means it at least works in some cases
 
+To debug, you must start chrome with the `--remote-debugging-port=9222` flag (port can be whatever port you choose).
+Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002` (9002 or whatever port you have your
+application listening on - set in the `v8toolkit::Debugger` constructor)
+
 
 ## Recent Feature: Automatic class binding generator
 
