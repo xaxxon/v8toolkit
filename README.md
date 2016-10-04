@@ -5,18 +5,19 @@
 
 I am currently implementing the necessary functionality to connect to your application with Chrome's 
 javascript debugger.  The beginnings of the code can be
-found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last is the most 
-interesting from a user perspective).
+found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last contains examples of
+how to integrate the debugger with an application).
 
 Minimal functionality will include: 
 
 * Viewing code (done)
 * Add/remove breakpoints (done)
 * Step over/into/out
-* Notification on breakpoint being hit (in progress)
-* Resuming execution
+* Notification on breakpoint being hit (done)
+* Resuming execution (done)
 * Evaluating arbitrary code (in progress)
 
+(done) means it at least works in some cases
 
 
 ## Recent Feature: Automatic class binding generator
