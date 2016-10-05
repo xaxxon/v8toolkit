@@ -1,22 +1,27 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
    
-## Next Major Feature: Instructions/code for debugging your JavaScript from Chrome's javascript debugger
+## Next Major Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
 
 I am currently implementing the necessary functionality to connect to your application with Chrome's 
 javascript debugger.  The beginnings of the code can be
-found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last is the most 
-interesting from a user perspective).
+found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last contains examples of
+how to integrate the debugger with an application).
 
 Minimal functionality will include: 
 
 * Viewing code (done)
 * Add/remove breakpoints (done)
-* Step over/into/out
-* Notification on breakpoint being hit (in progress)
-* Resuming execution
+* Step over/into/out (done)
+* Notification on breakpoint being hit (done)
+* Resuming execution (done)
 * Evaluating arbitrary code (in progress)
 
+(done) means it at least works in some cases
+
+To debug, you must start chrome with the `--remote-debugging-port=9222` flag (port can be whatever port you choose).
+Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002` (9002 or whatever port you have your
+application listening on - set in the `v8toolkit::Debugger` constructor)
 
 
 ## Recent Feature: Automatic class binding generator
