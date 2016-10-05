@@ -444,13 +444,17 @@ v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) 
 template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
 
-    
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
     auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
 
     if(get_maybe.IsEmpty() || get_maybe.ToLocalChecked()->IsUndefined()) {
-	throw UndefinedPropertyException(key);
+//        if (get_maybe.IsEmpty()) {
+//            std::cerr << "empty" << std::endl;
+//        } else {
+//            std::cerr << "undefined" << std::endl;
+//        }
+        throw UndefinedPropertyException(key);
     }
     return get_value_as<T>(get_maybe.ToLocalChecked());
 }

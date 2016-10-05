@@ -375,10 +375,10 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
 
     auto maybe_result = script->Run(context);
     if (try_catch.HasCaught()) {
-	printf("Context::run threw exception - about to print details:\n");
-	ReportException(isolate, &try_catch);
+        printf("Context::run threw exception - about to print details:\n");
+        ReportException(isolate, &try_catch);
     } else {
-	printf("Context::run ran without throwing exception\n");
+//	printf("Context::run ran without throwing exception\n");
     }
 
     if(maybe_result.IsEmpty()) {

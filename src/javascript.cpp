@@ -111,7 +111,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
         printf("Context::run threw exception - about to print details:\n");
         ReportException(isolate, &try_catch);
     } else {
-        printf("Context::run ran without throwing exception\n");
+//        printf("Context::run ran without throwing exception\n");
     }
 
     if(maybe_result.IsEmpty()) {

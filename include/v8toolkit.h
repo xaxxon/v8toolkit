@@ -69,6 +69,11 @@ namespace v8toolkit {
     v8::Isolate::Scope _v8toolkit_internal_isolate_scope((isolate)); \
     v8::HandleScope _v8toolkit_internal_handle_scope((isolate));
 
+#define DEBUG_SCOPED_RUN(isolate) \
+    v8::Locker _v8toolkit_internal_locker((isolate));                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope((isolate)); \
+    v8::HandleScope _v8toolkit_internal_handle_scope((isolate));     \
+    v8::Context::Scope _v8toolkit_internal_context_scope(v8::Debug::GetDebugContext((isolate)));
 
 
 /**

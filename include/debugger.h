@@ -235,7 +235,9 @@ std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
 
 struct Debugger_Paused {
     Debugger_Paused(Debugger const & debugger, int64_t script_id, int line_number, int column_number = 0);
-    std::vector<CallFrame> call_frames;
+    Debugger_Paused(Debugger const & debugger);
+
+        std::vector<CallFrame> call_frames;
 
     // XHR, DOM, EventListener, exception, assert, debugCommand, promiseRejection, other.
     std::string reason = "other";
@@ -347,6 +349,15 @@ class Debugger {
     static void debug_event_callback(v8::Debug::EventDetails const & event_details);
 
     bool paused_on_breakpoint = false;
+
+    // only valid if paused_on_breakpoint == true
+    int64_t breakpoint_paused_on = -1;
+
+    // only valid if paused_on_breakpoint == true
+    v8::Global<v8::Object> breakpoint_execution_state;
+
+    // helper function that set everything to be ready for resuming javascript execution
+    void resume_execution();
 
 public:
     Debugger(v8toolkit::ContextPtr & context, unsigned short port);
