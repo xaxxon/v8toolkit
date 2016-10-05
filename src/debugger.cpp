@@ -9,6 +9,9 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+int Debugger::STACK_TRACE_DEPTH=10;
+
+
 
 void Debugger::on_http(websocketpp::connection_hdl hdl) {
     Debugger::DebugServerType::connection_ptr con = this->debug_server.get_con_from_hdl(hdl);
@@ -153,26 +156,31 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
 //            std::cerr << "breakpoints removed: " <<  v8toolkit::stringify_value(isolate, result) << std::endl;
 
             // result of scriptBreakPoints():
-            // [{active_: true,
-            //   break_points_: [
-            //     {active_: true,
-            //      actual_location: {
-            //          column: 4,
-            //          line: 4,
-            //          script_id: 55},
-            //      condition_: null,
-            //      script_break_point_: ,
-            //      source_position_: 46}
-            //    ], // end break_points
-            //   column_: undefined,
-            //   condition_: undefined,
-            //   groupId_: undefined,
-            //   line_: 4,
-            //   number_: 1,
-            //   position_alignment_: 0,
-            //   script_id_: 55,
-            //   type_: 0
-            //  }, {...additional breakpoints...}
+            // [
+            //      {
+            //          active_: true,
+            //          break_points_: [
+            //              {
+            //                  active_: true,
+            //                  actual_location: {
+                //                  column: 4,
+                //                  line: 4,
+                //                  script_id: 55
+            //                  },
+                //              condition_: null,
+                //              script_break_point_: ,
+                //              source_position_: 46
+        //                  }
+            //          ], // end break_points
+                    //   column_: undefined,
+                    //   condition_: undefined,
+                    //   groupId_: undefined,
+                    //   line_: 4,
+                    //   number_: 1,
+                    //   position_alignment_: 0,
+                    //   script_id_: 55,
+                    //   type_: 0
+    //               }, {...additional breakpoints...}
             // ]
 
 
@@ -196,18 +204,34 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             v8::Local<v8::Value> step_type = debug_context->run("Debug.StepAction.StepNext").Get(isolate);
 //            std::cerr << "About to try to call prepareStep on execution state: " << v8toolkit::stringify_value(isolate, this->breakpoint_execution_state.Get(isolate), true, true) << std::endl;
             v8toolkit::call_javascript_function(debug_context->get_context(), "prepareStep", this->breakpoint_execution_state.Get(isolate), std::make_tuple(step_type));
-            //debug_context->run(fmt::format("MakeExecutionState({}).prepareStep(Debug.StepAction.StepIn);", this->breakpoint_paused_on));
             this->resume_execution(); // allows breakpoint-hit loop in callback to exit
 
         } else if (method_name == "Debugger.stepInto") {
+            assert(this->paused_on_breakpoint); // should only get this while paused
             std::cout << "step into" << std::endl;
 
-            assert(false);
+            auto debug_context = this->context->get_isolate_helper()->get_debug_context();
+            v8::Context::Scope context_scope(*debug_context);
+
+            v8::Local<v8::Value> step_type = debug_context->run("Debug.StepAction.StepIn").Get(isolate);
+            v8toolkit::call_javascript_function(debug_context->get_context(), "prepareStep", this->breakpoint_execution_state.Get(isolate), std::make_tuple(step_type));
+            this->resume_execution(); // allows breakpoint-hit loop in callback to exit
+
+
         } else if (method_name == "Debugger.stepOut") {
+            assert(this->paused_on_breakpoint); // should only get this while paused
             std::cout << "step out" << std::endl;
 
-            assert(false);
+            auto debug_context = this->context->get_isolate_helper()->get_debug_context();
+            v8::Context::Scope context_scope(*debug_context);
+
+            v8::Local<v8::Value> step_type = debug_context->run("Debug.StepAction.StepOut").Get(isolate);
+            v8toolkit::call_javascript_function(debug_context->get_context(), "prepareStep", this->breakpoint_execution_state.Get(isolate), std::make_tuple(step_type));
+            this->resume_execution(); // allows breakpoint-hit loop in callback to exit
+
+
         } else if (method_name == "Debugger.resume") {
+            assert(this->paused_on_breakpoint); // should only get this while paused
             std::cout << "resume" << std::endl;
             this->resume_execution();
 
@@ -272,6 +296,14 @@ v8toolkit::Context & Debugger::get_context() const {
     return *this->context;
 }
 
+CallFrame::CallFrame(v8::Local<v8::StackFrame> stack_frame, v8::Isolate * isolate, v8::Local<v8::Value>) :
+        function_name(*v8::String::Utf8Value(stack_frame->GetFunctionName())),
+        location(stack_frame->GetScriptId(), stack_frame->GetLineNumber() - 1 /* inspector.js always bumps it one line for unknown reason */),
+        javascript_this(isolate, v8::Object::New(isolate))
+{
+}
+
+
 Runtime_ExecutionContextCreated::Runtime_ExecutionContextCreated(Debugger const & debugger) :
     execution_context_description(debugger)
 {}
@@ -290,14 +322,24 @@ Location::Location(int64_t script_id, int line_number, int column_number) :
     column_number(column_number)
 {}
 
-Debugger_Paused::Debugger_Paused(Debugger const & debugger, int64_t script_id, int line_number, int column_number) {
+Debugger_Paused::Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id, int line_number, int column_number) {
     v8toolkit::Script const & script = debugger.get_context().get_script_by_id(script_id);
 
     this->hit_breakpoints.emplace_back(fmt::format("\"{}:{}:{}\"", script.get_source_location(), line_number, column_number));
+
+    // only doing 1 for now
+    auto isolate = debugger.get_context().get_context()->GetIsolate();
+
+    for (int i = 0; i < stack_trace->GetFrameCount(); i++) {
+        this->call_frames.emplace_back(CallFrame(stack_trace->GetFrame(i), isolate, v8::Object::New(isolate)));
+    }
 }
 
-Debugger_Paused::Debugger_Paused(Debugger const & debugger) {
+Debugger_Paused::Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace) {
     // if no breakpoint was hit
+    auto isolate = debugger.get_context().get_context()->GetIsolate();
+    this->call_frames.emplace_back(CallFrame(stack_trace->GetFrame(0), isolate, v8::Object::New(isolate)));
+
 }
 
 
@@ -323,14 +365,14 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
 //    std::cerr << "GOT DEBUG EVENT CALLBACK WITH EVENT TYPE " << event_details.GetEvent() << std::endl;
 
     v8::Local<v8::Object> event_data = event_details.GetEventData();
-//    std::cerr << "event data: " << std::endl << v8toolkit::stringify_value(isolate, event_data) << std::endl;
+    std::cerr << "event data: " << std::endl << v8toolkit::stringify_value(isolate, event_data, true, true) << std::endl;
 
     v8::Local<v8::Object> execution_state = event_details.GetExecutionState();
 //    debugger.breakpoint_execution_state.Reset(isolate, execution_state);
 
-//    std::cerr << "execution state: " << std::endl << v8toolkit::stringify_value(isolate, execution_state, true, true) << std::endl;
+    std::cerr << "execution state: " << std::endl << v8toolkit::stringify_value(isolate, execution_state, true, true) << std::endl;
 //
-//    std::cerr << "end printing event callback data" << std::endl;
+    std::cerr << "end printing event callback data" << std::endl;
 
     v8::DebugEvent debug_event_type = event_details.GetEvent();
 
@@ -340,6 +382,13 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
 
         v8::Local<v8::Value> str = v8::String::NewFromUtf8(isolate, "break_points_hit_");
 //        std::cerr << v8toolkit::stringify_value(debug_context->GetIsolate(), event_data->Get(str), true, true) << std::endl;
+
+
+        // TEST CODE FOR STACKTRACE LEARNING
+        v8::Local<v8::StackTrace> stack_trace = v8::StackTrace::CurrentStackTrace(isolate, Debugger::STACK_TRACE_DEPTH, static_cast<v8::StackTrace::StackTraceOptions>(v8::StackTrace::kOverview | v8::StackTrace::kScriptId));
+        v8::Local<v8::StackFrame> stack_frame = stack_trace->GetFrame(0);
+        std::cerr << stack_frame->GetLineNumber() << " : " << *v8::String::Utf8Value(stack_frame->GetScriptName()) << " : " << *v8::String::Utf8Value(stack_frame->GetFunctionName()) << std::endl;
+
 
         try {
             v8::Local<v8::Array> hit_breakpoints_array = v8toolkit::get_key_as<v8::Array>(debug_context, event_data,
@@ -365,12 +414,12 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
 
             // send message to debugger notifying that breakpoint was hit
             callback_data->debugger->send_message(
-                    make_method(Debugger_Paused(debugger, script_id, line_number, column_number)));
+                    make_method(Debugger_Paused(debugger, stack_trace, script_id, line_number, column_number)));
         } catch(v8toolkit::UndefinedPropertyException&) {
 
             // no breakpoint hit
             callback_data->debugger->send_message(
-                    make_method(Debugger_Paused(debugger)));
+                    make_method(Debugger_Paused(debugger, stack_trace)));
         }
 
         // cannot handle hitting a breakpoint while stopped at a breakpoint
@@ -387,31 +436,50 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const & event_detail
             }
         }
     }
-//    printf("Resuming from breakpoint\n");
+    printf("Resuming from breakpoint\n");
 
     /* GetEventData() when a breakpoint is hit returns:
      * {
-     *      break_points_hit_: [{active_: true, actual_location: {column: 4, line: 13, script_id: 55}, condition_: null,
-     *      script_break_point_: {
-     *          active_: true,
-     *          break_points_: [],
-     *          column_: undefined,
-     *          condition_: undefined,
-     *          groupId_: undefined,
-     *          line_: 13,
-     *          number_: 1,
-     *          position_alignment_: 0,
-     *          script_id_: 55,
-     *          type_: 0
- *          },
- *          source_position_: 175}], frame_: {break_id_: 8, details_: {break_id_: 8, details_: [392424216, {}, function a(){
-    println("Beginning of a()");
-    let some_var = 5;
-    some_var += 5;
-    b(some_var);
-    println("End of a()");
-
-}, {sourceColumnStart_: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 4, undefined, undefined, undefined, undefined, undefined, undefined, undefined]}, 0, 1, 175, false, false, 0, "some_var", 5]}, index_: 0, type_: "frame"}}
+     *      break_points_hit_:
+         *      [
+             *      {
+                 *      active_: true, actual_location: {column: 4, line: 13, script_id: 55}, condition_: null,
+                 *      script_break_point_: {
+                 *          active_: true,
+                 *          break_points_: [],
+                 *          column_: undefined,
+                 *          condition_: undefined,
+                 *          groupId_: undefined,
+                 *          line_: 13,
+                 *          number_: 1,
+                 *          position_alignment_: 0,
+                 *          script_id_: 55,
+                 *          type_: 0
+             *          },
+             *          source_position_: 175
+         *          }
+     *          ],
+     *          frame_: {
+     *              break_id_: 8,
+     *              details_: {
+     *                  break_id_: 8,
+     *                  details_: [
+     *                      392424216, {}, function a(){
+                                println("Beginning of a()");
+                                let some_var = 5;
+                                some_var += 5;
+                                b(some_var);
+                                println("End of a()");
+                            },
+                            {
+                                sourceColumnStart_: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 4, undefined, undefined, undefined, undefined, undefined, undefined, undefined]
+                            }, 0, 1, 175, false, false, 0, "some_var", 5
+                        ]
+                },
+                index_: 0,
+                type_: "frame"
+            }
+        }
 
      */
 

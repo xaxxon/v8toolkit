@@ -185,7 +185,7 @@ std::ostream& operator<<(std::ostream& os, const RemoteObject & remote_object) {
 }
 
 struct Location {
-    Location(int64_t script_id, int line_number, int column_number);
+    Location(int64_t script_id, int line_number, int column_number = 0);
     int64_t script_id;
     int line_number;
     int column_number;
@@ -223,21 +223,25 @@ std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
 struct Scope {};
 
 struct CallFrame {
-    std::string call_frame_id;
+    CallFrame(v8::Local<v8::StackFrame> stack_frame, v8::Isolate * isolate, v8::Local<v8::Value>);
+    std::string call_frame_id = "bogus call frame id";
     std::string function_name;
     Location location;
     std::vector<Scope> scope_chain; // ?
     RemoteObject javascript_this; // attribute name is just 'this'
 };
 std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
-    assert(false);
+//    {"method":"Debugger.paused","params":{"callFrames":[{"callFrameId":"{\"ordinal\":0,\"injectedScriptId\":20}","functionName":"","functionLocation":{"scriptId":"427","lineNumber":0,"columnNumber":0},"location":{"scriptId":"427","lineNumber":0,"columnNumber":0},"scopeChain":[{"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":20,\"id\":1}"}}],"this":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":20,\"id\":2}"}}],"reason":"other","hitBreakpoints":["https://www.google-analytics.com/analytics.js:0:0"]}}
+    os << fmt::format("{{\"callFrameId\":\"{}\",\"functionName\":\"{}\",\"functionLocation\":{},\"location\":{},\"this\":{},\"scopeChain\":[{{\"type\":\"global\",\"object\":{{\"type\":\"object\",\"className\":\"Window\",\"description\":\"Window\",\"objectId\":\"{{\\\"injectedScriptId\\\":20,\\\"id\\\":1}}\"}}}}]}}",
+                      call_frame.call_frame_id, call_frame.function_name, call_frame.location, /*twice on purpose for testing */call_frame.location, call_frame.javascript_this);
+    return os;
 }
 
 struct Debugger_Paused {
-    Debugger_Paused(Debugger const & debugger, int64_t script_id, int line_number, int column_number = 0);
-    Debugger_Paused(Debugger const & debugger);
+    Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id, int line_number, int column_number = 0);
+    Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace);
 
-        std::vector<CallFrame> call_frames;
+    std::vector<CallFrame> call_frames;
 
     // XHR, DOM, EventListener, exception, assert, debugCommand, promiseRejection, other.
     std::string reason = "other";
@@ -305,6 +309,16 @@ std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
         first = false;
         os << breakpoint;
     }
+    os << "],\"callFrames\":[";
+    first = true;
+    for (auto const & call_frame : paused.call_frames) {
+        if (!first) {
+            os << ",";
+        }
+        first = false;
+        os << call_frame;
+    }
+
     os << "]}";
     return os;
 }
@@ -360,6 +374,8 @@ class Debugger {
     void resume_execution();
 
 public:
+    static int STACK_TRACE_DEPTH;
+
     Debugger(v8toolkit::ContextPtr & context, unsigned short port);
 
     void poll();

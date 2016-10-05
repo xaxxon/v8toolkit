@@ -524,8 +524,8 @@ bool require(
                 auto script_origin =
                         std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate,
                                                                                    complete_filename.c_str()),
-                                                           v8::Integer::New(isolate, 0),
-                                                           v8::Integer::New(isolate, 0)
+                                                           v8::Integer::New(isolate, 0), // line offset
+                                                           v8::Integer::New(isolate, 0)  // column offset
                         );
                                             
                 if (std::regex_search(filename, std::regex(".json$"))) {

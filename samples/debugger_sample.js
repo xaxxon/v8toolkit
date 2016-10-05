@@ -1,4 +1,3 @@
-
 function c(){
     let c=10;
 }
