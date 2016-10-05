@@ -1,7 +1,7 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
    
-## Next Major Feature: Instructions/code for debugging your JavaScript from Chrome's javascript debugger
+## Next Major Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
 
 I am currently implementing the necessary functionality to connect to your application with Chrome's 
 javascript debugger.  The beginnings of the code can be
@@ -12,7 +12,7 @@ Minimal functionality will include:
 
 * Viewing code (done)
 * Add/remove breakpoints (done)
-* Step over/into/out
+* Step over/into/out (done)
 * Notification on breakpoint being hit (done)
 * Resuming execution (done)
 * Evaluating arbitrary code (in progress)
