@@ -30,7 +30,7 @@ set(V8_STATIC_LIBS
 set(V8_SHARED_LIBS
 	icui18n 
 	icuuc 
-	v8 v8_libplatform v8_libbase)
+	v8 v8_libbase)
 
 
 if (WIN32)

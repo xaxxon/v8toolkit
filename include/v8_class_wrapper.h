@@ -1352,10 +1352,10 @@ template<typename T>
 struct CastToJS<T&> {
 	using Pointer = typename std::add_pointer_t<T>;
 
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_const_t<T> & cpp_object){
 		return CastToJS<Pointer>()(isolate, &cpp_object);
 	}
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object){
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::add_const_t<T> & cpp_object){
         return CastToJS<Pointer>()(isolate, &cpp_object);
     }
 

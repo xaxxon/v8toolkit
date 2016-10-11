@@ -3,3 +3,14 @@ passed back from c++ helpers
 
 Debugging support - looks like there are packages out there for integrating it with chrome for debugging
 
+
+
+Building with gn:
+fresh computer:
+fetch v8
+
+existing computer:
+rm -rf v8
+gclient sync (from $HOME)
+
+

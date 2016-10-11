@@ -502,7 +502,7 @@ template<class T1, class T2>
 struct CastToJS<std::pair<T1, T2>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::pair<T1, T2> const & pair);
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::pair<T1, T2> && pair) {
-        this->operator()(isolate, pair);
+        return this->operator()(isolate, pair);
     }
 };
 template<class T1, class T2>

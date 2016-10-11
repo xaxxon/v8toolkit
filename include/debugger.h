@@ -12,15 +12,18 @@
 
 
 #include "javascript.h"
+
+namespace v8toolkit {
+
 class Debugger;
 
 template<class T>
-std::string make_response(int message_id, T const & response_object) {
+std::string make_response(int message_id, T const &response_object) {
     return fmt::format("{{\"id\":{},\"result\":{}}}", message_id, response_object);
 }
 
 template<class T>
-std::string make_method(T const & method_object) {
+std::string make_method(T const &method_object) {
     return fmt::format("{{\"method\":\"{}\",\"params\":{}}}", method_object.get_name(), method_object);
 }
 
@@ -30,7 +33,8 @@ std::string make_method(T const & method_object) {
 // https://chromedevtools.github.io/debugger-protocol-viewer/
 
 struct PageFrame {
-    PageFrame(Debugger const & debugger);
+    PageFrame(Debugger const &debugger);
+
     std::string frame_id;
     std::string parent_id = "";
     std::string network_loader_id;
@@ -39,64 +43,76 @@ struct PageFrame {
     std::string security_origin;
     std::string mime_type = "text/html";
 };
-std::ostream& operator<<(std::ostream& os, const PageFrame & page_frame) {
-    os << fmt::format("{{\"id\":\"{}\",\"parentId\":\"{}\",\"loaderId\":\"{}\",\"name\":\"{}\",\"url\":\"{}\",\"securityOrigin\":\"{}\",\"mimeType\":\"{}\"}}",
-        page_frame.frame_id, page_frame.parent_id, page_frame.network_loader_id, page_frame.name, page_frame.url, page_frame.security_origin, page_frame.mime_type);
+
+std::ostream &operator<<(std::ostream &os, const PageFrame &page_frame) {
+    os << fmt::format(
+            "{{\"id\":\"{}\",\"parentId\":\"{}\",\"loaderId\":\"{}\",\"name\":\"{}\",\"url\":\"{}\",\"securityOrigin\":\"{}\",\"mimeType\":\"{}\"}}",
+            page_frame.frame_id, page_frame.parent_id, page_frame.network_loader_id, page_frame.name,
+            page_frame.url, page_frame.security_origin, page_frame.mime_type);
     return os;
 }
 
 struct FrameResource {
-    FrameResource(Debugger const & debugger, v8toolkit::Script const & script);
+    FrameResource(Debugger const &debugger, v8toolkit::Script const &script);
+
     std::string url;
     std::string type = "Script";
     std::string mime_type = "text/javascript";
     //bool failed = false;
     //bool canceled = false;
 };
-std::ostream& operator<<(std::ostream& os, const FrameResource & frame_resource) {
+
+std::ostream &operator<<(std::ostream &os, const FrameResource &frame_resource) {
     os << fmt::format("{{\"url\":\"{}\",\"type\":\"{}\",\"mimeType\":\"{}\""/*,\"failed\":{},\"canceled\":{}*/"}}",
-                      frame_resource.url, frame_resource.type, frame_resource.mime_type/*, frame_resource.failed, frame_resource.canceled*/);
+                      frame_resource.url, frame_resource.type,
+                      frame_resource.mime_type/*, frame_resource.failed, frame_resource.canceled*/);
     return os;
 }
 
 
 struct Runtime_ExecutionContextDescription {
-    Runtime_ExecutionContextDescription(Debugger const & debugger);
+    Runtime_ExecutionContextDescription(Debugger const &debugger);
+
     int execution_context_id = 1;
-    bool is_default=true;
+    bool is_default = true;
     std::string origin;
-    std::string name="";
+    std::string name = "";
     std::string frame_id;
 };
-std::ostream& operator<<(std::ostream& os, const Runtime_ExecutionContextDescription & context) {
+
+std::ostream &operator<<(std::ostream &os, const Runtime_ExecutionContextDescription &context) {
     os << fmt::format("{{\"id\":{},\"isDefault\":{},\"name\":\"{}\",\"frameId\":\"{}\",\"origin\":\"{}\"}}",
-                      context.execution_context_id, context.is_default, context.name, context.frame_id, context.origin);
+                      context.execution_context_id, context.is_default, context.name, context.frame_id,
+                      context.origin);
     return os;
 }
 
 struct Runtime_ExecutionContextCreated {
-    Runtime_ExecutionContextCreated(Debugger const & debugger);
+    Runtime_ExecutionContextCreated(Debugger const &debugger);
+
     Runtime_ExecutionContextDescription execution_context_description;
-    std::string get_name() const {return "Runtime.executionContextCreated";}
+
+    std::string get_name() const { return "Runtime.executionContextCreated"; }
 };
-std::ostream& operator<<(std::ostream& os, const Runtime_ExecutionContextCreated & context) {
+
+std::ostream &operator<<(std::ostream &os, const Runtime_ExecutionContextCreated &context) {
     os << fmt::format("{{\"context\":{}}}", context.execution_context_description);
     return os;
 }
 
 struct FrameResourceTree {
-    FrameResourceTree(Debugger const & debugger);
+    FrameResourceTree(Debugger const &debugger);
 
     PageFrame page_frame;
     std::vector<FrameResourceTree> child_frames;
     std::vector<FrameResource> resources;
 };
 
-std::ostream& operator<<(std::ostream& os, const FrameResourceTree & frame_resource_tree) {
+std::ostream &operator<<(std::ostream &os, const FrameResourceTree &frame_resource_tree) {
     os << fmt::format("{{\"frameTree\":{{\"frame\":{}", frame_resource_tree.page_frame);
     os << ",\"childFrames\":[";
     bool first = true;
-    for (auto & child_frame : frame_resource_tree.child_frames) {
+    for (auto &child_frame : frame_resource_tree.child_frames) {
         if (!first) {
             os << ",";
         }
@@ -106,7 +122,7 @@ std::ostream& operator<<(std::ostream& os, const FrameResourceTree & frame_resou
     os << "],";
     os << "\"resources\":[";
     first = true;
-    for (auto & resource : frame_resource_tree.resources) {
+    for (auto &resource : frame_resource_tree.resources) {
         if (!first) {
             os << ",";
         }
@@ -118,17 +134,19 @@ std::ostream& operator<<(std::ostream& os, const FrameResourceTree & frame_resou
 }
 
 struct ScriptSource {
-    ScriptSource(v8toolkit::Script const & script);
+    ScriptSource(v8toolkit::Script const &script);
+
     std::string source;
 };
-std::ostream& operator<<(std::ostream& os, const ScriptSource & script_source) {
+
+std::ostream &operator<<(std::ostream &os, const ScriptSource &script_source) {
     os << fmt::format("{{\"scriptSource\":{}}}", script_source.source);
     return os;
 }
 
 
 struct Debugger_ScriptParsed {
-    Debugger_ScriptParsed(Debugger const & debugger, v8toolkit::Script const & script);
+    Debugger_ScriptParsed(Debugger const &debugger, v8toolkit::Script const &script);
 
     int64_t script_id;
     std::string url; // optional
@@ -140,12 +158,14 @@ struct Debugger_ScriptParsed {
     std::string source_map_url;
     bool has_source_url = false;
 
-    std::string get_name() const {return "Debugger.scriptParsed";}
+    std::string get_name() const { return "Debugger.scriptParsed"; }
 };
-std::ostream& operator<<(std::ostream& os, const Debugger_ScriptParsed & script_parsed) {
-    os << fmt::format("{{\"scriptId\":\"{}\",\"url\":\"{}\",\"startLine\":{},\"startColumn\":{}"/*,\"endLine\":{},\"endColumn\":{}*/"}}",
-                      script_parsed.script_id, script_parsed.url, script_parsed.start_line,
-                      script_parsed.start_column/*, script_parsed.end_line, script_parsed.end_column*/);
+
+std::ostream &operator<<(std::ostream &os, const Debugger_ScriptParsed &script_parsed) {
+    os << fmt::format(
+            "{{\"scriptId\":\"{}\",\"url\":\"{}\",\"startLine\":{},\"startColumn\":{}"/*,\"endLine\":{},\"endColumn\":{}*/"}}",
+            script_parsed.script_id, script_parsed.url, script_parsed.start_line,
+            script_parsed.start_column/*, script_parsed.end_line, script_parsed.end_column*/);
     return os;
 }
 
@@ -157,20 +177,24 @@ struct Network_LoadingFinished {
 
 // response to a getResourceContent request
 struct Page_Content {
-    Page_Content(std::string const & content);
+    Page_Content(std::string const &content);
+
     std::string content;
     bool base64_encoded = false;
 };
-std::ostream& operator<<(std::ostream& os, const Page_Content & content) {
+
+std::ostream &operator<<(std::ostream &os, const Page_Content &content) {
     os << "\"result\":{";
-    os << fmt::format("\"content\":\"{}\",\"base64Encoded\":{}", content.content, (content.base64_encoded ? "true" : "false"));
+    os << fmt::format("\"content\":\"{}\",\"base64Encoded\":{}", content.content,
+                      (content.base64_encoded ? "true" : "false"));
     os << "}";
     return os;
 }
 
 // https://chromedevtools.github.io/debugger-protocol-viewer/tot/Runtime/#type-RemoteObject
 struct RemoteObject {
-    RemoteObject(v8::Isolate * isolate, v8::Local<v8::Value> value);
+    RemoteObject(v8::Isolate *isolate, v8::Local<v8::Value> value);
+
     // object, function, undefined, string, number, boolean, symbol
     std::string type;
     std::string value_string;
@@ -179,18 +203,23 @@ struct RemoteObject {
     std::string description; // string representation of the value
     bool exception_thrown = false;
 };
-std::ostream& operator<<(std::ostream& os, const RemoteObject & remote_object) {
-    os << fmt::format("{{\"result\":{{\"type\":\"{}\",\"value\":{},\"description\":\"{}\"}},\"wasThrown\":{}}}", remote_object.type, remote_object.value_string, remote_object.description, remote_object.exception_thrown);
+
+std::ostream &operator<<(std::ostream &os, const RemoteObject &remote_object) {
+    os << fmt::format("{{\"result\":{{\"type\":\"{}\",\"value\":{},\"description\":\"{}\"}},\"wasThrown\":{}}}",
+                      remote_object.type, remote_object.value_string, remote_object.description,
+                      remote_object.exception_thrown);
     return os;
 }
 
 struct Location {
     Location(int64_t script_id, int line_number, int column_number = 0);
+
     int64_t script_id;
     int line_number;
     int column_number;
 };
-std::ostream& operator<<(std::ostream& os, const Location & location) {
+
+std::ostream &operator<<(std::ostream &os, const Location &location) {
     os << fmt::format("{{\"scriptId\":\"{}\",\"lineNumber\":{},\"columnNumber\":{}}}",
                       location.script_id, location.line_number, location.column_number);
     return os;
@@ -198,15 +227,17 @@ std::ostream& operator<<(std::ostream& os, const Location & location) {
 
 
 struct Breakpoint {
-    Breakpoint(v8toolkit::Script const & script, int line_number, int column_number = 0);
+    Breakpoint(v8toolkit::Script const &script, int line_number, int column_number = 0);
+
     std::string breakpoint_id;
     std::vector<Location> locations;
 };
-std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
+
+std::ostream &operator<<(std::ostream &os, const Breakpoint &breakpoint) {
     std::stringstream locations;
     locations << "[";
     bool first = true;
-    for (auto const & location : breakpoint.locations) {
+    for (auto const &location : breakpoint.locations) {
         if (!first) {
             locations << ",";
         }
@@ -220,26 +251,33 @@ std::ostream& operator<<(std::ostream& os, const Breakpoint & breakpoint) {
 }
 
 
-struct Scope {};
+struct Scope {
+};
 
 struct CallFrame {
-    CallFrame(v8::Local<v8::StackFrame> stack_frame, v8::Isolate * isolate, v8::Local<v8::Value>);
+    CallFrame(v8::Local<v8::StackFrame> stack_frame, v8::Isolate *isolate, v8::Local<v8::Value>);
+
     std::string call_frame_id = "bogus call frame id";
     std::string function_name;
     Location location;
     std::vector<Scope> scope_chain; // ?
     RemoteObject javascript_this; // attribute name is just 'this'
 };
-std::ostream& operator<<(std::ostream& os, const CallFrame & call_frame) {
+
+std::ostream &operator<<(std::ostream &os, const CallFrame &call_frame) {
 //    {"method":"Debugger.paused","params":{"callFrames":[{"callFrameId":"{\"ordinal\":0,\"injectedScriptId\":20}","functionName":"","functionLocation":{"scriptId":"427","lineNumber":0,"columnNumber":0},"location":{"scriptId":"427","lineNumber":0,"columnNumber":0},"scopeChain":[{"type":"global","object":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":20,\"id\":1}"}}],"this":{"type":"object","className":"Window","description":"Window","objectId":"{\"injectedScriptId\":20,\"id\":2}"}}],"reason":"other","hitBreakpoints":["https://www.google-analytics.com/analytics.js:0:0"]}}
-    os << fmt::format("{{\"callFrameId\":\"{}\",\"functionName\":\"{}\",\"functionLocation\":{},\"location\":{},\"this\":{},\"scopeChain\":[{{\"type\":\"global\",\"object\":{{\"type\":\"object\",\"className\":\"Window\",\"description\":\"Window\",\"objectId\":\"{{\\\"injectedScriptId\\\":20,\\\"id\\\":1}}\"}}}}]}}",
-                      call_frame.call_frame_id, call_frame.function_name, call_frame.location, /*twice on purpose for testing */call_frame.location, call_frame.javascript_this);
+    os << fmt::format(
+            "{{\"callFrameId\":\"{}\",\"functionName\":\"{}\",\"functionLocation\":{},\"location\":{},\"this\":{},\"scopeChain\":[{{\"type\":\"global\",\"object\":{{\"type\":\"object\",\"className\":\"Window\",\"description\":\"Window\",\"objectId\":\"{{\\\"injectedScriptId\\\":20,\\\"id\\\":1}}\"}}}}]}}",
+            call_frame.call_frame_id, call_frame.function_name,
+            call_frame.location, /*twice on purpose for testing */call_frame.location, call_frame.javascript_this);
     return os;
 }
 
 struct Debugger_Paused {
-    Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id, int line_number, int column_number = 0);
-    Debugger_Paused(Debugger const & debugger, v8::Local<v8::StackTrace> stack_trace);
+    Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id,
+                    int line_number, int column_number = 0);
+
+    Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTrace> stack_trace);
 
     std::vector<CallFrame> call_frames;
 
@@ -247,9 +285,10 @@ struct Debugger_Paused {
     std::string reason = "other";
     std::vector<std::string> hit_breakpoints;
 
-    static std::string get_name(){return "Debugger.paused";}
+    static std::string get_name() { return "Debugger.paused"; }
 };
-std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
+
+std::ostream &operator<<(std::ostream &os, const Debugger_Paused &paused) {
     /*
      {
          "method":"Debugger.paused",
@@ -302,7 +341,7 @@ std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
     // callFrames array should be populated, but not implemented yet, don't know how, not sure if absolutely req'd
     os << fmt::format("{{\"callFrames\":[],\"reason\":\"{}\",\"hitBreakpoints\":[", paused.reason);
     bool first = true;
-    for (auto const & breakpoint : paused.hit_breakpoints) {
+    for (auto const &breakpoint : paused.hit_breakpoints) {
         if (!first) {
             os << ",";
         }
@@ -311,7 +350,7 @@ std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
     }
     os << "],\"callFrames\":[";
     first = true;
-    for (auto const & call_frame : paused.call_frames) {
+    for (auto const &call_frame : paused.call_frames) {
         if (!first) {
             os << ",";
         }
@@ -326,10 +365,10 @@ std::ostream& operator<<(std::ostream& os, const Debugger_Paused & paused) {
 struct Debugger_Resumed {
     // No fields
 };
-std::ostream& operator<<(std::ostream& os, const Debugger_Resumed & resumed) {
+
+std::ostream &operator<<(std::ostream &os, const Debugger_Resumed &resumed) {
     assert(false);
 }
-
 
 
 class Debugger {
@@ -340,27 +379,33 @@ class Debugger {
 
     using WebSocketConnections = std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>>;
     WebSocketConnections connections;
-    void send_message(std::string const & message);
+
+    void send_message(std::string const &message);
 
 
     bool websocket_validation_handler(websocketpp::connection_hdl hdl);
 
     void on_open(websocketpp::connection_hdl hdl);
+
     void on_close(websocketpp::connection_hdl hdl);
+
     void on_message(websocketpp::connection_hdl hdl, DebugServerType::message_ptr msg);
+
     void on_http(websocketpp::connection_hdl hdl);
+
     v8toolkit::ContextPtr context;
 
     std::string frame_id = "12345.1";
 
 
     struct DebugEventCallbackData {
-        DebugEventCallbackData(Debugger * debugger) : debugger(debugger) {}
-        Debugger * debugger;
+        DebugEventCallbackData(Debugger *debugger) : debugger(debugger) {}
+
+        Debugger *debugger;
     };
 
 
-    static void debug_event_callback(v8::Debug::EventDetails const & event_details);
+    static void debug_event_callback(v8::Debug::EventDetails const &event_details);
 
     bool paused_on_breakpoint = false;
 
@@ -376,15 +421,25 @@ class Debugger {
 public:
     static int STACK_TRACE_DEPTH;
 
-    Debugger(v8toolkit::ContextPtr & context, unsigned short port);
+    Debugger(v8toolkit::ContextPtr &context, unsigned short port);
+    Debugger(Debugger const &) = delete; // not copyable
+    Debugger & operator=(Debugger const &) = delete;
+    Debugger(Debugger &&) = default; // moveable
+    Debugger & operator=(Debugger &&) = default;
 
     void poll();
+    void poll_one();
+
     void helper(websocketpp::connection_hdl hdl);
 
-    std::string const & get_frame_id() const;
-    std::string get_base_url() const;
-    v8toolkit::Context & get_context() const;
+    std::string const &get_frame_id() const;
 
+    std::string get_base_url() const;
+
+    v8toolkit::Context &get_context() const;
+
+
+};
 
 
 };
