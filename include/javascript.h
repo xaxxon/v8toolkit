@@ -56,7 +56,7 @@ private:
     /// constructor should only be called by an Isolate
 	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
 
-    /// stores the list of scripts
+    /// stores the list of scripts -- TODO: These should be weak_ptr's or no script/context will ever be cleaned up
     std::vector<ScriptPtr> scripts;
 
 	ScriptPtr get_script(std::string const & string);
@@ -84,6 +84,14 @@ public:
 	 */
     std::vector<ScriptPtr> const & get_scripts() const;
 
+
+	/**
+	 * Registers an externally created script object with this Context and returns a wrapped
+	 * Script object
+	 * @param external_script script that was created 'by hand' not with a method on this context
+	 * @return wrapped v8toolkit::Script object
+	 */
+	ScriptPtr register_external_script(v8::Local<v8::Script> external_script);
 
 	/**
 	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
@@ -345,17 +353,14 @@ class Script : public std::enable_shared_from_this<Script>
     friend class Context;
     
 private:
-    Script(std::shared_ptr<Context> context_helper,
-           v8::Local<v8::Script> script,
-           std::string const & script_source,
-           std::string const & source_location = "");
+    Script(ContextPtr context_helper,
+           v8::Local<v8::Script> script);
 
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
-    std::string source_code;
-    std::string source_location; // url or any identifier
+
 public:
     
 	Script() = delete;

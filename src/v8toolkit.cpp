@@ -313,16 +313,6 @@ bool _get_modification_time_of_filename(std::string filename, time_t & modificat
 //   cached value
 std::mutex require_results_mutex;
 
-struct RequireResult {
-    time_t time;
-    v8::Global<v8::Value> result;
-    std::unique_ptr<v8::ScriptOrigin> script_origin;
-    RequireResult(v8::Isolate * isolate, const time_t & time, v8::Local<v8::Value> result, std::unique_ptr<v8::ScriptOrigin> script_origin) :
-            time(time), result(v8::Global<v8::Value>(isolate, result)), script_origin(std::move(script_origin))
-    {}
-    // IF CRASHING IN RequireResult DESTRUCTOR, MAKE SURE TO CALL delete_require_cache_for_isolate BEFORE DESTROYING ISOLATE
-};
-
 typedef std::map<std::string, RequireResult> cached_isolate_modules_t; // a named module result
 static std::map<v8::Isolate *, cached_isolate_modules_t> require_results;
 
@@ -469,7 +459,9 @@ bool require(
     std::string filename,
     v8::Local<v8::Value> & result,
     const std::vector<std::string> & paths,
-    bool track_file_modification_times, bool use_cache)
+    bool track_file_modification_times,
+    bool use_cache,
+    std::function<void(RequireResult const &)> callback)
 {
 
     auto isolate = context->GetIsolate();
@@ -521,15 +513,14 @@ bool require(
                 }
 
                 // Compile the source code.
-                auto script_origin =
-                        std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate,
-                                                                                   complete_filename.c_str()),
-                                                           v8::Integer::New(isolate, 0), // line offset
-                                                           v8::Integer::New(isolate, 0)  // column offset
+                v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
+                                                                       complete_filename.c_str()),
+                                               v8::Integer::New(isolate, 0), // line offset
+                                               v8::Integer::New(isolate, 0)  // column offset
                         );
-                                            
+                v8::Local<v8::Script> script;
+
                 if (std::regex_search(filename, std::regex(".json$"))) {
-                    v8::Local<v8::Script> script;
                     v8::Local<v8::Value> error;
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
@@ -541,9 +532,8 @@ bool require(
                         return false;
                     }
                 } else {
-                    v8::Local<v8::Script> script;
                     v8::Local<v8::Value> error;
-                    result = execute_module(context, file_contents, *script_origin);
+                    result = execute_module(context, file_contents, script_origin);
 //                    if (!compile_source(context, file_contents, script, error, script_origin.get())) {
 //                        isolate->ThrowException(error);
 //                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
@@ -560,7 +550,7 @@ bool require(
 //                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
 //                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
 //                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
-		}
+		        }
 
 
                 
@@ -568,8 +558,13 @@ bool require(
                 if (use_cache) {
                     std::lock_guard<std::mutex> l(require_results_mutex);
                     auto & isolate_require_results = require_results[isolate];
-                    isolate_require_results.emplace(complete_filename, RequireResult(isolate, file_modification_time,
-                                                                                     result, std::move(script_origin)));
+                    isolate_require_results.emplace(complete_filename,
+                                                    RequireResult(isolate, context,
+                                                                  script, file_modification_time,
+                                                                  result));
+                    if (callback) {
+                        callback(isolate_require_results.find(complete_filename)->second);
+                    }
                 }
                 // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
                 // printf("Require returning resulting object for module %s\n", complete_filename.c_str());

@@ -89,12 +89,9 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     if (compiled_script.IsEmpty()) {
         throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
-    auto new_script = std::shared_ptr<Script>(new Script(shared_from_this(),
-                                                         compiled_script.ToLocalChecked(),
-                                                         javascript_source,
-                                                         fmt::format("v8toolkit://{}/{}",boost::uuids::to_string(this->uuid), filename)));
-    this->scripts.push_back(new_script);
-    return new_script;
+    this->scripts.emplace_back(new Script(shared_from_this(),
+                                       compiled_script.ToLocalChecked()));
+    return this->scripts.back();
 }
 
 
@@ -213,7 +210,15 @@ std::string Context::get_uuid_string() const {
 }
 
 
-    Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
+ScriptPtr Context::register_external_script(v8::Local<v8::Script> external_script) {
+    this->scripts.emplace_back(new v8toolkit::Script(this->shared_from_this(), external_script));
+
+    return this->scripts.back();
+}
+
+
+
+Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
 {   
     v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void{
         this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
@@ -228,15 +233,17 @@ v8::Local<v8::UnboundScript> Script::get_unbound_script() const {
 }
 
 
-    Isolate::operator v8::Isolate*()
+Isolate::operator v8::Isolate*()
 {
     return this->isolate;
 }
+
 
 Isolate::operator v8::Local<v8::ObjectTemplate>()
 {
     return this->global_object_template.Get(this->isolate);
 }
+
 
 Isolate & Isolate::add_print(std::function<void(const std::string &)> callback)
 {
@@ -245,6 +252,7 @@ Isolate & Isolate::add_print(std::function<void(const std::string &)> callback)
     });
     return *this;
 }
+
 
 Isolate & Isolate::add_print()
 {
@@ -428,20 +436,11 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 
 
 Script::Script(std::shared_ptr<Context> context_helper,
-               v8::Local<v8::Script> script,
-               std::string const & source_code,
-               std::string const & source_location) :
+               v8::Local<v8::Script> script) :
     context_helper(context_helper),
-    isolate(*context_helper),
-    script(v8::Global<v8::Script>(isolate, script)),
-    source_code(source_code),
-    source_location(source_location)
-{
-    // if no location provided, create a unique identification string
-    if (this->source_location == "") {
-        this->source_location = boost::uuids::to_string(boost::uuids::uuid());
-    }
-}
+    isolate(context_helper->get_isolate()),
+    script(v8::Global<v8::Script>(isolate, script))
+{}
 
 std::thread Script::run_thread()
 {
@@ -462,11 +461,13 @@ void Script::run_detached(){
 }
 
 std::string const & Script::get_source_code() const {
-    return this->source_code;
+//    return this->script.Get(this->isolate)->GetUnboundScript().
+    assert(false);
 }
 
 std::string const & Script::get_source_location() const {
-    return this->source_location;
+//    return this->source_location;
+    assert(false);
 }
 
 int64_t Script::get_script_id() const {

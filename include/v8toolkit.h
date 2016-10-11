@@ -1185,16 +1185,35 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & co
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template);
 
 
-/**
+
+struct RequireResult {
+    time_t time;
+    v8::Global<v8::Script> script;
+    v8::Global<v8::Context> context;
+    v8::Global<v8::Value> result;
+    RequireResult(v8::Isolate * isolate, v8::Local<v8::Context> context, v8::Local<v8::Script> script, const time_t & time, v8::Local<v8::Value> result) :
+            time(time),
+            script(v8::Global<v8::Script>(isolate, script)),
+            context(v8::Global<v8::Context>(isolate, context)),
+            result(v8::Global<v8::Value>(isolate, result))
+    {}
+    // IF CRASHING IN RequireResult DESTRUCTOR, MAKE SURE TO CALL delete_require_cache_for_isolate BEFORE DESTROYING ISOLATE
+};
+
+
+    /**
 * Attempts to load the specified module name from the given paths (in order).
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that
 */
 bool require(v8::Local<v8::Context> context,
-                             std::string filename,
-                             v8::Local<v8::Value> & result,
-                             const std::vector<std::string> & paths,
-                             bool track_modification_times = false, bool use_cache = true);
+             std::string filename,
+             v8::Local<v8::Value> & result,
+             const std::vector<std::string> & paths,
+             bool track_modification_times = false,
+             bool use_cache = true,
+             std::function<void(RequireResult const &)> callback = std::function<void(RequireResult const &)>()
+    );
 
 
 /**
