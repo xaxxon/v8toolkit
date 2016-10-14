@@ -56,7 +56,9 @@ private:
     /// constructor should only be called by an Isolate
 	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
 
-    /// stores the list of scripts -- TODO: These should be weak_ptr's or no script/context will ever be cleaned up
+    /// stores the list of scripts --
+    /// TODO: These should be weak_ptr's or no script/context will ever be cleaned up
+	/// WARNING: CHANGING THIS TO WEAK PTR MAY BREAK HOW REQUIRE STORES v8toolkit::Scripts for use by the Debugger object
     std::vector<ScriptPtr> scripts;
 
 	ScriptPtr get_script(std::string const & string);
@@ -66,6 +68,9 @@ private:
 
 	/// unique identifier for each context
 	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
+
+
+
 
 public:
 
@@ -91,7 +96,7 @@ public:
 	 * @param external_script script that was created 'by hand' not with a method on this context
 	 * @return wrapped v8toolkit::Script object
 	 */
-	ScriptPtr register_external_script(v8::Local<v8::Script> external_script);
+	ScriptPtr register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code);
 
 	/**
 	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
@@ -339,6 +344,14 @@ public:
      */
     Script const & get_script_by_id(int64_t script_id);
 
+
+	/**
+	 * Evaluates the specified file and returns the result - can be .js or .json
+	 * @param filename file containing javascript or json to evaluate
+	 * @return the result of the evaluation or empty on failure
+	 */
+	v8::Local<v8::Value> require(std::string const & filename, std::vector<std::string> const & paths);
+
 };
 
 using ContextPtr = std::shared_ptr<Context>;
@@ -354,12 +367,14 @@ class Script : public std::enable_shared_from_this<Script>
     
 private:
     Script(ContextPtr context_helper,
-           v8::Local<v8::Script> script);
+           v8::Local<v8::Script> script,
+		   std::string const & source_code = "");
 
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
+	std::string script_source_code;
 
 public:
     
@@ -375,7 +390,9 @@ public:
     }
 
     std::string const & get_source_code() const;
-    std::string const & get_source_location() const;
+
+	// this should go back to being a ref to an instance variable
+    std::string get_source_location() const;
 	int64_t get_script_id() const;
 
 	/**

@@ -629,7 +629,7 @@ public:
 		   
 	}
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
-	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
+//	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
 	ISOLATE_SCOPED_RUN(isolate);
 	global_parent_function_template =
 	    v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
@@ -658,7 +658,7 @@ public:
 						v8::Local<v8::Value>());
 	    
 	    // Add the constructor function to the parent object template (often the global template)
-	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
+//	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
 	    
 	    return *this;
@@ -683,7 +683,7 @@ public:
 		    v8::Local<v8::Value>());
 	    
 	    // Add the constructor function to the parent object template (often the global template)
-	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
+//	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
 	    
 	    return *this;
@@ -711,7 +711,7 @@ public:
             return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
         }
                 
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+//		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
         //   This makes sure if the same object is returned multiple times, the javascript object is also the same
@@ -1110,6 +1110,7 @@ public:
     		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
+                std::cout << "Adding method " << method_name << std::endl;
                 // get the behind-the-scenes c++ object
                 // However, Holder() refers to the most-derived object, so the prototype chain must be
                 //   inspected to find the appropriate v8::Object with the T* in its internal field
@@ -1498,10 +1499,10 @@ v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
 		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
 
-		fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
-				std::is_polymorphic<Head>::value);
-		fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
-				std::is_polymorphic<MatchingConstT>::value);
+//		fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
+//				std::is_polymorphic<Head>::value);
+//		fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
+//				std::is_polymorphic<MatchingConstT>::value);
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {

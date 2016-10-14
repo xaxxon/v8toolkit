@@ -74,7 +74,7 @@ namespace v8toolkit {
 												     const v8::Local<v8::Value> & data) {
 	assert(this->finalized == true);
 
-	fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
+//	fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
 
         auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
         init_instance_object_template(function_template->InstanceTemplate());
@@ -88,11 +88,11 @@ namespace v8toolkit {
         // if there is a parent type set, set that as this object's prototype
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
-	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
-            function_template->Inherit(parent_function_template);
+//	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
+//            function_template->Inherit(parent_function_template);
         }
 
-	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
+//	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
         this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
         return function_template;
     }
@@ -107,7 +107,7 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_function_template()
 	{
 	    if (this_class_function_templates.empty()){
-		fprintf(stderr, "Making function template because there isn't one %s\n", demangle<T>().c_str());
+//		fprintf(stderr, "Making function template because there isn't one %s\n", demangle<T>().c_str());
 		// this will store it for later use automatically
 		return make_wrapping_function_template();
 	    } else {
@@ -167,7 +167,7 @@ namespace v8toolkit {
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 	object_template->SetInternalFieldCount(1);
-	fprintf(stderr, "Adding %d members\n", (int)this->member_adders.size());
+//	fprintf(stderr, "Adding %d members\n", (int)this->member_adders.size());
 	for (auto & adder : this->member_adders) {
 	    adder(object_template);
 	}
@@ -176,10 +176,10 @@ namespace v8toolkit {
     template<class T> void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
 	init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 
-	fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
+//	fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
 	for (auto & adder : this->method_adders) {
 
-            // std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
+             std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
 
 	    // create a function template, set the lambda created above to be the handler
 	    auto function_template = v8::FunctionTemplate::New(this->isolate);
@@ -201,7 +201,7 @@ namespace v8toolkit {
 
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
-	fprintf(stderr, "Adding %d static methods\n", (int)this->static_method_adders.size());
+//	fprintf(stderr, "Adding %d static methods\n", (int)this->static_method_adders.size());
 	for (auto & adder : this->static_method_adders) {
 	    adder(constructor_function_template);
 	}

@@ -160,7 +160,9 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 
     add_function(isolate, object_template, "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i]) + "\n");
+        }
     });
     add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
@@ -179,7 +181,9 @@ void add_print(const v8::Local<v8::Context> context, std::function<void(const st
 
     add_function(context, context->Global(), "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i]) + "\n");
+        }
     });
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
@@ -560,7 +564,7 @@ bool require(
                     auto & isolate_require_results = require_results[isolate];
                     isolate_require_results.emplace(complete_filename,
                                                     RequireResult(isolate, context,
-                                                                  script, file_modification_time,
+                                                                  script, file_contents, file_modification_time,
                                                                   result));
                     if (callback) {
                         callback(isolate_require_results.find(complete_filename)->second);

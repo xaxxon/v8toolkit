@@ -370,16 +370,16 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const &event_details
 //    std::cerr << "GOT DEBUG EVENT CALLBACK WITH EVENT TYPE " << event_details.GetEvent() << std::endl;
 
     v8::Local<v8::Object> event_data = event_details.GetEventData();
-    std::cerr << "event data: " << std::endl << v8toolkit::stringify_value(isolate, event_data, true, true)
-              << std::endl;
+//    std::cerr << "event data: " << std::endl << v8toolkit::stringify_value(isolate, event_data, true, true)
+//              << std::endl;
 
     v8::Local<v8::Object> execution_state = event_details.GetExecutionState();
 //    debugger.breakpoint_execution_state.Reset(isolate, execution_state);
 
-    std::cerr << "execution state: " << std::endl
-              << v8toolkit::stringify_value(isolate, execution_state, true, true) << std::endl;
+//    std::cerr << "execution state: " << std::endl
+//              << v8toolkit::stringify_value(isolate, execution_state, true, true) << std::endl;
 //
-    std::cerr << "end printing event callback data" << std::endl;
+//    std::cerr << "end printing event callback data" << std::endl;
 
     v8::DebugEvent debug_event_type = event_details.GetEvent();
 

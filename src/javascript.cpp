@@ -12,8 +12,10 @@ boost::uuids::random_generator uuid_generator;
 std::atomic<int> script_id_counter(0);
 
 
-Context::Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context) :
-    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
+Context::Context(std::shared_ptr<Isolate> isolate_helper,
+                 v8::Local<v8::Context> context) :
+    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()),
+    context(v8::Global<v8::Context>(isolate, context))
 {}
 
 void Context::shutdown() {
@@ -90,7 +92,7 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
         throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
     this->scripts.emplace_back(new Script(shared_from_this(),
-                                       compiled_script.ToLocalChecked()));
+                                       compiled_script.ToLocalChecked(), javascript_source));
     return this->scripts.back();
 }
 
@@ -210,12 +212,21 @@ std::string Context::get_uuid_string() const {
 }
 
 
-ScriptPtr Context::register_external_script(v8::Local<v8::Script> external_script) {
-    this->scripts.emplace_back(new v8toolkit::Script(this->shared_from_this(), external_script));
+ScriptPtr Context::register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code) {
+    this->scripts.emplace_back(new v8toolkit::Script(this->shared_from_this(), external_script, source_code));
 
     return this->scripts.back();
 }
 
+
+v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<std::string> const & paths) {
+    v8::Local<v8::Value> require_result;
+    v8toolkit::require(this->get_context(), filename,
+                       require_result, paths, false, true, [this](RequireResult const & require_result) {
+        this->register_external_script(require_result.script.Get(this->isolate), require_result.source_code);
+    });
+    return require_result;
+}
 
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
@@ -269,6 +280,7 @@ void Isolate::add_require(std::vector<std::string> paths)
        v8toolkit::add_require(isolate, get_object_template(), paths);
     });
 }
+
 
 v8::Isolate * Isolate::get_isolate() 
 {
@@ -436,11 +448,15 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 
 
 Script::Script(std::shared_ptr<Context> context_helper,
-               v8::Local<v8::Script> script) :
+               v8::Local<v8::Script> script,
+               std::string const & source_code) :
     context_helper(context_helper),
     isolate(context_helper->get_isolate()),
-    script(v8::Global<v8::Script>(isolate, script))
-{}
+    script(v8::Global<v8::Script>(isolate, script)),
+    script_source_code(source_code)
+{
+    std::cerr << "source code length: " << source_code.length() << std::endl;
+}
 
 std::thread Script::run_thread()
 {
@@ -461,14 +477,14 @@ void Script::run_detached(){
 }
 
 std::string const & Script::get_source_code() const {
-//    return this->script.Get(this->isolate)->GetUnboundScript().
-    assert(false);
+    return this->script_source_code;
 }
 
-std::string const & Script::get_source_location() const {
-//    return this->source_location;
-    assert(false);
+std::string Script::get_source_location() const {
+//    return *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetSourceURL()->ToString());
+    return std::string("v8toolkit://") + this->context_helper->get_uuid_string() + "/" + *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetScriptName());
 }
+
 
 int64_t Script::get_script_id() const {
     auto unbound_script = this->get_unbound_script();

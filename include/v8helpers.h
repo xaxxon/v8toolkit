@@ -48,14 +48,14 @@ template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<S
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-    fprintf(stderr, "safe dynamic cast doing real cast\n");
+//    fprintf(stderr, "safe dynamic cast doing real cast\n");
     return dynamic_cast<Destination>(source);
 };
 template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
+//    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
     return nullptr;
 };
 
@@ -357,7 +357,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
 
 
  struct AnyBase
