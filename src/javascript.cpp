@@ -212,10 +212,13 @@ std::string Context::get_uuid_string() const {
 }
 
 
-ScriptPtr Context::register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code) {
+void Context::register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code) {
     this->scripts.emplace_back(new v8toolkit::Script(this->shared_from_this(), external_script, source_code));
+}
 
-    return this->scripts.back();
+
+void Context::register_external_function(v8::Global<v8::Function> external_function) {
+    this->functions.emplace_back(std::move(external_function));
 }
 
 
@@ -223,15 +226,16 @@ v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<
     v8::Local<v8::Value> require_result;
     v8toolkit::require(this->get_context(), filename,
                        require_result, paths, false, true, [this](RequireResult const & require_result) {
-        this->register_external_script(require_result.script.Get(this->isolate), require_result.source_code);
+        this->register_external_function(v8::Global<v8::Function>(require_result.isolate,
+                                                                  require_result.function.Get(require_result.isolate)));
     });
     return require_result;
 }
 
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
-{   
-    v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void{
+{
+    v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void {
         this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
     });
 }

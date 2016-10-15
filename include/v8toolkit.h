@@ -1187,19 +1187,21 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 
 
 struct RequireResult {
-    time_t time;
-    v8::Global<v8::Script> script;
+    v8::Isolate * isolate;
     v8::Global<v8::Context> context;
+    v8::Global<v8::Function> function;
     v8::Global<v8::Value> result;
-    std::string source_code;
-    RequireResult(v8::Isolate * isolate, v8::Local<v8::Context> context,
-                  v8::Local<v8::Script> script, std::string const & source_code,
-                  const time_t & time, v8::Local<v8::Value> result) :
-            time(time),
-            script(v8::Global<v8::Script>(isolate, script)),
+    time_t time;
+    RequireResult(v8::Isolate * isolate,
+                  v8::Local<v8::Context> context,
+                  v8::Local<v8::Function> function,
+                  v8::Local<v8::Value> result,
+                  const time_t & time) :
+            isolate(isolate),
             context(v8::Global<v8::Context>(isolate, context)),
+            function(v8::Global<v8::Function>(isolate, function)),
             result(v8::Global<v8::Value>(isolate, result)),
-            source_code(source_code)
+            time(time)
     {}
     // IF CRASHING IN RequireResult DESTRUCTOR, MAKE SURE TO CALL delete_require_cache_for_isolate BEFORE DESTROYING ISOLATE
 };

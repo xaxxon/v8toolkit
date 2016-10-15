@@ -511,7 +511,9 @@ public:
 				DestructorBehavior()(isolate, cpp_object);
 			}
 		);
-	}
+
+
+    }
 	
 	
     /**
@@ -711,7 +713,7 @@ public:
             return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
         }
                 
-//		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
         //   This makes sure if the same object is returned multiple times, the javascript object is also the same
@@ -788,7 +790,7 @@ public:
 
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
 											     callable);
-		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
+//		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
 						       method_name.c_str(),
 						       static_method_function_template);
@@ -818,7 +820,7 @@ public:
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
 											     callable);
 		    
-		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
+//		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
 						       method_name.c_str(),
 						       static_method_function_template);

@@ -166,7 +166,9 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
     });
     add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0], true, true) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i], true, true) + "\n");
+        }
     });
 	
 }
@@ -187,7 +189,9 @@ void add_print(const v8::Local<v8::Context> context, std::function<void(const st
     });
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0], true, true) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i], true, true) + "\n");
+        }
     });
 
 }
@@ -400,9 +404,17 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
     
 
 
+/**
+ * Compiles the given code within a containing function and returns the exports object
+ * @param context
+ * @param module_source
+ * @param script_origin
+ * @return
+ */
 v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
                                     const std::string module_source,
-                                    const v8::ScriptOrigin & script_origin) {
+                                    const v8::ScriptOrigin & script_origin,
+                                    v8::Local<v8::Function> compiled_function) {
 
     auto isolate = context->GetIsolate();
 
@@ -428,7 +440,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 
     // NEED PROPER ERROR HANDLING HERE
     assert(!maybe_module_function.IsEmpty());
-    auto module_function = maybe_module_function.ToLocalChecked();
+    compiled_function = maybe_module_function.ToLocalChecked();
 
     v8::Local<v8::Object> receiver = v8::Object::New(isolate);
     v8::Local<v8::Value> module_params[2];
@@ -437,7 +449,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     module_params[1] = exports_object;
     add_variable(context, module_params[0]->ToObject(), "exports", exports_object);
 
-    (void)module_function->Call(context, context->Global(), 2, &module_params[0]);
+    (void)compiled_function->Call(context, context->Global(), 2, &module_params[0]);
 
     return exports_object;
 }
@@ -535,41 +547,34 @@ bool require(
                         if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
                         return false;
                     }
+                    result = maybe_result.ToLocalChecked();
+
+                    // cache the result for subsequent requires of the same module in the same isolate
+                    if (use_cache) {
+                        // never re-implemented this after moving it into each branch of json/non-json
+                        assert(false);
+                    }
+
                 } else {
                     v8::Local<v8::Value> error;
-                    result = execute_module(context, file_contents, script_origin);
-//                    if (!compile_source(context, file_contents, script, error, script_origin.get())) {
-//                        isolate->ThrowException(error);
-//                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
-//                        return false;
-//                    }
+                    v8::Local<v8::Function> module_function;
+                    result = execute_module(context, file_contents, script_origin, module_function);
 
-                    // set up the module and exports stuff
-                    // TODO: module object should also have "children" array, "filename" string, "id" string, "loaded" boolean, "parent" module object that first loaded this one
-//                    (void)context->Global()->Set(context, v8::String::NewFromUtf8(isolate, "global"), context->Global());
+                    std::lock_guard<std::mutex> l(require_results_mutex);
+                    auto & isolate_require_results = require_results[isolate];
+                    isolate_require_results.emplace(complete_filename,
+                                                    RequireResult(isolate, context, module_function, result,
+                                                                  file_modification_time));
+                    if (callback) {
+                        callback(isolate_require_results.find(complete_filename)->second);
+                    }
 
-                    // return value of run doesn't matter, only what is hooked up to export variable
-//		    (void)run_script(context, script);
-                    //(void)script->Run(context);
-//                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
-//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
-//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
+
+
 		        }
 
 
                 
-                // cache the result for subsequent requires of the same module in the same isolate
-                if (use_cache) {
-                    std::lock_guard<std::mutex> l(require_results_mutex);
-                    auto & isolate_require_results = require_results[isolate];
-                    isolate_require_results.emplace(complete_filename,
-                                                    RequireResult(isolate, context,
-                                                                  script, file_contents, file_modification_time,
-                                                                  result));
-                    if (callback) {
-                        callback(isolate_require_results.find(complete_filename)->second);
-                    }
-                }
                 // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
                 // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
                 return true;

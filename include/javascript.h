@@ -59,7 +59,8 @@ private:
     /// stores the list of scripts --
     /// TODO: These should be weak_ptr's or no script/context will ever be cleaned up
 	/// WARNING: CHANGING THIS TO WEAK PTR MAY BREAK HOW REQUIRE STORES v8toolkit::Scripts for use by the Debugger object
-    std::vector<ScriptPtr> scripts;
+    std::vector<v8toolkit::ScriptPtr> scripts;
+	std::vector<v8::Global<v8::Function>> functions; // directly compiled functions
 
 	ScriptPtr get_script(std::string const & string);
 
@@ -68,8 +69,6 @@ private:
 
 	/// unique identifier for each context
 	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
-
-
 
 
 public:
@@ -96,12 +95,15 @@ public:
 	 * @param external_script script that was created 'by hand' not with a method on this context
 	 * @return wrapped v8toolkit::Script object
 	 */
-	ScriptPtr register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code);
+	void register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code);
 
-	/**
-	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
-	 * @return the global context object
-	 */
+	void register_external_function(v8::Global<v8::Function> external_function);
+
+
+		/**
+         * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
+         * @return the global context object
+         */
 	v8::Global<v8::Context> const & get_global_context() const;
 
     /**

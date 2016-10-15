@@ -89,7 +89,7 @@ namespace v8toolkit {
         auto parent_function_template = global_parent_function_template.Get(isolate);
         if (!parent_function_template.IsEmpty()) {
 //	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
-//            function_template->Inherit(parent_function_template);
+            function_template->Inherit(parent_function_template);
         }
 
 //	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
