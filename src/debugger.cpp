@@ -91,6 +91,15 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
                 if (script->get_script_id() == script_id) {
                     this->debug_server.send(hdl, make_response(message_id, ScriptSource(*script)),
                                             websocketpp::frame::opcode::TEXT);
+                    return;
+                }
+            }
+            for (auto & function : this->get_context().get_functions()) {
+                auto local_function = function.Get(isolate);
+                if (local_function->GetScriptOrigin().ScriptID()->Value() == script_id) {
+                    this->debug_server.send(hdl, make_response(message_id, ScriptSource(local_function)),
+                                            websocketpp::frame::opcode::TEXT);
+                    return;
                 }
             }
         } else if (method_name == "Debugger.setBreakpointByUrl") {
@@ -327,9 +336,10 @@ Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const &debugger, v8toolkit
         url(script.get_source_location()) {}
 
 Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const &debugger, v8::Local<v8::Function> const function) {
-    auto script_id = function->GetScriptOrigin().ScriptID();
-    std::cout << v8toolkit::stringify_value(debugger.get_context().get_isolate(), script_id);
-    std::cout << std::endl;
+    auto isolate = debugger.get_context().get_isolate();
+    auto function_origin = function->GetScriptOrigin();
+    this->script_id = function_origin.ScriptID()->Value();
+    this->url = *v8::String::Utf8Value(function_origin.ResourceName());
 }
 //    script_id(function->GetScriptOrigin().ScriptID()->Value()), url(function->GetScriptOrigin())
 
@@ -337,7 +347,11 @@ Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const &debugger, v8::Local
 ScriptSource::ScriptSource(v8toolkit::Script const &script) :
     source(nlohmann::basic_json<>(script.get_source_code()).dump()) {}
 
-Location::Location(int64_t script_id, int line_number, int column_number) :
+ScriptSource::ScriptSource(v8::Local<v8::Function> function) :
+    source(nlohmann::basic_json<>(*v8::String::Utf8Value(function)).dump()) {}
+
+
+    Location::Location(int64_t script_id, int line_number, int column_number) :
         script_id(script_id),
         line_number(line_number),
         column_number(column_number) {}

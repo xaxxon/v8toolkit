@@ -135,6 +135,7 @@ std::ostream &operator<<(std::ostream &os, const FrameResourceTree &frame_resour
 
 struct ScriptSource {
     ScriptSource(v8toolkit::Script const &script);
+    ScriptSource(v8::Local<v8::Function> function);
 
     std::string source;
 };
