@@ -25,6 +25,25 @@
 
 namespace v8toolkit {
 
+    namespace literals {
+
+        // put the following in your code to use these:
+        //     using namespace v8toolkit::literals;
+        inline v8::Local<v8::String> operator "" _v8(char const * string, unsigned long) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::String::NewFromUtf8(isolate, string);
+        }
+        inline v8::Local<v8::Number> operator"" _v8(long double number) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::Number::New(isolate, number);
+        }
+        inline v8::Local<v8::Integer> operator"" _v8(unsigned long long int number) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::Integer::New(isolate, number);
+        }
+
+    }
+
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
     
 #define V8TOOLKIT_COMMA ,

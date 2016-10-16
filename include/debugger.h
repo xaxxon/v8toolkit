@@ -147,6 +147,7 @@ std::ostream &operator<<(std::ostream &os, const ScriptSource &script_source) {
 
 struct Debugger_ScriptParsed {
     Debugger_ScriptParsed(Debugger const &debugger, v8toolkit::Script const &script);
+    Debugger_ScriptParsed(Debugger const &debugger, v8::Local<v8::Function> const function);
 
     int64_t script_id;
     std::string url; // optional
@@ -438,7 +439,7 @@ public:
 
     v8toolkit::Context &get_context() const;
 
-
+    void wait_for_connection();
 };
 
 

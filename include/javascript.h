@@ -88,13 +88,19 @@ public:
 	 */
     std::vector<ScriptPtr> const & get_scripts() const;
 
+    /**
+     * Returns a list of functions compiled directly to this context (vs those in a script)
+     * @return a list of functions compiled directly to this context (vs those in a script)
+     */
+    std::vector<v8::Global<v8::Function>> const & get_functions() const;
 
-	/**
-	 * Registers an externally created script object with this Context and returns a wrapped
-	 * Script object
-	 * @param external_script script that was created 'by hand' not with a method on this context
-	 * @return wrapped v8toolkit::Script object
-	 */
+
+    /**
+     * Registers an externally created script object with this Context and returns a wrapped
+     * Script object
+     * @param external_script script that was created 'by hand' not with a method on this context
+     * @return wrapped v8toolkit::Script object
+     */
 	void register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code);
 
 	void register_external_function(v8::Global<v8::Function> external_function);

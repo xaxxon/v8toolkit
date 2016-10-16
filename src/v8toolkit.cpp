@@ -22,6 +22,8 @@
 
 namespace v8toolkit {
 
+using namespace ::v8toolkit::literals;
+
 void process_v8_flags(int & argc, char ** argv)
 {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
@@ -427,8 +429,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 
     v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
     v8::Local<v8::String> parameter_names[] = {
-        v8::String::NewFromUtf8(isolate, "module"),
-        v8::String::NewFromUtf8(isolate, "exports")
+        "module"_v8, "exports"_v8
     };
     v8::TryCatch try_catch(isolate);
     auto maybe_module_function =
@@ -484,7 +485,7 @@ bool require(
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
         if (REQUIRE_DEBUG_PRINTS) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
-        isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Cannot specify a file containing .."));
+        isolate->ThrowException("Cannot specify a file containing .."_v8);
         return false;
     }
 
@@ -583,7 +584,7 @@ bool require(
         }
     }
     if (REQUIRE_DEBUG_PRINTS) printf("Couldn't find any matches for %s\n", filename.c_str());
-    isolate->ThrowException(v8::String::NewFromUtf8(isolate, "No such module found in any search path"));
+    isolate->ThrowException("No such module found in any search path"_v8);
     return false;
 }
 

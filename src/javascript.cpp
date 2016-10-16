@@ -162,6 +162,10 @@ std::vector<ScriptPtr> const & Context::get_scripts() const {
     return this->scripts;
 }
 
+std::vector<v8::Global<v8::Function>> const & Context::get_functions() const {
+    return this->functions;
+}
+
 Script const & Context::get_script_by_id(int64_t script_id) {
     for (::v8toolkit::ScriptPtr const & script : this->scripts) {
         if (script->get_script_id() == script_id) {

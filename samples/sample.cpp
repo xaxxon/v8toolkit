@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
             //   as the most derived type of the actual cpp object inside, which is a Foo, which does have an 'i'
             fprintf(stderr, "Testing most derived type return\n");
             fprintf(stderr, "%s\n", stringify_value(isolate, most_derived_fooparent_js_object).c_str());
-            assert(!most_derived_fooparent_js_object->Get(context, v8::String::NewFromUtf8(isolate, "i")).ToLocalChecked()->IsUndefined());
+            assert(!most_derived_fooparent_js_object->Get(context, "i"_v8).ToLocalChecked()->IsUndefined());
             fprintf(stderr, "Testing completed\n");
 
         });

@@ -21,6 +21,10 @@ int main(int, char**) {
     // To connect, start chrome with --remote-debugging-port=9222 http://localhost:9222/devtools/inspector.html?ws=localhost:9002
     // The debugger javascript application is served from chrome, but then it connects to our websocket
     Debugger debugger(context, 9002);
+    using namespace v8toolkit::literals;
+    v8::ScriptOrigin script_origin("compile_function_in_context"_v8, 1_v8);
+//    v8::ScriptCompiler::Source source("println(\"in code from CompileFunctionInContext\");",
+//    v8::ScriptCompiler::CompileFunctionInContext(*context, )
     for (;;) {
         script3->run();
         debugger.poll();

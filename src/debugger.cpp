@@ -10,6 +10,8 @@
 
 namespace v8toolkit {
 
+using namespace ::v8toolkit::literals;
+
 using json = nlohmann::json;
 
 int Debugger::STACK_TRACE_DEPTH = 10;
@@ -67,6 +69,10 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             for (auto &script : this->get_context().get_scripts()) {
                 this->debug_server.send(hdl, make_method(Debugger_ScriptParsed(*this, *script)),
                                         websocketpp::frame::opcode::TEXT);
+            }
+            for (auto & function : this->get_context().get_functions()) {
+                this->send_message(make_method(Debugger_ScriptParsed(*this, function.Get(isolate))));
+
             }
 
 
@@ -320,8 +326,16 @@ Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const &debugger, v8toolkit
         script_id(script.get_script_id()),
         url(script.get_source_location()) {}
 
+Debugger_ScriptParsed::Debugger_ScriptParsed(Debugger const &debugger, v8::Local<v8::Function> const function) {
+    auto script_id = function->GetScriptOrigin().ScriptID();
+    std::cout << v8toolkit::stringify_value(debugger.get_context().get_isolate(), script_id);
+    std::cout << std::endl;
+}
+//    script_id(function->GetScriptOrigin().ScriptID()->Value()), url(function->GetScriptOrigin())
+
+
 ScriptSource::ScriptSource(v8toolkit::Script const &script) :
-        source(nlohmann::basic_json<>(script.get_source_code()).dump()) {}
+    source(nlohmann::basic_json<>(script.get_source_code()).dump()) {}
 
 Location::Location(int64_t script_id, int line_number, int column_number) :
         script_id(script_id),
@@ -387,7 +401,7 @@ void Debugger::debug_event_callback(v8::Debug::EventDetails const &event_details
     if (debug_event_type == v8::DebugEvent::Break) {
 //        std::cerr << v8toolkit::stringify_value(debug_context->GetIsolate(), event_data, true, true) << std::endl;
 
-        v8::Local<v8::Value> str = v8::String::NewFromUtf8(isolate, "break_points_hit_");
+        v8::Local<v8::Value> str = "break_points_hit_"_v8;
 //        std::cerr << v8toolkit::stringify_value(debug_context->GetIsolate(), event_data->Get(str), true, true) << std::endl;
 
 
@@ -582,6 +596,17 @@ void Debugger::poll_one() {
     this->debug_server.poll_one();
 }
 
+
+using namespace std::literals::chrono_literals;
+
+void Debugger::wait_for_connection() {
+    while(this->connections.empty()) {
+        this->poll_one();
+        if (this->connections.empty()) {
+            std::this_thread::sleep_for(200ms);
+        }
+    }
+}
 
 
 }

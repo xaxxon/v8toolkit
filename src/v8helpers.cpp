@@ -39,10 +39,11 @@ std::string demangle_typeid_name(const std::string & mangled_name) {
 #endif
 }
 
+using namespace literals;
 
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array) {
     auto context = isolate->GetCurrentContext();
-    return array->Get(context, v8::String::NewFromUtf8(isolate, "length")).ToLocalChecked()->Uint32Value(); 
+    return array->Get(context, "length"_v8).ToLocalChecked()->Uint32Value();
 }
 
 
