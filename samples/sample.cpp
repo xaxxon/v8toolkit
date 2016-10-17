@@ -11,6 +11,7 @@
 #include "v8_class_wrapper.h"
 
 using namespace v8toolkit;
+using namespace v8toolkit::literals;
 using namespace std;
 
 

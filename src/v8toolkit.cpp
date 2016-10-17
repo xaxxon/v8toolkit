@@ -416,7 +416,7 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
 v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
                                     const std::string module_source,
                                     const v8::ScriptOrigin & script_origin,
-                                    v8::Local<v8::Function> compiled_function) {
+                                    v8::Local<v8::Function> & compiled_function) {
 
     auto isolate = context->GetIsolate();
 

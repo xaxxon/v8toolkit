@@ -15,6 +15,8 @@
 
 namespace v8toolkit {
 
+using namespace ::std::chrono_literals;
+
 class Debugger;
 
 template<class T>
@@ -229,7 +231,7 @@ std::ostream &operator<<(std::ostream &os, const Location &location) {
 
 
 struct Breakpoint {
-    Breakpoint(v8toolkit::Script const &script, int line_number, int column_number = 0);
+    Breakpoint(std::string const & location, int64_t script_id, int line_number, int column_number);
 
     std::string breakpoint_id;
     std::vector<Location> locations;
@@ -440,7 +442,7 @@ public:
 
     v8toolkit::Context &get_context() const;
 
-    void wait_for_connection();
+    void wait_for_connection(std::chrono::duration<float> sleep_between_polls = std::chrono::milliseconds(200));
 };
 
 

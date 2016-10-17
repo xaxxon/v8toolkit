@@ -108,20 +108,35 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
 //            std::cerr << fmt::format("set breakpoint on url: {} line: {}", url, line_number) << std::endl;
 
             v8toolkit::ScriptPtr script_to_break;
+            int64_t script_id_to_break = -1;
+            std::string script_location;
             for (v8toolkit::ScriptPtr const &script : context->get_scripts()) {
 //                std::cerr << fmt::format("Comparing {} and {}", script->get_source_location(), url) << std::endl;
                 if (script->get_source_location() == url) {
                     script_to_break = script;
+                    script_id_to_break = script->get_script_id();
+                    script_location = script->get_source_location();
                     break;
                 }
             }
             assert(script_to_break);
 
+            if (!script_to_break) {
+                for (v8::Global<v8::Function> const & global_function : context->get_functions()) {
+                    v8::Local<v8::Function> function = global_function.Get(isolate);
+                    v8::ScriptOrigin script_origin = function->GetScriptOrigin();
+                    if (url == *v8::String::Utf8Value(script_origin.ResourceName())) {
+                        script_id_to_break = script_origin.ScriptID()->Value();
+                        script_location = *v8::String::Utf8Value(script_origin.ResourceName());
+                    }
+                }
+            }
+
             auto debug_context = this->context->get_isolate_helper()->get_debug_context();
             v8::Context::Scope context_scope(*debug_context);
             v8::Local<v8::Value> result =
                     debug_context->run(
-                            fmt::format("Debug.setScriptBreakPointById({}, {});", script_to_break->get_script_id(),
+                            fmt::format("Debug.setScriptBreakPointById({}, {});", script_id_to_break,
                                         line_number)).Get(isolate);
 //            std::cerr << v8toolkit::stringify_value(isolate, result) << std::endl;
 
@@ -130,7 +145,7 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
             //auto number = v8toolkit::call_simple_javascript_function(isolate, v8toolkit::get_key_as<v8::Function>(*debug_context, result->ToObject(), "number"));
             // auto number = v8toolkit::get_key_as(*debug_context, result->ToObject(), "")
             this->debug_server.send(hdl,
-                                    make_response(message_id, Breakpoint(*script_to_break, line_number)),
+                                    make_response(message_id, Breakpoint(script_location, script_id_to_break, line_number)),
                                     websocketpp::frame::opcode::TEXT);
 
         } else if (method_name == "Runtime.evaluate") {
@@ -379,9 +394,9 @@ Debugger_Paused::Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTr
 }
 
 
-Breakpoint::Breakpoint(v8toolkit::Script const &script, int line_number, int column_number) {
-    this->breakpoint_id = fmt::format("{}:{}:{}", script.get_source_location(), line_number, column_number);
-    this->locations.emplace_back(Location(script.get_script_id(), line_number, column_number));
+Breakpoint::Breakpoint(std::string const & location, int64_t script_id, int line_number, int column_number) {
+    this->breakpoint_id = fmt::format("{}:{}:{}", location, line_number, column_number);
+    this->locations.emplace_back(Location(script_id, line_number, column_number));
 }
 
 
@@ -613,11 +628,12 @@ void Debugger::poll_one() {
 
 using namespace std::literals::chrono_literals;
 
-void Debugger::wait_for_connection() {
+void Debugger::wait_for_connection(std::chrono::duration<float> sleep_between_polls) {
     while(this->connections.empty()) {
         this->poll_one();
         if (this->connections.empty()) {
-            std::this_thread::sleep_for(200ms);
+            // don't suck up 100% cpu while waiting for connection
+            std::this_thread::sleep_for(sleep_between_polls);
         }
     }
 }

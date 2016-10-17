@@ -24,7 +24,7 @@ int main(int, char**) {
     // The debugger javascript application is served from chrome, but then it connects to our websocket
     Debugger debugger(context, 9002);
     using namespace v8toolkit::literals;
-    v8::ScriptOrigin script_origin("compile_function_in_context"_v8, 1_v8);
+    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(*isolate, (std::string("v8toolkit://") + context->get_uuid_string() + "/" + "compile_function_in_context").c_str()), 1_v8);
     v8::ScriptCompiler::Source source("println(\"in code from CompileFunctionInContext\");"_v8, script_origin);
     auto maybe_function = v8::ScriptCompiler::CompileFunctionInContext(*context, &source, 0, nullptr, 0, nullptr);
     assert(!maybe_function.IsEmpty());
