@@ -1,3 +1,5 @@
+# V8 IS CURRENTLY TRANSITIONING TO A DIFFERENT BUILD SYSTEM AND THESE INSTRUCTIONS MAY NOT BE CORRECT 
+
 Next, run `fetch v8`. This will put the source for V8 in a directory called v8.  The `fetch` command is in the `depot_tools` package you cloned earlier.
 
 You'll need to tell V8 to build with libc++ (instead of libstdc++).  To do this, set the following environment variables.
