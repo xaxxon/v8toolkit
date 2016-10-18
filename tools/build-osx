@@ -4,7 +4,6 @@ $CLANG_DIR/bin/clang++ \
     -fno-rtti -O0 -g \
     -I/usr/local/include \
         -I$CLANG_DIR/include \
-    -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/ \
     -fPIC -fvisibility-inlines-hidden -Wall -W -Wno-unused-parameter -Wwrite-strings -Wcast-qual \
     -Wmissing-field-initializers -pedantic -Wno-long-long -Wcovered-switch-default -Wnon-virtual-dtor \
     -Wdelete-non-virtual-dtor -Werror=date-time -std=c++11 -O3 -DNDEBUG  -fno-rtti \

@@ -231,7 +231,7 @@ std::ostream &operator<<(std::ostream &os, const Location &location) {
 
 
 struct Breakpoint {
-    Breakpoint(std::string const & location, int64_t script_id, int line_number, int column_number);
+    Breakpoint(std::string const & location, int64_t script_id, int line_number, int column_number = 0  );
 
     std::string breakpoint_id;
     std::vector<Location> locations;
