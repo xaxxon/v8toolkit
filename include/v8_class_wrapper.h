@@ -1112,7 +1112,6 @@ public:
     		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
-                std::cout << "Adding method " << method_name << std::endl;
                 // get the behind-the-scenes c++ object
                 // However, Holder() refers to the most-derived object, so the prototype chain must be
                 //   inspected to find the appropriate v8::Object with the T* in its internal field
