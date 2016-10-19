@@ -166,6 +166,7 @@ std::vector<v8::Global<v8::Function>> const & Context::get_functions() const {
     return this->functions;
 }
 
+
 Script const & Context::get_script_by_id(int64_t script_id) {
     for (::v8toolkit::ScriptPtr const & script : this->scripts) {
         if (script->get_script_id() == script_id) {
@@ -173,6 +174,18 @@ Script const & Context::get_script_by_id(int64_t script_id) {
         }
     }
     throw InvalidCallException(fmt::format("no script found with id {}", script_id));
+}
+
+
+v8::Local<v8::Function> Context::get_function_by_id(int64_t script_id) {
+
+    for (v8::Global<v8::Function> & global_function : this->functions) {
+        v8::Local<v8::Function> function = global_function.Get(this->get_isolate());
+        if (function->GetScriptOrigin().ScriptID()->Value() == script_id) {
+            return function;
+        }
+    }
+    throw InvalidCallException(fmt::format("no function found with id {}", script_id));
 }
 
 

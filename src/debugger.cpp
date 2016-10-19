@@ -119,7 +119,7 @@ void Debugger::on_message(websocketpp::connection_hdl hdl, Debugger::DebugServer
                     break;
                 }
             }
-            assert(script_to_break);
+            // assert(script_to_break);
 
             if (!script_to_break) {
                 for (v8::Global<v8::Function> const & global_function : context->get_functions()) {
@@ -373,10 +373,25 @@ ScriptSource::ScriptSource(v8::Local<v8::Function> function) :
 
 Debugger_Paused::Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id,
                                  int line_number, int column_number) {
-    v8toolkit::Script const &script = debugger.get_context().get_script_by_id(script_id);
 
-    this->hit_breakpoints.emplace_back(
-            fmt::format("\"{}:{}:{}\"", script.get_source_location(), line_number, column_number));
+    try {
+
+        v8toolkit::Script const &script = debugger.get_context().get_script_by_id(script_id);
+
+        this->hit_breakpoints.emplace_back(
+                fmt::format("\"{}:{}:{}\"", script.get_source_location(), line_number, column_number));
+    } catch (v8toolkit::InvalidCallException &){}
+    try {
+
+        v8::Local<v8::Function> function = debugger.get_context().get_function_by_id(script_id);
+
+        this->hit_breakpoints.emplace_back(
+                fmt::format("\"{}:{}:{}\"", *v8::String::Utf8Value(function->GetScriptOrigin().ResourceName()), line_number, column_number));
+    } catch (v8toolkit::InvalidCallException &){}
+
+
+
+
 
     // only doing 1 for now
     auto isolate = debugger.get_context().get_context()->GetIsolate();

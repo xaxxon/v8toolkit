@@ -352,6 +352,7 @@ public:
      */
     Script const & get_script_by_id(int64_t script_id);
 
+	v8::Local<v8::Function> get_function_by_id(int64_t script_id);
 
 	/**
 	 * Evaluates the specified file and returns the result - can be .js or .json
