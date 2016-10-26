@@ -242,12 +242,12 @@ template<class T, class Head, class... Tail>
 	}
 
 	template<class R, class TBase, class... Args,
-	    std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-	    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...)) {
+    std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...)) {
 	    throw std::exception();
 	}
 	template<class R, class... Args>
-	    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
+    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
 	    throw std::exception();
 	}
 
@@ -490,6 +490,11 @@ private:
     bool wrap_as_most_derived_flag = false;
 
 public:
+
+    /**
+     * Experimental
+     * @param callback
+     */
     void register_callback(AttributeChangeCallback callback);
     
 
@@ -532,7 +537,11 @@ public:
     */
     v8::Local<v8::FunctionTemplate> get_function_template();
 
-    
+    /**
+     * Returns the embedded C++ object in a JavaScript object
+     * @param object JavaScript object containing an embedded C++ object
+     * @return The embedded C++ object
+     */
     T * get_cpp_object(v8::Local<v8::Object> object);
 
 	
@@ -594,14 +603,14 @@ public:
     set_compatible_types()
     {
         assert(!is_finalized());
-	
-	if (!std::is_const<T>::value) {
-	    using ConstT = std::add_const_t<T>;
-	    V8ClassWrapper<ConstT>::get_instance(isolate).template set_compatible_types<std::add_const_t<CompatibleTypes>...>();
-	}
 
-	// Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
-	type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate));
+        if (!std::is_const<T>::value) {
+            using ConstT = std::add_const_t<T>;
+            V8ClassWrapper<ConstT>::get_instance(isolate).template set_compatible_types<std::add_const_t<CompatibleTypes>...>();
+        }
+
+        // Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
+        type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate));
 
         return *this;
     }
@@ -632,9 +641,9 @@ public:
 	}
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
 //	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
-	ISOLATE_SCOPED_RUN(isolate);
-	global_parent_function_template =
-	    v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
+        ISOLATE_SCOPED_RUN(isolate);
+	    global_parent_function_template =
+                v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
         return *this;
     }
     
@@ -669,9 +678,11 @@ public:
 
 	/**
 	 * When you don't want a "constructor" but you still need something to attach the static method names to, use this
+	 * instead of add_constructor
 	 */
-	v8toolkit::V8ClassWrapper<T> & expose_static_methods(const std::string & js_name,
-							     v8::Local<v8::ObjectTemplate> parent_template) {
+	v8toolkit::V8ClassWrapper<T> &
+    expose_static_methods(const std::string & js_name,
+                          v8::Local<v8::ObjectTemplate> parent_template) {
 	    assert(((void)"Type must be finalized before calling expose_static_methods", this->finalized) == true);
 
         if (global_name_conflicts(js_name)) {
@@ -708,7 +719,7 @@ public:
         
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
 	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
-	if (!this->is_finalized()) {    
+	    if (!this->is_finalized()) {
             // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
         }
@@ -749,7 +760,7 @@ public:
 	}
 
 
-	typedef std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> StdFunctionCallbackType;
+	using StdFunctionCallbackType = std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
 
 	using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
 	std::vector<AttributeAdder> member_adders;
@@ -954,7 +965,8 @@ public:
 	{
 	    return _add_method("unused name", method, true);
 	}
-    
+
+
     
     
 	template<class R, class TBase, class... Args,
@@ -1204,6 +1216,30 @@ public:
 
         return *this;
     }
+
+	v8::IndexedPropertyGetterCallback indexed_property_getter = nullptr;
+	/**
+	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#ae3303f3d55370684ac02b02e67712eac
+	 * Sets a callback when some_object[4] is called
+	 * @param callable function to be called
+	 */
+	void add_index_getter(v8::IndexedPropertyGetterCallback getter) {
+		// can only set one per class type
+		assert(indexed_property_getter == nullptr);
+		indexed_property_getter = getter;
+	}
+
+	v8::NamedPropertyGetterCallback named_property_getter = nullptr;
+	/**
+	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#a66fa7b04c87676e20e35497ea09a0ad0
+	 * @param callable function to be called
+	 */
+	void add_named_property_getter(v8::NamedPropertyGetterCallback getter) {
+		// can only set one per class type
+		assert(named_property_getter == nullptr);
+		named_property_getter = getter;
+	}
+
 };
 
 } // end v8toolkit namespace

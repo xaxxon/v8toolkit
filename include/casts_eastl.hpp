@@ -34,6 +34,12 @@ struct CastToNative<eastl::vector_multimap<Key, Value, Args...>> {
         return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);
     }
 };
+template<class Key, class Value, class... Args>
+struct CastToNative<eastl::vector_multimap<Key, Value, Args...> const> {
+    eastl::vector_multimap<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
+        return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);
+    }
+};
 
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(eastl::string)
     return eastl::string(*v8::String::Utf8Value(value));
@@ -72,6 +78,21 @@ template<class T, class... Rest>
 v8::Local<v8::Value>CastToJS<eastl::vector<T, Rest...>>::operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector) {
     return cast_to_js_vector_helper<eastl::vector, T, Rest...>(isolate, vector);
 }
+
+
+template<class A, class B, class... Rest>
+struct CastToJS<eastl::vector_multimap<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_multimap<A, B, Rest...> const & multimap) {
+        return casttojs_multimaplike(isolate, multimap);
+    }
+};
+
+template<class A, class B, class... Rest>
+struct CastToJS<eastl::vector_multimap<A, B, Rest...> const> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_multimap<A, B, Rest...> const & multimap) {
+        return casttojs_multimaplike(isolate, multimap);
+    }
+};
 
 
 

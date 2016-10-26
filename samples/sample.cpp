@@ -214,6 +214,14 @@ int main(int argc, char* argv[])
             });
 
             wrapped_point.add_member("y", &Point::y_);
+            wrapped_point.add_index_getter([](uint32_t index, v8::PropertyCallbackInfo<v8::Value> const & info){
+                printf("index getter: %d\n", index);
+                info.GetReturnValue().Set(index);
+            });
+            wrapped_point.add_named_property_getter([](v8::Local<v8::String> property_name, v8::PropertyCallbackInfo<v8::Value> const & info){
+                printf("named property getter: %s\n", *v8::String::Utf8Value(property_name));
+                info.GetReturnValue().Set(property_name);
+            });
 
             got_duplicate_name_exception = false;
             try {
@@ -372,13 +380,20 @@ int main(int argc, char* argv[])
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
             (void)script->Run(context);
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p[4]);")).ToLocalChecked();
+            (void)script->Run(context);
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p['four']);")).ToLocalChecked();
+            (void)script->Run(context);
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
             (void)script->Run(context);
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"()=>42.2")).ToLocalChecked();
 	    assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
-	    
+
+
+
+
 	        Foo most_derived_foo_test;
             v8::Local<v8::Object> most_derived_fooparent_js_object =
                 wrapped_fooparent.wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, &most_derived_foo_test);

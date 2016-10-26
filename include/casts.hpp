@@ -702,13 +702,8 @@ CastToJS<const std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::
 }
 
 
-/**
-* supports maps containing any type also supported by CastToJS to javascript arrays
-* It creates an object of key => [values...]
-* All values are arrays, even if there is only one value in the array.
-*/
-template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> & map){
+template<template<class,class,class...> class MultiMapLike, class A, class B, class... Rest>
+v8::Local<v8::Object> casttojs_multimaplike(v8::Isolate * isolate, MultiMapLike<A, B, Rest...> const & map) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
@@ -736,6 +731,16 @@ CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::m
         }
     }
     return object;
+}
+
+/**
+* supports maps containing any type also supported by CastToJS to javascript arrays
+* It creates an object of key => [values...]
+* All values are arrays, even if there is only one value in the array.
+*/
+template<class A, class B, class... Rest> v8::Local<v8::Value>
+CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> & map){
+    return casttojs_multimaplike(isolate, map);
 }
 
 

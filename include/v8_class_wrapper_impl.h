@@ -173,39 +173,46 @@ namespace v8toolkit {
 	}
     }
 
+
     template<class T> void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
 	init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
+//	    fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
+		for (auto &adder : this->method_adders) {
 
-//	fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
-	for (auto & adder : this->method_adders) {
+			std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
 
-             std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
+			// create a function template, set the lambda created above to be the handler
+			auto function_template = v8::FunctionTemplate::New(this->isolate);
+			function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, &adder.callback));
 
-	    // create a function template, set the lambda created above to be the handler
-	    auto function_template = v8::FunctionTemplate::New(this->isolate);
-            function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, &adder.callback));
+			// methods are put into the protype of the newly created javascript object
+			object_template->Set(v8::String::NewFromUtf8(isolate, adder.method_name.c_str()), function_template);
+		}
+		for (auto &adder : this->fake_method_adders) {
+			adder(object_template);
+		}
 
-            // methods are put into the protype of the newly created javascript object
-	    object_template->Set(v8::String::NewFromUtf8(isolate, adder.method_name.c_str()), function_template);
-        }
-        for (auto & adder : this->fake_method_adders) {
-            adder(object_template);
-        }
-
-	// if this is set, it allows the object returned from a 'new' call to be used as a function as well as a traditional object
-	//   e.g. let my_object = new MyClass(); my_object();
-	if (callable_adder.callback) {
-	    object_template->SetCallAsFunctionHandler(callback_helper, v8::External::New(this->isolate, &callable_adder.callback));
+		// if this is set, it allows the object returned from a 'new' call to be used as a function as well as a traditional object
+		//   e.g. let my_object = new MyClass(); my_object();
+		if (callable_adder.callback) {
+			object_template->SetCallAsFunctionHandler(callback_helper,
+													  v8::External::New(this->isolate, &callable_adder.callback));
+		}
+		if (this->indexed_property_getter) {
+			object_template->SetIndexedPropertyHandler(this->indexed_property_getter);
+		}
+		if (this->named_property_getter) {
+			object_template->SetNamedPropertyHandler(this->named_property_getter);
+		}
 	}
-    }
 
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
 //	fprintf(stderr, "Adding %d static methods\n", (int)this->static_method_adders.size());
-	for (auto & adder : this->static_method_adders) {
-	    adder(constructor_function_template);
+		for (auto &adder : this->static_method_adders) {
+			adder(constructor_function_template);
+		}
 	}
-    }
 
 
 
