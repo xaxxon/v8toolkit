@@ -81,6 +81,9 @@ public:
     // test for bug where using the same static method name on two classes
     //   causes duplicate attribute error
     static void static_method_same_name(){};
+
+    int operator[](uint32_t index) {return index;}
+    std::string operator[](std::string const & str) {return str;}
 };
 
 int Point::instance_count = 0;
@@ -188,7 +191,7 @@ int main(int argc, char* argv[])
             V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
             wrapped_point.add_static_method("static_method_same_name", &Point::static_method_same_name);
             wrapped_point.add_method("thing", &Point::thing);
-	    wrapped_point.make_callable(&Point::operator());
+	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
         
 
@@ -218,10 +221,8 @@ int main(int argc, char* argv[])
                 printf("index getter: %d\n", index);
                 info.GetReturnValue().Set(index);
             });
-            wrapped_point.add_named_property_getter([](v8::Local<v8::String> property_name, v8::PropertyCallbackInfo<v8::Value> const & info){
-                printf("named property getter: %s\n", *v8::String::Utf8Value(property_name));
-                info.GetReturnValue().Set(property_name);
-            });
+            // wrapped_point.add_named_property_getter<std::string>(std::bind<std::string(Point::*)(std::string const &)>(&Point::operator[], std::placeholders::_1, std::placeholders::_2));
+            wrapped_point.add_named_property_getter(&Point::operator[]);
 
             got_duplicate_name_exception = false;
             try {

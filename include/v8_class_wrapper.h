@@ -1220,6 +1220,7 @@ public:
 	v8::IndexedPropertyGetterCallback indexed_property_getter = nullptr;
 	/**
 	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#ae3303f3d55370684ac02b02e67712eac
+	 * This version hasn't been enhanced yet like the named property version has.
 	 * Sets a callback when some_object[4] is called
 	 * @param callable function to be called
 	 */
@@ -1229,15 +1230,62 @@ public:
 		indexed_property_getter = getter;
 	}
 
-	v8::NamedPropertyGetterCallback named_property_getter = nullptr;
+	std::function<void(v8::Local<v8::ObjectTemplate>)> named_property_adder;
+
+	struct NamedPropertyCallbackData {
+		T * cpp_object = nullptr;
+		std::function<void(v8::Local<v8::String> property_name,
+						   v8::PropertyCallbackInfo<v8::Value> const &)> getter;
+	};
+
+	template<class ReturnT>
+	using NamedPropertyGetter = std::function<ReturnT(T*, std::string const &)>;
+
+
+
 	/**
 	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#a66fa7b04c87676e20e35497ea09a0ad0
+	 * General purpose version, but to use operator[], use the other version
 	 * @param callable function to be called
 	 */
-	void add_named_property_getter(v8::NamedPropertyGetterCallback getter) {
-		// can only set one per class type
-		assert(named_property_getter == nullptr);
-		named_property_getter = getter;
+	template<class ReturnT>
+	void add_named_property_getter(NamedPropertyGetter<ReturnT> callback) {
+		assert(!named_property_adder);
+		named_property_adder = [this, callback](v8::Local<v8::ObjectTemplate> object_template) {
+
+			auto data = new NamedPropertyCallbackData();
+			data->getter = [this, callback](v8::Local<v8::String> property_name,
+									 v8::PropertyCallbackInfo<v8::Value> const &info) {
+
+				T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
+				info.GetReturnValue().Set(CastToJS<ReturnT>()(info.GetIsolate(),
+															 callback(cpp_object,
+																	  *v8::String::Utf8Value(property_name))));
+			};
+
+			object_template->SetNamedPropertyHandler(
+					// Getter
+					[](v8::Local<v8::String> property_name,
+					   v8::PropertyCallbackInfo<v8::Value> const &info){
+					auto external_data = v8::External::Cast(*info.Data());
+					NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
+					data->getter(property_name, info);
+				},
+					nullptr, // setter
+					nullptr, // query
+					nullptr, // deleter
+					nullptr, // enumerator
+					v8::External::New(this->isolate, (void *)data));
+		};
+	}
+
+	/**
+	 * This version accepts a &T::operator[] directly -- does the std::bind for you
+	 * @param callback T instance member function to be called
+	 */
+	template<class ReturnT, class ObjectT>
+	void add_named_property_getter(ReturnT(ObjectT::*callback)(std::string const &)) {
+		add_named_property_getter<ReturnT>(std::bind(callback, std::placeholders::_1, std::placeholders::_2));
 	}
 
 };

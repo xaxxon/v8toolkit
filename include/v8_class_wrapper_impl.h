@@ -201,8 +201,9 @@ namespace v8toolkit {
 		if (this->indexed_property_getter) {
 			object_template->SetIndexedPropertyHandler(this->indexed_property_getter);
 		}
-		if (this->named_property_getter) {
-			object_template->SetNamedPropertyHandler(this->named_property_getter);
+		if (this->named_property_adder) {
+			this->named_property_adder(object_template);
+
 		}
 	}
 
