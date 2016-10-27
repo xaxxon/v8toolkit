@@ -256,42 +256,48 @@ CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string)
 }
 
 
+template<template<class,class...> class VectorTemplate, class T, class... Rest>
+auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) -> VectorTemplate<T, Rest...>
+{
+    using ResultType = VectorTemplate<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
+    HANDLE_FUNCTION_VALUES;
+    auto context = isolate->GetCurrentContext();
+    ResultType v;
+    if (value->IsArray()) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+        auto array_length = get_array_length(isolate, array);
+        for (int i = 0; i < array_length; i++) {
+            auto value = array->Get(context, i).ToLocalChecked();
+            v.emplace_back(CastToNative<T>()(isolate, value));
+        }
+    } else {
+        throw CastException(fmt::format("CastToNative<std::vector<{}>> requires an array but instead got JS: '{}'",
+                                        demangle<T>(),
+                                        stringify_value(isolate, value)));
+    }
+    return v;
+}
+
+
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
-template<class ElementType>
-struct CastToNative<std::vector<ElementType>> {
+template<class T, class... Rest>
+struct CastToNative<std::vector<T, Rest...>> {
+    using ResultType = std::vector<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
 
-    using ResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
-
-    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-	HANDLE_FUNCTION_VALUES;
-	auto context = isolate->GetCurrentContext();
-	ResultType v;
-	if(value->IsArray()) {
-	    auto array = v8::Local<v8::Object>::Cast(value);
-	    auto array_length = get_array_length(isolate, array);
-	    for(int i = 0; i < array_length; i++) {
-		auto value = array->Get(context, i).ToLocalChecked();
-		v.emplace_back(CastToNative<ElementType>()(isolate, value));
-	    }
-	} else {
-	    throw CastException(fmt::format("CastToNative<std::vector<{}>> requires an array but instead got JS: '{}'",
-                                        demangle<ElementType>(),
-                                        stringify_value(isolate, value)));
-	}
-	return v;
+    ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
+        return vector_type_helper<std::vector, T, Rest...>(isolate, value);
     }
 };
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
-template<class ElementType>
-struct CastToNative<const std::vector<ElementType>> {
+template<class T, class... Rest>
+struct CastToNative<const std::vector<T, Rest...>> {
 
-    using NonConstResultType = std::vector<std::result_of_t<CastToNative<ElementType>(v8::Isolate *, v8::Local<v8::Value>)>>;
+    using NonConstResultType = std::vector<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
 
     const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-	// HANDLE_FUNCTION_VALUES; -- no need for this here, since we call another CastToNative from here
-	return CastToNative<NonConstResultType>()(isolate, value);
+        return vector_type_helper<std::vector, T, Rest...>(isolate, value);
     }
 };
 

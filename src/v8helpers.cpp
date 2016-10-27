@@ -214,6 +214,9 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
         // printf("About to see if we can stringify this as an object\n");
         // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
+        if (object->InternalFieldCount() > 0) {
+            output << "Internal field pointer: " << (void *)v8::External::Cast(*object->GetInternalField(0))->Value() << std::endl;
+        }
         if(value->IsObject() && !object.IsEmpty()) {
             if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
             output << "{";
