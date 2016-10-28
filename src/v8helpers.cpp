@@ -186,9 +186,19 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
     }
 
     // if the left is a bool, return true if right is a bool and they match, otherwise false
-    if (value->IsBoolean() || value->IsNumber() || value->IsFunction() || value->IsUndefined() || value->IsNull()) {
+    if (value->IsBoolean() || value->IsNumber() || value->IsUndefined() || value->IsNull()) {
         if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
-        output << *v8::String::Utf8Value(value);
+        auto string = *v8::String::Utf8Value(value);
+        output << (string ? string : "<COULD NOT CONVERT TO STRING>");
+        //output << "<something broken here>";
+    } else if (value->IsFunction()) {
+        auto string = *v8::String::Utf8Value(value);
+        output << (string ? string : "FUNCTION: <COULD NOT CONVERT TO STRING>");
+//
+//        output << "FUNCTION BUT PRINTING THEM IS WEIRD";
+//        if (value->IsObject()) {
+//            output << " - and is object too";
+//        }
     } else if (value->IsString()) {
         output << "\"" << *v8::String::Utf8Value(value) << "\"";
     } else if (value->IsArray()) {

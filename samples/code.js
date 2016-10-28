@@ -18,6 +18,9 @@ assert(point_instance_count() === 0);
 
 var line = new Line();
 printobj(line.get_point());
+let f = function(){}
+println("Pringing traditional function:");
+printobj(f);
 line.get_point().get_foo();
 assert(line.get_point().get_foo().i === 42);
 

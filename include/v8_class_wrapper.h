@@ -394,8 +394,9 @@ private:
 		// This function returns a reference to member in question
 		auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 		auto attribute_data = (*attribute_data_getter)(cpp_object);
-		info.GetReturnValue().Set(CastToJS<VALUE_T>()(isolate, attribute_data.member_reference));
+		info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<VALUE_T>>()(isolate, attribute_data.member_reference));
 	}
+
 
     // function used to set the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
@@ -419,16 +420,12 @@ private:
 	    attribute_data.class_wrapper.call_callbacks(self, *v8::String::Utf8Value(property), value);
 
 	}
-	
 
 
 	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
 	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
 							   const v8::PropertyCallbackInfo<void>& info)
         {}
-
-
-
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript

@@ -608,13 +608,26 @@ struct CastToJS<std::array<T, N> const> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::array<T, N> const & arr);
 };
 
-// CastToJS<std::shared>
+
+
+/**
+ * This is for when a function returns a std::unique - meaning it likely allocated new memory on its own
+ * If this is being sent back to JS, the unique_ptr must release the memory, because the unique_ptr is going to
+ * go out of scope immediately
+ *
+ * These functions are not const because they call unique_ptr::release
+ */
 template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> & unique_ptr);
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr);
 };
 
+
+/**
+ * If a data structure contains a unique_ptr and that is being returned, the unique_ptr should not ::release()
+ * its memory.  This is treated just as if the call were returning a T* instead of a unique_ptr<T>
+ */
 template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...> &> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
@@ -623,6 +636,8 @@ template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...> const &> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
 };
+
+
 
 // CastToJS<std::shared>
 template<class T>
@@ -912,16 +927,15 @@ CastToJS<std::array<T, N> const>::operator()(v8::Isolate * isolate, std::array<T
 */
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.release());
 }
 
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.release());
 }
-
 
 
 template<class T, class... Rest> v8::Local<v8::Value>

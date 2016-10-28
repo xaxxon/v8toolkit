@@ -72,31 +72,30 @@ namespace v8toolkit {
 	v8::Local<v8::FunctionTemplate>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::make_wrapping_function_template(v8::FunctionCallback callback,
 												     const v8::Local<v8::Value> & data) {
-	assert(this->finalized == true);
+		assert(this->finalized == true);
 
 //	fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
 
-        auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
-        init_instance_object_template(function_template->InstanceTemplate());
-        init_prototype_object_template(function_template->PrototypeTemplate());
-	init_static_methods(function_template);
+		auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
+		init_instance_object_template(function_template->InstanceTemplate());
+		init_prototype_object_template(function_template->PrototypeTemplate());
+		init_static_methods(function_template);
 
-	function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
+		function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
 
 
 
-        // if there is a parent type set, set that as this object's prototype
-        auto parent_function_template = global_parent_function_template.Get(isolate);
-        if (!parent_function_template.IsEmpty()) {
+		// if there is a parent type set, set that as this object's prototype
+		auto parent_function_template = global_parent_function_template.Get(isolate);
+		if (!parent_function_template.IsEmpty()) {
 //	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
-            function_template->Inherit(parent_function_template);
-        }
+			function_template->Inherit(parent_function_template);
+		}
 
 //	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
-        this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
-        return function_template;
-    }
-
+		this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
+		return function_template;
+	}
 
     /**
      * Returns an existing constructor function template for the class/isolate OR creates one if none exist.
@@ -166,12 +165,18 @@ namespace v8toolkit {
 
     template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
-	object_template->SetInternalFieldCount(1);
+		object_template->SetInternalFieldCount(1);
 //	fprintf(stderr, "Adding %d members\n", (int)this->member_adders.size());
-	for (auto & adder : this->member_adders) {
-	    adder(object_template);
+		for (auto &adder : this->member_adders) {
+			adder(object_template);
+		}
+		// if this is set, it allows the object returned from a 'new' call to be used as a function as well as a traditional object
+		//   e.g. let my_object = new MyClass(); my_object();
+		if (callable_adder.callback) {
+			object_template->SetCallAsFunctionHandler(callback_helper,
+													  v8::External::New(this->isolate, &callable_adder.callback));
+		}
 	}
-    }
 
 
     template<class T> void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
@@ -192,12 +197,6 @@ namespace v8toolkit {
 			adder(object_template);
 		}
 
-		// if this is set, it allows the object returned from a 'new' call to be used as a function as well as a traditional object
-		//   e.g. let my_object = new MyClass(); my_object();
-		if (callable_adder.callback) {
-			object_template->SetCallAsFunctionHandler(callback_helper,
-													  v8::External::New(this->isolate, &callable_adder.callback));
-		}
 		if (this->indexed_property_getter) {
 			object_template->SetIndexedPropertyHandler(this->indexed_property_getter);
 		}

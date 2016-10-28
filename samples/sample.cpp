@@ -64,7 +64,8 @@ public:
     eastl::fixed_string<char, 32, true, eastl::allocator> fixed_string;
 
     int operator()(int x) {
-	return x + x_;
+        printf("In Point::operator()\n");
+	    return x + x_;
     }
     
     // returns a new point object that should be managed by V8 GC
@@ -385,6 +386,14 @@ int main(int argc, char* argv[])
             (void)script->Run(context);
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p['four']);")).ToLocalChecked();
             (void)script->Run(context);
+
+            v8::TryCatch tc5(isolate);
+            script = v8::Script::Compile(context, "p = new Point(); println(\"before calling callable\");println(p(4));println(\"after\");"_v8).ToLocalChecked();
+            (void)script->Run(context);
+            if (tc5.HasCaught()) {
+                v8toolkit::ReportException(isolate, &tc5);
+            }
+
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
             (void)script->Run(context);
