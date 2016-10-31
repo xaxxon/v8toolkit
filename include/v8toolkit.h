@@ -311,7 +311,7 @@ template<class HEAD>
 struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::value >> {
     HEAD * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException("Not enough javascript parameters for function call");
+            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
         }
         stuff.emplace_back(std::make_unique<Stuff<HEAD>>(CastToNative<HEAD>()(info.GetIsolate(), info[i++])));
         return static_cast<Stuff<HEAD>>(*stuff.back()).get();
@@ -335,7 +335,7 @@ struct ParameterBuilder<T,
     using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException("Not enough javascript parameters for function call");
+            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
         }
         return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
     }
@@ -356,7 +356,7 @@ struct ParameterBuilder<T,
     using NoConstRefT = std::remove_const_t<NoRefT>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException("Not enough javascript parameters for function call");
+            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
         }
 
 	// if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
@@ -374,7 +374,7 @@ struct ParameterBuilder<char *> {
 
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException("Not enough javascript parameters for function call");
+            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call.  Requires {} but only {} specified", i+1, info.Length()));
         }
         auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());
@@ -396,7 +396,7 @@ struct ParameterBuilder<char *> {
      using DataHolderType = Container<IntermediaryType>;
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
-	     throw InvalidCallException("Not enough javascript parameters for function call");
+	     throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
 	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
 	 auto data_holder = stuff.get();
@@ -425,7 +425,7 @@ struct ParameterBuilder<char *> {
 
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
-	     throw InvalidCallException("Not enough javascript parameters for function call");
+         throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
 	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
 	 auto data_holder = stuff.get();
@@ -446,7 +446,7 @@ template<>
 struct ParameterBuilder<const char *> {
     const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException("Not enough javascript parameters for function call");
+            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
         }
         auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());

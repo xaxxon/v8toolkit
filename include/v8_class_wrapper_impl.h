@@ -88,7 +88,7 @@ namespace v8toolkit {
 		// if there is a parent type set, set that as this object's prototype
 		auto parent_function_template = global_parent_function_template.Get(isolate);
 		if (!parent_function_template.IsEmpty()) {
-//	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
+	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
 			function_template->Inherit(parent_function_template);
 		}
 
@@ -176,6 +176,11 @@ namespace v8toolkit {
 			object_template->SetCallAsFunctionHandler(callback_helper,
 													  v8::External::New(this->isolate, &callable_adder.callback));
 		}
+		if (this->named_property_adder) {
+			this->named_property_adder(object_template);
+
+		}
+
 	}
 
 
@@ -199,10 +204,6 @@ namespace v8toolkit {
 
 		if (this->indexed_property_getter) {
 			object_template->SetIndexedPropertyHandler(this->indexed_property_getter);
-		}
-		if (this->named_property_adder) {
-			this->named_property_adder(object_template);
-
 		}
 	}
 

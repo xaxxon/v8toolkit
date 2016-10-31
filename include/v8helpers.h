@@ -6,7 +6,6 @@
 #include <iostream>
 #include <set>
 #include <typeinfo>
-
 #include <fmt/ostream.h>
 
 
@@ -24,6 +23,9 @@
 
 
 namespace v8toolkit {
+
+    template<class T>
+    using void_t = void;
 
     namespace literals {
 
@@ -43,6 +45,18 @@ namespace v8toolkit {
         }
 
     }
+
+
+
+template<typename T, typename = void>
+struct ProxyType {
+    using PROXY_TYPE = T;
+};
+
+template<typename T>
+struct ProxyType<T,void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
+    using PROXY_TYPE = typename T::V8TOOLKIT_PROXY_TYPE;
+};
 
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
     

@@ -19,6 +19,7 @@
 
 #include "casts.hpp"
 
+using namespace v8toolkit::literals;
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
 #define V8_CLASS_WRAPPER_HAS_BIDIRECTIONAL_SUPPORT
@@ -382,7 +383,7 @@ private:
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
 	template<class VALUE_T> // type being returned
-	static void _getter_helper(v8::Local<v8::String> property,
+	static void _getter_helper(v8::Local<v8::Name> property,
 	                  const v8::PropertyCallbackInfo<v8::Value>& info) {
 
 		auto isolate = info.GetIsolate();
@@ -401,7 +402,7 @@ private:
     // function used to set the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
 	template<typename VALUE_T, std::enable_if_t<std::is_copy_assignable<VALUE_T>::value, int> = 0>
-	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
+	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
 	               const v8::PropertyCallbackInfo<void>& info) {
 
 	    auto isolate = info.GetIsolate();
@@ -1118,7 +1119,8 @@ public:
 		this->check_if_name_used(method_name);
 
 		
-    		MethodAdderData method_adder_data = {method_name, StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
+    		MethodAdderData method_adder_data = {method_name,
+                                                 StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
                 // get the behind-the-scenes c++ object
@@ -1231,60 +1233,160 @@ public:
 
 	struct NamedPropertyCallbackData {
 		T * cpp_object = nullptr;
-		std::function<void(v8::Local<v8::String> property_name,
-						   v8::PropertyCallbackInfo<v8::Value> const &)> getter;
+        std::function<void(v8::Local<v8::Name> property_name,
+                           v8::PropertyCallbackInfo<v8::Value> const &)> getter;
+        std::function<void(v8::Local<v8::Name> property_name,
+                           v8::Local<v8::Value> new_property_value,
+                           v8::PropertyCallbackInfo<v8::Value> const &)> setter;
 	};
 
 	template<class ReturnT>
 	using NamedPropertyGetter = std::function<ReturnT(T*, std::string const &)>;
 
+    template<class ReturnT>
+    using NamedPropertySetter = std::function<ReturnT(T*, std::string const &)>;
+
+
+
+
+	class NoResultAvailable : public std::exception {
+	public:
+		virtual const char * what() const noexcept override {return "";}
+	};
+
+
+	/* Helper for handling pointer return types from named property getter */
+	template<class ResultT>
+	std::enable_if_t<std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT result,
+																		   v8::PropertyCallbackInfo<v8::Value> const &info) {
+		if (result == nullptr) {
+			info.GetReturnValue().Set(CastToJS<ResultT>()(info.GetIsolate(), result));
+		}
+	}
+	/* Helper for handling non-pointer return types from named property getter */
+	template<class ResultT>
+	std::enable_if_t<!std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT&& result,
+																		   v8::PropertyCallbackInfo<v8::Value> const &info) {
+
+		info.GetReturnValue().Set(CastToJS<ResultT>()(info.GetIsolate(), std::move(result)));
+
+	}
 
 
 	/**
 	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#a66fa7b04c87676e20e35497ea09a0ad0
-	 * General purpose version, but to use operator[], use the other version
-	 * @param callable function to be called
+	 * Returning either a nullptr or throwing NoResultAvailable exception means the value was not found
+	 * @param callback function to be called
 	 */
-	template<class ReturnT>
-	void add_named_property_getter(NamedPropertyGetter<ReturnT> callback) {
+	template<class GetterReturnT, class SetterReturnT>
+	void add_named_property_handler(NamedPropertyGetter<GetterReturnT> getter_callback,
+                                    NamedPropertySetter<SetterReturnT> setter_callback) {
 		assert(!named_property_adder);
-		named_property_adder = [this, callback](v8::Local<v8::ObjectTemplate> object_template) {
+		named_property_adder = [this, getter_callback, setter_callback](v8::Local<v8::ObjectTemplate> object_template) {
 
 			auto data = new NamedPropertyCallbackData();
-			data->getter = [this, callback](v8::Local<v8::String> property_name,
-									 v8::PropertyCallbackInfo<v8::Value> const &info) {
 
-				T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
-				info.GetReturnValue().Set(CastToJS<ReturnT>()(info.GetIsolate(),
-															 callback(cpp_object,
-																	  *v8::String::Utf8Value(property_name))));
-			};
+			if (getter_callback) {
+				printf("Setting getter callback\n");
+				data->getter = [this, getter_callback](v8::Local<v8::Name> property_name,
+													   v8::PropertyCallbackInfo<v8::Value> const &info) {
+					// don't know how to handle symbols - can't find a way to stringify them
+					if (property_name->IsSymbol()) {
+						printf("symbol name: %s\n", *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(property_name)->Name()));
+						return;
+					}
+					printf("In getter callback\n");
+					T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
 
-			object_template->SetNamedPropertyHandler(
+					try {
+						handle_getter_result(getter_callback(cpp_object, *v8::String::Utf8Value(property_name)), info);
+						return;
+					} catch(NoResultAvailable) {
+						return;
+					}
+				};
+			}
+			if (setter_callback) {
+				printf("Setting setter callback\n");
+				data->setter = [this, setter_callback](v8::Local<v8::Name> property_name,
+													   v8::Local<v8::Value> new_property_value,
+													   v8::PropertyCallbackInfo<v8::Value> const &info) {
+					printf("IN ACTUAL SETTER CALLBACK");
+					T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
+					setter_callback(cpp_object, *v8::String::Utf8Value(property_name)) =
+							CastToNative<std::remove_reference_t<typename ProxyType<SetterReturnT>::PROXY_TYPE>>()(isolate,
+																						  new_property_value);
+					info.GetReturnValue().Set(true);
+				};
+			} else {
+				printf("NOT SETTING!!!!! setter callback\n");
+
+			}
+
+
+			object_template->SetHandler(v8::NamedPropertyHandlerConfiguration(
 					// Getter
-					[](v8::Local<v8::String> property_name,
-					   v8::PropertyCallbackInfo<v8::Value> const &info){
-					auto external_data = v8::External::Cast(*info.Data());
-					NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
-					data->getter(property_name, info);
-				},
-					nullptr, // setter
-					nullptr, // query
-					nullptr, // deleter
-					nullptr, // enumerator
-					v8::External::New(this->isolate, (void *)data));
+                    [](v8::Local<v8::Name> property_name,
+					   v8::PropertyCallbackInfo<v8::Value> const & info){
+						printf("IN GETTER CALLBACK1112 %s\n", *v8::String::Utf8Value(property_name));
+					    auto external_data = v8::External::Cast(*info.Data());
+					    NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
+					    data->getter(property_name, info);
+				    },
+                    // setter
+                    [](v8::Local<v8::Name> property_name,
+                       v8::Local<v8::Value> new_property_value,
+                       v8::PropertyCallbackInfo<v8::Value> const & info){
+						printf("IN SETTER CALLBACK222 %s\n", *v8::String::Utf8Value(property_name));
+                        auto external_data = v8::External::Cast(*info.Data());
+                        NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
+                        data->setter(property_name, new_property_value, info);
+                    },
+					// query - returns attributes on the given property name
+					// http://brendanashworth.github.io/v8-docs/namespacev8.html#a05f25f935e108a1ea2d150e274602b87
+					[](v8::Local< v8::Name > property_name, v8::PropertyCallbackInfo< v8::Integer> const & info){
+						printf("In query callback %s\n", *v8::String::Utf8Value(property_name));
+						info.GetReturnValue().Set(v8::None);
+					},
+					// deleter
+					[](v8::Local<v8::Name> property_name,
+					   v8::PropertyCallbackInfo<v8::Boolean> const & info){
+						printf("IN DELETER CALLBACK333 %s\n", *v8::String::Utf8Value(property_name));
+						info.GetReturnValue().Set(true);
+					},
+					// enumerator
+					[](v8::PropertyCallbackInfo<v8::Array> const & info) {
+						printf("IN ENUMERATOR CALLBACK444\n");
+
+						auto array = v8::Array::New(info.GetIsolate(), 1);
+						array->Set(0, "foo"_v8);
+					},
+					v8::External::New(this->isolate, (void *)data),
+					v8::PropertyHandlerFlags::kNonMasking // don't call on properties that exist
+//					v8::PropertyHandlerFlags::kNone // call on everything (doesn't work well with added methods/members)
+			));
 		};
 	}
+
 
 	/**
 	 * This version accepts a &T::operator[] directly -- does the std::bind for you
 	 * @param callback T instance member function to be called
 	 */
-	template<class ReturnT, class ObjectT>
-	void add_named_property_getter(ReturnT(ObjectT::*callback)(std::string const &)) {
-		add_named_property_getter<ReturnT>(std::bind(callback, std::placeholders::_1, std::placeholders::_2));
-	}
+	template<class GetterReturnT, class GetterObjectT, class SetterReturnT, class SetterObjectT>
+	void add_named_property_handler(GetterReturnT(GetterObjectT::*getter_callback)(std::string const &) const,
+                                    SetterReturnT(SetterObjectT::*setter_callback)(std::string const &)) {
+		NamedPropertyGetter<GetterReturnT> bound_getter;
+		NamedPropertySetter<SetterReturnT> bound_setter;
+		if (getter_callback != nullptr) {
+            bound_getter = std::bind(getter_callback, std::placeholders::_1, std::placeholders::_2);
+        }
+        if (setter_callback != nullptr) {
+            bound_setter = std::bind(setter_callback, std::placeholders::_1, std::placeholders::_2);
+        }
 
+		this->add_named_property_handler(bound_getter, bound_setter);
+	}
 };
 
 } // end v8toolkit namespace

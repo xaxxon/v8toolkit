@@ -10,6 +10,7 @@
 
 #include "v8_class_wrapper.h"
 
+using namespace v8;
 using namespace v8toolkit;
 using namespace v8toolkit::literals;
 using namespace std;
@@ -84,7 +85,24 @@ public:
     static void static_method_same_name(){};
 
     int operator[](uint32_t index) {return index;}
-    std::string operator[](std::string const & str) {return str;}
+
+
+    std::map<string,string> interceptor_map;
+    std::string const * operator[](std::string const & str) const {
+      printf("In Point::operator[] const for %s\n", str.c_str());
+        auto result = interceptor_map.find(str);
+        if (result != interceptor_map.end()) {
+            return &result->second;
+        } else {
+            return nullptr;
+        }
+    }
+
+    std::string & operator[](std::string const & str) {
+      printf("In Point::operator[] NON_CONST with %s", str.c_str());
+        return interceptor_map[str];
+    }
+
 };
 
 int Point::instance_count = 0;
@@ -171,22 +189,15 @@ int main(int argc, char* argv[])
             bool got_duplicate_name_exception = false;
 
 
-            // how to expose global variables as javascript variables "x" and "y"
-            // global_templ->SetAccessor(String::NewFromUtf8(isolate, "x"), XGetter, XSetter);
-            // global_templ->SetAccessor(String::NewFromUtf8(isolate, "y"), YGetter, YSetter);
-
             // wrap the constructor and add it to the global template
-            // Local<FunctionTemplate> ft = FunctionTemplate::New(isolate, create);
             v8::Local<v8::ObjectTemplate> global_templ = v8::ObjectTemplate::New(isolate);
-        
+
             add_print(isolate, global_templ);
             add_assert(isolate, global_templ);
-			
+
             add_function(isolate, global_templ, "some_function", some_function);
             add_function(isolate, global_templ, "throw_exception", [](){throw std::exception();});
 
-            // // add the function "four()" to javascript
-            // global_templ->Set(v8::String::NewFromUtf8(isolate, "four"), FunctionTemplate::New(isolate, four));
 
             // make the Point constructor function available to JS
             V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
@@ -194,7 +205,7 @@ int main(int argc, char* argv[])
             wrapped_point.add_method("thing", &Point::thing);
 	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
-        
+
 
             // overloaded functions can be individually addressed, but they can't be the same name to javascript
             //   at least not without some serious finagling of storing a mapping between a singlne name and
@@ -222,8 +233,7 @@ int main(int argc, char* argv[])
                 printf("index getter: %d\n", index);
                 info.GetReturnValue().Set(index);
             });
-            // wrapped_point.add_named_property_getter<std::string>(std::bind<std::string(Point::*)(std::string const &)>(&Point::operator[], std::placeholders::_1, std::placeholders::_2));
-            wrapped_point.add_named_property_getter(&Point::operator[]);
+            wrapped_point.add_named_property_handler(&Point::operator[], &Point::operator[]);
 
             got_duplicate_name_exception = false;
             try {
@@ -311,9 +321,9 @@ int main(int argc, char* argv[])
 
 
             wrapped_line.finalize();
-            
+
             wrapped_line.add_constructor("Line", global_templ);
-            
+
 
             auto & wrapped_fooparent = V8ClassWrapper<FooParent>::get_instance(isolate);
             wrapped_fooparent.set_compatible_types<Foo>();
@@ -323,15 +333,15 @@ int main(int argc, char* argv[])
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
             wrapped_foo.set_parent_type<FooParent>();
             wrapped_foo.add_member("i", &Foo::i).finalize();
-        
-            v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
+
+                v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
-            
+
             std::string js_code;
             if(!get_file_contents("code.js", js_code)) {
                 assert(false);
             }
-			
+
             v8::Local<v8::String> source =
                 v8::String::NewFromUtf8(isolate, js_code.c_str(),
                                     v8::NewStringType::kNormal).ToLocalChecked();
@@ -343,34 +353,34 @@ int main(int argc, char* argv[])
             print_maybe_value(result);
 
             v8::Local<v8::Script> script_for_static_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"println(Line.static_method(42));")).ToLocalChecked();
-            (void)script_for_static_method->Run(context);
+	                (void)script_for_static_method->Run(context);
 
             v8::Local<v8::Script> script_for_fake_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l = new Line(); println(l.fake_method());")).ToLocalChecked();
-            (void)script_for_fake_method->Run(context);
+	                (void)script_for_fake_method->Run(context);
 
 
             // calling a function with too few parameters throws
             v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
             v8::TryCatch tc(isolate);
-            (void)script3->Run(context);
+	                (void)script3->Run(context);
             assert(tc.HasCaught());
 
 			// calling a method with too few parameters throws
             v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
             v8::TryCatch tc2(isolate);
-            (void)script4->Run(context);
+	                (void)script4->Run(context);
             assert(tc2.HasCaught());
 
 
             v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
             v8::TryCatch tc3(isolate);
-            (void)script5->Run(context);
+	                (void)script5->Run(context);
             assert(tc3.HasCaught());
 
-            // printf("Checking that calling a method that throws a c++ exception has its exception wrapped for V8\n");
+             printf("Checking that calling a method that throws a c++ exception has its exception wrapped for V8\n");
             v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
             v8::TryCatch tc4(isolate);
-            (void)script6->Run(context);
+	                (void)script6->Run(context);
             assert(tc4.HasCaught());
 
             assert(changed_x == 0);
@@ -381,11 +391,13 @@ int main(int argc, char* argv[])
             assert(changed_x == 4);
 
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
-            (void)script->Run(context);
+            //(void)script->Run(context);
             script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p[4]);")).ToLocalChecked();
+	                (void)script->Run(context);
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p['four']);p['ThisStringDoesNotMatter']= 5; println(p.x);")).ToLocalChecked();
+            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"var p = new Point(); p.foo = 'fdsa';p.bar = 'rab'; println(p.foo);println(p.bar);")).ToLocalChecked();
             (void)script->Run(context);
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p['four']);")).ToLocalChecked();
-            (void)script->Run(context);
+            return 0;
 
             v8::TryCatch tc5(isolate);
             script = v8::Script::Compile(context, "p = new Point(); println(\"before calling callable\");println(p(4));println(\"after\");"_v8).ToLocalChecked();
