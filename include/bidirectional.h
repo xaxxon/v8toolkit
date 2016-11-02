@@ -33,7 +33,34 @@ public:
 
 
 // Inheriting from this gives hints to the system that you are a bidirectional type
-class BidirectionalBase;
+class JSWrapperBase {
+protected:
+    v8::Isolate *isolate;
+    v8::Global<v8::Context> global_context;
+    v8::Global<v8::Object> global_js_object;
+    v8::Global<v8::FunctionTemplate> global_created_by;
+
+    /**
+    * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
+    *   to call instead of calling the native C++ implementation, but finds its own JS_ACCESS function that its already in
+    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   Marked as
+    *   mutable because it needs to be changed even from within const methods
+    */
+    mutable bool called_from_javascript = false;
+
+protected:
+    JSWrapperBase(v8::Local<v8::Context> context,
+    v8::Local<v8::Object> object,
+            v8::Local<v8::FunctionTemplate> created_by) :
+    isolate(context->GetIsolate()),
+    global_context(v8::Global<v8::Context>(isolate, context)),
+            global_js_object(v8::Global<v8::Object>(isolate, object)),
+    global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by)) { }
+
+public:
+    v8::Local<v8::Object> get_javascript_object() const { return global_js_object.Get(isolate); }
+
+};
 
 
 /**
@@ -46,32 +73,29 @@ class BidirectionalBase;
 *   be a v8::Local<v8::Context>, v8::Local<v8::Object>
 */
 template<class Base>
-class JSWrapper {
+class JSWrapper : public JSWrapperBase {
 protected:
-    v8::Isolate *isolate;
-    v8::Global<v8::Context> global_context;
-    v8::Global<v8::Object> global_js_object;
-    v8::Global<v8::FunctionTemplate> global_created_by;
     using BASE_TYPE = Base;
 
-    /**
-    * It's easy to end up in infinite recursion where the JSWrapper object looks for a javascript implementation
-    *   to call instead of calling the native C++ implementation, but finds its own JS_ACCESS function that its already in
-    *   an proceeds to call itself.  This flag stops that from happening - at least in naive situations.   Marked as
-    *   mutable because it needs to be changed even from within const methods
-    */
-    mutable bool called_from_javascript = false;
 public:
     JSWrapper(v8::Local<v8::Context> context,
               v8::Local<v8::Object> object,
               v8::Local<v8::FunctionTemplate> created_by) :
-            isolate(context->GetIsolate()),
-            global_context(v8::Global<v8::Context>(isolate, context)),
-            global_js_object(v8::Global<v8::Object>(isolate, object)),
-            global_created_by(v8::Global<v8::FunctionTemplate>(isolate, created_by)) { }
-
-    v8::Local<v8::Object> get_javascript_object() const { return global_js_object.Get(isolate); }
+        JSWrapperBase(context, object, created_by)
+    {}
 };
+
+template<class T>
+std::enable_if_t<std::is_base_of<JSWrapperBase, T>::value, v8::Local<v8::Object>> safe_get_javascript_object(T * object) {
+    return object->get_javascript_object();
+}
+
+template<class T>
+std::enable_if_t<!std::is_base_of<JSWrapperBase, T>::value, v8::Local<v8::Object>> safe_get_javascript_object(T * object) {
+    return v8::Local<v8::Object>();
+}
+
+
 
 
 /* template<class... Ts> */
@@ -402,6 +426,7 @@ public:
             */
             V8ClassWrapper<JSWrapperClass>::get_instance(isolate).template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, js_wrapper_class_cpp_object.get());
 
+            // call javascript "constructor" method (per-instance)
             v8toolkit::call_javascript_function_with_vars(context,
                                                           this->js_new_object_constructor_function.Get(isolate),
                                                           context->Global(),

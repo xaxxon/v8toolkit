@@ -384,7 +384,7 @@ private:
     //   via the V8 SetAccessor method
 	template<class VALUE_T> // type being returned
 	static void _getter_helper(v8::Local<v8::Name> property,
-	                  const v8::PropertyCallbackInfo<v8::Value>& info) {
+							   v8::PropertyCallbackInfo<v8::Value> const & info) {
 
 		auto isolate = info.GetIsolate();
 		v8::Local<v8::Object> self = info.Holder();				   
@@ -424,7 +424,7 @@ private:
 
 
 	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
-	static void _setter_helper(v8::Local<v8::String> property, v8::Local<v8::Value> value,
+	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
 							   const v8::PropertyCallbackInfo<void>& info)
         {}
 
@@ -700,7 +700,7 @@ public:
 	    return *this;
 	    
 	}
-	
+
 
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
@@ -709,12 +709,13 @@ public:
     * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
     * \endcode
 	*/
+
 	template<class BEHAVIOR>
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, bool force_wrap_this_type = false)
 	{
 		auto isolate = this->isolate;
-        
-        
+
+
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
 	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
 	    if (!this->is_finalized()) {
@@ -722,23 +723,32 @@ public:
             return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
         }
                 
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p\n", existing_cpp_object, this, isolate);
+		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p type: %s\n", existing_cpp_object, this, isolate, v8toolkit::demangle<T>().c_str());
 		
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
         //   This makes sure if the same object is returned multiple times, the javascript object is also the same
 		v8::Local<v8::Object> javascript_object;
 		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
-			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found existing javascript object for c++ object %p\n", existing_cpp_object);
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Found existing javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit::demangle<T>().c_str());
 			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
 			
 		} else {
 		
-			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating new javascript object for c++ object %p\n", existing_cpp_object);
+			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating new javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit::demangle<T>().c_str());
 		
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
 
-            if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
+#ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
+            // try to get the javascript object inside a JSWrapper birectional object if it is one
+			auto jswrapper_javascript_object = safe_get_javascript_object(existing_cpp_object);
+			if (!jswrapper_javascript_object.IsEmpty()) {
+				return jswrapper_javascript_object;
+			}
+#endif
+
+
+			if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
                 javascript_object = this->type_checker->wrap_as_most_derived(existing_cpp_object);
             } else {
                 javascript_object = get_function_template()->GetFunction()->NewInstance();
@@ -751,7 +761,7 @@ public:
                 this->existing_wrapped_objects.emplace(existing_cpp_object,
                                                        v8::Global<v8::Object>(isolate, javascript_object));
                 //			if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Inserting new %s object into existing_wrapped_objects hash that is now of size: %d\n", typeid(T).name(), (int)this->existing_wrapped_objects.size());
-                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrap existing cpp object returning object about to be cast to a value: %s\n", *v8::String::Utf8Value(javascript_object));
+                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Wrap existing cpp object returning object about to be cast to a value: %s - %s\n", *v8::String::Utf8Value(javascript_object), v8toolkit::demangle<T>().c_str());
             }
 		}
 		return javascript_object;
@@ -907,7 +917,7 @@ public:
                                                                             cpp_object->*member);
 			});
 		    
-		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
+		    constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
 						      _getter_helper<MEMBER_TYPE_REF>, 
 						      _setter_helper<MEMBER_TYPE_REF>, 
 						      v8::External::New(isolate, get_attribute_helper_data));
@@ -1259,7 +1269,7 @@ public:
 	template<class ResultT>
 	std::enable_if_t<std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT result,
 																		   v8::PropertyCallbackInfo<v8::Value> const &info) {
-		if (result == nullptr) {
+		if (result != nullptr) {
 			info.GetReturnValue().Set(CastToJS<ResultT>()(info.GetIsolate(), result));
 		}
 	}
@@ -1287,7 +1297,6 @@ public:
 			auto data = new NamedPropertyCallbackData();
 
 			if (getter_callback) {
-				printf("Setting getter callback\n");
 				data->getter = [this, getter_callback](v8::Local<v8::Name> property_name,
 													   v8::PropertyCallbackInfo<v8::Value> const &info) {
 					// don't know how to handle symbols - can't find a way to stringify them
@@ -1295,11 +1304,12 @@ public:
 						printf("symbol name: %s\n", *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(property_name)->Name()));
 						return;
 					}
-					printf("In getter callback\n");
 					T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
 
 					try {
-						handle_getter_result(getter_callback(cpp_object, *v8::String::Utf8Value(property_name)), info);
+						auto str = *v8::String::Utf8Value(property_name);
+						assert(str);
+							handle_getter_result(getter_callback(cpp_object, str), info);
 						return;
 					} catch(NoResultAvailable) {
 						return;
@@ -1307,20 +1317,16 @@ public:
 				};
 			}
 			if (setter_callback) {
-				printf("Setting setter callback\n");
 				data->setter = [this, setter_callback](v8::Local<v8::Name> property_name,
 													   v8::Local<v8::Value> new_property_value,
 													   v8::PropertyCallbackInfo<v8::Value> const &info) {
-					printf("IN ACTUAL SETTER CALLBACK");
+
 					T *cpp_object = v8toolkit::V8ClassWrapper<T>::get_cpp_object(info.This());
 					setter_callback(cpp_object, *v8::String::Utf8Value(property_name)) =
 							CastToNative<std::remove_reference_t<typename ProxyType<SetterReturnT>::PROXY_TYPE>>()(isolate,
 																						  new_property_value);
 					info.GetReturnValue().Set(true);
 				};
-			} else {
-				printf("NOT SETTING!!!!! setter callback\n");
-
 			}
 
 
@@ -1328,7 +1334,6 @@ public:
 					// Getter
                     [](v8::Local<v8::Name> property_name,
 					   v8::PropertyCallbackInfo<v8::Value> const & info){
-						printf("IN GETTER CALLBACK1112 %s\n", *v8::String::Utf8Value(property_name));
 					    auto external_data = v8::External::Cast(*info.Data());
 					    NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
 					    data->getter(property_name, info);
@@ -1337,7 +1342,6 @@ public:
                     [](v8::Local<v8::Name> property_name,
                        v8::Local<v8::Value> new_property_value,
                        v8::PropertyCallbackInfo<v8::Value> const & info){
-						printf("IN SETTER CALLBACK222 %s\n", *v8::String::Utf8Value(property_name));
                         auto external_data = v8::External::Cast(*info.Data());
                         NamedPropertyCallbackData * data = static_cast<NamedPropertyCallbackData *>(external_data->Value());
                         data->setter(property_name, new_property_value, info);
@@ -1346,20 +1350,16 @@ public:
 					// http://brendanashworth.github.io/v8-docs/namespacev8.html#a05f25f935e108a1ea2d150e274602b87
 					[](v8::Local< v8::Name > property_name, v8::PropertyCallbackInfo< v8::Integer> const & info){
 						printf("In query callback %s\n", *v8::String::Utf8Value(property_name));
-						info.GetReturnValue().Set(v8::None);
 					},
 					// deleter
 					[](v8::Local<v8::Name> property_name,
 					   v8::PropertyCallbackInfo<v8::Boolean> const & info){
-						printf("IN DELETER CALLBACK333 %s\n", *v8::String::Utf8Value(property_name));
-						info.GetReturnValue().Set(true);
+						printf("IN DELETER CALLBACK %s\n", *v8::String::Utf8Value(property_name));
 					},
 					// enumerator
 					[](v8::PropertyCallbackInfo<v8::Array> const & info) {
-						printf("IN ENUMERATOR CALLBACK444\n");
-
-						auto array = v8::Array::New(info.GetIsolate(), 1);
-						array->Set(0, "foo"_v8);
+						printf("IN ENUMERATOR CALLBACK\n");
+						info.GetReturnValue().Set(v8::Array::New(info.GetIsolate()));
 					},
 					v8::External::New(this->isolate, (void *)data),
 					v8::PropertyHandlerFlags::kNonMasking // don't call on properties that exist
@@ -1458,10 +1458,21 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 		// if the type is polymorphic and potentially bidirectional, check to see if it actually is
 		using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
 //		fprintf(stderr, "Checking to see if object * is a JSWrapper *\n");
-		auto js_wrapper_t = dynamic_cast<const JSWrapperType *>(cpp_object);
-		if (js_wrapper_t) {
-		    return CastToJS<JSWrapperType>()(isolate, *js_wrapper_t);
+
+		if (std::is_const<T>::value) {
+			auto js_wrapper = dynamic_cast<JSWrapperType const *>(cpp_object);
+			if (js_wrapper) {
+				return CastToJS<const JSWrapperType>()(isolate, *js_wrapper);
+			}
+		} else {
+			// this only runs if it's non-const, so casting is not scary - only to trick compiler
+			using NonConstT = std::remove_const_t<T>;
+			auto js_wrapper = dynamic_cast<JSWrapperType *>(const_cast<NonConstT *>(cpp_object));
+			if (js_wrapper) {
+				return CastToJS<JSWrapperType>()(isolate, *js_wrapper);
+			}
 		}
+
 #endif
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
