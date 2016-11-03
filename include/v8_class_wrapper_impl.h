@@ -92,6 +92,10 @@ namespace v8toolkit {
 			function_template->Inherit(parent_function_template);
 		}
 
+		for (auto callback : this->function_template_callbacks) {
+			callback(function_template);
+		}
+
 //	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
 		this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
 		return function_template;
@@ -176,11 +180,6 @@ namespace v8toolkit {
 			object_template->SetCallAsFunctionHandler(callback_helper,
 													  v8::External::New(this->isolate, &callable_adder.callback));
 		}
-		if (this->named_property_adder) {
-			this->named_property_adder(object_template);
-
-		}
-
 	}
 
 

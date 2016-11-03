@@ -93,8 +93,20 @@ Destination safe_dynamic_cast(Source * source) {
 };
 
 
+#define SAFE_MOVE_CONSTRUCTOR_SFINAE !std::is_const<T>::value && std::is_move_constructible<T>::value
+template<class T, std::enable_if_t<SAFE_MOVE_CONSTRUCTOR_SFINAE, int> = 0>
+std::unique_ptr<T> safe_move_constructor(T && original) {
+    return std::make_unique<T>(std::move(original));
+};
+template<class T, std::enable_if_t<!(SAFE_MOVE_CONSTRUCTOR_SFINAE), int> = 0>
+std::unique_ptr<T> safe_move_constructor(T && original) {
+    assert(false); // This shouldn't be called
+    return std::unique_ptr<T>();
+};
 
-template<typename Test, template<typename...> class Ref>
+
+
+    template<typename Test, template<typename...> class Ref>
 struct is_specialization : std::false_type {};
 
 template<template<typename...> class Ref, typename... Args>
@@ -390,7 +402,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
 
 
  struct AnyBase

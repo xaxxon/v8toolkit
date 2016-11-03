@@ -99,7 +99,7 @@ protected:
 
     // returns cpp_object wrapped as its most derived type
 	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const = 0;
-
+	virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const = 0;
 };
 
 
@@ -122,7 +122,8 @@ template<class T>
         return nullptr;
     }
 
-    virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
+		virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
+		virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override;
 };
 
 
@@ -155,6 +156,10 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override {
 		return SUPER::wrap_as_most_derived(cpp_object);
 	}
+	virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override {
+		return SUPER::wrap_as_most_derived(std::move(cpp_object));
+	}
+
 
 };
 
@@ -174,7 +179,8 @@ template<class T, class Head, class... Tail>
 
 	virtual T * check(AnyBase * any_base, bool first_call = true) const override;
 
-	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
+		virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
+		virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override;
 };
 
 
@@ -458,7 +464,8 @@ private:
 	v8::Isolate * isolate;
 
 	// Stores a functor capable of converting compatible types into a <T> object
-	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>>>>(this->isolate);
+	// do non-const type first, so if it's a match, we don't try converting the non-const type to const and hit a debug assertion
+	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>>(this->isolate);
         
 	/**
 	* Stores a function template with any methods from the parent already in place.
@@ -1291,7 +1298,8 @@ public:
 	template<class GetterReturnT, class SetterReturnT>
 	void add_named_property_handler(NamedPropertyGetter<GetterReturnT> getter_callback,
                                     NamedPropertySetter<SetterReturnT> setter_callback) {
-		assert(!named_property_adder);
+		assert(!this->finalized);
+		assert(!this->named_property_adder);
 		named_property_adder = [this, getter_callback, setter_callback](v8::Local<v8::ObjectTemplate> object_template) {
 
 			auto data = new NamedPropertyCallbackData();
@@ -1387,6 +1395,19 @@ public:
 
 		this->add_named_property_handler(bound_getter, bound_setter);
 	}
+
+	using FunctionTemplateCallback = std::function<void(v8::Local<v8::FunctionTemplate> &)>;
+	std::vector<FunctionTemplateCallback> function_template_callbacks;
+
+	/**
+	 * ADVANCED: allows direct customization of the v8::FunctionTemplate used to create objects
+	 * Use for anything this library doesn't take care of
+	 */
+	void add_new_constructor_function_template_callback(FunctionTemplateCallback const & callback) {
+		assert(!this->finalized);
+		function_template_callbacks.push_back(callback);
+	}
+
 };
 
 } // end v8toolkit namespace
@@ -1660,6 +1681,16 @@ std::string type_details(){
 		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
 	}
 
+	template<class T>
+	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(T && cpp_object) const {
+		auto context = this->isolate->GetCurrentContext();
+		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).
+				template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context,
+																				safe_move_constructor(std::move(cpp_object)).
+																						release(), true /* don't infinitely recurse */);
+	}
+
+
 
 	template<class T, class Head, class... Tail> T *
 TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
@@ -1708,7 +1739,16 @@ v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	return SUPER::wrap_as_most_derived(cpp_object);
 }
 
+template<class T, class Head, class... Tail>
+v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+		std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
+::wrap_as_most_derived(T && cpp_object) const {
+
+	assert(false); // implement me
+};
 
 
-} // end namespace v8toolkit
+
+
+	} // end namespace v8toolkit
 
