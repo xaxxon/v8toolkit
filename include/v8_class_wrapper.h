@@ -140,15 +140,15 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
 
-#ifdef ANYBASE_DEBUG
-        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
-        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-            std::cerr
-                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
-                << std::endl;
-            assert(false);
-        }
-#endif
+//#ifdef ANYBASE_DEBUG
+//        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+//        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
+//            std::cerr
+//                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
+//                << std::endl;
+//            assert(false);
+//        }
+//#endif
 
         return SUPER::check(any_base);
     }
