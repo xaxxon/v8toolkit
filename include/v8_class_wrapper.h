@@ -91,22 +91,63 @@ protected:
 
   public:
 	TypeCheckerBase(v8::Isolate * isolate) : isolate(isolate) {}
-      virtual ~TypeCheckerBase(){}
+	virtual ~TypeCheckerBase(){}
 
     // returns nullptr if AnyBase cannot be converted to a compatible type
     virtual T * check(AnyBase *, bool first_call = true
 			) const = 0;
+};
 
-    // returns cpp_object wrapped as its most derived type
-	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const = 0;
-	virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const = 0;
+template<class T>
+struct WrapAsMostDerivedBase {
+protected:
+	v8::Isolate * isolate;
+
+public:
+	WrapAsMostDerivedBase(v8::Isolate * isolate) : isolate(isolate) {}
+	virtual ~WrapAsMostDerivedBase() = default;
+
+	virtual v8::Local<v8::Object> operator()(T * cpp_object) const = 0;
+	virtual v8::Local<v8::Object> operator()(T && cpp_object) const = 0;
+};
+
+// type to find the most derived type of an object and return a wrapped JavaScript object of that type
+template<class, class, class = void>
+struct WrapAsMostDerived;
+
+template<class T>
+struct WrapAsMostDerived<T, TypeList<>> : public WrapAsMostDerivedBase<T> {
+	WrapAsMostDerived(v8::Isolate * isolate) : WrapAsMostDerivedBase<T>(isolate) {}
+	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
+};
+
+
+// specialization for when there is no const conflict
+template<class T, class Head, class... Tail>
+struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>> : public WrapAsMostDerived<T, TypeList<Tail...>> {
+	using SUPER = WrapAsMostDerived<T, TypeList<Tail...>>;
+	WrapAsMostDerived(v8::Isolate * isolate) : SUPER(isolate) {}
+	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
+};
+
+// specializaiton for when we have something const (T) and want something non-const (Head)
+template<class T, class Head, class... Tail>
+struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<std::is_const<T>::value && !std::is_const<Head>::value>> : public WrapAsMostDerived<T, TypeList<Tail...>> {
+	using SUPER = WrapAsMostDerived<T, TypeList<Tail...>>;
+	WrapAsMostDerived(v8::Isolate * isolate) : SUPER(isolate) {}
+	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
 };
 
 
 
-// type to convert to, typelist of all types to check, sfinae helper type
+
+	// type to convert to, typelist of all types to check, sfinae helper type
 template<class, class, class = void>
 struct TypeChecker;
+
 
 // Fallback when everything in the typelist has been tried
 template<class T>
@@ -121,9 +162,6 @@ template<class T>
 #endif
         return nullptr;
     }
-
-		virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
-		virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override;
 };
 
 
@@ -153,14 +191,6 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
         return SUPER::check(any_base);
     }
 
-	virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override {
-		return SUPER::wrap_as_most_derived(cpp_object);
-	}
-	virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override {
-		return SUPER::wrap_as_most_derived(std::move(cpp_object));
-	}
-
-
 };
 
  
@@ -172,15 +202,13 @@ template<class T, class Head, class... Tail>
     // if it's *not* the condition of the specialization above
     std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
                      > : public TypeChecker<T, TypeList<Tail...>> {
-    
-   
+
+
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
 	virtual T * check(AnyBase * any_base, bool first_call = true) const override;
 
-		virtual v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) const override;
-		virtual v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) const override;
 };
 
 
@@ -466,6 +494,8 @@ private:
 	// Stores a functor capable of converting compatible types into a <T> object
 	// do non-const type first, so if it's a match, we don't try converting the non-const type to const and hit a debug assertion
 	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>>(this->isolate);
+	std::unique_ptr<WrapAsMostDerivedBase<T>> wrap_as_most_derived_object =
+			std::make_unique<WrapAsMostDerived<T, TypeList<>>>(this->isolate);
         
 	/**
 	* Stores a function template with any methods from the parent already in place.
@@ -616,7 +646,7 @@ public:
 
         // Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
         type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate));
-
+		this->wrap_as_most_derived_object.reset(new WrapAsMostDerived<T, TypeList<CompatibleTypes...>>(this->isolate));
         return *this;
     }
 	
@@ -756,7 +786,7 @@ public:
 
 
 			if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
-                javascript_object = this->type_checker->wrap_as_most_derived(existing_cpp_object);
+                javascript_object = this->wrap_as_most_derived(existing_cpp_object);
             } else {
                 javascript_object = get_function_template()->GetFunction()->NewInstance();
 
@@ -1042,8 +1072,14 @@ public:
 
 
 	v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) {
-		return this->type_checker->wrap_as_most_derived(cpp_object);
+		return this->wrap_as_most_derived_object->operator()(cpp_object);
 	}
+
+
+	v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) {
+		return this->wrap_as_most_derived_object->operator()(std::move(cpp_object));
+	}
+
 
 	template<class R, class Head, class... Tail>
 	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, std::function<R(Head, Tail...)> method)
@@ -1445,7 +1481,7 @@ struct CastToJS {
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Asked to convert rvalue type, so copying it first\n");
 
 		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
-		auto copy = new T(cpp_object);
+		auto copy = new T(std::move(cpp_object));
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context, copy);
@@ -1621,78 +1657,78 @@ std::string type_details(){
 /**
  * This can be used from CastToNative<UserType> calls to fall back to if other conversions aren't appropriate
  */
- template<class T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value, int> = 0>
-	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+template<class T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value, int> = 0>
+T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "cast to native\n");
-		if(!value->IsObject()){
-			fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
-			throw CastException("No specialized CastToNative found and value was not a Javascript Object");
-		}
-		auto object = v8::Object::Cast(*value);
-		if (object->InternalFieldCount() <= 0) {
-			throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
-		}
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
-		auto wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+	if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "cast to native\n");
+	if(!value->IsObject()){
+		fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+		throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+	}
+	auto object = v8::Object::Cast(*value);
+	if (object->InternalFieldCount() <= 0) {
+		throw CastException(fmt::format("No specialization CastToNative<{}> found (for any shortcut notation) and provided Object is not a wrapped C++ object.  It is a native Javascript Object", demangle<T>()));
+	}
+	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+	auto wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
-		auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
-		T * t = nullptr;
-		// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
-		if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+	auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
+	T * t = nullptr;
+	// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
+	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
 //			fprintf(stderr, "Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
-			throw CastException(fmt::format("Cannot convert {} to {} {}",
-							TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle<T>()));
+		throw CastException(fmt::format("Cannot convert {} to {} {}",
+						TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle<T>()));
+	}
+	return *t;
+}
+
+// excluding types where CastToNative doesn't return a reference type
+	// this stops trying &int when int is an rvalue
+//   when trying to deal with unique_ptr in casts.hpp (in an unused but still compiled code path)
+template<typename T>
+struct CastToNative<T*, std::enable_if_t<std::is_reference<
+		std::result_of_t<
+				CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+						> // end result_of
+		>::value // end is_reference
+		>// end enable_if_t
+		>// end template
+{
+	   T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
+			return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
 		}
-		return *t;
+};
+
+template<typename T, class>
+struct CastToNative
+{
+	T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		return get_object_from_embedded_cpp_object<T>(isolate, value);
 	}
-
-	// excluding types where CastToNative doesn't return a reference type
-        // this stops trying &int when int is an rvalue
-	//   when trying to deal with unique_ptr in casts.hpp (in an unused but still compiled code path)
-	template<typename T>
-	struct CastToNative<T*, std::enable_if_t<std::is_reference<
-			std::result_of_t<
-					CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
-							> // end result_of
-	        >::value // end is_reference
-			>// end enable_if_t
-			>// end template
-	{
-	       T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-		        return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
-		    }
-	};
-
-	template<typename T, class>
-	struct CastToNative
-	{
-		T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-			return get_object_from_embedded_cpp_object<T>(isolate, value);
-		}
-	};
+};
 
 
 
-	// If no more-derived option was found, wrap as this type
-	template<class T>
-	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(T * cpp_object) const {
-		auto context = this->isolate->GetCurrentContext();
-		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
-	}
+// If no more-derived option was found, wrap as this type
+template<class T>
+v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object) const {
+	auto context = this->isolate->GetCurrentContext();
+	return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
+}
 
-	template<class T>
-	v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<>>::wrap_as_most_derived(T && cpp_object) const {
-		auto context = this->isolate->GetCurrentContext();
-		return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).
-				template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context,
-																				safe_move_constructor(std::move(cpp_object)).
-																						release(), true /* don't infinitely recurse */);
-	}
+template<class T>
+v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T && cpp_object) const {
+	auto context = this->isolate->GetCurrentContext();
+	return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).
+			template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context,
+																			safe_move_constructor(std::move(cpp_object)).
+																					release(), true /* don't infinitely recurse */);
+}
 
 
 
-	template<class T, class Head, class... Tail> T *
+template<class T, class Head, class... Tail> T *
 TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>::check(AnyBase * any_base, bool first_call) const {
 
@@ -1717,18 +1753,13 @@ std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>::ch
 
 // if a more-derived type was found, pass it to that type to see if there's something even more derived
 template<class T, class Head, class... Tail>
-v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
-	std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
-::wrap_as_most_derived(T * cpp_object) const {
+v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
+	std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>>
+::operator()(T * cpp_object) const {
 
 	// if they're the same, let it fall through to the empty typechecker TypeList base case
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
 		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
-
-//		fprintf(stderr, "Head is polymorphic? %s, %d\n", demangle<Head>().c_str(),
-//				std::is_polymorphic<Head>::value);
-//		fprintf(stderr, "MatchingConstT is polymorphic?  %s, %d\n", demangle<MatchingConstT>().c_str(),
-//				std::is_polymorphic<MatchingConstT>::value);
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
@@ -1736,19 +1767,67 @@ v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 			}
 		}
 	}
-	return SUPER::wrap_as_most_derived(cpp_object);
+	return SUPER::operator()(cpp_object);
 }
 
 template<class T, class Head, class... Tail>
-v8::Local<v8::Object> TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
-		std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>
-::wrap_as_most_derived(T && cpp_object) const {
+v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
+		std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>>
+::operator()(T && cpp_object) const {
+	// if they're the same, let it fall through to the empty typechecker TypeList base case
+	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
 
-	assert(false); // implement me
+		if (std::is_const<T>::value == std::is_const<Head>::value) {
+			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(&cpp_object))) {
+				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(std::move(*derived));
+			}
+		}
+	}
+	return SUPER::operator()(std::move(cpp_object));
+
 };
 
 
 
 
-	} // end namespace v8toolkit
+} // end namespace v8toolkit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -188,11 +188,13 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
     // if the left is a bool, return true if right is a bool and they match, otherwise false
     if (value->IsBoolean() || value->IsNumber() || value->IsUndefined() || value->IsNull()) {
         if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
-        auto string = *v8::String::Utf8Value(value);
+        v8::String::Utf8Value value_utf8value(value);
+        auto string = *value_utf8value;
         output << (string ? string : "<COULD NOT CONVERT TO STRING>");
         //output << "<something broken here>";
     } else if (value->IsFunction()) {
-        auto string = *v8::String::Utf8Value(value);
+        v8::String::Utf8Value value_utf8value(value);
+        auto string = *value_utf8value;
         output << (string ? string : "FUNCTION: <COULD NOT CONVERT TO STRING>");
 //
 //        output << "FUNCTION BUT PRINTING THEM IS WEIRD";
