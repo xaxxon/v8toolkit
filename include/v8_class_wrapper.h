@@ -262,46 +262,33 @@ template<class T, class Head, class... Tail>
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:
      static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate){throw std::exception();}
-     template<class BEHAVIOR>
-     v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, bool force_wrap_this_type = false) {throw std::exception();}
+	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false);
 
-     T * cast(AnyBase * any_base){
-	 throw std::exception();
-     }
+     T * cast(AnyBase * any_base);
 
 
       	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
-	    throw std::exception();
-	}
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const);
 
 	template<class R, class TBase, class... Args,
     std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...)) {
-	    throw std::exception();
-	}
-	template<class R, class... Args>
-    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
-	    throw std::exception();
-	}
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...));
 
+	template<class R, class... Args>
+    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method);
 
 	/**
 	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
 	 */
 	template<class Callback>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
-	    throw std::exception();
-	}
+	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback);
 
 		    
 
  	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
- v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
- {throw std::exception();}
-
- void finalize(bool wrap_as_most_derived = false){throw std::exception();}
+ v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template);
+ void finalize(bool wrap_as_most_derived = false);
 
      template<class MEMBER_TYPE, class MemberClass>
 	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member, bool = false)
@@ -360,10 +347,6 @@ template<class T>
 class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 
 {
- public:
-
-
-    
 private:
 
 
@@ -386,8 +369,8 @@ private:
 	V8ClassWrapper(const V8ClassWrapper<T> &&) = delete;
 	V8ClassWrapper& operator=(const V8ClassWrapper<T> &) = delete;
 	V8ClassWrapper& operator=(const V8ClassWrapper<T> &&) = delete;
-	
-	
+
+
 	/**
 	 * users of the library should call get_instance, not this constructor directly
 	 */
@@ -477,7 +460,8 @@ private:
 
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
 		//   GC's the javascript object, there should be no c++ references to it
-		initialize_new_js_object<DestructorBehavior_Delete<T>>(isolate, args.This(), new_cpp_object);
+		auto & deleter = *v8toolkit::V8ClassWrapper<T>::get_instance(isolate).destructor_behavior_delete;
+		initialize_new_js_object(isolate, args.This(), new_cpp_object, deleter);
 		
 		// // return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
@@ -526,7 +510,12 @@ private:
 
 public:
 
-    /**
+	// these probably shouldn't be public, but they are for now
+	std::unique_ptr<DestructorBehavior> destructor_behavior_delete = std::make_unique<DestructorBehavior_Delete<T>>();
+	std::unique_ptr<DestructorBehavior> destructor_behavior_leave_alone = std::make_unique<DestructorBehavior_LeaveAlone>();
+
+
+	/**
      * Experimental
      * @param callback
      */
@@ -534,8 +523,7 @@ public:
     
 
 	// Common tasks to do for any new js object regardless of how it is created
-	template<class DestructorBehavior>
-	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object)
+	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object, DestructorBehavior const & destructor_behavior)
 	{
 //        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
 	    WrappedData<T> * wrapped_data = new WrappedData<T>(new AnyPtr<T>(cpp_object));
@@ -547,11 +535,9 @@ public:
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
 		
-		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object]() {
-				DestructorBehavior()(isolate, cpp_object);
-			}
-		);
-
+		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior]() {
+			destructor_behavior(isolate, cpp_object);
+		});
 
     }
 	
@@ -649,6 +635,16 @@ public:
 		this->wrap_as_most_derived_object.reset(new WrapAsMostDerived<T, TypeList<CompatibleTypes...>>(this->isolate));
         return *this;
     }
+
+	template<template<class> class Deleter>
+	void set_deleter() {
+		assert(!this->finalized);
+		using ConstT = std::add_const_t<T>;
+		if (!std::is_const<T>::value) {
+			V8ClassWrapper<ConstT>::get_instance(this->isolate).template set_deleter<Deleter>();
+		}
+		this->destructor_behavior_delete = std::make_unique<Deleter<T>>();
+	}
 	
 	
     /**
@@ -747,8 +743,7 @@ public:
     * \endcode
 	*/
 
-	template<class BEHAVIOR>
-	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, bool force_wrap_this_type = false)
+	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false)
 	{
 		auto isolate = this->isolate;
 
@@ -793,7 +788,7 @@ public:
                 // fprintf(stderr, "New object is empty?  %s\n", javascript_object.IsEmpty()?"yes":"no");
                 // fprintf(stderr, "Created new JS object to wrap existing C++ object.  Internal field count: %d\n", javascript_object->InternalFieldCount());
 
-                initialize_new_js_object<BEHAVIOR>(isolate, javascript_object, existing_cpp_object);
+                initialize_new_js_object(isolate, javascript_object, existing_cpp_object, destructor_behavior);
 
                 this->existing_wrapped_objects.emplace(existing_cpp_object,
                                                        v8::Global<v8::Object>(isolate, javascript_object));
@@ -1457,7 +1452,7 @@ namespace v8toolkit {
 /**
 * Stores the "singleton" per isolate
 */
-template <class T> 
+template <class T>
     std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::isolate_to_wrapper_map;
 
 template<class T>
@@ -1484,7 +1479,7 @@ struct CastToJS {
 		auto copy = new T(std::move(cpp_object));
 		auto context = isolate->GetCurrentContext();
 		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-		auto result = class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context, copy);
+		auto result = class_wrapper.template wrap_existing_cpp_object(context, copy, *class_wrapper.destructor_behavior_delete);
         if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
         
         return result;
@@ -1534,7 +1529,7 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
 		/** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
+		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
 	}
 };
 
@@ -1554,7 +1549,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
-		return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
+		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
 	}
 
  };
@@ -1574,7 +1569,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
          if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
-         return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
+         return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
      }
  };
 
@@ -1594,7 +1589,7 @@ struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
 
             if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
-            return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object);
+            return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
         }
     };
 
@@ -1714,16 +1709,19 @@ struct CastToNative
 template<class T>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object) const {
 	auto context = this->isolate->GetCurrentContext();
-	return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, cpp_object, true /* don't infinitely recurse */);
+	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+	return wrapper.template wrap_existing_cpp_object(context, cpp_object, *wrapper.destructor_behavior_leave_alone, true /* don't infinitely recurse */);
 }
 
 template<class T>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T && cpp_object) const {
 	auto context = this->isolate->GetCurrentContext();
-	return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate).
-			template wrap_existing_cpp_object<DestructorBehavior_Delete<T>>(context,
+	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
+	return wrapper.
+			template wrap_existing_cpp_object(context,
 																			safe_move_constructor(std::move(cpp_object)).
-																					release(), true /* don't infinitely recurse */);
+																					release(),
+																			*wrapper.destructor_behavior_delete, true /* don't infinitely recurse */);
 }
 
 

@@ -84,9 +84,10 @@ map<string, string> static_method_renames = {{"name", "get_name"}};
 
 
 map<string, string> cpp_to_js_type_conversions = {{"^(const)?\\s*(unsigned)?\\s*(char|short|int|long|long long|float|double|long double)\\s*(const)?\\s*[*]?\\s*[&]?$", "Number"},
-						  {"^(const)?\\s*(bool)\\s*(const)?\\s*[*]?\\s*[&]?$", "Boolean"},
-						  {"^(const)?\\s*(char\\s*[*]|(std::)?string)\\s*(const)?\\s*\\s*[&]?$", "String"},
-						  {"^void$", "Undefined"}};
+                                                  {"^(const)?\\s*(bool)\\s*(const)?\\s*[*]?\\s*[&]?$", "Boolean"},
+                                                  {"^(const)?\\s*(char\\s*[*]|(std::)?string)\\s*(const)?\\s*\\s*[&]?$", "String"},
+                                                  {"^void$", "Undefined"},
+                                                  {"^(?:class|struct)?[^:]*vector<([^>]+)>$", "Array.{$1}"}};
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
 
@@ -764,9 +765,15 @@ namespace {
 		string name = "";
 		string description = "no description available";
 		void convert_type() {
+            std::smatch matches;
 		    for (auto & pair : cpp_to_js_type_conversions) {
-			if (regex_match(this->type, std::regex(pair.first))) {
+			if (regex_match(this->type, matches, std::regex(pair.first))) {
 			    this->type = pair.second;
+
+                // look for $1, $2, etc in resplacement and substitute in the matching position
+                for(int i = 1; i < matches.size(); i++) {
+                    this->type = std::regex_replace(this->type, std::regex(fmt::format("${}",i)), matches[i]);
+                }
 			} else {
 			    this->type = regex_replace(type, std::regex("^(struct|class) "), "");
 			}

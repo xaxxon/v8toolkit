@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_constructor("Line", global_templ);
 
 
-            auto & wrapped_fooparent = V8ClassWrapper<FooParent>::get_instance(isolate);
+            V8ClassWrapper<FooParent> & wrapped_fooparent = V8ClassWrapper<FooParent>::get_instance(isolate);
             wrapped_fooparent.set_compatible_types<Foo>();
             wrapped_fooparent.finalize(true);
 
@@ -418,7 +418,7 @@ int main(int argc, char* argv[])
 
 	        Foo most_derived_foo_test;
             v8::Local<v8::Object> most_derived_fooparent_js_object =
-                wrapped_fooparent.wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(context, &most_derived_foo_test);
+                wrapped_fooparent.wrap_existing_cpp_object(context, &most_derived_foo_test, *wrapped_fooparent.destructor_behavior_leave_alone);
 
             // even though this is wrapped as a FooParent that doesn't have an 'i', it should actually be wrapped
             //   as the most derived type of the actual cpp object inside, which is a Foo, which does have an 'i'

@@ -306,7 +306,7 @@ struct CastToNative<const std::vector<T, Rest...>> {
 
 template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
-    std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	HANDLE_FUNCTION_VALUES;
 
 	// if it's an object, use the memory in the object
@@ -324,7 +324,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_c
 
 template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value>> {
-    std::unique_ptr<T> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 	HANDLE_FUNCTION_VALUES;
         // if T is a user-defined type
         if (value->IsObject()) {

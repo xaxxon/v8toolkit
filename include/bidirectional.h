@@ -424,7 +424,8 @@ public:
                                                     std::forward<InternalConstructorParams>(internal_constructor_values)...,
                                                     std::forward<ExternalConstructorParams>(external_constructor_values)...);
             */
-            V8ClassWrapper<JSWrapperClass>::get_instance(isolate).template initialize_new_js_object<DestructorBehavior_Delete<JSWrapperClass>>(isolate, new_js_object, js_wrapper_class_cpp_object.get());
+            auto & wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
+            wrapper.template initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_delete);
 
             // call javascript "constructor" method (per-instance)
             v8toolkit::call_javascript_function_with_vars(context,
