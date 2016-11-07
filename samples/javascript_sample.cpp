@@ -18,6 +18,10 @@ int y2 = 3;
 
 struct Thing {
     static void name(){}
+
+
+    // must be careful because CastToNative
+    Thing(vector<Thing>&&){}
 };
 
 
@@ -28,7 +32,7 @@ auto run_static_function_tests() {
     V8ClassWrapper<Thing> & thing = i->wrap_class<Thing>();
     thing.add_static_method("get_name", &Thing::name);
     thing.finalize();
-    thing.add_constructor("Thing", *i);
+    thing.add_constructor<vector<Thing>&&>("Thing", *i);
 
     ContextPtr context = i->create_context();
     auto result = context->run("Thing.get_name();");

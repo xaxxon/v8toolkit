@@ -47,7 +47,9 @@ struct CastToNative<eastl::vector<T, Args...>> {
 };
 template<class T, class... Args>
 struct CastToNative<eastl::vector<T, Args...> const> {
-    eastl::vector<T, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
+    using ResultType = eastl::vector<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Args...>;
+
+    ResultType operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
         return vector_type_helper<eastl::vector, T, Args...>(isolate, value);
     }
 };

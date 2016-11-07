@@ -261,72 +261,46 @@ template<class T, class Head, class... Tail>
  template<class T>
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:
-     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate){throw std::exception();}
+     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
 	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false);
 
      T * cast(AnyBase * any_base);
 
+	 template<class... Args>
+	 V8ClassWrapper<T> & add_method(Args&&...);
 
-      	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const);
-
-	template<class R, class TBase, class... Args,
-    std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...));
-
-	template<class R, class... Args>
-    void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method);
-
-	/**
-	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
-	 */
-	template<class Callback>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback);
 
 		    
 
- 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
- v8toolkit::V8ClassWrapper<T>& add_constructor(std::string js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template);
- void finalize(bool wrap_as_most_derived = false);
+ 	template<class... Args>
+ 	v8toolkit::V8ClassWrapper<T>& add_constructor(Args&&...);
 
-     template<class MEMBER_TYPE, class MemberClass>
-	V8ClassWrapper<T> & add_member(std::string member_name, MEMBER_TYPE MemberClass::* member, bool = false)
- {throw std::exception();}
+	void finalize(bool wrap_as_most_derived = false);
 
-    template<class... CompatibleTypes>
-    std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value, V8ClassWrapper<T>&>
- set_compatible_types(){throw std::exception();}
+     template<class... Args>
+	V8ClassWrapper<T> & add_member(Args&&...);
+    template<class...>
+    V8ClassWrapper<T>& set_compatible_types();
 
-     template<class ParentType>
-    std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
- set_parent_type(){throw std::exception();}
+     template<class>
+    V8ClassWrapper<T> & set_parent_type();
  
      
-     template<class R, class... Params>
-	 V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
-	 throw std::exception();
-     }
-
-     template<class Callable>
-	 V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
-	 throw std::exception();
-     }
+     template<class... Args>
+	 V8ClassWrapper<T> & add_static_method(Args&&...);
 
      T * get_cpp_object(v8::Local<v8::Object> object);
 
      
- V8ClassWrapper<T> & set_class_name(const std::string & name){throw std::exception();}
+ 	V8ClassWrapper<T> & set_class_name(const std::string & name);
 
-     template<class MEMBER_TYPE, class MemberClass>
- V8ClassWrapper<T> & add_member_readonly(std::string member_name, MEMBER_TYPE MemberClass::* member, bool = false){throw std::exception();}
+     template<class... Args>
+ 	V8ClassWrapper<T> & add_member_readonly(Args&&...);
 
- v8::Local<v8::FunctionTemplate> get_function_template(){throw std::exception();}
+ 	v8::Local<v8::FunctionTemplate> get_function_template();
 
- template<class DestructorBehavior>
- static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object){throw std::exception();}
-
-
+ 	template<class>
+ 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object);
 };
 
 

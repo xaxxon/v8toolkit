@@ -257,9 +257,13 @@ CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string)
 
 
 template<template<class,class...> class VectorTemplate, class T, class... Rest>
-auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) -> VectorTemplate<T, Rest...>
+auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
+    VectorTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>
 {
-    using ResultType = VectorTemplate<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
+    static_assert(!std::is_reference<T>::value, "vector value type cannot be reference");
+    using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
+    static_assert(!std::is_reference<ValueType>::value, "vector value type cannot be reference");
+    using ResultType = VectorTemplate<ValueType, Rest...>;
     HANDLE_FUNCTION_VALUES;
     auto context = isolate->GetCurrentContext();
     ResultType v;
@@ -276,14 +280,14 @@ auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) -> Ve
                                         stringify_value(isolate, value)));
     }
     return v;
-}
 
+}
 
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
 template<class T, class... Rest>
 struct CastToNative<std::vector<T, Rest...>> {
-    using ResultType = std::vector<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
+    using ResultType = std::vector<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
 
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return vector_type_helper<std::vector, T, Rest...>(isolate, value);
@@ -927,25 +931,25 @@ CastToJS<std::array<T, N> const>::operator()(v8::Isolate * isolate, std::array<T
 */
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
+//    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.release());
 }
 
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
+//    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.release());
 }
 
 
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...> &>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.get());
 }
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...> const &>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
     return CastToJS<T*>()(isolate, unique_ptr.get());
 }
 
