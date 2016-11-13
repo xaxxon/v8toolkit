@@ -371,6 +371,12 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
 };
 
 
+/** IF YOU GET AN ERROR ABOUT RESULT_OF::TYPE NOT EXISTING, MAKE SURE YOUR LAMBDA PARAMETER TYPE IS EXACTLY RIGHT,
+ * ESPECTIALLY RE; CONST
+ * @param container input container
+ * @param callable  transformation callback
+ * @return container of the transformed results
+ */
 template <class Container, class Callable>
 auto mapper(const Container & container, Callable callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
 {
