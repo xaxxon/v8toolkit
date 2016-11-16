@@ -303,18 +303,30 @@ template<class T, class = void>
 struct ParameterBuilder;
 
 
+// if the CastToNative is callable with only an isolate, no v8::Value
+template <class T, int_t<std::result_of_t<CastToNative<T>()>> = 0>
+void cast_to_native_no_value(const v8::FunctionCallbackInfo<v8::Value> & info, int i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    return CastToNative<T>()();
+};
+
+
+template <class T>
+void cast_to_native_no_value(const v8::FunctionCallbackInfo<v8::Value> & info, int i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
+};
 
 /**
 * Specialization that deals with pointers to primitive types by creating a holder that the address of can be passed along
 */
-template<class HEAD>
-struct ParameterBuilder<HEAD*, std::enable_if_t< std::is_fundamental<HEAD>::value >> {
-    HEAD * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+template<class T>
+struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
+    T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
+            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>()(info, i++, info.GetIsolate())));
+        } else {
+            stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
         }
-        stuff.emplace_back(std::make_unique<Stuff<HEAD>>(CastToNative<HEAD>()(info.GetIsolate(), info[i++])));
-        return static_cast<Stuff<HEAD>>(*stuff.back()).get();
+        return static_cast<Stuff<T>>(*stuff.back()).get();
     }
 };
 
@@ -335,9 +347,10 @@ struct ParameterBuilder<T,
     using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
+            return cast_to_native_no_value<T>()(info, i++, info.GetIsolate());
+        } else {
+            return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
         }
-        return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
     }
 };
 
@@ -356,14 +369,16 @@ struct ParameterBuilder<T,
     using NoConstRefT = std::remove_const_t<NoRefT>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call, call requires {} parameters but only {} were specified", i+1, info.Length()));
-        }
 
-	// if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
-	// IF YOU HAVE AN UNCOPYABLE TYPE SHOWING UP HERE make sure you haven't overridden the CastToNative type for it
-	//   to not return a reference - can be a problem with "shortcut" CastToNative implementations instead of
-	//   new MyType() constructors in javascript.
-	stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
+            stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<T>()(info, i++, info.GetIsolate())));
+        } else {
+
+            // if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
+            // IF YOU HAVE AN UNCOPYABLE TYPE SHOWING UP HERE make sure you haven't overridden the CastToNative type for it
+            //   to not return a reference - can be a problem with "shortcut" CastToNative implementations instead of
+            //   new MyType() constructors in javascript.
+            stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
+        }
         return *static_cast<Stuff<NoRefT>&>(*stuff.back()).get();
     }
 };
@@ -373,10 +388,12 @@ template<>
 struct ParameterBuilder<char *> {
 
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+        std::string string;
         if (i >= info.Length()) {
-            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call.  Requires {} but only {} specified", i+1, info.Length()));
+            // leave the string empty
+        } else {
+            string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         }
-        auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');
         stuff.emplace_back(std::make_unique<Stuff<std::vector<char>>>(std::move(char_data)));
@@ -396,6 +413,7 @@ struct ParameterBuilder<char *> {
      using DataHolderType = Container<IntermediaryType>;
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
+         static_assert(false, "implement me");
 	     throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
 	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
@@ -425,6 +443,8 @@ struct ParameterBuilder<char *> {
 
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
+         static_assert(false, "implement me");
+
          throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
 	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
@@ -441,14 +461,19 @@ struct ParameterBuilder<char *> {
      }
  };
 
+
 // const char *
 template<>
 struct ParameterBuilder<const char *> {
     const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
-        if (i >= info.Length()) {
-            throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
+        std::string string;
+
+        // if there is a value, use it, otherwise just use empty string
+        if (i < info.Length()) {
+            static_assert(false, "implement me");
+
+            string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         }
-        auto string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');
         stuff.emplace_back(std::make_unique<Stuff<std::vector<char>>>(std::move(char_data)));

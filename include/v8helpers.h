@@ -27,6 +27,10 @@ namespace v8toolkit {
     template<class T>
     using void_t = void;
 
+    template<class T>
+    using int_t = int;
+
+
     namespace literals {
 
         // put the following in your code to use these:
