@@ -771,8 +771,8 @@ namespace {
 			    this->type = pair.second;
 
                 // look for $1, $2, etc in resplacement and substitute in the matching position
-                for(int i = 1; i < matches.size(); i++) {
-                    this->type = std::regex_replace(this->type, std::regex(fmt::format("${}",i)), matches[i]);
+                for(size_t i = 1; i < matches.size(); i++) {
+                    this->type = std::regex_replace(this->type, std::regex(fmt::format("${}",i)), matches[i].str());
                 }
 			} else {
 			    this->type = regex_replace(type, std::regex("^(struct|class) "), "");
