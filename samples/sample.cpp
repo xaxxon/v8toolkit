@@ -103,6 +103,11 @@ public:
         return interceptor_map[str];
     }
 
+    void rvalue_qualified_method() && {}
+    void lvalue_qualified_method() & {}
+    void rvalue_const_qualified_method() const && {}
+    void lvalue_const_qualified_method() const & {}
+
 };
 
 int Point::instance_count = 0;
@@ -201,7 +206,11 @@ int main(int argc, char* argv[])
 
             // make the Point constructor function available to JS
             V8ClassWrapper<Point> & wrapped_point = V8ClassWrapper<Point>::get_instance(isolate);
-            wrapped_point.add_static_method("static_method_same_name", &Point::static_method_same_name);
+            //wrapped_point.add_method("rvalue_qualified_method", &Point::rvalue_qualified_method); // not supported
+            wrapped_point.add_method("lvalue_qualified_method", &Point::lvalue_qualified_method);
+            //wrapped_point.add_method("rvalue_const_qualified_method", &Point::rvalue_const_qualified_method); // not supported
+            wrapped_point.add_method("lvalue_const_qualified_method", &Point::lvalue_const_qualified_method);
+            wrapped_point.add_static_method("", &Point::static_method_same_name);
             wrapped_point.add_method("thing", &Point::thing);
 	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);

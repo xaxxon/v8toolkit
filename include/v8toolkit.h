@@ -302,17 +302,21 @@ struct Stuff : public StuffBase {
 template<class T, class = void>
 struct ParameterBuilder;
 
-
-// if the CastToNative is callable with only an isolate, no v8::Value
-template <class T, int_t<std::result_of_t<CastToNative<T>()>> = 0>
-void cast_to_native_no_value(const v8::FunctionCallbackInfo<v8::Value> & info, int i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
-    return CastToNative<T>()();
+template <class T, class = void>
+struct cast_to_native_no_value {
+    std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
+        throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
+    }
 };
 
 
+// if the CastToNative is callable with only an isolate, no v8::Value
 template <class T>
-void cast_to_native_no_value(const v8::FunctionCallbackInfo<v8::Value> & info, int i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
-    throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
+struct cast_to_native_no_value<T, std::enable_if_t<std::result_of_t<CastToNative<T>()>::value>> {
+
+    std::result_of_t<CastToNative<T>()> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
+        return CastToNative<T>()();
+    }
 };
 
 /**
@@ -322,7 +326,7 @@ template<class T>
 struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
     T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>()(info, i++, info.GetIsolate())));
+            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>(info, i++)));
         } else {
             stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
         }
@@ -347,7 +351,7 @@ struct ParameterBuilder<T,
     using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            return cast_to_native_no_value<T>()(info, i++, info.GetIsolate());
+            return cast_to_native_no_value<NoRefT>()(info, i++);
         } else {
             return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
         }
@@ -370,7 +374,7 @@ struct ParameterBuilder<T,
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
 
-            stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<T>()(info, i++, info.GetIsolate())));
+                stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
         } else {
 
             // if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
@@ -413,7 +417,7 @@ struct ParameterBuilder<char *> {
      using DataHolderType = Container<IntermediaryType>;
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
-         static_assert(false, "implement me");
+//         static_assert(false, "implement me");
 	     throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
 	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
@@ -443,7 +447,7 @@ struct ParameterBuilder<char *> {
 
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
 	 if (i >= info.Length()) {
-         static_assert(false, "implement me");
+//         static_assert(false, "implement me");
 
          throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
 	 }
@@ -470,7 +474,7 @@ struct ParameterBuilder<const char *> {
 
         // if there is a value, use it, otherwise just use empty string
         if (i < info.Length()) {
-            static_assert(false, "implement me");
+//            static_assert(false, "implement me");
 
             string = CastToNative<std::string>()(info.GetIsolate(), info[i++]);
         }
@@ -1086,7 +1090,8 @@ struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
 
     Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) ) :
       object(object), method(method){}
-      ~Bind(){}
+
+    ~Bind(){}
 
     CLASS_TYPE & object;
     R(METHOD_CLASS::*method)(Args...);
@@ -1096,8 +1101,25 @@ struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
     }
 };
 
+template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
+struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...) &> {
 
-/**
+    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) &) :
+            object(object), method(method){}
+
+    ~Bind(){}
+
+    CLASS_TYPE & object;
+    R(METHOD_CLASS::*method)(Args...) &;
+
+    R operator()(Args... params){
+        return (object.*method)(std::forward<Args>(params)...);
+    }
+};
+
+
+
+    /**
  * Non-const object to const method
  */
 template<class Class, class R, class METHOD_CLASS, class... Args>
@@ -1114,8 +1136,23 @@ struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
     }
 };
 
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<Class, R(METHOD_CLASS::*)(Args...) const &> {
 
-/**
+    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const &) :
+            object(object), method(method){}
+
+    Class & object;
+    R(METHOD_CLASS::*method)(Args...) const &;
+
+    R operator()(Args... params){
+        return (object.*method)(std::forward<Args>(params)...);
+    }
+};
+
+
+
+    /**
  * Const object to const method
  */
 template<class Class, class R, class METHOD_CLASS, class... Args>
@@ -1132,9 +1169,27 @@ struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
 };
 
 
-
-
 /**
+* Const object to const method
+*/
+template<class Class, class R, class METHOD_CLASS, class... Args>
+struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const &> {
+    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const &) :
+            object(object), method(method){}
+
+    const Class & object;
+    R(METHOD_CLASS::*method)(Args...) const &;
+
+    R operator()(Args... params){
+        return (object.*method)(std::forward<Args>(params)...);
+    }
+};
+
+
+
+
+
+    /**
 * Helper function to create a Bind object using type deduction and wrap it in a
 * std::function object.
 * This specialization is for handling non-const class methods
@@ -1143,6 +1198,11 @@ template <class CLASS, class R, class METHOD_CLASS, class... Args>
 std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
 {
     return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...)>(object, method));
+}
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) &)
+{
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) &>(object, method));
 }
 
 
@@ -1157,6 +1217,20 @@ template <class CLASS, class R, class METHOD_CLASS, class... Args>
 std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
     return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
+}
+
+
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const &)
+{
+    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) const &>(object, method));
+}
+
+
+template <class CLASS, class R, class METHOD_CLASS, class... Args>
+std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const &)
+{
+    return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const &>(object, method));
 }
 
 

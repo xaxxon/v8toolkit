@@ -299,8 +299,13 @@ template<class T, class Head, class... Tail>
 
  	v8::Local<v8::FunctionTemplate> get_function_template();
 
- 	template<class>
- 	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object);
+	 template<class... Args>
+	 v8::Local<v8::Object> wrap_as_most_derived(Args&&...);
+
+     std::unique_ptr<DestructorBehavior> destructor_behavior_delete;
+     std::unique_ptr<DestructorBehavior> destructor_behavior_leave_alone;
+
+     static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object, DestructorBehavior const & destructor_behavior);
 };
 
 
@@ -981,30 +986,58 @@ public:
 	}
 
 
-    
-    
-	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
-	    if (!std::is_const<T>::value) {
-		V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
-	    }
-	    return _add_method(method_name, method);
-	}
+
+
+    template<class R, class TBase, class... Args,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
+        if (!std::is_const<T>::value) {
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+        }
+        return _add_method(method_name, method);
+    }
+    template<class R, class TBase, class... Args,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const &) {
+        if (!std::is_const<T>::value) {
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+        }
+        return _add_method(method_name, method);
+    }
+    template<class R, class TBase, class... Args,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&) {
+        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
+    }
 
     
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
 	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
 	{
 		return _add_method(method_name, method);
 	}
+    template<class R, class TBase, class... Args,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) &)
+    {
+        return _add_method(method_name, method);
+    }
+
+    template<class R, class TBase, class... Args,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&)
+    {
+        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
+    }
 
 
-	/**
+
+
+    /**
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
 	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
@@ -1446,13 +1479,14 @@ struct CastToJS {
 	* If an rvalue is passed in, a copy must be made.
 	*/
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object){
+        using NoRefT = std::remove_reference_t<T>;
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In base cast to js struct with rvalue ref");
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Asked to convert rvalue type, so copying it first\n");
 
 		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
-		auto copy = new T(std::move(cpp_object));
+		auto copy = new NoRefT(std::move(cpp_object));
 		auto context = isolate->GetCurrentContext();
-		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		V8ClassWrapper<NoRefT> & class_wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
 		auto result = class_wrapper.template wrap_existing_cpp_object(context, copy, *class_wrapper.destructor_behavior_delete);
         if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
         

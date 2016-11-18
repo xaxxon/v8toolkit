@@ -126,10 +126,28 @@ struct LTG {
 
     template<class R, class... Args>
     static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const &)->std::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...) &)->std::function<R(Args...)>;
+
+};
+
+template<class T>
+struct LTG<T &&> {
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const &&)->std::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...) &&)->std::function<R(Args...)>;
+
 };
 
 
-template <class... > struct TypeList {};
+
+    template <class... > struct TypeList {};
 
 // for use inside a decltype only
 template <class R, class... Ts>

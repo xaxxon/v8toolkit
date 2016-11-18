@@ -14,3 +14,4 @@ rm -rf v8
 gclient sync (from $HOME)
 
 
+No support for pointer to l/r-value ref qualified member function
