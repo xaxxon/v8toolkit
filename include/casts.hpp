@@ -152,6 +152,14 @@ struct CastToNative<std::function<Return(Params...)>> {
     std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
 };
 
+template<class Return, class... Params>
+struct CastToNative<std::function<Return(Params...)> const> {
+    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return CastToNative<std::function<Return(Params...)>>()(isolate, value);
+    }
+};
+
+
 
 
     template<template<class,class> class ContainerTemplate, class SecondT, class FirstT>

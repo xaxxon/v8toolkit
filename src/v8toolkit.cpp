@@ -559,6 +559,7 @@ bool require(
                 } else {
                     v8::Local<v8::Value> error;
                     v8::Local<v8::Function> module_function;
+                    
                     result = execute_module(context, file_contents, script_origin, module_function);
 
                     std::lock_guard<std::mutex> l(require_results_mutex);
