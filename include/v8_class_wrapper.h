@@ -323,6 +323,7 @@ template<class T, class Head, class... Tail>
 *
 */ 
 template<class T>
+    
 class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 
 {

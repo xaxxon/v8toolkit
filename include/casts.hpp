@@ -162,6 +162,8 @@ struct CastToNative<std::function<Return(Params...)> const> {
 
 
 
+
+
     template<template<class,class> class ContainerTemplate, class SecondT, class FirstT>
     ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
         HANDLE_FUNCTION_VALUES;
@@ -477,6 +479,21 @@ template<class T>
 struct CastToJS<T**> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, const T** multi_pointer) {
         return CastToJS<T*>(isolate, *multi_pointer);
+    }
+};
+
+
+template<class R, class... Params>
+struct CastToJS<std::function<R(Params...)>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::function<R(Params...)> & function) {
+        return v8::String::NewFromUtf8(isolate, "CastToJS of std::function not supported yet");
+    }
+};
+
+template<class R, class... Params>
+struct CastToJS<std::function<R(Params...)> const> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::function<R(Params...)> const & function) {
+        return v8::String::NewFromUtf8(isolate, "CastToJS of std::function not supported yet");
     }
 };
 
