@@ -88,7 +88,7 @@ namespace v8toolkit {
 		// if there is a parent type set, set that as this object's prototype
 		auto parent_function_template = global_parent_function_template.Get(isolate);
 		if (!parent_function_template.IsEmpty()) {
-	    fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
+			//fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
 			function_template->Inherit(parent_function_template);
 		}
 
@@ -188,7 +188,7 @@ namespace v8toolkit {
 //	    fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
 		for (auto &adder : this->method_adders) {
 
-			std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
+			//std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
 
 			// create a function template, set the lambda created above to be the handler
 			auto function_template = v8::FunctionTemplate::New(this->isolate);

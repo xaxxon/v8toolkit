@@ -393,7 +393,7 @@ public:
         internal_param_tuple(internal_constructor_values...)
 
     {
-        printf("Created JSFactory object at %p\n", (void*)this);
+//        printf("Created JSFactory object at %p\n", (void*)this);
 
 
 
@@ -439,7 +439,7 @@ public:
     }
 
     ~JSFactory(){
-        printf("Deleting JSFactory object at %p\n", (void*)this);
+//        printf("Deleting JSFactory object at %p\n", (void*)this);
     }
 
     

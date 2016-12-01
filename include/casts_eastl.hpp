@@ -87,7 +87,7 @@ struct CastToNative<eastl::vector_set<T, Args...> const > {
 
 
 
-    template<class Key, class Value, class... Args>
+template<class Key, class Value, class... Args>
 struct CastToNative<eastl::vector_multimap<Key, Value, Args...>> {
     eastl::vector_multimap<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
         return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);

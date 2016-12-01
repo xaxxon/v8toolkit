@@ -772,7 +772,7 @@ CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::m
 
 template<class A, class B, class... Rest> v8::Local<v8::Value>
 CastToJS<std::multimap<A, B, Rest...> const>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> const & multimap){
-    return CastToJS<std::multimap<A, B, Rest...>>()(isolate, multimap);
+    return casttojs_multimaplike(isolate, multimap);
 }
 
 
