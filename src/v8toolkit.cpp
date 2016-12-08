@@ -22,6 +22,7 @@
 
 namespace v8toolkit {
 
+
 using namespace ::v8toolkit::literals;
 
 void process_v8_flags(int & argc, char ** argv)
@@ -65,7 +66,7 @@ void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Obje
 
 
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
-    object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
 

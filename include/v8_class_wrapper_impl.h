@@ -74,7 +74,7 @@ namespace v8toolkit {
 												     const v8::Local<v8::Value> & data) {
 		assert(this->finalized == true);
 
-//	fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
+        // fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
 
 		auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
 		init_instance_object_template(function_template->InstanceTemplate());
@@ -96,7 +96,7 @@ namespace v8toolkit {
 			callback(function_template);
 		}
 
-//	fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
+        // fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
 		this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
 		return function_template;
 	}
@@ -112,11 +112,11 @@ namespace v8toolkit {
 	    if (this_class_function_templates.empty()){
 //		fprintf(stderr, "Making function template because there isn't one %s\n", demangle<T>().c_str());
 		// this will store it for later use automatically
-		return make_wrapping_function_template();
+		    return make_wrapping_function_template();
 	    } else {
 		// fprintf(stderr, "Not making function template because there is already one %s\n", demangle<T>().c_str());
 		// return an arbitrary one, since they're all the same when used to call .NewInstance()
-		return this_class_function_templates[0].Get(isolate);
+		    return this_class_function_templates[0].Get(isolate);
 	    }
 	}
 
@@ -129,10 +129,10 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
 
         if (object->InternalFieldCount() == 0) {
-            throw CastException("Tried to get internal field from object with no internal fields");
+            throw CastException(fmt::format("Tried to get internal field from object with no internal fields: {}", demangle<T>()));
         } else if (object->InternalFieldCount() > 1) {
             throw CastException(
-                    "Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit");
+                    fmt::format("Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit: {}", demangle<T>()));
         }
 
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
@@ -152,15 +152,18 @@ namespace v8toolkit {
 	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
 	    if(type_checker != nullptr) {
 		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Explicit compatible types set, using that\n");
-		return type_checker->check(any_base);
-	    } else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
-		assert(false); // should not use this code path anymore
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No explicit compatible types, but successfully cast to self-type\n");
-		return static_cast<AnyPtr<T>*>(any_base)->get();
-	    }
+		    return type_checker->check(any_base);
+	    } 
+        
+        else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
+		    assert(false); // should not use this code path anymore
+            if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No explicit compatible types, but successfully cast to self-type\n");
+            return static_cast<AnyPtr<T>*>(any_base)->get();
+        }
+            
 	    // if it's already not const, it's ok to run it again
 	    else if (dynamic_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)) {
-		return static_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)->get();
+		    return static_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)->get();
 	    }
 
 	    throw CastException("Could not determine type of object in V8ClassWrapper::cast().  Define ANYBASE_DEBUG for more information");
@@ -270,7 +273,7 @@ namespace v8toolkit {
     template<class T>  V8ClassWrapper<T> &
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::finalize(bool wrap_as_most_derived_flag) {
         if (this->finalized) {
-            throw V8Exception(this->isolate, "Called ::finalize on wrapper that was already finalized");
+            throw V8Exception(this->isolate, fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
         }
         if (!std::is_const<T>::value) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();

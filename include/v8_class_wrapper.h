@@ -19,6 +19,8 @@
 
 #include "casts.hpp"
 
+#define V8_CLASS_WRAPPER_DEBUG_INFO
+
 using namespace v8toolkit::literals;
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
@@ -392,8 +394,10 @@ private:
 		// This function returns a reference to member in question
 		auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 		auto attribute_data = (*attribute_data_getter)(cpp_object);
-		info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<VALUE_T>>()(isolate, attribute_data.member_reference));
-	}
+        activity_name_stack.push_back(attribute_data.name);
+        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<VALUE_T>>()(isolate, attribute_data.member_reference));
+        activity_name_stack.pop_back();
+    }
 
 
     // function used to set the value of a C++ variable backing a javascript variable visible
@@ -411,19 +415,23 @@ private:
 	    auto attribute_data_getter = (AttributeHelperDataCreator<VALUE_T> *)v8::External::Cast(*(info.Data()))->Value();
 	    auto attribute_data = (*attribute_data_getter)(cpp_object);
 
-	    // assign the new value to the c++ class data member
+        
+        activity_name_stack.push_back(attribute_data.name);
+
+        // assign the new value to the c++ class data member
 	    attribute_data.member_reference = CastToNative<typename std::remove_reference<VALUE_T>::type>()(isolate, value);
 
 	    // call any registered change callbacks
 	    attribute_data.class_wrapper.call_callbacks(self, *v8::String::Utf8Value(property), value);
-
+        
+        activity_name_stack.pop_back();
 	}
 
 
 	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
 	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
 							   const v8::PropertyCallbackInfo<void>& info)
-        {}
+    {}
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript
@@ -729,7 +737,7 @@ public:
 
 
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
-	//*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
+	    //*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
 	    if (!this->is_finalized()) {
             // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
             return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
@@ -820,7 +828,7 @@ public:
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-											     callable);
+											     callable, method_name);
 //		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
 						       method_name.c_str(),
@@ -849,7 +857,7 @@ public:
 		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-											     callable);
+											     callable, method_name);
 		    
 //		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
@@ -881,20 +889,28 @@ public:
 
     }
 
-
+    /**
+     * 
+     * @tparam MemberType 
+     */
     template<class MemberType>
     struct AttributeHelperData {
     public:
 		AttributeHelperData(V8ClassWrapper<T> & class_wrapper,
-                            MemberType & member_reference) :
-			class_wrapper(class_wrapper), member_reference(member_reference)
-		{
+                            MemberType & member_reference, 
+                            std::string name) :
+			class_wrapper(class_wrapper), member_reference(member_reference), name(name)
+        {
 		    //fprintf(stderr, "Creating AttributeHelperData with %p and %p\n", (void *)&class_wrapper, (void *)&member_reference);
 		}
 
 		V8ClassWrapper<T> & class_wrapper;
 		MemberType & member_reference;
+        std::string name;
     };
+    
+    
+    
 	template<class MemberType>
 	using AttributeHelperDataCreator = std::function<AttributeHelperData<MemberType>(T*)>;
 
@@ -903,7 +919,6 @@ public:
     * Adds a getter and setter method for the specified class member
     * add_member(&ClassName::member_name, "javascript_attribute_name");
     */
-    // allow members from parent types of T
     template<class MEMBER_TYPE, class MemberClass, std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
 	V8ClassWrapper<T> & add_member(std::string member_name,
                                    MEMBER_TYPE MemberClass::* member)
@@ -923,10 +938,11 @@ public:
 		    
 		    auto get_attribute_helper_data =
 					new AttributeHelperDataCreator<MEMBER_TYPE_REF>(
-							[this, member](T * cpp_object)->AttributeHelperData<MEMBER_TYPE_REF> {
+							[this, member, member_name](T * cpp_object)->AttributeHelperData<MEMBER_TYPE_REF> {
 
 							    return AttributeHelperData<MEMBER_TYPE_REF>(*this,
-                                                                            cpp_object->*member);
+                                                                            cpp_object->*member, 
+                                                                            member_name);
 			});
 		    
 		    constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
@@ -960,11 +976,13 @@ public:
 	    
 	    this->check_if_name_used(member_name);
 	    
-	    member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+	    member_adders.emplace_back([this, member, &member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 
-		    auto get_attribute_helper_data = new AttributeHelperDataCreator<ConstMemberType>([this, member](T * cpp_object)->AttributeHelperData<ConstMemberType>{
-			    return AttributeHelperData<ConstMemberType>(*this, cpp_object->*member);
+		    auto get_attribute_helper_data = new AttributeHelperDataCreator<ConstMemberType>([this, member, &member_name](T * cpp_object)->AttributeHelperData<ConstMemberType>{
+			    return AttributeHelperData<ConstMemberType>(*this, 
+                                                            cpp_object->*member, 
+                                                            member_name);
 			});
 		    
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
@@ -1135,7 +1153,9 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-					CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
+                    activity_name_stack.push_back(method_name);
+                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
+                    activity_name_stack.pop_back();
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1253,7 +1273,9 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
+                    activity_name_stack.push_back(method_name);
                     CallCallable<decltype(bound_method)>()(bound_method, info);
+                    activity_name_stack.pop_back();
                 } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
@@ -1667,7 +1689,7 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "cast to native\n");
 	if(!value->IsObject()){
 		fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
-		throw CastException("No specialized CastToNative found and value was not a Javascript Object");
+		throw CastException(fmt::format("No specialized CastToNative found and value was not a Javascript Object: {}", demangle<T>()));
 	}
 	auto object = v8::Object::Cast(*value);
 	if (object->InternalFieldCount() <= 0) {
@@ -1681,14 +1703,14 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
 //			fprintf(stderr, "Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
-		throw CastException(fmt::format("Cannot convert {} to {} {}",
-						TYPE_DETAILS(*any_base), std::is_const<T>::value, demangle<T>()));
+		throw CastException(fmt::format("Cannot convert {} to {}",
+						TYPE_DETAILS(*any_base), demangle<T>()));
 	}
 	return *t;
 }
 
 // excluding types where CastToNative doesn't return a reference type
-	// this stops trying &int when int is an rvalue
+// this stops trying &int when int is an rvalue
 //   when trying to deal with unique_ptr in casts.hpp (in an unused but still compiled code path)
 template<typename T>
 struct CastToNative<T*, std::enable_if_t<std::is_reference<

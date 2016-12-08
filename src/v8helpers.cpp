@@ -6,6 +6,13 @@
 
 namespace v8toolkit {
 
+    std::vector<std::string> activity_name_stack;
+
+
+InvalidCallException::InvalidCallException(const std::string & message) : 
+        message(message + " - " + activity_name_stack.back())
+{}
+
 
 std::string demangle_typeid_name(const std::string & mangled_name) {
 

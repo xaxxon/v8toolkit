@@ -33,7 +33,9 @@
 namespace v8toolkit {
 
 
-     /**
+
+
+    /**
      * Holds the c++ object to be embedded inside a javascript object along with additional debugging information
      *   when requested
      */
@@ -640,19 +642,31 @@ struct CallCallable<std::function<void(const v8::FunctionCallbackInfo<v8::Value>
 };
 
 
+template<class R, class... Args>
+struct FunctionTemplateData {
+    std::function<R(Args...)> callable;
+    std::string name;
+};
+    
 /**
 * Creates a function template from a std::function
 */
 template <class R, class... Args>
-v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, std::function<R(Args...)> f)
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, 
+                                                       std::function<R(Args...)> f, 
+                                                       std::string name)
 {
-    auto copy = new std::function<R(Args...)>(f);
+    auto data = new FunctionTemplateData<R, Args...>();
+    data->callable = f;
+    data->name = name;
 
     // wrap the actual call in this lambda
     return v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
 
-        auto callable = *(std::function<R(Args...)>*)v8::External::Cast(*(info.Data()))->Value();
+        FunctionTemplateData<R, Args...> & data = *(FunctionTemplateData<R, Args...> *)v8::External::Cast(*(info.Data()))->Value();
+        
+        
 
 //        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, TypeList<Args...>>;
 //        PB_TYPE pb;
@@ -666,7 +680,10 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 //        }
         std::exception_ptr exception_pointer;
         try {
-            CallCallable<decltype(callable)>()(callable, info);
+            activity_name_stack.push_back(data.name);
+            CallCallable<decltype(data.callable)>()(data.callable, info);
+            activity_name_stack.pop_back();
+
         } catch (std::exception & e) {
 
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
@@ -679,7 +696,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
         }
         return; // no return value, PB sets it in the 'info' object
 
-    }, v8::External::New(isolate, (void*)copy));
+    }, v8::External::New(isolate, (void*)data));
 }
 
 
@@ -687,7 +704,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, st
 * Takes an arbitrary class method and returns a std::function wrapping it
 */
 template<class R, class CLASS, class... Args>
-std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable )
+std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable)
 {
     return std::function<R(Args...)>(callable);
 }
@@ -695,7 +712,7 @@ std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) 
 
 
 template<class R, class... Args>
-std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...)) {
+std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...), std::string name) {
     return std::function<R(Args...)>(callable);
 };
 
@@ -704,9 +721,9 @@ std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...))
 * Creates a v8::FunctionTemplate for an arbitrary callable
 */
 template<class T>
-v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable)
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T callable, std::string name)
 {
-    return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable));
+    return make_function_template(isolate, make_std_function_from_callable(&T::operator(), callable), name);
 }
 
 
@@ -714,9 +731,9 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T 
 * Creates a function template from a c-style function pointer
 */
 template <class R, class... Args>
-v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(*f)(Args...))
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(*f)(Args...), std::string const & name)
 {
-    return make_function_template(isolate, std::function<R(Args...)>(f));
+    return make_function_template(isolate, std::function<R(Args...)>(f), name);
 }
 
 
@@ -726,7 +743,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(
 */
 template<class R, class... Args>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
-    object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
 /**
@@ -736,7 +753,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 template<class T>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
         decltype(LTG<T>::go(&T::operator())) f(callable);
-    object_template->Set(isolate, name, make_function_template(isolate, f));
+    object_template->Set(isolate, name, make_function_template(isolate, f, name));
 }
 
 /**
@@ -745,7 +762,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 */
 template<class R, class... Args>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
-    object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
 /**
@@ -759,7 +776,7 @@ void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Ob
     CONTEXT_SCOPED_RUN(context);
 
     auto isolate = context->GetIsolate();
-    auto function_template = make_function_template(isolate, callable);
+    auto function_template = make_function_template(isolate, callable, name);
     auto function = function_template->GetFunction();
     (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
 }

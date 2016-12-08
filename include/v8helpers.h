@@ -24,6 +24,10 @@
 
 namespace v8toolkit {
 
+    // stack of names of the member/function being operated on for debugging/informational purposes
+    extern std::vector<std::string> activity_name_stack;
+
+
     template<class T>
     using void_t = void;
 
@@ -216,7 +220,7 @@ private:
     std::string message;
 
 public:
-    InvalidCallException(const std::string & message) : message(message) {}
+    InvalidCallException(const std::string & message);
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 

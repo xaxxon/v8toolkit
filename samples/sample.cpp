@@ -341,91 +341,149 @@ int main(int argc, char* argv[])
 
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
             wrapped_foo.set_parent_type<FooParent>();
-            wrapped_foo.add_member("i", &Foo::i).finalize();
+            wrapped_foo.add_member("i", &Foo::i);
+            wrapped_foo.finalize();
 
+            
                 v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
             v8::Context::Scope context_scope_x(context);
 
-            std::string js_code;
-            if(!get_file_contents("code.js", js_code)) {
-                assert(false);
+            {
+                std::string js_code;
+                if (!get_file_contents("code.js", js_code)) {
+                    assert(false);
+                }
+
+                v8::Local<v8::String> source =
+                        v8::String::NewFromUtf8(isolate, js_code.c_str(),
+                                                v8::NewStringType::kNormal).ToLocalChecked();
+
+                // Compile the source code.
+                v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
+
+                auto result = script->Run(context);
+                print_maybe_value(result);
             }
 
-            v8::Local<v8::String> source =
-                v8::String::NewFromUtf8(isolate, js_code.c_str(),
-                                    v8::NewStringType::kNormal).ToLocalChecked();
+            {
+                v8::Local<v8::Script> script_for_static_method = 
+                        v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "println(Line.static_method(42));")).ToLocalChecked();
+                (void) script_for_static_method->Run(context);
+            }
 
-            // Compile the source code.
-            v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
+            {
+                v8::Local<v8::Script> script_for_fake_method = 
+                        v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "l = new Line(); println(l.fake_method());")).ToLocalChecked();
 
-            auto result = script->Run(context);
-            print_maybe_value(result);
+                (void) script_for_fake_method->Run(context);
+            }
 
-            v8::Local<v8::Script> script_for_static_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"println(Line.static_method(42));")).ToLocalChecked();
-	                (void)script_for_static_method->Run(context);
+            {
+                // calling a function with too few parameters throws
+                v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                                     "some_function();")).ToLocalChecked();
+                v8::TryCatch tc(isolate);
+                (void) script3->Run(context);
+                assert(tc.HasCaught());
+            }
 
-            v8::Local<v8::Script> script_for_fake_method = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l = new Line(); println(l.fake_method());")).ToLocalChecked();
-	                (void)script_for_fake_method->Run(context);
+            {
+                // calling a method with too few parameters throws
+                v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                                     "l=new Line();l.some_method();")).ToLocalChecked();
+                v8::TryCatch tc2(isolate);
+                (void) script4->Run(context);
+                assert(tc2.HasCaught());
+            }
 
+            {
+                v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                                     "throw_exception();")).ToLocalChecked();
+                v8::TryCatch tc3(isolate);
+                (void) script5->Run(context);
+                assert(tc3.HasCaught());
+            }
 
-            // calling a function with too few parameters throws
-            v8::Local<v8::Script> script3 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"some_function();")).ToLocalChecked();
-            v8::TryCatch tc(isolate);
-	                (void)script3->Run(context);
-            assert(tc.HasCaught());
+            {
 
-			// calling a method with too few parameters throws
-            v8::Local<v8::Script> script4 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.some_method();")).ToLocalChecked();
-            v8::TryCatch tc2(isolate);
-	                (void)script4->Run(context);
-            assert(tc2.HasCaught());
+                printf("Checking that calling a method that throws a c++ exception has its exception wrapped for V8\n");
+                v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                                     "l=new Line();l.throw_exception();")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void) script6->Run(context);
+                assert(tc4.HasCaught());
+            }
 
+            {
 
-            v8::Local<v8::Script> script5 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"throw_exception();")).ToLocalChecked();
-            v8::TryCatch tc3(isolate);
-	                (void)script5->Run(context);
-            assert(tc3.HasCaught());
+                assert(changed_x == 0);
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "p=new Pii(1,2);p2=new Pii(3,4); p.x = 2; p2.x = 4")).ToLocalChecked();
+                (void) script->Run(context);
+                assert(changed_x == 2);
+                (void) script->Run(context);
+                assert(changed_x == 4);
+            }
 
-             printf("Checking that calling a method that throws a c++ exception has its exception wrapped for V8\n");
-            v8::Local<v8::Script> script6 = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"l=new Line();l.throw_exception();")).ToLocalChecked();
-            v8::TryCatch tc4(isolate);
-	                (void)script6->Run(context);
-            assert(tc4.HasCaught());
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
+                (void)script->Run(context);
 
-            assert(changed_x == 0);
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p=new Pii(1,2);p2=new Pii(3,4); p.x = 2; p2.x = 4")).ToLocalChecked();
-            (void)script->Run(context);
-            assert(changed_x == 2);
-            (void)script->Run(context);
-            assert(changed_x == 4);
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "p = new Point(); println(p[4]);")).ToLocalChecked();
+                (void) script->Run(context);
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "p = new Point(); println(p['four']);p['ThisStringDoesNotMatter']= 5; println(p.x);")).ToLocalChecked();
+                (void)script->Run(context);
+            }
 
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
-            //(void)script->Run(context);
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p[4]);")).ToLocalChecked();
-	                (void)script->Run(context);
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); println(p['four']);p['ThisStringDoesNotMatter']= 5; println(p.x);")).ToLocalChecked();
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"var p = new Point(); p.foo = 'fdsa';p.bar = 'rab'; println(p.foo);println(p.bar);")).ToLocalChecked();
-            (void)script->Run(context);
-            return 0;
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "var p = new Point(); p.foo = 'fdsa';p.bar = 'rab'; println(p.foo);println(p.bar);")).ToLocalChecked();
+                (void) script->Run(context);
+            }
 
-            v8::TryCatch tc5(isolate);
-            script = v8::Script::Compile(context, "p = new Point(); println(\"before calling callable\");println(p(4));println(\"after\");"_v8).ToLocalChecked();
-            (void)script->Run(context);
-            if (tc5.HasCaught()) {
-                v8toolkit::ReportException(isolate, &tc5);
+            {
+
+                v8::TryCatch tc5(isolate);
+                auto script = v8::Script::Compile(context,
+                                             "p = new Point(); println(\"before calling callable\");println(p(4));println(\"after\");"_v8).ToLocalChecked();
+                (void) script->Run(context);
+                if (tc5.HasCaught()) {
+                    v8toolkit::ReportException(isolate, &tc5);
+                }
+            }
+
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
+                (void) script->Run(context);
+            }
+
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
+                assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
+            }
+
+            {
+                auto script = v8::Script::Compile(context,
+                                                  v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
+                assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
+            }
+#
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                              "let l = new Line(); l.take_point();")).ToLocalChecked();
+                (void) script->Run(context);
             }
 
 
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"p = new Point(); l = new Line(); l.take_point(p); l.take_map({a:5, b: 6});")).ToLocalChecked();
-            (void)script->Run(context);
-
-            script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,"()=>42.2")).ToLocalChecked();
-	    assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
-
-
-
-
-	        Foo most_derived_foo_test;
+            Foo most_derived_foo_test;
             v8::Local<v8::Object> most_derived_fooparent_js_object =
                 wrapped_fooparent.wrap_existing_cpp_object(context, &most_derived_foo_test, *wrapped_fooparent.destructor_behavior_leave_alone);
 
@@ -435,6 +493,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "%s\n", stringify_value(isolate, most_derived_fooparent_js_object).c_str());
             assert(!most_derived_fooparent_js_object->Get(context, "i"_v8).ToLocalChecked()->IsUndefined());
             fprintf(stderr, "Testing completed\n");
+            return 0;
 
         });
         
