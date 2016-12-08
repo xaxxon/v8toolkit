@@ -901,7 +901,7 @@ public:
                             std::string name) :
 			class_wrapper(class_wrapper), member_reference(member_reference), name(name)
         {
-		    //fprintf(stderr, "Creating AttributeHelperData with %p and %p\n", (void *)&class_wrapper, (void *)&member_reference);
+		   // fprintf(stderr, "Creating AttributeHelperData with %p and %p and name: %s\n", (void *)&class_wrapper, (void *)&member_reference, this->name.c_str());
 		}
 
 		V8ClassWrapper<T> & class_wrapper;
@@ -976,10 +976,10 @@ public:
 	    
 	    this->check_if_name_used(member_name);
 	    
-	    member_adders.emplace_back([this, member, &member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+	    member_adders.emplace_back([this, member, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 
-		    auto get_attribute_helper_data = new AttributeHelperDataCreator<ConstMemberType>([this, member, &member_name](T * cpp_object)->AttributeHelperData<ConstMemberType>{
+		    auto get_attribute_helper_data = new AttributeHelperDataCreator<ConstMemberType>([this, member, member_name](T * cpp_object)->AttributeHelperData<ConstMemberType>{
 			    return AttributeHelperData<ConstMemberType>(*this, 
                                                             cpp_object->*member, 
                                                             member_name);
