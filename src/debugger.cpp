@@ -626,8 +626,13 @@ Breakpoint::Breakpoint(std::string const & location, int64_t script_id, int line
 * Returning from this function resumes javascript execution
 */
 void Debugger::debug_event_callback(v8::Debug::EventDetails const &event_details) {
-    v8::Isolate *isolate = event_details.GetIsolate();
-    v8::Local<v8::Context> debug_context = v8::Debug::GetDebugContext(isolate);
+
+
+        // reverted to old version of v8, so had to change this line
+//    v8::Isolate *isolate = event_details.GetIsolate();
+        v8::Isolate *isolate = v8::Isolate::GetCurrent(); // this line may now be wrong - I just want it to compile
+
+        v8::Local<v8::Context> debug_context = v8::Debug::GetDebugContext(isolate);
     DebugEventCallbackData *callback_data =
             static_cast<DebugEventCallbackData *>(v8::External::Cast(*event_details.GetCallbackData())->Value());
     Debugger &debugger = *callback_data->debugger;

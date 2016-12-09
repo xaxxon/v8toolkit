@@ -225,8 +225,8 @@ int main(int argc, char* argv[])
             wrapped_point.add_method("make_point", &Point::make_point);
 
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
-            wrapped_point.add_member("x", &Point::x_);
-            wrapped_point.add_member("fixed_string", &Point::fixed_string);
+            wrapped_point.add_member<int, Point, &Point::x_>("x");
+            wrapped_point.add_member<eastl::fixed_string<char, 32, true, eastl::allocator>, Point, &Point::fixed_string>("fixed_string");
             int changed_x = 0;
 	                wrapped_point.register_callback([&changed_x](v8::Isolate * isolate,
                                                          v8::Local<v8::Object> & object,
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
                 changed_x++;
             });
 
-            wrapped_point.add_member("y", &Point::y_);
+            wrapped_point.add_member<int, Point, &Point::y_>("y");
             wrapped_point.add_index_getter([](uint32_t index, v8::PropertyCallbackInfo<v8::Value> const & info){
                 printf("index getter: %d\n", index);
                 info.GetReturnValue().Set(index);
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 
             got_duplicate_name_exception = false;
             try {
-                wrapped_point.add_member("y", &Point::y_);
+                wrapped_point.add_member<int, Point, &Point::y_>("y");
             } catch (DuplicateNameException &) {
                 got_duplicate_name_exception = true;
             }
@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_static_method("static_method_same_name", &Line::static_method_same_name);
             wrapped_line.add_method("get_point", &Line::get_point);
             wrapped_line.add_method("get_rvalue_point", &Line::get_rvalue_point);
-            wrapped_line.add_member("p", &Line::p);
+            wrapped_line.add_member<Point, Line, &Line::p>("p");
             wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
 
             auto & wrapped_foo = V8ClassWrapper<Foo>::get_instance(isolate);
             wrapped_foo.set_parent_type<FooParent>();
-            wrapped_foo.add_member("i", &Foo::i);
+            wrapped_foo.add_member<int, Foo, &Foo::i>("i");
             wrapped_foo.finalize();
 
             
