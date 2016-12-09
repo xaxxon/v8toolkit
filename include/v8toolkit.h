@@ -328,11 +328,11 @@ template<class T>
 struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
     T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
         if (i >= info.Length()) {
-            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>(info, i++)));
+            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>()(info, i++)));
         } else {
             stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
         }
-        return static_cast<Stuff<T>>(*stuff.back()).get();
+        return static_cast<Stuff<T> &>(*stuff.back()).get();
     }
 };
 
@@ -343,12 +343,12 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
  */
 template<class T>
 struct ParameterBuilder<T,
-    std::enable_if_t<std::is_reference<std::result_of_t<
-                              CastToNative<
-                                           std::remove_reference_t<T>
-                              >(v8::Isolate*, v8::Local<v8::Value>)
-                > // end result_of
-        >::value
+    std::enable_if_t<!std::is_fundamental<std::remove_pointer_t<T>>::value &&
+        std::is_reference<std::result_of_t<
+            CastToNative<
+                std::remove_reference_t<T>
+            >(v8::Isolate*, v8::Local<v8::Value>)> // end result_of
+        >::value // end of is_reference
         >> {
     using NoRefT = std::remove_reference_t<T>;
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
@@ -385,7 +385,7 @@ struct ParameterBuilder<T,
             //   new MyType() constructors in javascript.
             stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
         }
-        return *static_cast<Stuff<NoRefT>&>(*stuff.back()).get();
+        return *static_cast<Stuff<NoRefT> &>(*stuff.back()).get();
     }
 };
 
@@ -403,7 +403,7 @@ struct ParameterBuilder<char *> {
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');
         stuff.emplace_back(std::make_unique<Stuff<std::vector<char>>>(std::move(char_data)));
-        return static_cast<Stuff<std::vector<char>>&>(*stuff.back()).get()->data();
+        return static_cast<Stuff<std::vector<char>> &>(*stuff.back()).get()->data();
     }
 };
 
@@ -483,7 +483,7 @@ struct ParameterBuilder<const char *> {
         std::vector<char> char_data(string.begin(), string.end());
         char_data.push_back('\0');
         stuff.emplace_back(std::make_unique<Stuff<std::vector<char>>>(std::move(char_data)));
-        return static_cast<Stuff<std::vector<char>>&>(*stuff.back()).get()->data();
+        return static_cast<Stuff<std::vector<char>> &>(*stuff.back()).get()->data();
     }
 };
 
@@ -647,14 +647,17 @@ struct FunctionTemplateData {
     std::function<R(Args...)> callable;
     std::string name;
 };
-    
+
+
+
+
 /**
 * Creates a function template from a std::function
 */
 template <class R, class... Args>
-v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, 
-                                                       std::function<R(Args...)> f, 
-                                                       std::string name)
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
+                                                       std::function<R(Args...)> f,
+                                                       std::string const & name)
 {
     auto data = new FunctionTemplateData<R, Args...>();
     data->callable = f;
@@ -665,8 +668,8 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
         auto isolate = info.GetIsolate();
 
         FunctionTemplateData<R, Args...> & data = *(FunctionTemplateData<R, Args...> *)v8::External::Cast(*(info.Data()))->Value();
-        
-        
+
+
 
 //        using PB_TYPE = ParameterBuilder<0, std::function<R(Args...)>, TypeList<Args...>>;
 //        PB_TYPE pb;
@@ -731,7 +734,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T 
 * Creates a function template from a c-style function pointer
 */
 template <class R, class... Args>
-v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, R(*f)(Args...), std::string const & name)
+v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,  R(*f)(Args...), std::string const & name)
 {
     return make_function_template(isolate, std::function<R(Args...)>(f), name);
 }

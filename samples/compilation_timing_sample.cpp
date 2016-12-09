@@ -144,3 +144,173 @@ void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
 
 };
 #endif
+
+
+#ifdef WRAP_VOID_VOID_MEMBER_FUNCTION_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    void a();
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+
+};
+#endif
+
+
+#ifdef WRAP_MEMBER_FUNCTION_5_TIMES_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    void a();
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+    wrapper.add_method("b", &MemberFunctionClass::a);
+    wrapper.add_method("c", &MemberFunctionClass::a);
+    wrapper.add_method("d", &MemberFunctionClass::a);
+    wrapper.add_method("e", &MemberFunctionClass::a);
+
+};
+#endif
+
+
+#ifdef WRAP_INT_VOID_MEMBER_FUNCTION_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    int a();
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+
+};
+#endif
+
+#ifdef WRAP_5_DIFFERENT_MEMBER_FUNCTION_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    int a(int);
+    char b(char);
+    float c(float);
+    double d(double);
+    unsigned e(unsigned);
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+    wrapper.add_method("b", &MemberFunctionClass::b);
+    wrapper.add_method("c", &MemberFunctionClass::c);
+    wrapper.add_method("d", &MemberFunctionClass::d);
+    wrapper.add_method("e", &MemberFunctionClass::e);
+
+};
+#endif
+
+#ifdef WRAP_5_DIFFERENT_MEMBER_FUNCTION_2_CLASSES
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    int a(int);
+    char b(char);
+    float c(float);
+    double d(double);
+    unsigned e(unsigned);
+};
+
+struct MemberFunctionClass2 {
+    int a(int);
+    char b(char);
+    float c(float);
+    double d(double);
+    unsigned e(unsigned);
+};
+
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+    wrapper.add_method("b", &MemberFunctionClass::b);
+    wrapper.add_method("c", &MemberFunctionClass::c);
+    wrapper.add_method("d", &MemberFunctionClass::d);
+    wrapper.add_method("e", &MemberFunctionClass::e);
+
+    V8ClassWrapper<MemberFunctionClass2> & wrapper2 = V8ClassWrapper<MemberFunctionClass2>::get_instance(*isolate);
+    wrapper2.add_method("a", &MemberFunctionClass2::a);
+    wrapper2.add_method("b", &MemberFunctionClass2::b);
+    wrapper2.add_method("c", &MemberFunctionClass2::c);
+    wrapper2.add_method("d", &MemberFunctionClass2::d);
+    wrapper2.add_method("e", &MemberFunctionClass2::e);
+
+};
+#endif
+
+
+#ifdef WRAP_10_DIFFERENT_MEMBER_FUNCTION_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    int a(int);
+    char b(char);
+    float c(float);
+    double d(double);
+    unsigned e(unsigned);
+
+    const int a2(int *);
+    const char b2(char *);
+    const float c2(float *);
+    const double d2(double *);
+    const unsigned e2(unsigned *);
+
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+    wrapper.add_method("b", &MemberFunctionClass::b);
+    wrapper.add_method("c", &MemberFunctionClass::c);
+    wrapper.add_method("d", &MemberFunctionClass::d);
+    wrapper.add_method("e", &MemberFunctionClass::e);
+
+    wrapper.add_method("a2", &MemberFunctionClass::a2);
+    wrapper.add_method("b2", &MemberFunctionClass::b2);
+    wrapper.add_method("c2", &MemberFunctionClass::c2);
+    wrapper.add_method("d2", &MemberFunctionClass::d2);
+    wrapper.add_method("e2", &MemberFunctionClass::e2);
+
+
+};
+#endif
+
+
+#ifdef WRAP_COMPLEX_MEMBER_FUNCTION_CLASS
+#include "javascript.h"
+using namespace v8toolkit;
+
+struct MemberFunctionClass {
+    int a(int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned,
+    int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned,
+    int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned, int, char, float, double, unsigned);
+};
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    V8ClassWrapper<MemberFunctionClass> & wrapper = V8ClassWrapper<MemberFunctionClass>::get_instance(*isolate);
+    wrapper.add_method("a", &MemberFunctionClass::a);
+
+};
+#endif
