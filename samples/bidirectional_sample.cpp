@@ -80,8 +80,8 @@ void test_calling_bidirectional_from_javascript()
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
 		thing.set_compatible_types<JSThing>();
-		thing.add_member("i", &Thing::i);
-		thing.add_member("j", &Thing::j);
+		thing.add_member<const int, Thing, &Thing::i>("i");
+		thing.add_member<std::string, Thing, &Thing::j>("j");
 
 		thing.finalize();
 		thing.add_constructor<int, const std::string &>("Thing", *isolate);

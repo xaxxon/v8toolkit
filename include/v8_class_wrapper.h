@@ -428,7 +428,8 @@ private:
 	}
 
 
-	template<typename VALUE_T, std::enable_if_t<!std::is_copy_assignable<VALUE_T>::value, int> = 0>
+	template<typename MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
+		std::enable_if_t<!std::is_copy_assignable<MemberType>::value, int> = 0>
 	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
 							   const v8::PropertyCallbackInfo<void>& info)
     {}
