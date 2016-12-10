@@ -933,7 +933,7 @@ public:
 	    
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
 	    if (!std::is_const<T>::value) {
-		    V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).template add_member_readonly<MemberType, MemberClass, member>(member_name);
+		    V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).template add_member_readonly<ConstMemberType, MemberClass, member>(member_name);
 	    }
 
 	    assert(this->finalized == false);

@@ -82,16 +82,51 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
-
-map<string, string> cpp_to_js_type_conversions = {{"^(const)?\\s*(unsigned)?\\s*(char|short|int|long|long long|float|double|long double)\\s*(const)?\\s*[*]?\\s*[&]?$", "Number"},
-                                                  {"^(const)?\\s*(bool)\\s*(const)?\\s*[*]?\\s*[&]?$", "Boolean"},
-                                                  {"^(const)?\\s*(char\\s*[*]|(std::)?string)\\s*(const)?\\s*\\s*[&]?$", "String"},
-                                                  {"^void$", "Undefined"},
-                                                  {"^(?:class|struct)?[^:]*vector<([^>]+)>$", "Array.{$1}"}};
+// http://usejsdoc.org/tags-type.html
+map<string, string> cpp_to_js_type_conversions = {{"^(?:std::)?vector[<]\\s*([^>]+?)\\s*[>]\\s*$", "Array.{$1}"},
+                                                  {"^(?:std::)?map[<]\\s*([^>]+?)\\s*,\\s*([^>]+?)\\s*[>]\\s*$", "Object.{$1, $2}"},
+                                                  {"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
+                                                  {"^(?:const)?\\s*(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
+                                                  {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Boolean"},
+                                                  {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$", "String"},
+                                                  {"^void$", "Undefined"}};
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
 
+std::string js_api_header = R"JS_API_HEADER(
+/**
+ * Prints a string and appends a newline
+ * @param {string} s the string to be printed
+ */
+function println(s){}
 
+/**
+ * Prints a string without adding a newline to the end
+ * @param {string} s the string to be printed
+ */
+function print(s){}
+
+/**
+ * Dumps the contents of the given variable - only 'own' properties
+ * @param o the variable to be dumped
+ */
+function printobj(o)
+
+/**
+ * Dumps the contents of the given variable - all properties including those of prototype chain
+ * @param o the variable to be dumped
+ */
+function printobjall(o)
+
+/**
+ * Attempts to load the given module and returns the exported data.  Requiring the same module
+ *   more than once will return the cached result, not re-execute the source.
+ * @param {string} module_name name of the module to require
+ */
+function require(module_name) {}
+
+
+)JS_API_HEADER";
 
 #include <iostream>
 #include <fstream>
@@ -140,8 +175,31 @@ int matched_classes_returned = 0;
 
 namespace {
 
+    std::string get_canonical_name_for_decl(const TypeDecl * decl) {
+        if (decl == nullptr) {
+            llvm::report_fatal_error("null type decl to get_canonical_name_for_decl");
+        }
+        return decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString();
+    }
 
-    int print_logging = 0;
+//
+//    std::string get_full_name_for_type(QualType qual_type) {
+//
+//        if (auto typedef_decl = qual_type->getAs<TypedefNameDecl>()) {
+//            qual_type = typedef_decl->getUnderlyingType();
+//        }
+//        auto record_decl = qual_type->getAsCXXRecordDecl();
+//        if (record_decl == nullptr) {
+//            std::cerr << fmt::format("Couldn't get record decl for {}", qual_type.getAsString()) << std::endl;
+//            assert(record_decl != nullptr);
+//        }
+//
+//        return get_canonical_name_for_decl(record_decl);
+//    }
+
+
+
+        int print_logging = 1;
 
     // how was a wrapped class determined to be a wrapped class?
     enum FOUND_METHOD {
@@ -164,9 +222,6 @@ namespace {
     EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED);
 
 
-    std::string get_canonical_name_for_decl(const TypeDecl * decl) {
-        return decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString();
-    }
 
     // list of data (source code being processed) errors occuring during the run.   Clang API errors are still immediate fails with
     //   llvm::report_fatal_error
@@ -570,6 +625,7 @@ namespace {
         set<string> names;
         set<WrappedClass *> derived_types;
         set<WrappedClass *> base_types;
+        set<FieldDecl *> fields;
         set<string> wrapper_extension_methods;
         CompilerInstance & compiler_instance;
         string my_include; // the include for getting my type
@@ -727,6 +783,20 @@ namespace {
             return true;
         }
 
+        // return all the header files for all the types used by all the base types of the specified type
+        std::set<string> get_base_type_includes() {
+            set<string> results{this->my_include};
+            results.insert(this->include_files.begin(), this->include_files.end());
+            std::cerr << fmt::format("adding base type include for {}", this->class_name) << std::endl;
+
+            for (WrappedClass * base_class : this->base_types) {
+                auto base_results = base_class->get_base_type_includes();
+                results.insert(base_results.begin(), base_results.end());
+            }
+
+            return results;
+        }
+
         std::set<string> get_derived_type_includes() {
             cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
             set<string> results;
@@ -760,134 +830,161 @@ namespace {
 
 	
         std::string generate_js_stub() {
-	    struct MethodParam {
-		string type = "";
-		string name = "";
-		string description = "no description available";
-		void convert_type() {
-            std::smatch matches;
-		    for (auto & pair : cpp_to_js_type_conversions) {
-			if (regex_match(this->type, matches, std::regex(pair.first))) {
-			    this->type = pair.second;
+            struct MethodParam {
+                string type = "";
+                string name = "";
+                string description = "no description available";
 
-                // look for $1, $2, etc in resplacement and substitute in the matching position
-                for(size_t i = 1; i < matches.size(); i++) {
-                    this->type = std::regex_replace(this->type, std::regex(fmt::format("${}",i)), matches[i].str());
+                void convert_type(std::string const & indentation = "") {
+                    std::smatch matches;
+                    std::cerr << fmt::format("{} converting {}...", indentation, this->type) << std::endl;
+                    this->type = regex_replace(type, std::regex("^(struct|class) "), "");
+                    for (auto &pair : cpp_to_js_type_conversions) {
+                        if (regex_match(this->type, matches, std::regex(pair.first))) {
+                            std::cerr << fmt::format("{} matched {}, converting to {}", indentation, pair.first, pair.second) << std::endl;
+                            auto new_type = pair.second; // need a temp because the regex matches point into the current this->type
+
+                            // look for $1, $2, etc in resplacement and substitute in the matching position
+                            for (size_t i = 1; i < matches.size(); i++) {
+                                // recursively convert the matched type
+                                MethodParam mp;
+                                mp.type = matches[i].str();
+                                mp.convert_type(indentation + "   ");
+                                new_type = std::regex_replace(new_type, std::regex(fmt::format("[$]{}", i)),
+                                                                mp.type);
+                            }
+                            this->type = new_type;
+                            std::cerr << fmt::format("{}... final conversion to: {}", indentation, this->type) << std::endl;
+                        }
+                    }
                 }
-			} else {
-			    this->type = regex_replace(type, std::regex("^(struct|class) "), "");
-			}
-		    }
-		}
-	    };
+            }; //  MethodParam
 
-	    stringstream result;
-	    result << fmt::format("class {} {{\n", this->name_alias);
+            stringstream result;
+            string indentation = "    ";
+
+            result << "/**\n";
+            result << fmt::format(" * @class {}\n", this->name_alias);
+
+            for (auto field : this->fields) {
+                MethodParam field_type;
+                field_type.name = field->getNameAsString();
+                field_type.type = field->getType().getAsString();
+                field_type.convert_type();
+                result << fmt::format(" * @property {{{}}} {} \n", field_type.type, field_type.name);
+            }
+            result << fmt::format(" **/\n", indentation);
 
 
-	    
+            result << fmt::format("class {} {{\n", this->name_alias);
+
             for (auto method_decl : this->wrapped_methods_decls) {
 
-		
-		vector<MethodParam> parameters;
-		MethodParam return_value_info;
-		string method_description;
-		
-		auto parameter_count = method_decl->getNumParams();
-		for (unsigned int i = 0; i < parameter_count; i++) {
-		    MethodParam this_param;
-		    auto param_decl = method_decl->getParamDecl(i);
-		    auto parameter_name = param_decl->getNameAsString();
-		    if (parameter_name == "") {
-			data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
-						 this->name_alias, method_decl->getNameAsString(), i));
-			parameter_name = fmt::format("unspecified_position_{}", parameters.size());
-		    }
-		    this_param.name = parameter_name;
-		    auto type = get_plain_type(param_decl->getType());
-		    this_param.type = type.getAsString();
-		    parameters.push_back(this_param);
-		}
 
-		return_value_info.type = get_plain_type(method_decl->getReturnType()).getAsString();
+                vector<MethodParam> parameters;
+                MethodParam return_value_info;
+                string method_description;
 
-                FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
+                auto parameter_count = method_decl->getNumParams();
+                for (unsigned int i = 0; i < parameter_count; i++) {
+                    MethodParam this_param;
+                    auto param_decl = method_decl->getParamDecl(i);
+                    auto parameter_name = param_decl->getNameAsString();
+                    if (parameter_name == "") {
+                        data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
+                                                 this->name_alias, method_decl->getNameAsString(), i));
+                        parameter_name = fmt::format("unspecified_position_{}", parameters.size());
+                    }
+                    this_param.name = parameter_name;
+                    auto type = get_plain_type(param_decl->getType());
+                    this_param.type = type.getAsString();
+                    parameters.push_back(this_param);
+                }
+
+                return_value_info.type = get_plain_type(method_decl->getReturnType()).getAsString();
+
+                FullComment *comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
                 if (comment != nullptr) {
-		    cerr << "**1" << endl;
+                    cerr << "**1" << endl;
                     auto comment_text = get_source_for_source_range(
                         this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
 
-		    cerr << "FullComment: " << comment_text << endl;
-		    for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-			cerr << "**2.1" << endl;
-			    
-			auto child_comment_source_range = (*i)->getSourceRange();
-			if (child_comment_source_range.isValid()) {
-			    cerr << "**2.2" << endl;
-			    
-			    auto child_comment_text = get_source_for_source_range(
-										  this->compiler_instance.getPreprocessor().getSourceManager(),
-										  child_comment_source_range);
-			    
-			    if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-				cerr << "Is ParamCommandComment" << endl;
-				auto command_param_name = param_command->getParamName(comment).str();
+                    cerr << "FullComment: " << comment_text << endl;
+                    for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
+                        cerr << "**2.1" << endl;
 
-				auto matching_param_iterator =
-				    std::find_if(parameters.begin(), parameters.end(), [&command_param_name](auto & param){
-					    return command_param_name == param.name;
-					});
-				
-				if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
-				    
-				  auto & param_info = *matching_param_iterator;
-				    if (param_command->getParagraph() != nullptr) {
-					cerr << "**3" << endl;
-					param_info.description = get_source_for_source_range(this->compiler_instance.getPreprocessor().getSourceManager(),
-											     param_command->getParagraph()->getSourceRange());
-				    }
-				} else {
-				    data_warning(fmt::format("method parameter comment name doesn't match any parameter {}", command_param_name));
-				}
-			    } else {
-				cerr << "is not param command comment" << endl;
-			    }
-			    cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
-			}
-		    }
+                        auto child_comment_source_range = (*i)->getSourceRange();
+                        if (child_comment_source_range.isValid()) {
+                            cerr << "**2.2" << endl;
+
+                            auto child_comment_text = get_source_for_source_range(
+                                this->compiler_instance.getPreprocessor().getSourceManager(),
+                                child_comment_source_range);
+
+                            if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
+                                cerr << "Is ParamCommandComment" << endl;
+                                auto command_param_name = param_command->getParamName(comment).str();
+
+                                auto matching_param_iterator =
+                                    std::find_if(parameters.begin(), parameters.end(),
+                                                 [&command_param_name](auto &param) {
+                                                     return command_param_name == param.name;
+                                                 });
+
+                                if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
+
+                                    auto &param_info = *matching_param_iterator;
+                                    if (param_command->getParagraph() != nullptr) {
+                                        cerr << "**3" << endl;
+                                        param_info.description = get_source_for_source_range(
+                                            this->compiler_instance.getPreprocessor().getSourceManager(),
+                                            param_command->getParagraph()->getSourceRange());
+                                    }
+                                } else {
+                                    data_warning(
+                                        fmt::format("method parameter comment name doesn't match any parameter {}",
+                                                    command_param_name));
+                                }
+                            } else {
+                                cerr << "is not param command comment" << endl;
+                            }
+                            cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+                        }
+                    }
                 } else {
-		    cerr << "No comment on " << method_decl->getNameAsString() << endl;
-		}
+                    cerr << "No comment on " << method_decl->getNameAsString() << endl;
+                }
 
-		string indentation = "    ";
-		
-		result << fmt::format("{}/**\n", indentation);
-		for (auto & param : parameters) {
-		    param.convert_type(); // change to JS types
-		    result << fmt::format("{} * @param {} {{{}}} {}\n", indentation, param.name, param.type, param.description);
-		}
-		return_value_info.convert_type();
-		result << fmt::format("{} * @return {{{}}} {}\n", indentation, return_value_info.type, return_value_info.description);
-		result << fmt::format("{} */\n", indentation);
-		if (method_decl->isStatic()) {
-		    result << fmt::format("{}static ", indentation);
-		}
-		
-		result << fmt::format("{}{}(", indentation, method_decl->getNameAsString());
-		bool first_parameter = true;
-		for (auto & param : parameters) {
-		    if (!first_parameter) {
-			result << ", ";
-		    }
-		    first_parameter = false;
-		    result << fmt::format("{}", param.name);
-		}
-		result << fmt::format("){{}}\n\n");
+
+                result << fmt::format("{}/**\n", indentation);
+                for (auto &param : parameters) {
+                    param.convert_type(); // change to JS types
+                    result << fmt::format("{} * @param {} {{{}}} {}\n", indentation, param.name, param.type,
+                                          param.description);
+                }
+                return_value_info.convert_type();
+                result << fmt::format("{} * @return {{{}}} {}\n", indentation, return_value_info.type,
+                                      return_value_info.description);
+                result << fmt::format("{} */\n", indentation);
+                if (method_decl->isStatic()) {
+                    result << fmt::format("{}static ", indentation);
+                }
+
+                result << fmt::format("{}{}(", indentation, method_decl->getNameAsString());
+                bool first_parameter = true;
+                for (auto &param : parameters) {
+                    if (!first_parameter) {
+                        result << ", ";
+                    }
+                    first_parameter = false;
+                    result << fmt::format("{}", param.name);
+                }
+                result << fmt::format("){{}}\n\n");
 
             }
 
-	    
-            result << fmt::format("}}\n");
+
+            result << fmt::format("}}\n\n\n");
             fprintf(stderr, "%s", result.str().c_str());
             return result.str();
         }
@@ -1274,6 +1371,15 @@ namespace {
     std::string get_type_string(QualType qual_type,
                                 const std::string & indentation = "") {
 
+        auto original_qualifiers = qual_type.getLocalFastQualifiers();
+        // chase any typedefs to get the "real" type
+        while (auto typedef_type = dyn_cast<TypedefType>(qual_type)) {
+            qual_type = typedef_type->getDecl()->getUnderlyingType();
+        }
+
+        // re-apply qualifiers to potentially new qualtype
+        qual_type.setLocalFastQualifiers(original_qualifiers);
+
         auto canonical_qual_type = qual_type.getCanonicalType();
 //        cerr << "canonical qual type typeclass: " << canonical_qual_type->getTypeClass() << endl;
         auto canonical = canonical_qual_type.getAsString();
@@ -1448,7 +1554,8 @@ namespace {
 
         bool print_logging = true;
 
-        cerr << "In update_wrapped_class_for_type" << endl;
+        cerr << fmt::format("In update_wrapped_class_for_type {} in wrapped class {}", qual_type.getAsString(), wrapped_class.class_name) << endl;
+
         if (print_logging) cerr << "Went from " << qual_type.getAsString();
         qual_type = qual_type.getLocalUnqualifiedType();
 
@@ -1504,6 +1611,7 @@ namespace {
         }
 
 
+
         wrapped_class.include_files.insert(actual_include_string);
 
 
@@ -1513,11 +1621,12 @@ namespace {
 
             auto template_specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl);
 
+            // go through the template args
             auto & template_arg_list = template_specialization_decl->getTemplateArgs();
             for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
                 auto & arg = template_arg_list[i];
 
-                // this code only cares about types
+                // this code only cares about types, so skip non-type template arguments
                 if (arg.getKind() != clang::TemplateArgument::Type) {
                     continue;
                 }
@@ -1800,12 +1909,17 @@ namespace {
     class BidirectionalBindings {
     private:
         CompilerInstance & compiler_instance;
-        WrappedClass & wrapped_class;
+
+        // the "normal" non-bidirectional class being wrapped
+        WrappedClass & js_wrapper_class; // the bidirectional type
+        WrappedClass & wrapped_class; // the non-birectional type being wrapped
 
     public:
         BidirectionalBindings(CompilerInstance & compiler_instance,
+                              WrappedClass & js_wrapper_class,
                               WrappedClass & wrapped_class) :
             compiler_instance(compiler_instance),
+            js_wrapper_class(js_wrapper_class),
             wrapped_class(wrapped_class) {}
 
         std::string short_name(){return wrapped_class.name_alias;}
@@ -1898,7 +2012,9 @@ namespace {
 
         }
 
-        void generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
+        void
+
+        generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
             std::stringstream result;
             auto matches = wrapped_class.annotations.get_regex("v8toolkit_generate_(.*)");
             if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
@@ -1949,23 +2065,22 @@ namespace {
 
             bidirectional_class_file << "#pragma once\n\n";
 
-            // find corresponding wrapped class
-            const WrappedClass * this_class = nullptr;
-            for (auto & wrapped_class : wrapped_classes) {
-                if (wrapped_class->class_name == canonical_name()) {
-                    this_class = wrapped_class.get();
-                    break;
-                }
-            }
 
-            if (this_class == nullptr) {
-                llvm::report_fatal_error(fmt::format("couldn't find wrapped class for {}", short_name()), false);
-            }
-
-            // This needs include files because the IMPLEMENTATION goes in the file.  If it were moved out, then the header file could
+            // This needs include files because the IMPLEMENTATION goes in the file (via macros).
+            // If the implementation was moved out to a .cpp file, then the header file could
             //   rely soley on the primary type's includes
-            for (auto & include : this_class->include_files) {
+            for (auto & include : this->wrapped_class.include_files) {
                 if (include == ""){continue;}
+                bidirectional_class_file << "#include " << include << "\n";
+            }
+
+
+            // need to include all the includes from the parent types because the implementation of this bidirectional
+            //   type may need the types for things the parent type .h files don't need (like unique_ptr contained types)
+            auto all_base_type_includes = this->wrapped_class.get_base_type_includes();
+
+            for (auto & include : all_base_type_includes) {
+                std::cerr << fmt::format("for bidirectional {}, adding base type include {}", this->short_name(), include) << std::endl;
                 bidirectional_class_file << "#include " << include << "\n";
             }
 
@@ -2080,19 +2195,26 @@ namespace {
             }
             top_level_class->names.insert(short_field_name);
 
+            containing_class.fields.insert(field);
 
             // made up number to represent the overhead of making a new wrapped class
-            //   even before adding methods/members
-            top_level_class->declaration_count=3;
+            //   even before adding methods/members - 3 was pretty low
+            // This means that two wrapped classes will count as much towards rolling to the next file as
+            // one wrapped class with <THIS NUMBER> of wrapped members/functions
+            top_level_class->declaration_count=8;
 
             update_wrapped_class_for_type(ci, *top_level_class, field->getType());
 
-            if (annotations.has(V8TOOLKIT_READONLY_STRING)) {
-                result << fmt::format("{}class_wrapper.add_member_readonly(\"{}\", &{});\n", indentation,
-                                      short_field_name, full_field_name);
+            string full_type_name = get_type_string(field->getType());
+
+            if (annotations.has(V8TOOLKIT_READONLY_STRING) || field->getType().isConstQualified()) {
+                result << fmt::format("{}class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n", indentation,
+                                      full_type_name,
+                                      containing_class.class_name, full_field_name, short_field_name);
             } else {
-                result << fmt::format("{}class_wrapper.add_member(\"{}\", &{});\n", indentation,
-                                      short_field_name, full_field_name);
+                result << fmt::format("{}class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n", indentation,
+                                      full_type_name,
+                                      containing_class.class_name, full_field_name, short_field_name);
             }
 //            printf("%sData member %s, type: %s\n",
 //                   indentation.c_str(),
@@ -2131,8 +2253,17 @@ namespace {
                 return "";
             }
             if (method->isOverloadedOperator()) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping overloaded operator %s\n", indentation.c_str(), full_method_name.c_str());
-                return "";
+
+                // if it's a call operator, grab it
+                if (OO_Call == method->getOverloadedOperator()) {
+                    // nothing specific to do, just don't skip it only because it's an overloaded operator
+                } else {
+
+                    // otherwise skip overloaded operators
+                    if (PRINT_SKIPPED_EXPORT_REASONS)
+                        printf("%s**skipping overloaded operator %s\n", indentation.c_str(), full_method_name.c_str());
+                    return "";
+                }
             }
             if (dyn_cast<CXXConstructorDecl>(method)) {
                 if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**skipping constructor %s\n", indentation.c_str(), full_method_name.c_str());
@@ -2220,9 +2351,21 @@ namespace {
                 cerr << "Method is not static" << endl;
                 top_level_class->declaration_count++;
                 klass.wrapped_methods_decls.insert(method);
-                result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                                      get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl, method),
-                                      short_method_name, full_method_name);
+
+                // overloaded operator type names (like OO_Call) defined here:
+                //   http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
+                // name is "OO_" followed by the first field in each line
+                if (OO_Call == method->getOverloadedOperator()) {
+                    result << fmt::format("class_wrapper.make_callable<{}>(&{});\n",
+                                          get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl,
+                                                                                      method),
+                                          full_method_name);
+                } else {
+                    result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
+                                          get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl,
+                                                                                      method),
+                                          short_method_name, full_method_name);
+                }
                 methods_wrapped++;
 
             }
@@ -2321,46 +2464,10 @@ namespace {
                 if (print_logging)
                     cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
                          << get_include_for_type_decl(ci, wrapped_class.decl) << endl;
+
+                // get the .h file the type is defined in
                 wrapped_class.include_files.insert(get_include_for_type_decl(this->ci, wrapped_class.decl));
 
-
-                // if this is a bidirectional class, make a minimal wrapper for it
-                if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-
-                    if (print_logging)
-                        cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
-
-                    auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
-                                                             top_level_class->get_short_name());
-
-
-                    auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
-                    // auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
-                    WrappedClass *js_wrapped_class = nullptr;
-                    //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
-                    cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
-                    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
-                                                                                   this->ci);
-                    js_wrapped_class = bidirectional_unique_ptr.get();
-                    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
-
-                    auto &bidirectional = *js_wrapped_class;
-                    bidirectional.base_types.insert(top_level_class);
-
-                    cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-                                        bidirectional.class_name, wrapped_class.name_alias) << endl;
-                    wrapped_class.derived_types.insert(&bidirectional);
-                    bidirectional.include_files.insert(generated_header_name);
-                    bidirectional.my_include = generated_header_name;
-
-                    BidirectionalBindings bd(this->ci, wrapped_class);
-                    bd.generate_bindings(wrapped_classes);
-
-
-                } else {
-                    if (print_logging)
-                        cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
-                }
 
             } // end if top level class
             else {
@@ -2542,7 +2649,8 @@ namespace {
                     cerr << fmt::format("'force no constructors' set on {} so skipping making constructors", class_name)
                          << endl;
                 } else {
-                    if (print_logging) cerr << fmt::format(
+                    if (print_logging)
+                        cerr << fmt::format(
                             "About to process constructors for {} -- passed all checks to skip class constructors.",
                             wrapped_class.class_name) << endl;
 
@@ -2599,14 +2707,58 @@ namespace {
                 //   the static methods
                 if (top_level_class->constructors.empty() && top_level_class->has_static_method) {
                     std::string static_name = wrapped_class.name_alias;
-                    auto static_name_annotation = top_level_class->annotations.get_regex(V8TOOLKIT_EXPOSE_STATIC_METHODS_AS_PREFIX "(.*)");
+                    auto static_name_annotation = top_level_class->annotations.get_regex(
+                        V8TOOLKIT_EXPOSE_STATIC_METHODS_AS_PREFIX "(.*)");
                     if (!static_name_annotation.empty()) {
                         static_name = static_name_annotation[0];
                     }
                     top_level_class->constructors.insert(
-                        fmt::format("{}  class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, static_name)
+                        fmt::format("{}  class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation,
+                                    static_name)
                     );
                 }
+
+                // if this is a bidirectional class, make a minimal wrapper for it
+                if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+
+                    if (print_logging)
+                        cerr << "Type " << top_level_class->class_name << " **IS** bidirectional" << endl;
+
+                    auto generated_header_name = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"",
+                                                             top_level_class->get_short_name());
+
+
+                    auto bidirectional_class_name = fmt::format("JS{}", top_level_class->get_short_name());
+                    // auto js_wrapped_classes = get_wrapped_class_regex(bidirectional_class_name + "$"); SEE COMMENT BELOW
+                    WrappedClass *js_wrapped_class = nullptr;
+                    //if (js_wrapped_classes.empty()) { SEE COMMENT BELOW
+                    cerr << "Creating new Wrapped class object for " << bidirectional_class_name << endl;
+                    auto bidirectional_unique_ptr = std::make_unique<WrappedClass>(bidirectional_class_name,
+                                                                                   this->ci);
+                    js_wrapped_class = bidirectional_unique_ptr.get();
+                    wrapped_classes.emplace_back(move(bidirectional_unique_ptr));
+
+                    auto &bidirectional = *js_wrapped_class;
+                    bidirectional.base_types.insert(top_level_class);
+
+                    cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
+                                        bidirectional.class_name, wrapped_class.name_alias) << endl;
+
+                    // set the bidirectional class as being a subclass of the non-bidirectional type
+                    wrapped_class.derived_types.insert(&bidirectional);
+
+                    bidirectional.include_files.insert(generated_header_name);
+                    bidirectional.my_include = generated_header_name;
+
+                    BidirectionalBindings bd(this->ci, *js_wrapped_class, wrapped_class);
+                    bd.generate_bindings(wrapped_classes);
+
+
+                } else {
+                    if (print_logging)
+                        cerr << "Type " << top_level_class->class_name << " is not bidirectional" << endl;
+                }
+
             } // if top level
         } // end method
 
@@ -3097,6 +3249,8 @@ namespace {
                 throw std::exception();
             }
 
+            // write hard-coded text to top of apb api file
+            js_stub << js_api_header << std::endl;
 
 
             cerr << fmt::format("About to start writing out wrapped classes with {} potential classes", wrapped_classes.size()) << endl;

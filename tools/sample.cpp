@@ -65,7 +65,7 @@ namespace v8toolkit {
 
     using MyType V8TOOLKIT_NAME_ALIAS V8TOOLKIT_WRAPPED_CLASS = v8toolkit::CppFactory<int, char, v8toolkit::TypeList<double>>;
 
-    
+
 }
 
 
@@ -105,8 +105,13 @@ public:
     DerivedFromWrappedClassBase<short> derived_my_template_short;
     DerivedFromWrappedClassBase<char*> derived_my_template_charp;
 
-    
-    
+    std::vector<int> returns_vector_of_ints();
+    std::map<string, int> returns_map_of_string_to_int();
+
+
+    const asdf const_typedef_to_int = 1;
+
+
     template<class T2>
 	const T2& templated_function(const T2 & t){return t;};
 
