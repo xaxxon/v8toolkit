@@ -1,7 +1,7 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
    
-## new Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
+## New Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
 
 * Viewing code 
 * Add/remove breakpoints
@@ -64,13 +64,14 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
 #### Building V8
 
-Building V8 is not a simple process and changes often.
+Building V8 is not a simple process and changes often, so these instructions may not'
+be correct.
 
-First, you need to install a set of tools for getting and building V8 called "depot tools".
+ * First, you need to install a set of tools for getting and building V8 called "depot tools".
 
 https://www.chromium.org/developers/how-tos/install-depot-tools
 
-Then, download V8 via the instructions here: 
+ * Then, download V8 via the instructions here: 
 
 https://github.com/v8/v8/wiki/Using%20Git
 
@@ -82,7 +83,7 @@ and the previous build process (simpler but will stop working eventually) here:
 
 https://github.com/v8/v8/wiki/Building%20with%20Gyp
 
-The steps I use on each platform are documented here:
+* The steps I use on each platform are documented here:
 
 [Build V8 for OS X](osx_v8_build.md)
 
