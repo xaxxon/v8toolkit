@@ -5,7 +5,7 @@ var searchData=
   ['debugger_5fresumed',['Debugger_Resumed',['../debugger_8h.html#structDebugger__Resumed',1,'']]],
   ['debugger_5fscriptparsed',['Debugger_ScriptParsed',['../structDebugger__ScriptParsed.html',1,'']]],
   ['derivedfromwrappedclassbase',['DerivedFromWrappedClassBase',['../classDerivedFromWrappedClassBase.html',1,'']]],
-  ['derivedfromwrappedclassbase_3c_20char_20_2a_3e',['DerivedFromWrappedClassBase&lt; char *&gt;',['../classDerivedFromWrappedClassBase.html',1,'']]],
+  ['derivedfromwrappedclassbase_3c_20char_20_2a_20_3e',['DerivedFromWrappedClassBase&lt; char * &gt;',['../classDerivedFromWrappedClassBase.html',1,'']]],
   ['derivedfromwrappedclassbase_3c_20short_20_3e',['DerivedFromWrappedClassBase&lt; short &gt;',['../classDerivedFromWrappedClassBase.html',1,'']]],
   ['destructorbehavior',['DestructorBehavior',['../structv8toolkit_1_1DestructorBehavior.html',1,'v8toolkit']]],
   ['destructorbehavior_5fdelete',['DestructorBehavior_Delete',['../structv8toolkit_1_1DestructorBehavior__Delete.html',1,'v8toolkit']]],
