@@ -226,7 +226,6 @@ int main(int argc, char* argv[])
 
             wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
             wrapped_point.add_member<int, Point, &Point::x_>("x");
-            wrapped_point.add_member<int const, Point, &Point::x_>("x");
 
             wrapped_point.add_member<eastl::fixed_string<char, 32, true, eastl::allocator>, Point, &Point::fixed_string>("fixed_string");
             int changed_x = 0;

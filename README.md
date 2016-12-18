@@ -130,7 +130,7 @@ git clone v8toolkit:
 git clone https://github.com/xaxxon/v8toolkit.git 
 
 Create a build directory (anywhere, but I prefer inside the directory v8toolkit was cloned into) and type:
-`cmake -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/ /path/to/v8toolkit`
+    cmake -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/ /path/to/v8toolkit
 
 and then type: `make` then `make install` (may need sudo)
 

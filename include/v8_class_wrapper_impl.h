@@ -10,14 +10,15 @@
 
 namespace v8toolkit {
 
-
     template<class T>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {
 		this->isolate_to_wrapper_map.emplace(isolate, this);
 	}
 
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object,
+																						 const std::string & property_name,
+																						 v8::Local<v8::Value> & value) {
 		for (auto &callback : attribute_callbacks) {
 			callback(isolate, object, property_name, value);
 		}
@@ -137,7 +138,7 @@ namespace v8toolkit {
 
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-        if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrapped_data->native_object);
+        V8TOOLKIT_DEBUG("uncasted internal field: %p\n", wrapped_data->native_object);
         return this->cast(static_cast<AnyBase *>(wrapped_data->native_object));
     }
 
@@ -149,15 +150,15 @@ namespace v8toolkit {
     template<class T>   T *
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::cast(AnyBase * any_base)
 	{
-	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
+	    V8TOOLKIT_DEBUG("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
 	    if(type_checker != nullptr) {
-		if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Explicit compatible types set, using that\n");
+		    V8TOOLKIT_DEBUG("Explicit compatible types set, using that\n");
 		    return type_checker->check(any_base);
 	    } 
         
         else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
 		    assert(false); // should not use this code path anymore
-            if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "No explicit compatible types, but successfully cast to self-type\n");
+            V8TOOLKIT_DEBUG("No explicit compatible types, but successfully cast to self-type\n");
             return static_cast<AnyPtr<T>*>(any_base)->get();
         }
             
