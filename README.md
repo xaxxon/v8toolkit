@@ -1,30 +1,24 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
    
-## Next Major Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
+## new Feature: Debugging embedded JavaScript from Chrome's javascript debugger (basic functionality useable now)
 
-I am currently implementing the necessary functionality to connect to your application with Chrome's 
-javascript debugger.  The beginnings of the code can be
-found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last contains examples of
-how to integrate the debugger with an application).
+* Viewing code 
+* Add/remove breakpoints
+* Step over/into/out
+* Notification on breakpoint being hit
+* Resuming execution
 
-Minimal functionality will include: 
-
-* Viewing code (done)
-* Add/remove breakpoints (done)
-* Step over/into/out (done)
-* Notification on breakpoint being hit (done)
-* Resuming execution (done)
-* Evaluating arbitrary code (in progress)
-
-(done) means it at least works in some cases
 
 To debug, you must start chrome with the `--remote-debugging-port=9222` flag (port can be whatever port you choose).
 Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002` (9002 or whatever port you have your
 application listening on - set in the `v8toolkit::Debugger` constructor)
 
+This code will be rewritten using the newly implemented debugging interface in V8, but
+until then, the existing code has some of the functionality.
 
-## Recent Feature: Automatic class binding generator
+
+## New Feature: Automatic class binding generator
 
 There is an experimental clang compiler plugin that will look at all your code and generate bindings for your
 classes automatically - you just put in a few annotations to say which things you want.  Anything not annotated
@@ -61,23 +55,34 @@ Check out the "tools" directory.   It will require some customization to get wor
 Edit: now the clang plugin also uses doxygen docs in your c++ code to generate a stubbed out javascript 'library' with jsdoc, suitable
 for use with editors that can use that information for autocompletion, such as JetBrains IDEs such as CLion and WebStorm.
 
-## Tutorial for using this library
+## Tutorial
 
 #### Install git
 
-Type `git` on the command line.   If you don't have it, go here: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
 
 #### Building V8
 
-Building V8 is not a simple process.
-in
-"depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
-`git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git` this then include it in the PATH environment variable (or just type in the whole path)
+Building V8 is not a simple process and changes often.
 
-(following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
+First, you need to install a set of tools for getting and building V8 called "depot tools".
 
-From here, the process diverges a bit based on what platform you're on:
+https://www.chromium.org/developers/how-tos/install-depot-tools
+
+Then, download V8 via the instructions here: 
+
+https://github.com/v8/v8/wiki/Using%20Git
+
+The official build process documentation is here:
+
+https://github.com/v8/v8/wiki/Building%20with%20GN
+
+and the previous build process (simpler but will stop working eventually) here:
+
+https://github.com/v8/v8/wiki/Building%20with%20Gyp
+
+The steps I use on each platform are documented here:
 
 [Build V8 for OS X](osx_v8_build.md)
 
@@ -85,39 +90,11 @@ From here, the process diverges a bit based on what platform you're on:
 
 [Build V8 for Linux](linux_v8_build.md)
 
-(the following hasn't been moved into the above links yet)
-
-##### Building in Windows (incomplete)
-
-git clone depot tools as above. - $ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-
-Put the new directory in your path - http://www.computerhope.com/issues/ch000549.htm
-
-install python (2) from python.org - I used 2.7.11 -  https://www.python.org/downloads/
-
-put python in your permanent path - it must be in your path environment variable for visual studio to use later or you will get errors in the output window in visual studio
-
-start the bash included with depot_tools:  depot_tools\git-2.7.4-64_bin\bin/bash.exe
-
-This next line shouldn't be needed and I don't know what it does, but if you don't use it and get errors in landmines.py, use it
-> export DEPOT_TOOLS_WIN_TOOLCHAIN=0 
-
-type >fetch v8
-
-in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".  
-
-`NOTE: This will build with the 2013 toolchain by default.  This means you CANNOT link it with code compiled with the 2015 toolchain.  To change this, go to the Project menu, then `Properties`, `Configuration Properties`, `General`, and go to the `Platform Toolset` option and select `Visual Studio 2015 (v140)` or whatever version you want to use.  However, it probably isn't guaranteed to work in any other version of the toolset.
-
-Also note this will build with the statically linked runtime.  As far as I understand, the runtimes of what you link to it must match.  I don't know if building with the dynamically linked runtime works or not.
-
-In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
 
 
 #### Building/installing Boost
 
 v8toolkit uses `boost::format` to provide printf-style functions for console output and string generation.
-
-##### Simple but long Boost install
 
 With apt-get:  `sudo apt-get install libboost-all-dev`
 
@@ -136,21 +113,25 @@ More detailed install information: http://www.boost.org/doc/libs/1_60_0/more/get
 NOTE: If you plan on using the boost libraries that have to be compiled (as opposed to header-only ones), you'll need to build boost with libc++.  Here is an example
 on how to do that: https://gist.github.com/jimporter/10442880
 
-##### Quick Boost "install"
-`boost::format` is a header-only library, so you can just use the -I flag to point the compiler at the headers in the untar'd source.
+#### Install the following v8toolkit dependencies
 
+Websocket library used for communicationg with chrome javascript debugger:
+https://github.com/zaphoyd/websocketpp
+
+Text formatting library (faster but less featureful than boost::format):
+https://github.com/fmtlib/fmt
 
 
 #### Build v8toolkit
 
-git clone v8toolkit:  git clone https://github.com/xaxxon/v8toolkit.git 
+git clone v8toolkit:  
+
+git clone https://github.com/xaxxon/v8toolkit.git 
 
 Create a build directory (anywhere, but I prefer inside the directory v8toolkit was cloned into) and type:
-`cmake /path/to/v8toolkit`
+`cmake -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/ /path/to/v8toolkit`
 
-and then type: `make`
-
-You may need to customize the v8 header and v8 library directory locations
+and then type: `make` then `make install` (may need sudo)
 
 
 #### Your First V8 program
@@ -288,6 +269,11 @@ You can see which STL containers are supported by looking in
 https://github.com/xaxxon/v8toolkit/blob/master/include/casts.hpp   You can also use this as a foundation
 for adding your own conversions for either missing STL containers or your own types.   Make sure any new
 conversions you make are in the `v8toolkit` namespace - but they can be in your own files.
+
+There is experimental support for some EASTL types, as well.   To enable it, in your
+program before including any v8toolkit headers:
+
+     #define V8TOOLKIT_ENABLE_EASTL_SUPPORT
 
 #### Exposing your C++ class to javascript
 

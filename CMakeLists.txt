@@ -6,8 +6,6 @@ SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
 ucm_set_runtime(STATIC)
 
-set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
-
 
 file(GLOB HEADER_FILES
         include/*.h
@@ -32,54 +30,53 @@ set(V8_SHARED_LIBS
 	icuuc 
 	v8 v8_libbase)
 
+# https://github.com/fmtlib/fmt
+find_package(fmt REQUIRED)
+include_directories(${fmt_INCLUDE_DIRS})
+
+# https://github.com/zaphoyd/websocketpp
+find_package(websocketpp REQUIRED)
+include_directories(${websocketpp_INCLUDE_DIRS})
+
+# http://www.boost.org/
+find_package(Boost REQUIRED COMPONENTS system)
+include_directories(${Boost_INCLUDE_DIR})
+
 
 if (WIN32)
-    set(CPPFORMAT_BASE_DIR_DEFAULT c:\\program\ files\\FORMAT)
-    set(V8_BASE_STATIC_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
-    set(V8_BASE_SHARED_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
-    set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
     set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
-
 else()
-
     set(CXX_COMPILER_FLAGS ${CXX_COMPILER_FLAGS} -Wshadow)
-
-    set(V8_BASE_STATIC_LIB_DIR_DEFAULT ../v8/out/native)
-    set(V8_BASE_SHARED_LIB_DIR_DEFAULT ../v8/out/native)
-    set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
     set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
+
 endif()
 
-set(CPPFORMAT_BASE_DIR ${CPPFORMAT_BASE_DIR_DEFAULT} CACHE PATH "path to root of cppformat that contains include and lib dirs")
-set(V8_BASE_STATIC_LIB_DIR ${V8_BASE_STATIC_LIB_DIR_DEFAULT} CACHE PATH "full path including v8/out/<build_type>")
-set(V8_BASE_SHARED_LIB_DIR ${V8_BASE_SHARED_LIB_DIR_DEFAULT} CACHE PATH "full path including v8/out/<build_type>")
-set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8.h including 'include' at the end")
-
-
+# -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files
+set(V8_BASE_SHARED_LIB_DIR CACHE PATH "full path containing V8 library files")
 link_directories(${V8_BASE_SHARED_LIB_DIR})
 
-link_directories(${CPPFORMAT_BASE_DIR}\\lib)
 
-include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT_BASE_DIR}/include)
+# -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
+set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8 public headers directory containing v8.h")
+include_directories(./include ${V8_INCLUDE_DIR})
 
 
 # only use this against a shared-object-built V8
 #   library=shared snapshot=off
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
+
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase boost_system boost_chrono)
+target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
 
 # GCC doesn't need to link to this to make a shared object
-if (APPLE)
-  target_link_libraries(v8toolkit_shared fmt)
-endif()
+target_link_libraries(v8toolkit_shared)
+target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
 
-#set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
-target_link_libraries(v8toolkit_static fmt)
+target_link_libraries(v8toolkit_static fmt ${Boost_LIBRARIES})
 
 if (WIN32)
 	target_link_libraries(v8toolkit_static WinMM)
