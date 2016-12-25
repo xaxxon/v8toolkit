@@ -316,7 +316,7 @@ protected:
     
     v8::Global<v8::Object> js_prototype;
 
-    std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
+    func::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
 
     using TupleType = std::tuple<InternalConstructorParams...>;
     TupleType internal_param_tuple;

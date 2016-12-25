@@ -11,6 +11,7 @@
 
 #include "v8helpers.h"
 #include "casts.hpp"
+#include "stdfunctionreplacement.h"
 
 #ifndef _MSC_VER
 #include <dirent.h>
@@ -521,7 +522,7 @@ struct ParameterBuilder<v8::Local<v8::Object>> {
 
 
 template<class ReturnType, class... Args, class... Ts>
-auto run_function(std::function<ReturnType(Args...)> & function,
+auto run_function(func::function<ReturnType(Args...)> & function,
               const v8::FunctionCallbackInfo<v8::Value> & info,
               Ts&&... ts) -> ReturnType {
 
@@ -542,11 +543,11 @@ struct CallCallable;
 
 
 template<class ReturnType, class... Args, class InitialArg>
-struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> {
+struct CallCallable<func::function<ReturnType(InitialArg, Args...)>, InitialArg> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
 //    template<class T, class... Ts>
-//    void thingify(std::function<ReturnType(InitialArg, Args...)> & function,
+//    void thingify(func::function<ReturnType(InitialArg, Args...)> & function,
 //                  const v8::FunctionCallbackInfo<v8::Value> & info,
 //                  T&& t,
 //                  Ts&&... ts) {
@@ -556,7 +557,7 @@ struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> 
 //
 //    }
 
-    void operator()(std::function<ReturnType(InitialArg, Args...)> & function,
+    void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg) {
 
@@ -571,11 +572,11 @@ struct CallCallable<std::function<ReturnType(InitialArg, Args...)>, InitialArg> 
 
 
 template<class InitialArg, class... Args>
-struct CallCallable<std::function<void(InitialArg, Args...)>, InitialArg> {
+struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
 
 
-    void operator()(std::function<void(InitialArg, Args...)> & function,
+    void operator()(func::function<void(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg) {
 
@@ -588,10 +589,10 @@ struct CallCallable<std::function<void(InitialArg, Args...)>, InitialArg> {
 
 
 template<class ReturnType, class... Args>
-struct CallCallable<std::function<ReturnType(Args...)>> {
+struct CallCallable<func::function<ReturnType(Args...)>> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
     template<class... Ts>
-//    void thingify(std::function<ReturnType(Args...)> & function,
+//    void thingify(func::function<ReturnType(Args...)> & function,
 //                  const v8::FunctionCallbackInfo<v8::Value> & info,
 //                  Ts&&... ts) {
 //        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
@@ -599,7 +600,7 @@ struct CallCallable<std::function<ReturnType(Args...)>> {
 //    }
 
 
-    void operator()(std::function<ReturnType(Args...)> & function,
+    void operator()(func::function<ReturnType(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     bool return_most_derived = false) {
 
@@ -619,10 +620,10 @@ struct CallCallable<std::function<ReturnType(Args...)>> {
 
 
 template<class... Args>
-struct CallCallable<std::function<void(Args...)>> {
+struct CallCallable<func::function<void(Args...)>> {
 
 
-    void operator()(std::function<void(Args...)> & function,
+    void operator()(func::function<void(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info) {
 
         int i = 0;
@@ -633,9 +634,9 @@ struct CallCallable<std::function<void(Args...)>> {
 
 
 template<>
-struct CallCallable<std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
+struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
 
-    void operator()(std::function<void(const v8::FunctionCallbackInfo<v8::Value>&)> & function,
+    void operator()(func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info) {
         function(info);
     }
@@ -644,7 +645,7 @@ struct CallCallable<std::function<void(const v8::FunctionCallbackInfo<v8::Value>
 
 template<class R, class... Args>
 struct FunctionTemplateData {
-    std::function<R(Args...)> callable;
+    func::function<R(Args...)> callable;
     std::string name;
 };
 
@@ -652,11 +653,11 @@ struct FunctionTemplateData {
 
 
 /**
-* Creates a function template from a std::function
+* Creates a function template from a func::function
 */
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
-                                                       std::function<R(Args...)> f,
+                                                       func::function<R(Args...)> f,
                                                        std::string const & name)
 {
     auto data = new FunctionTemplateData<R, Args...>();
@@ -691,19 +692,19 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
 
 
 /**
-* Takes an arbitrary class method and returns a std::function wrapping it
+* Takes an arbitrary class method and returns a func::function wrapping it
 */
 template<class R, class CLASS, class... Args>
-std::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable)
+func::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable)
 {
-    return std::function<R(Args...)>(callable);
+    return func::function<R(Args...)>(callable);
 }
 
 
 
 template<class R, class... Args>
-std::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...), std::string name) {
-    return std::function<R(Args...)>(callable);
+func::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...), std::string name) {
+    return func::function<R(Args...)>(callable);
 };
 
 
@@ -723,16 +724,16 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate, T 
 template <class R, class... Args>
 v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,  R(*f)(Args...), std::string const & name)
 {
-    return make_function_template(isolate, std::function<R(Args...)>(f), name);
+    return make_function_template(isolate, func::function<R(Args...)>(f), name);
 }
 
 
 /**
-* Helper to both create a function template from a std::function and bind it with the specified name to the specified object template
+* Helper to both create a function template from a func::function and bind it with the specified name to the specified object template
 * Adding functions to an object_template allows creation of multiple contexts with the function already added to each context
 */
 template<class R, class... Args>
-void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::function<R(Args...)> function) {
+void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, func::function<R(Args...)> function) {
     object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
@@ -951,12 +952,15 @@ void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
 }
 
 
- template<class T, class... Rest>
-     void expose_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, std::unique_ptr<T, Rest...> & variable) {
-    object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
-                                 _variable_getter<std::unique_ptr<T, Rest...>&>,
-                                 _variable_setter<std::unique_ptr<T, Rest...>&>,
-                                 v8::External::New(isolate, variable.get()));
+template<class T, class... Rest>
+ void expose_variable(v8::Isolate * isolate,
+                      const v8::Local<v8::ObjectTemplate> & object_template,
+                      const char * name,
+                      std::unique_ptr<T, Rest...> & variable) {
+object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
+                             _variable_getter<std::unique_ptr<T, Rest...>&>,
+                             _variable_setter<std::unique_ptr<T, Rest...>&>,
+                             v8::External::New(isolate, variable.get()));
 }
 
 
@@ -1066,8 +1070,8 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 *
 * printobj - prints a bunch of information about an object - format highly susceptible to frequent change
 */
-void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
-void add_print(const v8::Local<v8::Context> context, std::function<void(const std::string &)> callback = [](const std::string & s){printf("%s", s.c_str());});
+void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, func::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
+void add_print(const v8::Local<v8::Context> context, func::function<void(const std::string &)> callback = [](const std::string & s){printf("%s", s.c_str());});
 
 /**
 * Adds an assert method that calls assert.h assert() on failure.  This is different than the add_assert() in javascript.h that throws an exception on failure
@@ -1084,42 +1088,45 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
 /**
 * Accepts an object and a method on that object to be called later via its operator()
 * Does not require knowledge of how many parameters the method takes or any placeholder arguments
-* Can be wrapped with a std::function
+* Can be wrapped with a func::function
 */
-template<class T, class U>
+template<class>
 struct Bind{};
 
 /**
  * Non-const object to non-const method
  */
-template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
-struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...)> {
+template<class R, class T, class... Args>
+struct Bind<R(T::*)(Args...)> {
 
-    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) ) :
-      object(object), method(method){}
+    Bind(T & object, R(T::*method)(Args...) )
+        :
+      object(object), method(method)
+    {}
 
     ~Bind(){}
 
-    CLASS_TYPE & object;
-    R(METHOD_CLASS::*method)(Args...);
+    T & object;
+    R(T::*method)(Args...);
 
-    R operator()(Args... params){
+    R operator()(Args && ... params){
         return (object.*method)(std::forward<Args>(params)...);
+//        return R();
     }
 };
 
-template<class CLASS_TYPE, class R, class METHOD_CLASS, class... Args>
-struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...) &> {
+template<class R, class T, class... Args>
+struct Bind<R(T::*)(Args...) &> {
 
-    Bind(CLASS_TYPE & object, R(METHOD_CLASS::*method)(Args...) &) :
+    Bind(T & object, R(T::*method)(Args...) &) :
             object(object), method(method){}
 
     ~Bind(){}
 
-    CLASS_TYPE & object;
-    R(METHOD_CLASS::*method)(Args...) &;
+    T & object;
+    R(T::*method)(Args...) &;
 
-    R operator()(Args... params){
+    R operator()(Args && ... params){
         return (object.*method)(std::forward<Args>(params)...);
     }
 };
@@ -1129,115 +1136,92 @@ struct Bind<CLASS_TYPE, R(METHOD_CLASS::*)(Args...) &> {
     /**
  * Non-const object to const method
  */
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<Class, R(METHOD_CLASS::*)(Args...) const> {
+template<class R, class T, class... Args>
+struct Bind<R(T::*)(Args...) const> {
 
-    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const) :
+    Bind(T & object, R(T::*method)(Args...) const) :
       object(object), method(method){}
 
-    Class & object;
-    R(METHOD_CLASS::*method)(Args...) const;
+    T & object;
+    R(T::*method)(Args...) const;
 
-    R operator()(Args... params){
+    R operator()(Args && ... params){
         return (object.*method)(std::forward<Args>(params)...);
     }
 };
 
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<Class, R(METHOD_CLASS::*)(Args...) const &> {
 
-    Bind(Class & object, R(METHOD_CLASS::*method)(Args...) const &) :
+template<class R, class T, class... Args>
+struct Bind<R(T::*)(Args...) const &> {
+
+    Bind(T const & object, R(T::*method)(Args...) const &) :
             object(object), method(method){}
 
-    Class & object;
-    R(METHOD_CLASS::*method)(Args...) const &;
+    T const & object;
+    R(T::*method)(Args...) const &;
 
-    R operator()(Args... params){
+    R operator()(Args && ... params){
         return (object.*method)(std::forward<Args>(params)...);
     }
 };
 
 
 
-    /**
- * Const object to const method
- */
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const> {
-    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const) :
-            object(object), method(method){}
-
-    const Class & object;
-    R(METHOD_CLASS::*method)(Args...) const;
-
-    R operator()(Args... params){
-        return (object.*method)(std::forward<Args>(params)...);
-    }
-};
 
 
 /**
-* Const object to const method
-*/
-template<class Class, class R, class METHOD_CLASS, class... Args>
-struct Bind<const Class, R(METHOD_CLASS::*)(Args...) const &> {
-    Bind(const Class & object, R(METHOD_CLASS::*method)(Args...) const &) :
-            object(object), method(method){}
-
-    const Class & object;
-    R(METHOD_CLASS::*method)(Args...) const &;
-
-    R operator()(Args... params){
-        return (object.*method)(std::forward<Args>(params)...);
-    }
-};
-
-
-
-
-
-    /**
+ * unqualified
 * Helper function to create a Bind object using type deduction and wrap it in a
-* std::function object.
+* func::function object.
 * This specialization is for handling non-const class methods
 */
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
-{
-    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...)>(object, method));
-}
-template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) &)
-{
-    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) &>(object, method));
+    func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
+//    func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
+//    auto bind(CLASS & object, R(METHOD_CLASS::*method)(Args...))
+
+    {
+    return Bind<decltype(method)>(object, method);
 }
 
 
+/**
+ * l-value qualified
+ * @param object
+ * @param method
+ * @return
+ */
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
+func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) &)
 {
-    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
+    return Bind<decltype(method)>(object, method);
 }
 
 
+
+/**
+ * Const qualified
+ * @param object
+ * @param method
+ * @return
+ */
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
+func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const)
 {
-    return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const>(object, method));
+    return Bind<decltype(method)>(object, method);
 }
 
 
+/**
+ * l-value and const qualified
+ * @param object
+ * @param method
+ * @return
+ */
 template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const &)
+func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...) const &)
 {
-    return std::function<R(Args...)>(Bind<CLASS, R(METHOD_CLASS::*)(Args...) const &>(object, method));
-}
-
-
-template <class CLASS, class R, class METHOD_CLASS, class... Args>
-std::function<R(Args...)> bind(const CLASS & object, R(METHOD_CLASS::*method)(Args...) const &)
-{
-    return std::function<R(Args...)>(Bind<const CLASS, R(METHOD_CLASS::*)(Args...) const &>(object, method));
+    return Bind<decltype(method)>(object, method);
 }
 
 
@@ -1324,7 +1308,7 @@ bool require(v8::Local<v8::Context> context,
              const std::vector<std::string> & paths,
              bool track_modification_times = false,
              bool use_cache = true,
-             std::function<void(RequireResult const &)> callback = std::function<void(RequireResult const &)>()
+             func::function<void(RequireResult const &)> callback = func::function<void(RequireResult const &)>()
     );
 
 

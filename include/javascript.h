@@ -512,7 +512,7 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-    Isolate & add_print(std::function<void(const std::string &)>);
+    Isolate & add_print(func::function<void(const std::string &)>);
     Isolate & add_print();
     
     void add_assert();

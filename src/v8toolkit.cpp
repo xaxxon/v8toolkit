@@ -153,7 +153,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 
 
 
-void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> callback) {
+void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, func::function<void(const std::string &)> callback) {
     add_function(isolate, object_template, "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(isolate, object_template, "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
@@ -176,7 +176,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 	
 }
 
-void add_print(const v8::Local<v8::Context> context, std::function<void(const std::string &)> callback) {
+void add_print(const v8::Local<v8::Context> context, func::function<void(const std::string &)> callback) {
     add_function(context, context->Global(), "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(context, context->Global(), "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(context, context->Global(), "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
@@ -479,7 +479,7 @@ bool require(
     const std::vector<std::string> & paths,
     bool track_file_modification_times,
     bool use_cache,
-    std::function<void(RequireResult const &)> callback)
+    func::function<void(RequireResult const &)> callback)
 {
 
     auto isolate = context->GetIsolate();

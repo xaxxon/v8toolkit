@@ -342,7 +342,7 @@ private:
 	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
 
 
-	using AttributeChangeCallback = std::function<void(v8::Isolate * isolate,
+	using AttributeChangeCallback = func::function<void(v8::Isolate * isolate,
 													   v8::Local<v8::Object> & self,
 													   const std::string &,
 													   const v8::Local<v8::Value> & value)>;
@@ -455,7 +455,7 @@ private:
 		auto isolate = args.GetIsolate();
         
 		T * new_cpp_object = nullptr;
-		std::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
+		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
         
 		CallCallable<decltype(constructor)>()(constructor, args);
@@ -823,16 +823,16 @@ public:
 
 
 
-	using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
+	using AttributeAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
 	std::vector<AttributeAdder> member_adders;
 
-	using StaticMethodAdder = std::function<void(v8::Local<v8::FunctionTemplate>)>;
+	using StaticMethodAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
 	std::vector<StaticMethodAdder> static_method_adders;
 
 
 	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
 	//   the "this" pointer before any javascript parameters are passed in
-	using FakeMethodAdder = std::function<void(v8::Local<v8::ObjectTemplate>)>;
+	using FakeMethodAdder = func::function<void(v8::Local<v8::ObjectTemplate>)>;
 	std::vector<FakeMethodAdder> fake_method_adders;
 
 	std::string class_name = demangle<T>();
@@ -1048,7 +1048,7 @@ public:
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
 	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, std::function<R(Head, Tail...)> method) {
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head, Tail...)> method) {
 		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_fake_method(method_name, method);
 	};
 
@@ -1057,13 +1057,13 @@ public:
 	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
 	 */
 	template<class R, class Head, class... Tail, std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, std::function<R(Head, Tail...)> method) {
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head, Tail...)> method) {
 		// nothing to do here
 	};
 
 
     template<class R, class... Args>
-	void add_method(const std::string & method_name, std::function<R(T*, Args...)> & method) {
+	void add_method(const std::string & method_name, func::function<R(T*, Args...)> & method) {
 		_add_fake_method(method_name, method);
 	}
 
@@ -1091,7 +1091,7 @@ public:
 
 
 	template<class R, class Head, class... Tail>
-	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, std::function<R(Head, Tail...)> method)
+	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method)
 	{
 		assert(this->finalized == false);
 
@@ -1104,8 +1104,8 @@ public:
 		// Object template that will be passed in later when the list is traversed
 		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
 
-			using CopyFunctionType = std::function<R(Head, Tail...)>;
-			CopyFunctionType * copy = new std::function<R(Head, Tail...)>(method);
+			using CopyFunctionType = func::function<R(Head, Tail...)>;
+			CopyFunctionType * copy = new func::function<R(Head, Tail...)>(method);
 
 
 			// This is the actual code associated with "method_name" and called when javascript calls the method
@@ -1113,7 +1113,7 @@ public:
 					new StdFunctionCallbackType([method_name, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
 
 
-				auto fake_method = *(std::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
+				auto fake_method = *(func::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
 				auto isolate = info.GetIsolate();
 
 				auto holder = info.Holder();
@@ -1124,9 +1124,9 @@ public:
 				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
 
 
-				// the typelist and std::function parameters don't match because the first parameter doesn't come
+				// the typelist and func::function parameters don't match because the first parameter doesn't come
 				// from the javascript value array in 'info', it is passed in from this function as the 'this' pointer
-//				using PB_TYPE = v8toolkit::ParameterBuilder<0, std::function<R(Head, Tail...)>, TypeList<Tail...>>;
+//				using PB_TYPE = v8toolkit::ParameterBuilder<0, func::function<R(Head, Tail...)>, TypeList<Tail...>>;
 //
 //				PB_TYPE pb;
 //				auto arity = PB_TYPE::ARITY;
@@ -1233,7 +1233,7 @@ public:
                     static_cast<AnyBase *>(wrapped_data->native_object));
 
 //			    assert(backing_object_pointer != nullptr);
-                // bind the object and method into a std::function then build the parameters for it and call it
+                // bind the object and method into a func::function then build the parameters for it and call it
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "binding with object %p\n", backing_object_pointer);
                 auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
@@ -1289,22 +1289,22 @@ public:
 		indexed_property_getter = getter;
 	}
 
-	std::function<void(v8::Local<v8::ObjectTemplate>)> named_property_adder;
+	func::function<void(v8::Local<v8::ObjectTemplate>)> named_property_adder;
 
 	struct NamedPropertyCallbackData {
 		T * cpp_object = nullptr;
-        std::function<void(v8::Local<v8::Name> property_name,
+        func::function<void(v8::Local<v8::Name> property_name,
                            v8::PropertyCallbackInfo<v8::Value> const &)> getter;
-        std::function<void(v8::Local<v8::Name> property_name,
+        func::function<void(v8::Local<v8::Name> property_name,
                            v8::Local<v8::Value> new_property_value,
                            v8::PropertyCallbackInfo<v8::Value> const &)> setter;
 	};
 
 	template<class ReturnT>
-	using NamedPropertyGetter = std::function<ReturnT(T*, std::string const &)>;
+	using NamedPropertyGetter = func::function<ReturnT(T*, std::string const &)>;
 
     template<class ReturnT>
-    using NamedPropertySetter = std::function<ReturnT(T*, std::string const &)>;
+    using NamedPropertySetter = func::function<ReturnT(T*, std::string const &)>;
 
 
 
@@ -1439,7 +1439,7 @@ public:
 		this->add_named_property_handler(bound_getter, bound_setter);
 	}
 
-	using FunctionTemplateCallback = std::function<void(v8::Local<v8::FunctionTemplate> &)>;
+	using FunctionTemplateCallback = func::function<void(v8::Local<v8::FunctionTemplate> &)>;
 	std::vector<FunctionTemplateCallback> function_template_callbacks;
 
 	/**

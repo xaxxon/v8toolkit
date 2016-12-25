@@ -476,7 +476,7 @@ int main(int argc, char* argv[])
                                                   v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
                 assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
             }
-#
+
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "let l = new Line(); l.take_point();")).ToLocalChecked();

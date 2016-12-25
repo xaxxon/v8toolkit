@@ -8,6 +8,9 @@
 #include <typeinfo>
 #include <fmt/ostream.h>
 
+#include "stdfunctionreplacement.h"
+
+
 
 // Everything in here is standalone and does not require any other v8toolkit files
 #include <libplatform/libplatform.h>
@@ -24,7 +27,7 @@
 
 namespace v8toolkit {
 
-    using StdFunctionCallbackType = std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
+    using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
     struct MethodAdderData {
         std::string method_name;
         StdFunctionCallbackType callback;
@@ -130,31 +133,31 @@ template<template<typename...> class Ref, typename... Args>
 struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
 
 /**
- * Returns a std::function type compatible with the lambda passed in
+ * Returns a func::function type compatible with the lambda passed in
  */
 template<class T>
 struct LTG {
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...))->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const &)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...) &)->func::function<R(Args...)>;
 
 };
 
 template<class T>
 struct LTG<T &&> {
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &&)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const &&)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &&)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...) &&)->func::function<R(Args...)>;
 
 };
 
@@ -164,11 +167,11 @@ struct LTG<T &&> {
 
 // for use inside a decltype only
 template <class R, class... Ts>
-auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
+auto get_typelist_for_function(func::function<R(Ts...)>) ->TypeList<Ts...>;
 
 // for use inside a decltype only
 template <class R, class Head, class... Tail>
-auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
+auto get_typelist_for_function_strip_first(func::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
 // for use inside a decltype only
 template <class... Ts>
