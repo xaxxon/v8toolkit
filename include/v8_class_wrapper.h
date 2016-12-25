@@ -822,7 +822,6 @@ public:
 	}
 
 
-	using StdFunctionCallbackType = std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
 
 	using AttributeAdder = std::function<void(v8::Local<v8::ObjectTemplate> &)>;
 	std::vector<AttributeAdder> member_adders;
@@ -1166,10 +1165,7 @@ public:
 	 * A list of methods to be added to each object
 	 */
 
-	struct MethodAdderData {
-	    std::string method_name;
-	    StdFunctionCallbackType callback;
-	};
+
 	// Nothing may ever be removed from this vector, as things point into it
 	std::list<MethodAdderData> method_adders;
 
@@ -1183,8 +1179,8 @@ public:
 
 		this->check_if_name_used(method_name);
 
-		
-    		MethodAdderData method_adder_data = {method_name,
+
+    		MethodAdderData method_adder_data = MethodAdderData{method_name,
                                                  StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
@@ -1271,7 +1267,7 @@ public:
 
 		if (add_as_callable_object_callback) {
 		    // can only set this once
-		    assert(!callable_adder.callback); 
+		    assert(!callable_adder.callback);
 		    callable_adder = method_adder_data;
 		} else {
 		    method_adders.push_back(method_adder_data);

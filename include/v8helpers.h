@@ -24,6 +24,15 @@
 
 namespace v8toolkit {
 
+    using StdFunctionCallbackType = std::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
+    struct MethodAdderData {
+        std::string method_name;
+        StdFunctionCallbackType callback;
+
+        MethodAdderData();
+        MethodAdderData(std::string const &, StdFunctionCallbackType const &);
+    };
+
     // stack of names of the member/function being operated on for debugging/informational purposes
     extern std::vector<std::string> activity_name_stack;
 

@@ -6,6 +6,15 @@
 
 namespace v8toolkit {
 
+
+    MethodAdderData::MethodAdderData() = default;
+    MethodAdderData::MethodAdderData(std::string const & method_name,
+                                     StdFunctionCallbackType const & callback) :
+        method_name(method_name),
+        callback(callback)
+    {}
+
+
     std::vector<std::string> activity_name_stack;
 
 

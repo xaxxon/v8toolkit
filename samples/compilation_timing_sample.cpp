@@ -259,6 +259,112 @@ void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
 };
 #endif
 
+#ifdef WRAP_5_DIFFERENT_MEMBER_FUNCTION_10_CLASSES_OLD
+#include "javascript.h"
+using namespace v8toolkit;
+
+#define MAKE_CLASS(suffix) \
+struct MemberFunctionClass##suffix { \
+    int a(int); \
+    char b(char); \
+    float c(float); \
+    double d(double); \
+    unsigned e(unsigned); \
+};
+
+MAKE_CLASS(1);
+MAKE_CLASS(2);
+MAKE_CLASS(3);
+MAKE_CLASS(4);
+MAKE_CLASS(5);
+MAKE_CLASS(6);
+MAKE_CLASS(7);
+MAKE_CLASS(8);
+MAKE_CLASS(9);
+MAKE_CLASS(0);
+
+#define MAKE_WRAPPER(suffix) \
+{ \
+    V8ClassWrapper<MemberFunctionClass##suffix> & wrapper = V8ClassWrapper<MemberFunctionClass##suffix>::get_instance(*isolate); \
+    wrapper.add_method("a", &MemberFunctionClass##suffix::a); \
+    wrapper.add_method("b", &MemberFunctionClass##suffix::b); \
+    wrapper.add_method("c", &MemberFunctionClass##suffix::c); \
+    wrapper.add_method("d", &MemberFunctionClass##suffix::d); \
+    wrapper.add_method("e", &MemberFunctionClass##suffix::e); \
+}
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    MAKE_WRAPPER(1);
+    MAKE_WRAPPER(2);
+    MAKE_WRAPPER(3);
+    MAKE_WRAPPER(4);
+    MAKE_WRAPPER(5);
+    MAKE_WRAPPER(6);
+    MAKE_WRAPPER(7);
+    MAKE_WRAPPER(8);
+    MAKE_WRAPPER(9);
+    MAKE_WRAPPER(0);
+
+};
+#endif
+
+
+
+
+
+#ifdef WRAP_5_DIFFERENT_MEMBER_FUNCTION_10_CLASSES_NEW
+#include "javascript.h"
+using namespace v8toolkit;
+
+#define MAKE_CLASS(suffix) \
+struct MemberFunctionClass##suffix { \
+    int a(int); \
+    char b(char); \
+    float c(float); \
+    double d(double); \
+    unsigned e(unsigned); \
+};
+
+MAKE_CLASS(1);
+MAKE_CLASS(2);
+MAKE_CLASS(3);
+MAKE_CLASS(4);
+MAKE_CLASS(5);
+MAKE_CLASS(6);
+MAKE_CLASS(7);
+MAKE_CLASS(8);
+MAKE_CLASS(9);
+MAKE_CLASS(0);
+
+#define MAKE_WRAPPER(suffix) \
+{ \
+    V8ClassWrapper<MemberFunctionClass##suffix> & wrapper = V8ClassWrapper<MemberFunctionClass##suffix>::get_instance(*isolate); \
+    wrapper.add_method<decltype(&MemberFunctionClass##suffix::a), &MemberFunctionClass##suffix::a>("a"); \
+    wrapper.add_method<decltype(&MemberFunctionClass##suffix::b), &MemberFunctionClass##suffix::b>("b"); \
+    wrapper.add_method<decltype(&MemberFunctionClass##suffix::c), &MemberFunctionClass##suffix::c>("c"); \
+    wrapper.add_method<decltype(&MemberFunctionClass##suffix::d), &MemberFunctionClass##suffix::d>("d"); \
+    wrapper.add_method<decltype(&MemberFunctionClass##suffix::e), &MemberFunctionClass##suffix::e>("e"); \
+}
+
+void wrap_DataMemberClass(v8toolkit::IsolatePtr isolate) {
+    MAKE_WRAPPER(1);
+    MAKE_WRAPPER(2);
+    MAKE_WRAPPER(3);
+    MAKE_WRAPPER(4);
+    MAKE_WRAPPER(5);
+    MAKE_WRAPPER(6);
+    MAKE_WRAPPER(7);
+    MAKE_WRAPPER(8);
+    MAKE_WRAPPER(9);
+    MAKE_WRAPPER(0);
+
+};
+#endif
+
+
+
+
+
 
 #ifdef WRAP_10_DIFFERENT_MEMBER_FUNCTION_CLASS
 #include "javascript.h"
