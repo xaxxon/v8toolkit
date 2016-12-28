@@ -5,7 +5,6 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <functional>
 
 #include <string.h>
 
@@ -255,11 +254,13 @@ class V8ExecutionException : public V8Exception {
 public:
 
     V8ExecutionException(v8::Isolate * isolate, v8::TryCatch & tc) :
-V8Exception(isolate, tc.Exception()) {
-    auto stacktrace_maybe = tc.StackTrace(isolate->GetCurrentContext());
-    if (!stacktrace_maybe.IsEmpty()) {
-    stacktrace = *v8::String::Utf8Value(stacktrace_maybe.ToLocalChecked());
-    }
+        V8Exception(isolate, tc.Exception())
+    {
+
+        auto stacktrace_maybe = tc.StackTrace(isolate->GetCurrentContext());
+        if (!stacktrace_maybe.IsEmpty()) {
+            stacktrace = *v8::String::Utf8Value(stacktrace_maybe.ToLocalChecked());
+        }
     }
     const std::string & get_stacktrace(){return stacktrace;}
 };
@@ -308,7 +309,7 @@ struct ParameterBuilder;
 template <class T, class = void>
 struct cast_to_native_no_value {
     std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
-        throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1, info.Length()));
+        throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified, missing {}", i+1, info.Length(), demangle<T>()));
     }
 };
 
@@ -546,17 +547,6 @@ template<class ReturnType, class... Args, class InitialArg>
 struct CallCallable<func::function<ReturnType(InitialArg, Args...)>, InitialArg> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-//    template<class T, class... Ts>
-//    void thingify(func::function<ReturnType(InitialArg, Args...)> & function,
-//                  const v8::FunctionCallbackInfo<v8::Value> & info,
-//                  T&& t,
-//                  Ts&&... ts) {
-//        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-//                                                                    function(std::forward<InitialArg>(t),
-//                                                                             std::forward<Args>(ts)...)));
-//
-//    }
-
     void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg) {
@@ -591,30 +581,19 @@ struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 template<class ReturnType, class... Args>
 struct CallCallable<func::function<ReturnType(Args...)>> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
+
     template<class... Ts>
-//    void thingify(func::function<ReturnType(Args...)> & function,
-//                  const v8::FunctionCallbackInfo<v8::Value> & info,
-//                  Ts&&... ts) {
-//        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-//                                                                    function(std::forward<Args>(ts)...)));
-//    }
-
-
     void operator()(func::function<ReturnType(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     bool return_most_derived = false) {
 
         int i = 0;
         std::vector<std::unique_ptr<StuffBase>> stuff;
-//        if (return_most_derived) {
-//            //TODO: me
-//            assert(false);
-//        } else {
+
             info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
                                                                         run_function(function, info, std::forward<Args>(
                                                                             ParameterBuilder<Args>()(info, i,
                                                                                                      stuff))...)));
-//        }
     }
 };
 
@@ -671,9 +650,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
         FunctionTemplateData<R, Args...> & data = *(FunctionTemplateData<R, Args...> *)v8::External::Cast(*(info.Data()))->Value();
 
         try {
-            activity_name_stack.push_back(data.name);
             CallCallable<decltype(data.callable)>()(data.callable, info);
-            activity_name_stack.pop_back();
 
         } catch (std::exception & e) {
 
@@ -1133,16 +1110,16 @@ struct Bind<R(T::*)(Args...) &> {
 
 
 
-    /**
+/**
  * Non-const object to const method
  */
 template<class R, class T, class... Args>
 struct Bind<R(T::*)(Args...) const> {
 
-    Bind(T & object, R(T::*method)(Args...) const) :
+    Bind(T const & object, R(T::*method)(Args...) const) :
       object(object), method(method){}
 
-    T & object;
+    T const & object;
     R(T::*method)(Args...) const;
 
     R operator()(Args && ... params){

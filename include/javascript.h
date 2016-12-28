@@ -3,7 +3,6 @@
 #include <thread>
 #include <mutex>
 #include <future>
-#include <functional>
 
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include <boost/uuid/uuid_generators.hpp> // generators

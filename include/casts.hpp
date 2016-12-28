@@ -148,14 +148,14 @@ CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char32_t)return static_cast<char32_t>(value-
 
 
 template<class Return, class... Params>
-struct CastToNative<func::function<Return(Params...)>> {
-    func::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
+struct CastToNative<std::function<Return(Params...)>> {
+    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
 };
 
 template<class Return, class... Params>
-struct CastToNative<func::function<Return(Params...)> const> {
-    func::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return CastToNative<func::function<Return(Params...)>>()(isolate, value);
+struct CastToNative<std::function<Return(Params...)> const> {
+    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return CastToNative<std::function<Return(Params...)>>()(isolate, value);
     }
 };
 
@@ -484,16 +484,16 @@ struct CastToJS<T**> {
 
 
 template<class R, class... Params>
-struct CastToJS<func::function<R(Params...)>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, func::function<R(Params...)> & function) {
-        return v8::String::NewFromUtf8(isolate, "CastToJS of func::function not supported yet");
+struct CastToJS<std::function<R(Params...)>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::function<R(Params...)> & function) {
+        return v8::String::NewFromUtf8(isolate, "CastToJS of std::function not supported yet");
     }
 };
 
 template<class R, class... Params>
-struct CastToJS<func::function<R(Params...)> const> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, func::function<R(Params...)> const & function) {
-        return v8::String::NewFromUtf8(isolate, "CastToJS of func::function not supported yet");
+struct CastToJS<std::function<R(Params...)> const> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::function<R(Params...)> const & function) {
+        return v8::String::NewFromUtf8(isolate, "CastToJS of std::function not supported yet");
     }
 };
 

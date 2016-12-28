@@ -3,10 +3,10 @@
 namespace v8toolkit {
 
 template<class Return, class... Params>
-func::function<Return(Params...)> CastToNative<func::function<Return(Params...)>>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+std::function<Return(Params...)> CastToNative<std::function<Return(Params...)>>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     auto js_function = v8toolkit::get_value_as<v8::Function>(value);
 
-    // v8::Global's aren't copyable, but shared pointers to them are. func::functions need everything in them to be copyable
+    // v8::Global's aren't copyable, but shared pointers to them are. std::functions need everything in them to be copyable
     auto context = isolate->GetCurrentContext();
     auto shared_global_function = std::make_shared<v8::Global<v8::Function>>(isolate, js_function);
     auto shared_global_context = std::make_shared<v8::Global<v8::Context>>(isolate, context);

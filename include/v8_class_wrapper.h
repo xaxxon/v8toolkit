@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <algorithm>
 
-#include <functional>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -409,9 +408,7 @@ private:
 		// This function returns a reference to member in question
         MemberType & value = cpp_object->*member_pointer;
 
-        activity_name_stack.push_back(demangle<MemberType>());
         info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberType &>>()(isolate, value));
-        activity_name_stack.pop_back();
     }
 
 
@@ -430,7 +427,6 @@ private:
 	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
         MemberType & member_reference = cpp_object->*member_pointer;
 
-        activity_name_stack.push_back(demangle<MemberType>());
 
         // assign the new value to the c++ class data member
         member_reference = CastToNative<MemberType>()(isolate, value);
@@ -438,7 +434,6 @@ private:
 	    // call any registered change callbacks
 	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(self, *v8::String::Utf8Value(property), value);
         
-        activity_name_stack.pop_back();
 	}
 
 
@@ -1141,9 +1136,7 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-                    activity_name_stack.push_back(method_name);
                     CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
-                    activity_name_stack.pop_back();
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1255,9 +1248,7 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-                    activity_name_stack.push_back(method_name);
                     CallCallable<decltype(bound_method)>()(bound_method, info);
-                    activity_name_stack.pop_back();
                 } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;

@@ -36,8 +36,6 @@ namespace v8toolkit {
         MethodAdderData(std::string const &, StdFunctionCallbackType const &);
     };
 
-    // stack of names of the member/function being operated on for debugging/informational purposes
-    extern std::vector<std::string> activity_name_stack;
 
 
     template<class T>
