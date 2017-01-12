@@ -7,38 +7,35 @@
 namespace v8toolkit {
 
 
-    MethodAdderData::MethodAdderData() = default;
-    MethodAdderData::MethodAdderData(std::string const & method_name,
-                                     StdFunctionCallbackType const & callback) :
-        method_name(method_name),
-        callback(callback)
-    {}
+MethodAdderData::MethodAdderData() = default;
+MethodAdderData::MethodAdderData(std::string const & method_name,
+                                 StdFunctionCallbackType const & callback) :
+    method_name(method_name),
+    callback(callback)
+{}
 
 
-    /**
-     * Returns a string with the given stack trace and a leading and trailing newline
-     * @param stack_trace stack trace to return a string representation of
-     * @return string representation of the given stack trace
-     */
-    std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace) {
-        std::stringstream result;
-        result << std::endl;
-        int frame_count = stack_trace->GetFrameCount();
-        for (int i = 0; i < frame_count; i++) {
-            auto frame = stack_trace->GetFrame(i);
-            result << fmt::format("{}:{} {}",
-                                  *v8::String::Utf8Value(frame->GetScriptName()),
-                                  frame->GetLineNumber(),
-                                  *v8::String::Utf8Value(frame->GetFunctionName())) << std::endl;
-        }
-        return result.str();
+
+/**
+* Returns a string with the given stack trace and a leading and trailing newline
+* @param stack_trace stack trace to return a string representation of
+* @return string representation of the given stack trace
+*/
+std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace) {
+    std::stringstream result;
+    result << std::endl;
+    int frame_count = stack_trace->GetFrameCount();
+    for (int i = 0; i < frame_count; i++) {
+        auto frame = stack_trace->GetFrame(i);
+        result << fmt::format("{}:{} {}",
+                              *v8::String::Utf8Value(frame->GetScriptName()),
+                              frame->GetLineNumber(),
+                              *v8::String::Utf8Value(frame->GetFunctionName())) << std::endl;
     }
-
-
-InvalidCallException::InvalidCallException(const std::string & message) : 
-        message(message + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100)))
-{
+    return result.str();
 }
+
+
 
 
 std::string demangle_typeid_name(const std::string & mangled_name) {

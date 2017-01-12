@@ -266,7 +266,10 @@ public:
 };
 
 
-/**
+
+
+
+    /**
 * Same as a V8 exception, except if this type is thrown it indicates the exception was generated
 *   during compilation, not at runtime.
 */
@@ -818,7 +821,7 @@ v8::Local<v8::Value> call_javascript_function_with_vars(const v8::Local<v8::Cont
         if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
             printf("Some of the types are const, make sure what you are using them for is available on the const type\n");
         }
-	ReportException(isolate, &tc);
+	    ReportException(isolate, &tc);
         throw V8ExecutionException(isolate, tc);
     }
     return maybe_result.ToLocalChecked();

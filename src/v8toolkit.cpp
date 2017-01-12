@@ -52,6 +52,12 @@ void expose_gc()
 }
 
 
+InvalidCallException::InvalidCallException(const std::string & message) :
+    message(message + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100)))
+{
+}
+
+
 void add_variable(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, const v8::Local<v8::Data> template_to_attach) 
 {
     object_template->Set(isolate, name, template_to_attach);

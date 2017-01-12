@@ -36,6 +36,14 @@ namespace v8toolkit {
         MethodAdderData(std::string const &, StdFunctionCallbackType const &);
     };
 
+    /**
+    * Returns a string with the given stack trace and a leading and trailing newline
+    * @param stack_trace stack trace to return a string representation of
+    * @return string representation of the given stack trace
+    */
+    std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
+
+
 
 
     template<class T>
@@ -65,6 +73,17 @@ namespace v8toolkit {
     }
 
 
+
+
+// thrown when data cannot be converted properly
+class CastException : public std::exception {
+private:
+    std::string reason;
+
+public:
+    CastException(const std::string & reason) : reason(reason + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
+    virtual const char * what() const noexcept override {return reason.c_str();}
+};
 
 template<typename T, typename = void>
 struct ProxyType {
@@ -211,17 +230,6 @@ template <> struct static_all_of<> : std::true_type {};
 
 #define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
 
-// thrown when data cannot be converted properly
-class CastException : public std::exception {
-private:
-    std::string reason;
-
-public:
-    CastException(const std::string & reason) : reason(reason) {}
-    virtual const char * what() const noexcept override {return reason.c_str();}
-};
-
- 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -515,7 +523,7 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     } else {
         printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
         print_v8_value_details(value);
-	throw v8toolkit::CastException("Couldn't cast value to requested type");
+	    throw v8toolkit::CastException("Couldn't cast value to requested type");
     }
 }
 

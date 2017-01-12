@@ -2198,10 +2198,10 @@ namespace {
             containing_class.fields.insert(field);
 
             // made up number to represent the overhead of making a new wrapped class
-            //   even before adding methods/members - 3 was pretty low
+            //   even before adding methods/members - 3 was pretty low, 8 still pretty low
             // This means that two wrapped classes will count as much towards rolling to the next file as
             // one wrapped class with <THIS NUMBER> of wrapped members/functions
-            top_level_class->declaration_count=8;
+            top_level_class->declaration_count=20;
 
             update_wrapped_class_for_type(ci, *top_level_class, field->getType());
 
