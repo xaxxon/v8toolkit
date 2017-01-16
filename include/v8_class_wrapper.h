@@ -37,7 +37,7 @@ namespace v8toolkit {
 #endif
 /**
 * Design Questions:
-* - When a c++ object returns a new object represented by one of its members, should it
+* - When a c++ object returns a new object represted by one of its members, should it
 *   return the same javascript object each time as well?  
 *     class Thing {
 *       OtherClass other_class;
@@ -149,7 +149,7 @@ struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<std::is_co
 
 
 
-	// type to convert to, typelist of all types to check, sfinae helper type
+// type to convert to, typelist of all types to check, sfinae helper type
 template<class, class, class = void>
 struct TypeChecker;
 
@@ -236,7 +236,7 @@ template<class T, class Head, class... Tail>
 
 
  // uncomment this to see the effects of generating the wrapper class on compile time (but won't actually run correctly)
- //#define TEST_NO_REAL_WRAPPERS
+// #define TEST_NO_REAL_WRAPPERS
  
 
  #ifdef TEST_NO_REAL_WRAPPERS
@@ -247,11 +247,11 @@ template<class T, class Head, class... Tail>
  #else
 // Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+    ((V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX) || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
 
 // otherwise use the 'cheap' specialization
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+    !((V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX) || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
 #endif
 
 
@@ -259,7 +259,8 @@ template<class T, class Head, class... Tail>
 	
  
 /**
- * The real template is quite expensive to make for types that don't need it, so here's an alternative for when it isn't actually going to be used
+ * The real template is quite expensive to make for types that don't need it,
+ *   so here's an alternative for when it isn't actually going to be used
  */
  template<class T, class = void> class V8ClassWrapper;
 
@@ -267,24 +268,34 @@ template<class T, class Head, class... Tail>
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:
      static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
-	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false);
+
+	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context,
+                                                    T * existing_cpp_object,
+                                                    DestructorBehavior const & destructor_behavior,
+                                                    bool force_wrap_this_type = false);
 
      T * cast(AnyBase * any_base);
 
 	 template<class... Args>
 	 V8ClassWrapper<T> & add_method(Args&&...);
 
-
-		    
-
  	template<class... Args>
  	v8toolkit::V8ClassWrapper<T>& add_constructor(Args&&...);
 
 	void finalize(bool wrap_as_most_derived = false);
 
-     template<class... Args>
-	V8ClassWrapper<T> & add_member(Args&&...);
-    template<class...>
+         template<class MemberType,
+             class MemberClass,
+             MemberType (MemberClass::*member)>
+	V8ClassWrapper<T> & add_member(std::string const &);
+
+         template<class MemberType,
+             class MemberClass,
+             MemberType (MemberClass::*member)>
+         V8ClassWrapper<T> & add_member_readonly(std::string const &);
+
+
+     template<class...>
     V8ClassWrapper<T>& set_compatible_types();
 
      template<class>
@@ -299,8 +310,6 @@ template<class T, class Head, class... Tail>
      
  	V8ClassWrapper<T> & set_class_name(const std::string & name);
 
-     template<class... Args>
- 	V8ClassWrapper<T> & add_member_readonly(Args&&...);
 
  	v8::Local<v8::FunctionTemplate> get_function_template();
 
@@ -408,6 +417,7 @@ private:
 		// This function returns a reference to member in question
         MemberType & value = cpp_object->*member_pointer;
 
+        // add lvalue ref as to know not to delete the object if the JS object is garbage collected
         info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberType &>>()(isolate, value));
     }
 
@@ -925,7 +935,7 @@ public:
 		class MemberClass,
 		MemberType (MemberClass::*member),
 		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member(std::string member_name)
+	V8ClassWrapper<T> & add_member(std::string const & member_name)
 	{
 
 	    assert(this->finalized == false);
@@ -953,7 +963,7 @@ public:
 		class MemberClass, 	// allow members from parent types of T
 		MemberType (MemberClass::*member),
 		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member_readonly(std::string member_name)
+	V8ClassWrapper<T> & add_member_readonly(std::string const & member_name)
 	{
 	    // make sure to be using the const version even if it's not passed in
 	    using ConstMemberType = std::add_const_t<MemberType>;

@@ -180,7 +180,7 @@ struct LTG<T &&> {
 
 
 
-    template <class... > struct TypeList {};
+template <class... > struct TypeList {};
 
 // for use inside a decltype only
 template <class R, class... Ts>
