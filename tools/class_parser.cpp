@@ -47,8 +47,8 @@ using namespace std;
 //////////////////////////////
 
 // if this is defined, only template info will be printed
-//#define TEMPLATE_INFO_ONLY
-//#define TEMPLATE_FILTER_STD
+#define TEMPLATE_INFO_ONLY
+#define TEMPLATE_FILTER_STD
 
 #define TEMPLATED_CLASS_PRINT_THRESHOLD 10
 #define TEMPLATED_FUNCTION_PRINT_THRESHOLD 100
@@ -616,7 +616,7 @@ namespace {
         string class_name;
         string name_alias; // if no alias, is equal to class_name
         set<string> include_files;
-        int declaration_count = 0;
+        int declaration_count = 3;
         set<string> methods;
 
         set<CXXMethodDecl const *> wrapped_methods_decls;
@@ -2198,14 +2198,15 @@ namespace {
             containing_class.fields.insert(field);
 
             // made up number to represent the overhead of making a new wrapped class
-            //   even before adding methods/members - 3 was pretty low, 8 still pretty low
+            //   even before adding methods/members
             // This means that two wrapped classes will count as much towards rolling to the next file as
             // one wrapped class with <THIS NUMBER> of wrapped members/functions
-            top_level_class->declaration_count=20;
 
             update_wrapped_class_for_type(ci, *top_level_class, field->getType());
 
             string full_type_name = get_type_string(field->getType());
+
+            std::cerr << fmt::format("incrementing declaration count for {} - data member", top_level_class->name_alias) << std::endl;
 
             if (annotations.has(V8TOOLKIT_READONLY_STRING) || field->getType().isConstQualified()) {
                 result << fmt::format("{}class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n", indentation,
@@ -2336,6 +2337,7 @@ namespace {
 
             if (method->isStatic()) {
                 cerr << "method is static" << endl;
+                std::cerr << fmt::format("incrementing declaration count for {} - static function", top_level_class->name_alias) << std::endl;
                 top_level_class->declaration_count++;
 
                 if (static_method_renames.find(short_method_name) != static_method_renames.end()) {
@@ -2349,6 +2351,7 @@ namespace {
                 klass.has_static_method = true;
             } else {
                 cerr << "Method is not static" << endl;
+                std::cerr << fmt::format("incrementing declaration count for {} - non-static function", top_level_class->name_alias) << std::endl;
                 top_level_class->declaration_count++;
                 klass.wrapped_methods_decls.insert(method);
 
@@ -3280,6 +3283,7 @@ namespace {
                     already_wrapped_classes.insert(&wrapped_class);
                     found_match = true;
 
+                    std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class.name_alias, wrapped_class.declaration_count) << std::endl;
 
                     // if there's room in the current file, add this class
                     auto space_available = declaration_count_this_file == 0 ||
@@ -3287,8 +3291,9 @@ namespace {
                                            MAX_DECLARATIONS_PER_FILE;
 
                     if (!space_available) {
-                        //printf("Actually writing file to disk\n");
-                        //write_classes(file_count, classes_for_this_file, last_class);
+                        
+                        
+                        std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
                         classes_per_file.emplace_back(classes_for_this_file);
 
                         // reset for next file
