@@ -27,7 +27,7 @@ using namespace v8toolkit::literals;
 namespace v8toolkit {
 
 
-// #define V8_CLASS_WRAPPER_DEBUG
+//#define V8_CLASS_WRAPPER_DEBUG
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
 #define V8TOOLKIT_DEBUG(format_string, ...) \
@@ -229,6 +229,11 @@ template<class T, class Head, class... Tail>
  *   try to instantiate it for a very large number of types which can drastically slow down compilation.
  * Setting an explicit value for this is NOT required - it is just a compile-time, compile-RAM (and maybe binary size) optimizatioan
  */
+#ifdef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
+#error this is no longer supported
+#endif
+
+
 #ifndef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
  class UnusedType;
 #define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<UnusedType, T>::value
@@ -308,7 +313,7 @@ template<class T, class Head, class... Tail>
      T * get_cpp_object(v8::Local<v8::Object> object);
 
      
- 	V8ClassWrapper<T> & set_class_name(const std::string & name);
+ 	void set_class_name(const std::string & name);
 
 
  	v8::Local<v8::FunctionTemplate> get_function_template();
@@ -407,14 +412,13 @@ private:
 							   v8::PropertyCallbackInfo<v8::Value> const & info) {
 
 		auto isolate = info.GetIsolate();
-		v8::Local<v8::Object> self = info.Holder();				   
+		v8::Local<v8::Object> self = info.Holder();
 		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 		WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "Getter helper got cpp object: %p\n", cpp_object);
 #endif
-		// This function returns a reference to member in question
         MemberType & value = cpp_object->*member_pointer;
 
         // add lvalue ref as to know not to delete the object if the JS object is garbage collected
@@ -541,7 +545,7 @@ public:
 	    WrappedData<T> * wrapped_data = new WrappedData<T>(new AnyPtr<T>(cpp_object));
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), any, cpp_object);
+        fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
 #endif
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
@@ -627,7 +631,7 @@ public:
      * Specify the name of the object which will be used for debugging statements as well as 
      *   being the type returned from javascript typeof
      */
-    V8ClassWrapper<T> & set_class_name(const std::string & name);
+    void set_class_name(const std::string & name);
 
     
 
@@ -917,7 +921,7 @@ public:
     *   objects of the wrapped type can be created to make sure everything stays consistent
     * Must be called before adding any constructors or using wrap_existing_object()
     */
-	V8ClassWrapper<T> & finalize(bool wrap_as_most_derived = false);
+	void finalize(bool wrap_as_most_derived = false);
 
     /**
     * returns whether finalize() has been called on this type for this isolate
@@ -1316,14 +1320,17 @@ public:
 	};
 
 
-	/* Helper for handling pointer return types from named property getter */
+	/* Helper for handling pointer return types from named property getter
+	 * allows checking for null pointers
+	 */
 	template<class ResultT>
-	std::enable_if_t<std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT result,
+	std::enable_if_t<std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT&& result,
 																		   v8::PropertyCallbackInfo<v8::Value> const &info) {
 		if (result != nullptr) {
-			info.GetReturnValue().Set(CastToJS<ResultT>()(info.GetIsolate(), result));
+			info.GetReturnValue().Set(CastToJS<ResultT>()(info.GetIsolate(), std::forward<ResultT>(result)));
 		}
 	}
+
 	/* Helper for handling non-pointer return types from named property getter */
 	template<class ResultT>
 	std::enable_if_t<!std::is_pointer<ResultT>::value, void> handle_getter_result(ResultT&& result,
@@ -1718,8 +1725,30 @@ struct CastToNative
 };
 
 
+template<typename T>
+struct CastToNative<T&, std::enable_if_t<std::is_reference<
+    std::result_of_t<
+        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_ofs
+>::value>>
+{
+    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+        return get_object_from_embedded_cpp_object<T>(isolate, value);
+    }
+};
 
-// If no more-derived option was found, wrap as this type
+// cannot get a reference unless the object is stored inside a javascript object
+template<typename T>
+struct CastToNative<T&, std::enable_if_t<!std::is_reference<
+    std::result_of_t<
+        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_ofs
+>::value>>;
+
+
+
+
+    // If no more-derived option was found, wrap as this type
 template<class T>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object) const {
 	auto context = this->isolate->GetCurrentContext();
@@ -1733,10 +1762,10 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T 
 	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 	return wrapper.
 			template wrap_existing_cpp_object(context,
-																			safe_move_constructor(std::move(cpp_object)).
-																					release(),
-																			*wrapper.destructor_behavior_delete, true /* don't infinitely recurse */);
-}
+                                              safe_move_constructor(std::move(cpp_object)).
+                                                  release(),
+                                              *wrapper.destructor_behavior_delete, true /* don't infinitely recurse */);
+    }
 
 
 

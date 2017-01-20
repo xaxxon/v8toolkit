@@ -27,13 +27,15 @@ namespace v8toolkit {
 
     template<class T> void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_name_used(const std::string & name) {
-      if (std::find(used_attribute_name_list.begin(),
-		    used_attribute_name_list.end(),
-		    name) != used_attribute_name_list.end()) {
+		if (std::find(used_attribute_name_list.begin(),
+			used_attribute_name_list.end(),
+			name) != used_attribute_name_list.end()) {
 
-  	  throw DuplicateNameException(fmt::format("Cannot add method/member named '{}' to class '{}', name already in use", name, class_name));
-      }
-      used_attribute_name_list.push_back(name);
+			throw DuplicateNameException(fmt::format("Cannot add method/member named '{}' to class '{}', name already in use", name, class_name));
+		}
+
+		// hasn't been used, so add it to used list
+		used_attribute_name_list.push_back(name);
     }
 
 	template<class T> void
@@ -80,7 +82,9 @@ namespace v8toolkit {
 		auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
 		init_instance_object_template(function_template->InstanceTemplate());
 		init_prototype_object_template(function_template->PrototypeTemplate());
-		init_static_methods(function_template);
+		for (auto &adder : this->static_method_adders) {
+			adder(function_template);
+		}
 
 		function_template->SetClassName(v8::String::NewFromUtf8(isolate, class_name.c_str()));
 
@@ -151,10 +155,10 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::cast(AnyBase * any_base)
 	{
 	    V8TOOLKIT_DEBUG("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
-	    if(type_checker != nullptr) {
+	    if (type_checker != nullptr) {
 		    V8TOOLKIT_DEBUG("Explicit compatible types set, using that\n");
 		    return type_checker->check(any_base);
-	    } 
+	    }
         
         else if (dynamic_cast<AnyPtr<T>*>(any_base)) {
 		    assert(false); // should not use this code path anymore
@@ -210,14 +214,6 @@ namespace v8toolkit {
 		}
 	}
 
-    template<class T>  void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template) {
-//	fprintf(stderr, "Adding %d static methods\n", (int)this->static_method_adders.size());
-		for (auto &adder : this->static_method_adders) {
-			adder(constructor_function_template);
-		}
-	}
-
 
 
 
@@ -257,11 +253,10 @@ namespace v8toolkit {
 	}
 
 
-    template<class T>  V8ClassWrapper<T> &
+    template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::set_class_name(const std::string & name){
-	assert(!this->finalized);
-	this->class_name = name;
-	return *this;
+		assert(!this->finalized);
+		this->class_name = name;
     }
 
 
@@ -271,7 +266,7 @@ namespace v8toolkit {
      *   objects of the wrapped type can be created to make sure everything stays consistent
      * Must be called before adding any constructors or using wrap_existing_object()
      */
-    template<class T>  V8ClassWrapper<T> &
+    template<class T>  void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::finalize(bool wrap_as_most_derived_flag) {
         if (this->finalized) {
             throw V8Exception(this->isolate, fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
@@ -282,18 +277,7 @@ namespace v8toolkit {
 	    this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
         this->finalized = true;
         get_function_template(); // force creation of a function template that doesn't call v8_constructor
-        return *this;
     }
-
-
-    /**
-     * returns whether finalize() has been called on this type for this isolate
-     */
-//    template<class T>  bool
-//	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::is_finalized()
-//	{
-//	    return this->finalized;
-//	}
 
 
 } // end namespace v8toolkit

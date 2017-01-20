@@ -161,10 +161,23 @@ void run_type_conversion_test()
 {
     auto i = Platform::create_isolate();
     (*i)([&]{
-        i->wrap_class<C>().finalize().add_constructor("C", i->get_object_template());
-        i->wrap_class<A>().set_compatible_types<C>().finalize().add_constructor("A", i->get_object_template());
-        i->wrap_class<B>().set_compatible_types<C>().finalize().add_constructor("B", i->get_object_template());
-        i->wrap_class<NotFamily>().finalize().add_constructor("NotFamily", i->get_object_template());
+        auto & c_wrapper = i->wrap_class<C>();
+        c_wrapper.finalize();
+        c_wrapper.add_constructor("C", i->get_object_template());
+
+        auto & a_wrapper = i->wrap_class<A>();
+        a_wrapper.set_compatible_types<C>();
+        a_wrapper.finalize();
+        a_wrapper.add_constructor("A", i->get_object_template());
+
+        auto & b_wrapper = i->wrap_class<B>();
+        b_wrapper.set_compatible_types<C>();
+        b_wrapper.finalize();
+        b_wrapper.add_constructor("B", i->get_object_template());
+
+        auto & notfamily_wrapper = i->wrap_class<NotFamily>();
+        notfamily_wrapper.finalize();
+        notfamily_wrapper.add_constructor("NotFamily", i->get_object_template());
         i->add_function("a", [](A * a) {
             printf("In 'A' function, A::i = %d (1) &a=%p\n", a->i, a);
         });
@@ -501,8 +514,16 @@ void run_inheritance_test()
         i->add_assert();
         
         // it's critical to wrap both classes and have the base class set the child as "compatible" and the child set the parent as "parent"
-        i->wrap_class<IT_A>().add_method("get_int", &IT_A::get_int).set_compatible_types<IT_B>().finalize().add_constructor<>("IT_A", *i);
-        i->wrap_class<IT_B>().set_parent_type<IT_A>().finalize().add_constructor<>("IT_B", *i);
+        auto & ita_wrapper = i->wrap_class<IT_A>();
+        ita_wrapper.add_method("get_int", &IT_A::get_int);
+        ita_wrapper.set_compatible_types<IT_B>();
+        ita_wrapper.finalize();
+        ita_wrapper.add_constructor<>("IT_A", *i);
+
+        auto & itb_wrapper = i->wrap_class<IT_B>();
+        itb_wrapper.set_parent_type<IT_A>();
+        itb_wrapper.finalize();
+        itb_wrapper.add_constructor<>("IT_B", *i);
         
         auto c = i->create_context();
 
