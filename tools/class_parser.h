@@ -122,3 +122,10 @@
  */
 #define V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER __attribute__((annotate(V8TOOLKIT_BIDIRECTIONAL_INTERNAL_PARAMETER_STRING)))
 
+
+#define V8TOOLKIT_CUSTOM_EXTENSION_STRING "v8toolkit_custom_extension"
+
+/**
+ * function will be called to extend the functionality of the constructor FunctionTemplate
+ */
+#define V8TOOLKIT_CUSTOM_EXTENSION __attribute__((annotate(V8TOOLKIT_CUSTOM_EXTENSION_STRING)))
