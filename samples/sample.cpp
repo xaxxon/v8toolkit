@@ -108,6 +108,7 @@ public:
     void rvalue_const_qualified_method() const && {}
     void lvalue_const_qualified_method() const & {}
 
+
 };
 
 int Point::instance_count = 0;
@@ -149,6 +150,19 @@ struct Line {
 
 
     static void static_method_same_name(){};
+    void map_of_point_refs(std::map<string, Point const &> points) {
+        for(auto const & pair : points) {
+            cerr << pair.first << ": " << pair.second.x_ << ", " << pair.second.y_ << endl;
+        }
+    }
+    void map_of_point_pointers(std::map<string, Point const *> points) {
+        for(auto const & pair : points) {
+            cerr << pair.first << ": " << pair.second->x_ << ", " << pair.second->y_ << endl;
+        }
+
+    }
+    void map_of_int_refs(std::map<string, int const &> points) {}
+
 
 };
 
@@ -302,6 +316,8 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("take_unique_ref", &Line::take_unique_ref);
             wrapped_line.add_method("take_unique_int", &Line::take_unique_int);
             wrapped_line.add_method("take_unique_int_ref", &Line::take_unique_int_ref);
+            wrapped_line.add_method("map_of_point_refs", &Line::map_of_point_refs);
+            wrapped_line.add_method("map_of_point_pointers", &Line::map_of_point_pointers);
 
             got_duplicate_name_exception = false;
             try {
@@ -476,10 +492,22 @@ int main(int argc, char* argv[])
                                                   v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
                 assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
             }
-#
+
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "let l = new Line(); l.take_point();")).ToLocalChecked();
+                (void) script->Run(context);
+            }
+
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "l = new Line(); l.map_of_point_refs({thing: new Point()});")).ToLocalChecked();
+                (void) script->Run(context);
+            }
+
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "l = new Line(); l.map_of_point_pointers({thing: new Point()});")).ToLocalChecked();
                 (void) script->Run(context);
             }
 

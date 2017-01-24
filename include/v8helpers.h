@@ -8,6 +8,9 @@
 #include <typeinfo>
 #include <fmt/ostream.h>
 
+#include "stdfunctionreplacement.h"
+
+
 
 // Everything in here is standalone and does not require any other v8toolkit files
 #include <libplatform/libplatform.h>
@@ -24,8 +27,23 @@
 
 namespace v8toolkit {
 
-    // stack of names of the member/function being operated on for debugging/informational purposes
-    extern std::vector<std::string> activity_name_stack;
+    using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
+    struct MethodAdderData {
+        std::string method_name;
+        StdFunctionCallbackType callback;
+
+        MethodAdderData();
+        MethodAdderData(std::string const &, StdFunctionCallbackType const &);
+    };
+
+    /**
+    * Returns a string with the given stack trace and a leading and trailing newline
+    * @param stack_trace stack trace to return a string representation of
+    * @return string representation of the given stack trace
+    */
+    std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
+
+
 
 
     template<class T>
@@ -55,6 +73,17 @@ namespace v8toolkit {
     }
 
 
+
+
+// thrown when data cannot be converted properly
+class CastException : public std::exception {
+private:
+    std::string reason;
+
+public:
+    CastException(const std::string & reason) : reason(reason + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
+    virtual const char * what() const noexcept override {return reason.c_str();}
+};
 
 template<typename T, typename = void>
 struct ProxyType {
@@ -121,45 +150,45 @@ template<template<typename...> class Ref, typename... Args>
 struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
 
 /**
- * Returns a std::function type compatible with the lambda passed in
+ * Returns a func::function type compatible with the lambda passed in
  */
 template<class T>
 struct LTG {
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...))->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const &)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...) &)->func::function<R(Args...)>;
 
 };
 
 template<class T>
 struct LTG<T &&> {
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &&)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const &&)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &&)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...) &&)->func::function<R(Args...)>;
 
 };
 
 
 
-    template <class... > struct TypeList {};
+template <class... > struct TypeList {};
 
 // for use inside a decltype only
 template <class R, class... Ts>
-auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
+auto get_typelist_for_function(func::function<R(Ts...)>) ->TypeList<Ts...>;
 
 // for use inside a decltype only
 template <class R, class Head, class... Tail>
-auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
+auto get_typelist_for_function_strip_first(func::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
 // for use inside a decltype only
 template <class... Ts>
@@ -201,17 +230,6 @@ template <> struct static_all_of<> : std::true_type {};
 
 #define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
 
-// thrown when data cannot be converted properly
-class CastException : public std::exception {
-private:
-    std::string reason;
-
-public:
-    CastException(const std::string & reason) : reason(reason) {}
-    virtual const char * what() const noexcept override {return reason.c_str();}
-};
-
- 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -505,7 +523,7 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     } else {
         printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
         print_v8_value_details(value);
-	throw v8toolkit::CastException("Couldn't cast value to requested type");
+	    throw v8toolkit::CastException("Couldn't cast value to requested type");
     }
 }
 

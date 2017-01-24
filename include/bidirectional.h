@@ -154,12 +154,13 @@ namespace v8toolkit {
 */
 template<class Base, // The common base class type of object to be returned
          class = TypeList<>, // List of parameters that may change per-instance created
-         class FactoryBase = EmptyFactoryBase> // base class of this factory class
+         class FactoryBase = EmptyFactoryBase, // base class of this factory class
+    class Deleter = std::default_delete<Base>>
 class Factory;
 
 
- template<class Base, class... ConstructorArgs, class FactoryBase>
-     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase> : public virtual FactoryBase {
+ template<class Base, class... ConstructorArgs, class FactoryBase, class Deleter>
+     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase, Deleter> : public virtual FactoryBase {
 public:
 //     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
 //     {}
@@ -213,17 +214,19 @@ template<
 	class Child,
         class FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
 	class ExternalTypeList,
-    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>>
+    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
+    class Deleter = std::default_delete<Child> >
 class CppFactory;
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
- template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase>
+ template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase, class Deleter>
     class CppFactory<Base,
                     Child,
                     TypeList<FixedParams...>,
                     TypeList<ExternalConstructorParams...>,
-     FactoryBase> :
+     FactoryBase,
+         Deleter> :
  public virtual FactoryBase {
 
      using TupleType = std::tuple<FixedParams...>;
@@ -279,7 +282,8 @@ class CppFactory;
 
 	class Internal,
 	class External,
-    class FactoryBase = Factory<Base, External, EmptyFactoryBase>>
+    class FactoryBase = Factory<Base, External, EmptyFactoryBase>,
+    class Deleter = std::default_delete<JSWrapperClass>>
 class JSFactory; // instance of undefined template means your inheritance is wrong and failing sfinae check
     // sfinae check is almost certainly good
 
@@ -290,14 +294,16 @@ template<
 
 	class... InternalConstructorParams,
 	class... ExternalConstructorParams,
-    class FactoryBase>
+    class FactoryBase,
+    class Deleter>
 class JSFactory<
 	Base,
 	JSWrapperClass,
 
 	TypeList<InternalConstructorParams...>,
 	TypeList<ExternalConstructorParams...>,
-    FactoryBase>
+    FactoryBase,
+        Deleter>
 
 	: public virtual FactoryBase
 { // Begin JSFactory class
@@ -316,7 +322,7 @@ protected:
     
     v8::Global<v8::Object> js_prototype;
 
-    std::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
+    func::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
 
     using TupleType = std::tuple<InternalConstructorParams...>;
     TupleType internal_param_tuple;
@@ -364,7 +370,7 @@ public:
 
 
     template<std::size_t... Is>
-    std::unique_ptr<JSWrapperClass> call_operator_helper(v8::Local<v8::Object> new_js_object,
+    std::unique_ptr<JSWrapperClass, Deleter> call_operator_helper(v8::Local<v8::Object> new_js_object,
                                 ExternalConstructorParams&&... constructor_args,
                                 std::index_sequence<Is...>) const {
 
@@ -433,7 +439,6 @@ public:
                                                           context->Global(),
                                                           TypeList<v8::Local<v8::Object>>(),
                                                           new_js_object);
-
             return js_wrapper_class_cpp_object.release();
         };
     }

@@ -7,7 +7,11 @@ template<class T>
 class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
 
 
+namespace v8 {
+  template<class> class Local;
 
+    class FunctionTemplate;
+};
 
 
 //
@@ -151,7 +155,12 @@ public:
 
    TemplatedClass<HelperClass, 5> test_method_with_templated_types(const TemplatedClass<const Using2*&, 8828>****&);
 
-    V8TOOLKIT_EXTEND_WRAPPER static void wrapper_extension(v8toolkit::V8ClassWrapper<Foo> &);
+    V8TOOLKIT_EXTEND_WRAPPER
+    static void wrapper_extension(v8toolkit::V8ClassWrapper<Foo> &);
+
+    V8TOOLKIT_CUSTOM_EXTENSION
+    static void custom_extension(v8::Local<v8::FunctionTemplate> & function_template);
+
 };
 
 

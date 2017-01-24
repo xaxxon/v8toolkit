@@ -26,7 +26,7 @@ set(V8_STATIC_LIBS
         v8_libplatform)
 
 set(V8_SHARED_LIBS
-	icui18n 
+	icui18n
 	icuuc 
 	v8 v8_libbase)
 

@@ -277,7 +277,7 @@ Isolate::operator v8::Local<v8::ObjectTemplate>()
 }
 
 
-Isolate & Isolate::add_print(std::function<void(const std::string &)> callback)
+Isolate & Isolate::add_print(func::function<void(const std::string &)> callback)
 {
     (*this)([this, callback](){
         v8toolkit::add_print(isolate, get_object_template(), callback);

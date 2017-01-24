@@ -3,7 +3,6 @@
 #include <thread>
 #include <mutex>
 #include <future>
-#include <functional>
 
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include <boost/uuid/uuid_generators.hpp> // generators
@@ -512,7 +511,7 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-    Isolate & add_print(std::function<void(const std::string &)>);
+    Isolate & add_print(func::function<void(const std::string &)>);
     Isolate & add_print();
     
     void add_assert();
