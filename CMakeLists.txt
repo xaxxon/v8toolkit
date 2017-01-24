@@ -70,8 +70,7 @@ add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 # even when v8 is build shared, still needs some statically linked libs
 target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
 
-# GCC doesn't need to link to this to make a shared object
-target_link_libraries(v8toolkit_shared)
+# Linux doesn't need to link to this to make a shared object
 target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
 
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
@@ -143,7 +142,7 @@ add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_shared copy_sample_resources)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
-target_link_libraries(sample v8toolkit_shared fmt eastl)
+target_link_libraries(sample v8toolkit_shared fmt EASTL)
 
 add_custom_target(copy_sample_resources)
 add_custom_command(TARGET copy_sample_resources POST_BUILD

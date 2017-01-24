@@ -1,6 +1,11 @@
 
 Very similar to os x.
 
+When building the libfmt dependency, make sure to build the shared object library:
+
+    > cmake -DBUILD_SHARED_LIBS=TRUE
+
+
 
 Depending on your version of V8, you may run into this:
 
