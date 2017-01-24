@@ -383,6 +383,7 @@ private:
 	 */
     std::vector<std::string> used_attribute_name_list;
     std::vector<std::string> used_static_attribute_name_list;
+	std::vector<std::string> used_constructor_name_list;
 
 	/**
 	 * Calls registered callbacks when the specified property name is changed
@@ -404,6 +405,12 @@ private:
      */
     void check_if_static_name_used(const std::string & name);
 
+
+	/**
+	 * returns whether the name is already used at a global level
+	 * @param name name to check
+	 */
+	void check_if_constructor_name_used(std::string const &);
 
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
@@ -720,6 +727,8 @@ public:
 	v8toolkit::V8ClassWrapper<T>& add_constructor(const std::string & js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
 	{				
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
+
+		check_if_constructor_name_used(js_constructor_name);
 	    
 	    auto constructor_template =
 		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
@@ -741,6 +750,7 @@ public:
     expose_static_methods(const std::string & js_name,
                           v8::Local<v8::ObjectTemplate> parent_template) {
 	    assert(((void)"Type must be finalized before calling expose_static_methods", this->finalized) == true);
+		check_if_constructor_name_used(js_name);
 
         if (global_name_conflicts(js_name)) {
             throw V8Exception(this->isolate, "name conflicts with global names (bug: this ignores if your parent template isn't the global object)");
@@ -1740,6 +1750,28 @@ struct CastToNative<T&, std::enable_if_t<std::is_reference<
 // cannot get a reference unless the object is stored inside a javascript object
 template<typename T>
 struct CastToNative<T&, std::enable_if_t<!std::is_reference<
+    std::result_of_t<
+        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_ofs
+>::value>>;
+
+
+
+template<typename T>
+struct CastToNative<T&&, std::enable_if_t<std::is_reference<
+    std::result_of_t<
+        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_ofs
+>::value>>
+{
+    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+        return get_object_from_embedded_cpp_object<T>(isolate, value);
+    }
+};
+
+// cannot get a reference unless the object is stored inside a javascript object
+template<typename T>
+struct CastToNative<T&&, std::enable_if_t<!std::is_reference<
     std::result_of_t<
         CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
     > // end result_ofs

@@ -49,9 +49,21 @@ namespace v8toolkit {
 		used_static_attribute_name_list.push_back(name);
 	}
 
+    template<class T> void
+    V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_constructor_name_used(const std::string & name) {
+        if (std::find(used_constructor_name_list.begin(),
+                      used_constructor_name_list.end(),
+                      name) != used_constructor_name_list.end()) {
+
+            throw DuplicateNameException(fmt::format("Cannot add constructor named '{}' to class '{}', name already in use", name, class_name));
+        }
+        used_constructor_name_list.push_back(name);
+    }
 
 
-	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
+
+
+    // takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
     //   Useful because capturing lambdas don't have a traditional function pointer type
     template<class T> void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) {
