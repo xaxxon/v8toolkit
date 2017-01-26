@@ -355,6 +355,7 @@ public:
                 decltype(info[starting_info_index + 0]->ToObject()), // second parameter type for function
                 v8::Local<v8::Function>,
                 InternalConstructorParams...> // constructor params for function
+
                 (&std::make_unique<ThisFactoryType, // specify exactly which make_unique to give a function pointer to
                          decltype(context),   // repeat types for make_unique
                          decltype(info[starting_info_index + 0]->ToObject()), // repeat types for make_unique
@@ -436,9 +437,9 @@ public:
             // call javascript "constructor" method (per-instance)
             v8toolkit::call_javascript_function_with_vars(context,
                                                           this->js_new_object_constructor_function.Get(isolate),
-                                                          context->Global(),
-                                                          TypeList<v8::Local<v8::Object>>(),
-                                                          new_js_object);
+                                                          new_js_object,
+                                                          TypeList<ExternalConstructorParams...>(),
+                                                          std::forward<ExternalConstructorParams>(external_constructor_values)...);
             return js_wrapper_class_cpp_object.release();
         };
     }

@@ -6,10 +6,11 @@ let thing2_i_val = 24;
 
 let thing2_factory = create_thing_factory(
     {}, // This is the actual prototype object shared by all new instances of the type
-    function(new_thing2){ // This function is called on each new object, creating non-shared, per-object properties
+    function(str){ // This function is called on each new object, creating non-shared, per-object properties
         // println("In new thing2 object constructor");
-        new_thing2.per_object_property = 42;
+        this.per_object_property = 42;
         // printobj(new_thing2);
+        //println(`thing2 factory string input: ${str}`);
     }, 24);
 
 // let thing2_factory = create_thing_factory(function(j_value, base_thing){
