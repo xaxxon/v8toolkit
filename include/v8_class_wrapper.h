@@ -162,7 +162,7 @@ template<class T>
     virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
 #ifdef ANYBASE_DEBUG
-        std::cerr << fmt::format("Failed to find match for anybase with type string: {}", any_base->type_name)
+        std::cerr << fmt::format("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name)
                   << std::endl;
 #endif
         return nullptr;
@@ -554,6 +554,9 @@ public:
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
 #endif
+        if (js_object->InternalFieldCount() == 0) {
+            fprintf(stderr, "Maybe you are calling a constructor without 'new'?");
+        }
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
 		
