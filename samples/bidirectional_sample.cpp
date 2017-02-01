@@ -28,6 +28,7 @@ struct Thing {
 	Thing & operator=(const Thing&&) = delete;
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
+	virtual std::string get_string_value(){return "C++ string";}
 	virtual std::string get_string_const()const{return "const C++ string";}
 
 	// test case for non-polymorphic types
@@ -46,6 +47,7 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
 	JSWrapper(context, js_object, created_by) {}
     
 	JS_ACCESS(std::string, get_string);
+	JS_ACCESS(std::string, get_string_value);
 	JS_ACCESS_CONST(std::string, get_string_const);
 };
 
@@ -77,6 +79,7 @@ void test_calling_bidirectional_from_javascript()
 		isolate->add_print();
 		auto & thing = isolate->wrap_class<Thing>();
 		thing.add_method("get_string", &Thing::get_string);
+		thing.add_method("get_string_value", &Thing::get_string_value);
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
 		thing.set_compatible_types<JSThing>();

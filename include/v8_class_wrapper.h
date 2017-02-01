@@ -284,7 +284,7 @@ template<class T, class Head, class... Tail>
 	 template<class... Args>
 	 V8ClassWrapper<T> & add_method(Args&&...);
 
- 	template<class... Args>
+	 template<class... Args>
  	v8toolkit::V8ClassWrapper<T>& add_constructor(Args&&...);
 
 	void finalize(bool wrap_as_most_derived = false);
@@ -442,7 +442,7 @@ private:
 							   v8::PropertyCallbackInfo<void> const & info) {
 
 	    auto isolate = info.GetIsolate();
-	    v8::Local<v8::Object> self = info.Holder();		   
+	    v8::Local<v8::Object> self = info.Holder();
 	    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 	    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
@@ -454,7 +454,7 @@ private:
 
 	    // call any registered change callbacks
 	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(self, *v8::String::Utf8Value(property), value);
-        
+
 	}
 
 
@@ -469,21 +469,21 @@ private:
 	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
 	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		auto isolate = args.GetIsolate();
-        
+
 		T * new_cpp_object = nullptr;
 		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
-        
+
 		CallCallable<decltype(constructor)>()(constructor, args);
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 #endif
 
-		// if the object was created by calling new in javascript, it should be deleted when the garbage collector 
+		// if the object was created by calling new in javascript, it should be deleted when the garbage collector
 		//   GC's the javascript object, there should be no c++ references to it
 		auto & deleter = *v8toolkit::V8ClassWrapper<T>::get_instance(isolate).destructor_behavior_delete;
 		initialize_new_js_object(isolate, args.This(), new_cpp_object, deleter);
-		
+
 		// // return the object to the javascript caller
 		args.GetReturnValue().Set(args.This());
 	}
@@ -559,10 +559,10 @@ public:
         }
 		assert(js_object->InternalFieldCount() >= 1);
 	    js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
-		
+
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
-		
+
 		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior]() {
 			destructor_behavior(isolate, cpp_object);
 		});
@@ -700,11 +700,11 @@ public:
 	    V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParent>();
 	}
 
-	
+
 	if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
 	    fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
 		   demangle<T>().c_str(), demangle<ParentType>().c_str());
-		   
+
 	}
         assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
 //	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
@@ -732,15 +732,15 @@ public:
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
 
 		check_if_constructor_name_used(js_constructor_name);
-	    
+
 	    auto constructor_template =
 		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
 						v8::Local<v8::Value>());
-	    
+
 	    // Add the constructor function to the parent object template (often the global template)
 //	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
-	    
+
 	    return *this;
 	}
 
@@ -758,17 +758,17 @@ public:
         if (global_name_conflicts(js_name)) {
             throw V8Exception(this->isolate, "name conflicts with global names (bug: this ignores if your parent template isn't the global object)");
         }
-	    
+
 	    auto non_constructor_template =
 		make_wrapping_function_template([](const v8::FunctionCallbackInfo<v8::Value>& args)->void{
 			throw V8Exception(args.GetIsolate(), "You cannot create an object of this type");
 		    },
 		    v8::Local<v8::Value>());
-	    
+
 	    // Add the constructor function to the parent object template (often the global template)
 //	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
-	    
+
 	    return *this;
 	    
 	}
@@ -806,7 +806,7 @@ public:
             fprintf(stderr, "Found existing javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit::demangle<T>().c_str());
 #endif
 			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
-			
+
 		} else {
 
             V8TOOLKIT_DEBUG("Creating new javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit::demangle<T>().c_str());
@@ -889,9 +889,9 @@ public:
 						       method_name.c_str(),
 						       static_method_function_template);
 		};
-		
+
 		this->static_method_adders.emplace_back(static_method_adder);
-		
+
 		return *this;
 	};
 
@@ -913,7 +913,7 @@ public:
 
 		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
 											     callable, method_name);
-		    
+
 //		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
 		    constructor_function_template->Set(this->isolate,
 						       method_name.c_str(),
@@ -956,14 +956,14 @@ public:
 	{
 
 	    assert(this->finalized == false);
-	    
+
 	    if (!std::is_const<T>::value) {
 			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).
 				template add_member_readonly<std::add_const_t<MemberType>, MemberClass, member>(member_name);
 	    }
-	    
+
 	    this->check_if_name_used(member_name);
-	    
+
 	    // store a function for adding the member on to an object template in the future
 	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
@@ -984,19 +984,19 @@ public:
 	{
 	    // make sure to be using the const version even if it's not passed in
 	    using ConstMemberType = std::add_const_t<MemberType>;
-	    
+
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
 	    if (!std::is_const<T>::value) {
 		    V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).template add_member_readonly<ConstMemberType, MemberClass, member>(member_name);
 	    }
 
 	    assert(this->finalized == false);
-	    
+
 	    this->check_if_name_used(member_name);
-	    
+
 	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
-		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()), 
+		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
 						      _getter_helper<MemberType, MemberClass, member>,
 						      0);
 		});
@@ -1070,8 +1070,8 @@ public:
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
 	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head, Tail...)> method) {
-		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_fake_method(method_name, method);
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
+		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate)._add_fake_method(method_name, method);
 	};
 
 
@@ -1079,15 +1079,38 @@ public:
 	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
 	 */
 	template<class R, class Head, class... Tail, std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head, Tail...)> method) {
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
 		// nothing to do here
 	};
 
 
-    template<class R, class... Args>
-	void add_method(const std::string & method_name, func::function<R(T*, Args...)> & method) {
+	/**
+	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
+	 *   the method on the const type
+	 * @param method_name JavaScript name to expose this method as
+	 * @param method method to call when JavaScript function invoked
+	 */
+    template<class R, class Head, class... Args,
+	std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
+					 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
+	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method) {
 		_add_fake_method(method_name, method);
 	}
+
+	/**
+	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
+	 *   the method on the const type
+	 * @param method_name JavaScript name to expose this method as
+	 * @param method method to call when JavaScript function invoked
+	 */
+	template<class R, class Head, class... Args,
+		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
+						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
+	void add_method(const std::string & method_name, R(*method)(Head, Args...)) {
+
+		_add_fake_method(method_name, func::function<R(Head, Args...)>(method));
+	}
+
 
 
 	/**
@@ -1112,7 +1135,9 @@ public:
 	}
 
 
-	template<class R, class Head, class... Tail>
+	template<class R, class Head, class... Tail,
+		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
+						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, std::remove_const_t<T>>::value, int> = 0>
 	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method)
 	{
 		assert(this->finalized == false);

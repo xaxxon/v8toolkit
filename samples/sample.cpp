@@ -132,12 +132,13 @@ struct Line {
     Point & get_point(){return this->p;}
     Point get_rvalue_point(){return Point();}
     void some_method(int){}
-    std::string echo(const std::string & input){printf("In echo"); return input;}
+    std::string echo(const std::string & input) const {printf("In echo"); return input;}
     void throw_exception(){throw std::exception();}
     static int static_method(float){return 42;}
     void takes_function(std::function<Foo&()>){}
     void takes_const_ref_fundamental(const int & i) {}
     void takes_ref_fundamental(int & i) {}
+    Line const & get_const_version(){return *this;}
 
     void take_point(Point && point){p = std::move(point);}
     void take_map(map<string, int> && new_map){map<string, int> my_map(std::move(new_map));}
@@ -165,6 +166,15 @@ struct Line {
 
 
 };
+
+std::string line_fake_method(Line * l) {
+    return "line_fake_method";
+}
+
+std::string const_line_fake_method(Line const * l) {
+    return "const_line_fake_method";
+}
+
 
 
 
@@ -302,7 +312,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
-            wrapped_line.add_method("fake_method", [](Line * line){
+            wrapped_line.add_method("fake_method", [](Line const * line){
                 printf("HI");
                 return line->echo("line echo called from fake_method");
             });
@@ -318,6 +328,11 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("take_unique_int_ref", &Line::take_unique_int_ref);
             wrapped_line.add_method("map_of_point_refs", &Line::map_of_point_refs);
             wrapped_line.add_method("map_of_point_pointers", &Line::map_of_point_pointers);
+
+            wrapped_line.add_method("line_fake_method", line_fake_method);
+            wrapped_line.add_method("const_line_fake_method", const_line_fake_method);
+
+            wrapped_line.add_method("get_const_version", &Line::get_const_version);
 
             got_duplicate_name_exception = false;
             try {
@@ -510,6 +525,13 @@ int main(int argc, char* argv[])
                                                                                    "l = new Line(); l.map_of_point_pointers({thing: new Point()});")).ToLocalChecked();
                 (void) script->Run(context);
             }
+
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "l = new Line(); println(l.line_fake_method()); const_l = l.get_const_version(); println(const_l.const_line_fake_method());")).ToLocalChecked();
+                (void) script->Run(context);
+            }
+
 
 
             Foo most_derived_foo_test;
