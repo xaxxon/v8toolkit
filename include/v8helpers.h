@@ -293,11 +293,10 @@ template<class Callable>
 void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, Callable callable) {
     
     if (value->IsArray()) {
-        auto array = v8::Object::Cast(*value);
-        int i = 0;
-        while(array->Has(context, i).FromMaybe(false)) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+	auto length = get_array_length(context->GetIsolate(), array);
+	for(int i = 0; i < length; i++) {
             callable(array->Get(context, i).ToLocalChecked());
-            i++;
         }
     } else {
         callable(value);

@@ -785,7 +785,7 @@ public:
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false)
 	{
 		auto isolate = this->isolate;
-
+		assert(existing_cpp_object != nullptr);
 
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
 	    //*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
@@ -1719,7 +1719,10 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 
 	V8TOOLKIT_DEBUG("cast to native\n");
 	if(!value->IsObject()){
-		fprintf(stderr, "CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+		V8TOOLKIT_DEBUG("CastToNative failed for type: %s (%s)\n", type_details<T>().c_str(), *v8::String::Utf8Value(value));
+		v8toolkit::print_v8_value_details(value);
+		V8TOOLKIT_DEBUG("stringified value: %s\n", stringify_value(isolate, value).c_str());
+
 		throw CastException(fmt::format("No specialized CastToNative found and value was not a Javascript Object: {}", demangle<T>()));
 	}
 	auto object = v8::Object::Cast(*value);
