@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
             wrapped_line.add_method("fake_method", [](Line const * line){
-                printf("HI");
+                printf("const-ok lambda fake_method");
                 return line->echo("line echo called from fake_method");
             });
 
@@ -527,8 +527,9 @@ int main(int argc, char* argv[])
             }
 
             {
+                // test const/non-const lambda and "normal function" fake methods
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
-                                                                                   "l = new Line(); println(l.line_fake_method()); const_l = l.get_const_version(); println(const_l.const_line_fake_method());")).ToLocalChecked();
+                                                                                   "l = new Line(); println(l.line_fake_method()); l.fake_method(); const_l = l.get_const_version(); println(const_l.const_line_fake_method());const_l.fake_method();")).ToLocalChecked();
                 (void) script->Run(context);
             }
 

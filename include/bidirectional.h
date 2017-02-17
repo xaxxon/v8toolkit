@@ -540,16 +540,16 @@ virtual return_type name(t1 p1) override {\
     JS_ACCESS_CORE(return_type, name, p1)\
 }
 
-#define JS_ACCESS_2(return_type, name, t1, t2)\
-virtual return_type name(t1 p1, t2 p2) override {\
+#define JS_ACCESS_2(return_type, name, t1, t2) \
+virtual return_type name(t1 p1, t2 p2) override { \
     v8toolkit::TypeList<t1, t2> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2)\
+    JS_ACCESS_CORE(return_type, name, p1, p2) \
 }
 
 #define JS_ACCESS_3(return_type, name, t1, t2, t3)\
-virtual return_type name(t1 p1, t2 p2, t3 p3) override {\
-     v8toolkit::TypeList<t1, t2, t3> typelist; \
-JS_ACCESS_CORE(return_type, name, p1, p2, p3)\
+virtual return_type name(t1 p1, t2 p2, t3 p3) override { \
+    v8toolkit::TypeList<t1, t2, t3> typelist; \
+    JS_ACCESS_CORE(return_type, name, p1, p2, p3) \
 }
 
 #define JS_ACCESS_4(return_type, name, t1, t2, t3, t4)\

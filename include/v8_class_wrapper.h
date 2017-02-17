@@ -1165,7 +1165,10 @@ public:
 
 				auto holder = info.Holder();
 
+                // it should not be 0, and right now there is no known way for it being more than 1.
+                assert(holder->InternalFieldCount() == 1);
 
+                // a crash here may have something to do with a native override of toString
 				v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(holder->GetInternalField(0));
 				WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
