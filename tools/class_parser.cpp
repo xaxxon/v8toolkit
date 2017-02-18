@@ -2236,6 +2236,17 @@ namespace {
 
             std::string full_method_name(method->getQualifiedNameAsString());
             std::string short_method_name(method->getNameAsString());
+
+            Annotations annotations(method);
+
+            // check to see if there's a name annotation on the method giving it a different JavaScript name
+            auto annotated_custom_name = annotations.get_regex(
+                "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+            if (!annotated_custom_name.empty()) {
+                short_method_name = annotated_custom_name[0];
+            }
+
+
             if (print_logging || PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
             //            if (print_logging) cerr << "changing method name from " << full_method_name << " to ";
 //
@@ -2312,7 +2323,6 @@ namespace {
 
 
 
-            Annotations annotations(method);
             if (annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
                 // cerr << "has extend wrapper string" << endl;
                 if (!method->isStatic()) {

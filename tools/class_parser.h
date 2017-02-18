@@ -59,6 +59,14 @@
 
 
 /**
+ * Overrides the default name to be the name specified instead
+ */
+#define V8TOOLKIT_USE_NAME_PREFIX "v8toolkit_use_name_"
+#define V8TOOLKIT_USE_NAME(name) \
+    __attribute__((annotate(V8TOOLKIT_USE_NAME_PREFIX #name)))
+
+
+/**
  * Use this to create a JavaScript constructor function with the specified name
  */
 #define V8TOOLKIT_CONSTRUCTOR_PREFIX "v8toolkit_bidirectional_constructor_"
