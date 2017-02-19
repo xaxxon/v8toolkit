@@ -15,3 +15,10 @@ gclient sync (from $HOME)
 
 
 No support for pointer to l/r-value ref qualified member function
+
+
+Need to change debugging to use v8's built-in debugging
+
+
+detect default parameters in c++ and use them in the javascript callbacks
+

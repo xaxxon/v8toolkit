@@ -785,7 +785,8 @@ public:
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false)
 	{
 		auto isolate = this->isolate;
-		assert(existing_cpp_object != nullptr);
+
+        assert(existing_cpp_object != nullptr);
 
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
 	    //*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
