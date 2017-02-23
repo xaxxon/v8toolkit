@@ -1654,12 +1654,24 @@ namespace {
     }
 
 
-    vector<QualType> get_method_param_qual_types(const CXXMethodDecl * method,
+    vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instance,
+                                                 const CXXMethodDecl * method,
                                                  const string & annotation = "") {
         vector<QualType> results;
         auto parameter_count = method->getNumParams();
         for (unsigned int i = 0; i < parameter_count; i++) {
             auto param_decl = method->getParamDecl(i);
+
+            if (param_decl->hasDefaultArg()) {
+                auto default_argument = param_decl->getDefaultArg();
+                auto source_range = default_argument->getSourceRange();
+                auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
+                llvm::report_fatal_error(fmt::format("Got default argument: {}", source), false);
+
+
+
+            }
+
             Annotations annotations(param_decl);
             if (annotation != "" && !annotations.has(annotation)) {
                 if (print_logging) cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
@@ -1691,7 +1703,7 @@ namespace {
                                       const string & annotation = "") {
         std::stringstream result;
         bool first_param = true;
-        auto type_list = get_method_param_qual_types(method, annotation);
+        auto type_list = get_method_param_qual_types(compiler_instance, method, annotation);
 
         if (!type_list.empty() && add_leading_comma) {
             result << ", ";
@@ -1997,7 +2009,7 @@ namespace {
             result << method_name.str();
 
             if (num_params > 0) {
-                auto types = get_method_param_qual_types(method);
+                auto types = get_method_param_qual_types(this->compiler_instance, method);
                 vector<string>type_names;
                 for (auto & type : types) {
                     type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
@@ -2022,9 +2034,7 @@ namespace {
 
         }
 
-        void
-
-        generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
+        void generate_bindings(const std::vector<unique_ptr<WrappedClass>> & wrapped_classes) {
             std::stringstream result;
             auto matches = wrapped_class.annotations.get_regex("v8toolkit_generate_(.*)");
             if (wrapped_class.annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
@@ -2043,7 +2053,7 @@ namespace {
                     got_constructor = true;
                     result << get_method_parameters(compiler_instance, wrapped_class, constructor_decl, true, true);
                     constructor_parameter_count = constructor_decl->getNumParams();
-                    constructor_parameters = get_method_param_qual_types(constructor_decl);
+                    constructor_parameters = get_method_param_qual_types(this->compiler_instance,l constructor_decl);
 
                 }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
                 if (!got_constructor) {

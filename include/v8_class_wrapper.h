@@ -474,7 +474,7 @@ private:
 		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
 
-		CallCallable<decltype(constructor)>()(constructor, args);
+		CallCallable<decltype(constructor)>()(constructor, args, std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>{});
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "In v8_constructor and created new cpp object at %p\n", new_cpp_object);
 #endif
@@ -1012,7 +1012,7 @@ public:
 			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
 	{
-	    return _add_method("unused name", method, true);
+	    return _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}
 
 
@@ -1022,44 +1022,51 @@ public:
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
     V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
         if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>());
         }
-        return _add_method(method_name, method);
+        return _add_method(method_name, method, TypeList<Args...>());
     }
+
+
     template<class R, class TBase, class... Args,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
     V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const &) {
         if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>());
         }
-        return _add_method(method_name, method);
+        return _add_method(method_name, method, TypeList<Args...>());
     }
+
+
     template<class R, class TBase, class... Args,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
     void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&) {
         static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
 
-    
+
 	/**
 	* Adds the ability to call the specified class instance method on an object of this type
 	*/
-	template<class R, class TBase, class... Args,
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
 			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
+	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...), DefaultArgs const & default_args = DefaultArgs())
 	{
-		return _add_method(method_name, method);
+		return _add_method(method_name, method, TypeList<Args...>(), default_args);
 	}
-    template<class R, class TBase, class... Args,
+
+
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) &)
+    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) &, DefaultArgs const & default_args = DefaultArgs())
     {
-        return _add_method(method_name, method);
+        return _add_method(method_name, method, TypeList<Args...>(), default_args);
     }
 
-    template<class R, class TBase, class... Args,
+
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&)
+    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&, DefaultArgs const & default_args = DefaultArgs())
     {
         static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
@@ -1070,8 +1077,10 @@ public:
     /**
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
-	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
+	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
+        std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+                                        DefaultArgs const & default_args = DefaultArgs()) {
 		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate)._add_fake_method(method_name, method);
 	};
 
@@ -1079,8 +1088,10 @@ public:
 	/**
 	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
 	 */
-	template<class R, class Head, class... Tail, std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
+	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
+        std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+                                        DefaultArgs const & default_args = DefaultArgs()) {
 		// nothing to do here
 	};
 
@@ -1091,10 +1102,11 @@ public:
 	 * @param method_name JavaScript name to expose this method as
 	 * @param method method to call when JavaScript function invoked
 	 */
-    template<class R, class Head, class... Args,
+    template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
 	std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 					 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method) {
+	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method,
+                    DefaultArgs const & default_args = DefaultArgs()) {
 		_add_fake_method(method_name, method);
 	}
 
@@ -1104,10 +1116,11 @@ public:
 	 * @param method_name JavaScript name to expose this method as
 	 * @param method method to call when JavaScript function invoked
 	 */
-	template<class R, class Head, class... Args,
+	template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
 		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, R(*method)(Head, Args...)) {
+	void add_method(const std::string & method_name, R(*method)(Head, Args...),
+                    DefaultArgs const & default_args = DefaultArgs()) {
 
 		_add_fake_method(method_name, func::function<R(Head, Args...)>(method));
 	}
@@ -1117,8 +1130,9 @@ public:
 	/**
 	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
 	 */
-	template<class Callback>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
+	template<class Callback, class DefaultArgs = std::tuple<>   >
+	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback,
+                                   DefaultArgs const & default_args = DefaultArgs()) {
 		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
 		this->_add_fake_method(method_name, f);
 
@@ -1192,7 +1206,7 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
+                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>()); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1221,16 +1235,19 @@ public:
 	// makes a single function to be run when the wrapping javascript object is called with ()
 	MethodAdderData callable_adder;
 
-    template<class M>
-	V8ClassWrapper<T> & _add_method(const std::string & method_name, M method, bool add_as_callable_object_callback = false)
+    template<class M, class... Args, class... DefaultArgTypes>
+	V8ClassWrapper<T> & _add_method(const std::string & method_name,
+                                    M method,
+                                    TypeList<Args...> const &,
+                                    std::tuple<DefaultArgTypes...> const & default_args_tuple = std::tuple<DefaultArgTypes...>(),
+                                    bool add_as_callable_object_callback = false)
     {
         assert(this->finalized == false);
 
 		this->check_if_name_used(method_name);
 
-
     		MethodAdderData method_adder_data = MethodAdderData{method_name,
-                                                 StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
+                                                 StdFunctionCallbackType([this, default_args_tuple, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
                 // get the behind-the-scenes c++ object
@@ -1304,7 +1321,9 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-                    CallCallable<decltype(bound_method)>()(bound_method, info);
+                    std::cerr << fmt::format("HERE!!!") << std::endl;
+                    CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, default_args_tuple
+                     );
                 } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;

@@ -133,7 +133,7 @@ public:
      * @param b some character
      * @return some made up number
      */
-   int foo_int_method(char* a, char b){return 4;}
+   int foo_int_method(char* a, char b = 'a'){return 4;}
    virtual void fooparent_virtual_tobeoverridden();
    static int foo_static_method(const int *){return 8;}
    const Using2 & using_return_type_test();

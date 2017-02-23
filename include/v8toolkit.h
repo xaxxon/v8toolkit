@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <tuple>
 
 #include <string.h>
 
@@ -33,6 +34,15 @@
 namespace v8toolkit {
 
 
+    template<bool condition, class IfTrue, class IfFalse>
+    std::enable_if_t<condition> compile_time_if(IfTrue const & if_true, IfFalse const & = []{}) {
+        if_true();
+    }
+
+    template<bool condition, class IfTrue, class IfFalse>
+    std::enable_if_t<!condition> compile_time_if(IfTrue const &, IfFalse const & if_false = []{}) {
+        if_false();
+    }
 
 
     /**
@@ -300,14 +310,6 @@ struct Stuff : public StuffBase {
 };
 
 
-/**
-* Class for turning a function parameter list into a parameter pack useful for calling the function
- * depth is the current index into the FunctionCallbackInfo object's parameter list
- * Function is the complete type of the function to call
- * TypeList is the types of the remaining parameterse to parse - whe this is empty the function can be called
-*/
-template<class T, class = void>
-struct ParameterBuilder;
 
 template <class T, class = void>
 struct cast_to_native_no_value {
@@ -326,13 +328,34 @@ struct cast_to_native_no_value<T, std::enable_if_t<std::result_of_t<CastToNative
     }
 };
 
+
+
+
+/**
+* Class for turning a function parameter list into a parameter pack useful for calling the function
+ * depth is the current index into the FunctionCallbackInfo object's parameter list
+ * Function is the complete type of the function to call
+ * TypeList is the types of the remaining parameterse to parse - whe this is empty the function can be called
+*/
+template<class T, class = void>
+struct ParameterBuilder;
+
 /**
 * Specialization that deals with pointers to primitive types by creating a holder that the address of can be passed along
 */
 template<class T>
 struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
-    T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+
+
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("PB1") << std::endl;
         if (i >= info.Length()) {
+            if (default_arg_position >= 0) {
+                stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(),
+                                                                                  std::get<default_arg_position>(default_args_tuple) )));
+            }
             stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>()(info, i++)));
         } else {
             stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
@@ -356,7 +379,12 @@ struct ParameterBuilder<T,
         >::value // end of is_reference
         >> {
     using NoRefT = std::remove_reference_t<T>;
-    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+
+
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb2") << std::endl;
         if (i >= info.Length()) {
             return cast_to_native_no_value<NoRefT>()(info, i++);
         } else {
@@ -364,6 +392,21 @@ struct ParameterBuilder<T,
         }
     }
 };
+
+
+template <int default_arg_position, class NoRefT, class DefaultArgsTuple>
+std::enable_if_t<default_arg_position < 0> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                     DefaultArgsTuple const & default_args_tuple) {
+    stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(NoRefT(cast_to_native_no_value<NoRefT>()(info, i++))));
+
+}
+
+template <int default_arg_position, class NoRefT, class DefaultArgsTuple>
+std::enable_if_t<(default_arg_position >= 0)> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                     DefaultArgsTuple const & default_args_tuple) {
+    stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(NoRefT(std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)))));
+
+}
 
 
 template<class T>
@@ -378,10 +421,50 @@ struct ParameterBuilder<T,
         >> {
     using NoRefT = std::remove_reference_t<T>;
     using NoConstRefT = std::remove_const_t<NoRefT>;
-    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+
+
+    template<int default_arg_position, class DefaultArgsTuple>
+    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb3") << std::endl;
+        if (i >= info.Length()) {
+            set_unspecified_parameter_value<default_arg_position, NoRefT>(info, i, stuff, default_args_tuple);
+//            boost::hana::eval_if((std::is_same<DefaultArgsTuple, std::tuple<> >::value || default_arg_position < 0),
+//                [&](auto _){
+//                    stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(_(info), i++)));
+//                },
+//                [&](auto _){
+//                    _(
+//                    stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(
+//                        CastToNative<NoRefT>()(info.GetIsolate(),
+//                                               std::get<(std::size_t)default_arg_position>(default_args_tuple) ))));
+//                }
+//            );
+//            if (default_arg_position >= 0) {
+//                stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(
+//                    CastToNative<NoRefT>()(info.GetIsolate(),
+//                                           std::get<default_arg_position < 0 ? 0 : default_arg_position>(default_args_tuple) )));
+//            }
+//
+//            stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
+        } else {
+
+            // if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
+            // IF YOU HAVE AN UNCOPYABLE TYPE SHOWING UP HERE make sure you haven't overridden the CastToNative type for it
+            //   to not return a reference - can be a problem with "shortcut" CastToNative implementations instead of
+            //   new MyType() constructors in javascript.
+            stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
+        }
+        return *static_cast<Stuff<NoRefT> &>(*stuff.back()).get();
+    }
+
+    template<int default_arg_position>
+    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   std::tuple<> const & default_args_tuple =  std::tuple<>()) {
+        std::cerr << fmt::format("pb3") << std::endl;
         if (i >= info.Length()) {
 
-                stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
+            stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
         } else {
 
             // if CastToNative is set remove_const, then you can have a const-wrapped object that won't cast properly
@@ -398,8 +481,11 @@ struct ParameterBuilder<T,
 template<>
 struct ParameterBuilder<char *> {
 
-    char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::string string;
+        std::cerr << fmt::format("pb4") << std::endl;
         if (i >= info.Length()) {
             // leave the string empty
         } else {
@@ -422,22 +508,27 @@ struct ParameterBuilder<char *> {
      using ResultType = Container<char *>;
      using IntermediaryType = std::result_of_t<CastToNative<char *>(v8::Isolate *, v8::Local<v8::Value>)>;
      using DataHolderType = Container<IntermediaryType>;
-     ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
-	 if (i >= info.Length()) {
-//         static_assert(false, "implement me");
-	     throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
-	 }
-	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
-	 auto data_holder = stuff.get();
-
-	 stuffs.emplace_back(std::move(stuff));
 
 
-	 ResultType result;
-	 for (auto & str : data_holder) {
-	     result.push_back(str->c_str());
-	 }
-	 return result;
+         template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+     ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
+                           DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+             std::cerr << fmt::format("pb5") << std::endl;
+         if (i >= info.Length()) {
+    //         static_assert(false, "implement me");
+             throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
+         }
+         Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
+         auto data_holder = stuff.get();
+
+         stuffs.emplace_back(std::move(stuff));
+
+
+         ResultType result;
+         for (auto & str : data_holder) {
+             result.push_back(str->c_str());
+         }
+         return result;
      }
  };
 
@@ -452,33 +543,43 @@ struct ParameterBuilder<char *> {
      using IntermediaryType = std::result_of_t<CastToNative<const char *>(v8::Isolate *, v8::Local<v8::Value>)>;
      using DataHolderType = Container<IntermediaryType>;
 
-     ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs) {
-	 if (i >= info.Length()) {
+
+
+         template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+         ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
+                           DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+             std::cerr << fmt::format("pb6") << std::endl;
+             if (i >= info.Length()) {
 //         static_assert(false, "implement me");
 
-         throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
-	 }
-	 Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
-	 auto data_holder = stuff.get();
+                 throw InvalidCallException(fmt::format(
+                     "Not enough javascript parameters for function call - requires {} but only {} were specified",
+                     i + 1 + sizeof(Rest)..., info.Length()));
+             }
+             Stuff < DataHolderType > stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
+             auto data_holder = stuff.get();
 
-	 stuffs.emplace_back(std::make_unique<Stuff<DataHolderType>>(std::move(stuff)));
+             stuffs.emplace_back(std::make_unique<Stuff < DataHolderType>>
+             (std::move(stuff)));
 
 
-	 ResultType result;
-	 for (auto & str : *data_holder) {
-	     result.push_back(str.get());
-	 }
-	 return result;
-     }
+             ResultType result;
+             for (auto &str : *data_holder) {
+                 result.push_back(str.get());
+             }
+             return result;
+         }
  };
 
 
 // const char *
 template<>
 struct ParameterBuilder<const char *> {
-    const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::string string;
-
+std::cerr << fmt::format("pb7") << std::endl;
         // if there is a value, use it, otherwise just use empty string
         if (i < info.Length()) {
 //            static_assert(false, "implement me");
@@ -495,7 +596,13 @@ struct ParameterBuilder<const char *> {
 
 template<>
 struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
-    const v8::FunctionCallbackInfo<v8::Value> & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    const v8::FunctionCallbackInfo<v8::Value> & operator()(const v8::FunctionCallbackInfo<v8::Value> & info,
+                                                           int & i,
+                                                           std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                                           DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb8") << std::endl;
         return info;
     }
 };
@@ -503,7 +610,10 @@ struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
 
 template<>
 struct ParameterBuilder<v8::Isolate *> {
-    v8::Isolate * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    v8::Isolate * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                             DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb10") << std::endl;
         return info.GetIsolate();
     }
 };
@@ -511,7 +621,10 @@ struct ParameterBuilder<v8::Isolate *> {
 
 template<>
 struct ParameterBuilder<v8::Local<v8::Context>> {
-    v8::Local<v8::Context> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    v8::Local<v8::Context> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb11") << std::endl;
         return info.GetIsolate()->GetCurrentContext();
     }
 };
@@ -519,7 +632,12 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
 
 template<>
 struct ParameterBuilder<v8::Local<v8::Object>> {
-    v8::Local<v8::Object> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff) {
+
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    v8::Local<v8::Object> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+                                     std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        std::cerr << fmt::format("pb12") << std::endl;
         return info.This();
     }
 };
@@ -546,20 +664,37 @@ template<class Function, class... T>
 struct CallCallable;
 
 
-template<class ReturnType, class... Args, class InitialArg>
+/**
+ * Call a function where the first argument is specified differently for "fake methods" - functions
+ * that aren't proper member instance functions but act like it by taking a pointer to "this" as their first
+ * explicit parameter
+ */
+template<class ReturnType, class InitialArg, class... Args>
 struct CallCallable<func::function<ReturnType(InitialArg, Args...)>, InitialArg> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
+    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
-                    InitialArg initial_arg) {
+                    InitialArg initial_arg,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
+
+        constexpr int user_parameter_count = sizeof...(Args);
+        constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+
+        // while this is negative, no default argument is available
+        constexpr int default_parameter_position = default_arg_count - user_parameter_count - 1;
+
         std::vector<std::unique_ptr<StuffBase>> stuff;
         info.GetReturnValue().
 	    Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
 						  run_function(function, info, std::forward<InitialArg>(initial_arg),
-							       std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...)));
+							       std::forward<Args>(
+                                       ParameterBuilder<
+                                           Args>().template operator()<ArgIndexes - default_arg_count>(info, i, stuff, default_args_tuple))...)));
     }
 };
 
@@ -568,58 +703,98 @@ template<class InitialArg, class... Args>
 struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
 
-
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
-                    InitialArg initial_arg) {
+                    InitialArg initial_arg,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
+        constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+
         std::vector<std::unique_ptr<StuffBase>> stuff;
         run_function(function, info, std::forward<InitialArg>(initial_arg),
-                 std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
+                 std::forward<Args>(ParameterBuilder<Args>().template operator()<ArgIndexes - default_arg_count - 1>(info, i, stuff,
+                                                             default_args_tuple))...);
+
     }
 };
 
 
+/**
+ * CallCallable for a normal function which has a non-void return type
+ */
 template<class ReturnType, class... Args>
 struct CallCallable<func::function<ReturnType(Args...)>> {
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-    template<class... Ts>
+    template<class... Ts, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<ReturnType(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple(),
                     bool return_most_derived = false) {
 
         int i = 0;
+
+        constexpr auto arg_count = sizeof...(Args);
+        constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+
+
         std::vector<std::unique_ptr<StuffBase>> stuff;
 
-            info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                        run_function(function, info, std::forward<Args>(
-                                                                            ParameterBuilder<Args>()(info, i,
-                                                                                                     stuff))...)));
+        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+                                                                    run_function(function, info, std::forward<Args>(
+                                                                        ParameterBuilder<Args>().template operator()
+                                                                        <(int)(-arg_count + ArgIndexes + default_arg_count)> (info, i,
+                                                                                                 stuff, default_args_tuple
+                                                                        ))...)));
     }
 };
 
 
+/**
+ * call callable for a normal function with a void return
+ */
 template<class... Args>
 struct CallCallable<func::function<void(Args...)>> {
 
-
+    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(Args...)> & function,
-                    const v8::FunctionCallbackInfo<v8::Value> & info) {
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
+
+        int user_parameter_count = sizeof...(Args);
+        constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+
+        // while this is negative, no default argument is available
+        int default_parameter_position = default_arg_count - user_parameter_count - 1;
+
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        run_function(function, info, std::forward<Args>(ParameterBuilder<Args>()(info, i, stuff))...);
+        run_function(function, info,
+                     std::forward<Args>(ParameterBuilder<Args>().template operator()<ArgIndexes>(info, i, stuff, default_args_tuple))...);
     }
 };
 
 
+/**
+ * CallCallable for a function directly taking a v8::FunctionCallbackInfo
+ * This requires the function to do everything itself in terms of parsing parameters
+ */
 template<>
 struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
 
+    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)> & function,
-                    const v8::FunctionCallbackInfo<v8::Value> & info) {
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        if (!std::is_same<DefaultArgsTuple, std::tuple<>>::value) {
+            throw InvalidCallException("Cannot have default arguments for function taking a v8::FunctionCallbackInfo object");
+        }
         function(info);
     }
 };
@@ -653,7 +828,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
         FunctionTemplateData<R, Args...> & data = *(FunctionTemplateData<R, Args...> *)v8::External::Cast(*(info.Data()))->Value();
 
         try {
-            CallCallable<decltype(data.callable)>()(data.callable, info);
+            CallCallable<decltype(data.callable)>()(data.callable, info, std::index_sequence_for<Args...>{});
 
         } catch (std::exception & e) {
 

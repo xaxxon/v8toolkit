@@ -57,7 +57,7 @@ public:
     Point & operator=(Point&&){cerr << "Point move assignment called" << endl; return *this;}
     ~Point(){instance_count--;}
     int x_, y_;
-    int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
+    int thing(int z, char zz = 'a'){if (SAMPLE_DEBUG) fprintf(stderr, "In Point::Thing with this %p x: %d y: %d and input value z = %d zz = %c\n", this, this->x_, this->y_, z, zz); return z*2;}
     int overloaded_method(char * foo){return 0;}
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
@@ -235,7 +235,8 @@ int main(int argc, char* argv[])
             //wrapped_point.add_method("rvalue_const_qualified_method", &Point::rvalue_const_qualified_method); // not supported
             wrapped_point.add_method("lvalue_const_qualified_method", &Point::lvalue_const_qualified_method);
             wrapped_point.add_static_method("", &Point::static_method_same_name);
-            wrapped_point.add_method("thing", &Point::thing);
+
+            wrapped_point.add_method("thing", &Point::thing, std::tuple<char>('f'));
 	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
 
@@ -396,7 +397,7 @@ int main(int argc, char* argv[])
                 auto result = script->Run(context);
                 print_maybe_value(result);
             }
-
+#if 0
             {
                 v8::Local<v8::Script> script_for_static_method = 
                         v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "println(Line.static_method(42));")).ToLocalChecked();
@@ -463,6 +464,26 @@ int main(int argc, char* argv[])
                 (void)script->Run(context);
 
             }
+#endif
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   // decimal ascii 100 = 'd'
+                                                                                   "p = new Point(); p.thing(3, 100);")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); p.thing(3);")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+#if 0
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "p = new Point(); println(p[4]);")).ToLocalChecked();
@@ -471,7 +492,7 @@ int main(int argc, char* argv[])
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "p = new Point(); println(p['four']);p['ThisStringDoesNotMatter']= 5; println(p.x);")).ToLocalChecked();
-                (void)script->Run(context);
+                (void)script->Run(context); 
             }
 
             {
@@ -533,7 +554,7 @@ int main(int argc, char* argv[])
                 (void) script->Run(context);
             }
 
-
+#endif
 
             Foo most_derived_foo_test;
             v8::Local<v8::Object> most_derived_fooparent_js_object =
