@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
+
+
 project(v8toolkit)
 set (CMAKE_CXX_STANDARD 14)
 
@@ -47,7 +49,7 @@ if (WIN32)
     set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
 else()
-    set(CXX_COMPILER_FLAGS ${CXX_COMPILER_FLAGS} -Wshadow)
+    set(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} -Wshadow)
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
     set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
 
@@ -169,3 +171,4 @@ add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
 
 
+add_subdirectory(tools)

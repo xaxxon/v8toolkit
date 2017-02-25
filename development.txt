@@ -22,3 +22,11 @@ Need to change debugging to use v8's built-in debugging
 
 detect default parameters in c++ and use them in the javascript callbacks
 
+add default parameter text to js-api stubs:
+ * @param {string} [somebody=John Doe] - Somebody's name.
+
+ make tools/CMakeLists.txt file build clang library
+
+ change class_parser to build up and use ParsedMethod objects instead of current way
+
+
