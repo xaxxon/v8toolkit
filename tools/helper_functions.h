@@ -37,6 +37,7 @@ extern vector<string> never_include_for_any_file;
 extern string header_for_every_class_wrapper_file;
 extern vector<string> includes_for_every_class_wrapper_file;
 bool has_wrapped_class(const CXXRecordDecl * decl);
+string convert_type_to_jsdoc(std::string const & type_name_input);
 
 
 // how was a wrapped class determined to be a wrapped class?

@@ -146,7 +146,7 @@ public:
    void nested_foo_struct_test(const NestedFooStruct *&);
    void call_helper_callback(HelperClass::Callback);
 
-   HelperClass & do_foo_things(Foo &, HelperClass**&, volatile FooParent *&);
+   HelperClass & do_foo_things(Foo & foo, HelperClass**&, volatile FooParent *&);
 
    float b;
    V8TOOLKIT_SKIP float c;

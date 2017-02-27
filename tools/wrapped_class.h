@@ -6,6 +6,7 @@
 
 #include <sstream>
 
+
 struct WrappedClass {
 
     static vector<WrappedClass *> wrapped_classes;

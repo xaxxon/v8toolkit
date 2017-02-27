@@ -22,8 +22,10 @@ string(REPLACE "\n" " " output_var ${output_var})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic" )
 set(CMAKE_SHARED_LINKER_FLAGS ${output_var})
 
-add_library(class_parser_plugin SHARED class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
-        annotations.cpp class_handler.cpp bidirectional_bindings.cpp ast_consumer.cpp wrapped_class.cpp)
+add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
+        annotations.cpp class_handler.cpp bidirectional_bindings.cpp ast_consumer.cpp wrapped_class.cpp
+        )
+
 cotire(class_parser_plugin)
 
 # how to add the result of this to the compile command?
