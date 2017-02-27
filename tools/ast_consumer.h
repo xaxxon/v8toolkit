@@ -1,60 +1,32 @@
 #pragma once
 
-// Implementation of the ASTConsumer interface for reading an AST produced
-// by the Clang parser. It registers a couple of matchers and runs them on
-// the AST.
+#include "clang.h"
+
+#include "class_handler.h"
+
+
+/**
+ * Defines what will be matched and sent to
+ */
 class MyASTConsumer : public ASTConsumer {
+private:
+
+    // matcher that is parameterized in constructor
+    ast_matchers::MatchFinder Matcher;
+
+    // MatchCallback object called for each element matched by matcher
+    ClassHandler HandlerForClass;
+
+    CompilerInstance & ci;
+
 public:
-    MyASTConsumer(CompilerInstance &CI) :
-        HandlerForClass(CI) {
-
-#ifdef TEMPLATE_INFO_ONLY
-
-        Matcher.addMatcher(decl(anyOf(
-					  classTemplateSpecializationDecl().bind("class"),
-					  cxxMethodDecl().bind("method")
-					  )),
-			       &HandlerForClass);
-
-#else
-        Matcher.addMatcher(cxxRecordDecl(
-            allOf(
-                unless(isDerivedFrom("::v8toolkit::JSWrapper")), // JS-Classes will be completely regenerated
-                anyOf(isStruct(), isClass()),
-                anyOf( // order of these matters.   If a class matches more than one it will only be returned as the first
-
-                    allOf(isDefinition(),
-                          cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
-
-                    // mark a type you control with the wrapped class attribute
-                    allOf(isDefinition(),
-                          unless(matchesName("^::std::")),
-                          cxxRecordDecl(/*hasAttr(attr::Annotate)*/).bind("not std:: class")),
-
-                    // used for marking types not under your control with the wrapped class attribute
-                    allOf(unless(isDefinition()),
-                          unless(matchesName("^::std::")),
-                          cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
-                )
-            )), &HandlerForClass);
-
-        Matcher.addMatcher(namedDecl(allOf(
-            hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
-            unless(matchesName("^::std::")),
-            unless(matchesName("^::__")
-            ))).bind("named decl"),
-                           &HandlerForClass);
-#endif
-
-    }
+    MyASTConsumer(CompilerInstance &CI);
 
     void HandleTranslationUnit(ASTContext &Context) override {
         // Run the matchers when we have the whole TU parsed.
+        // matchers configured in constructor
         Matcher.matchAST(Context);
     }
 
-private:
-    ClassHandler HandlerForClass;
-    MatchFinder Matcher;
 
 };

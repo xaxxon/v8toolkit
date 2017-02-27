@@ -1,12 +1,19 @@
 #pragma once
 
+#include "clang.h"
+
+#include <regex>
+#include <iostream>
+#include <fmt/ostream.h>
+
+
 
 class Annotations {
     set <string> annotations;
 
-    void get_annotations_for_decl(const Decl *decl) {
-        if (!decl) { return; }
-        for (auto attr : decl->getAttrs()) {
+    void get_annotations_for_decl(const Decl * decl_to_check) {
+        if (!decl_to_check) { return; }
+        for (auto attr : decl_to_check->getAttrs()) {
             AnnotateAttr *annotation = dyn_cast<AnnotateAttr>(attr);
             if (annotation) {
                 auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
@@ -20,13 +27,13 @@ class Annotations {
 
 public:
 
-    Annotations(const Decl *decl) {
-        get_annotations_for_decl(decl);
+    Annotations(const Decl *decl_to_check) {
+        get_annotations_for_decl(decl_to_check);
     }
 
 
-    Annotations(const CXXMethodDecl *decl) {
-        get_annotations_for_decl(decl);
+    Annotations(const CXXMethodDecl *decl_to_check) {
+        get_annotations_for_decl(decl_to_check);
 
     }
 
@@ -42,12 +49,12 @@ public:
     }
 
     std::vector <string> get_regex(const string &regex_string) const {
-        auto regex = std::regex(regex_string);
+        auto re = regex(regex_string);
         std::vector <string> results;
 
         for (auto &annotation : annotations) {
             std::smatch matches;
-            if (std::regex_match(annotation, matches, regex)) {
+            if (std::regex_match(annotation, matches, re)) {
                 // printf("GOT %d MATCHES\n", (int)matches.size());
                 if (matches.size() > 1) {
                     results.emplace_back(matches[1]);
@@ -68,6 +75,8 @@ public:
     }
 
 
+    // holds a list of templates and associated annotations.  These annotations will be merged with classes created
+    //   from the template.  This allows metadata associated with all instantiations of a template
     static map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
 
     // any annotations on 'using' statements should be applied to the actual CXXRecordDecl being aliased (the right side)
@@ -78,18 +87,5 @@ public:
     //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
     static map<const CXXRecordDecl *, string> names_for_record_decls;
 
-    Annotations(const CXXRecordDecl *decl) {
-        auto name = get_canonical_name_for_decl(decl);
-        get_annotations_for_decl(decl);
-        cerr << "Making annotations object for " << name << endl;
-        if (auto spec_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
-            cerr << fmt::format("{} is a template, getting any tmeplate annotations available", name) << endl;
-            cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size()
-                 << " annotations available" << endl;
-            merge(annotations_for_class_templates[spec_decl->getSpecializedTemplate()]);
-        } else {
-            cerr << "Not a template" << endl;
-        }
-
-    }
+    Annotations(const CXXRecordDecl *decl_to_check);
 };

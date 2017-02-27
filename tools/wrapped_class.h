@@ -2,8 +2,14 @@
 #pragma once
 
 #include "parsed_method.h"
+#include "annotations.h"
+
+#include <sstream>
 
 struct WrappedClass {
+
+    static vector<WrappedClass *> wrapped_classes;
+
     CXXRecordDecl const * decl = nullptr;
 
     // if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
@@ -13,7 +19,7 @@ struct WrappedClass {
     set<string> include_files;
     int declaration_count = 3;
 
-    set<ParsedMethod *> methods;
+    set<unique_ptr<ParsedMethod>> methods;
     set<string> members;
     set<string> constructors;
     set<string> names;
@@ -214,226 +220,13 @@ struct WrappedClass {
     WrappedClass & operator=(const WrappedClass &) = delete;
 
     // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
-    WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
-        decl(nullptr),
-        class_name(class_name),
-        name_alias(class_name),
-        compiler_instance(compiler_instance),
-        valid(true), // explicitly generated, so must be valid
-        found_method(FOUND_GENERATED)
-    {}
-
-
-    std::string generate_js_stub() {
-        struct MethodParam {
-            string type = "";
-            string name = "";
-            string description = "no description available";
-
-            void convert_type(std::string const & indentation = "") {
-                std::smatch matches;
-                std::cerr << fmt::format("{} converting {}...", indentation, this->type) << std::endl;
-                this->type = regex_replace(type, std::regex("^(struct|class) "), "");
-                for (auto &pair : cpp_to_js_type_conversions) {
-                    if (regex_match(this->type, matches, std::regex(pair.first))) {
-                        std::cerr << fmt::format("{} matched {}, converting to {}", indentation, pair.first, pair.second) << std::endl;
-                        auto new_type = pair.second; // need a temp because the regex matches point into the current this->type
-
-                        // look for $1, $2, etc in resplacement and substitute in the matching position
-                        for (size_t i = 1; i < matches.size(); i++) {
-                            // recursively convert the matched type
-                            MethodParam mp;
-                            mp.type = matches[i].str();
-                            mp.convert_type(indentation + "   ");
-                            new_type = std::regex_replace(new_type, std::regex(fmt::format("[$]{}", i)),
-                                                          mp.type);
-                        }
-                        this->type = new_type;
-                        std::cerr << fmt::format("{}... final conversion to: {}", indentation, this->type) << std::endl;
-                    }
-                }
-            }
-        }; //  MethodParam
-
-        stringstream result;
-        string indentation = "    ";
-
-        result << "/**\n";
-        result << fmt::format(" * @class {}\n", this->name_alias);
-
-        for (auto field : this->fields) {
-            MethodParam field_type;
-            field_type.name = field->getNameAsString();
-            field_type.type = field->getType().getAsString();
-            field_type.convert_type();
-            result << fmt::format(" * @property {{{}}} {} \n", field_type.type, field_type.name);
-        }
-        result << fmt::format(" **/\n", indentation);
-
-
-        result << fmt::format("class {}", this->name_alias);
-
-        if (this->base_types.size() == 1) {
-            result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
-        }
-        result << "{\n";
-
-        for (auto method : this->methods) {
-
-            auto  method_decl = method->method_decl;
-            vector<MethodParam> parameters;
-            MethodParam return_value_info;
-            string method_description;
-
-            auto parameter_count = method_decl->getNumParams();
-            for (unsigned int i = 0; i < parameter_count; i++) {
-                MethodParam this_param;
-                auto param_decl = method_decl->getParamDecl(i);
-                auto parameter_name = param_decl->getNameAsString();
-                if (parameter_name == "") {
-                    data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
-                                             this->name_alias, method_decl->getNameAsString(), i));
-                    parameter_name = fmt::format("unspecified_position_{}", parameters.size());
-                }
-                this_param.name = parameter_name;
-                auto type = get_plain_type(param_decl->getType());
-                this_param.type = type.getAsString();
-                parameters.push_back(this_param);
-            }
-
-            return_value_info.type = get_plain_type(method_decl->getReturnType()).getAsString();
-
-            FullComment *comment = this->compiler_instance.getASTContext().getCommentForDecl(method_decl, nullptr);
-            if (comment != nullptr) {
-                cerr << "**1" << endl;
-                auto comment_text = get_source_for_source_range(
-                    this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
-
-                cerr << "FullComment: " << comment_text << endl;
-                for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-                    cerr << "**2.1" << endl;
-
-                    auto child_comment_source_range = (*i)->getSourceRange();
-                    if (child_comment_source_range.isValid()) {
-                        cerr << "**2.2" << endl;
-
-                        auto child_comment_text = get_source_for_source_range(
-                            this->compiler_instance.getPreprocessor().getSourceManager(),
-                            child_comment_source_range);
-
-                        if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-                            cerr << "Is ParamCommandComment" << endl;
-                            auto command_param_name = param_command->getParamName(comment).str();
-
-                            auto matching_param_iterator =
-                                std::find_if(parameters.begin(), parameters.end(),
-                                             [&command_param_name](auto &param) {
-                                                 return command_param_name == param.name;
-                                             });
-
-                            if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
-
-                                auto &param_info = *matching_param_iterator;
-                                if (param_command->getParagraph() != nullptr) {
-                                    cerr << "**3" << endl;
-                                    param_info.description = get_source_for_source_range(
-                                        this->compiler_instance.getPreprocessor().getSourceManager(),
-                                        param_command->getParagraph()->getSourceRange());
-                                }
-                            } else {
-                                data_warning(
-                                    fmt::format("method parameter comment name doesn't match any parameter {}",
-                                                command_param_name));
-                            }
-                        } else {
-                            cerr << "is not param command comment" << endl;
-                        }
-                        cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
-                    }
-                }
-            } else {
-                cerr << "No comment on " << method_decl->getNameAsString() << endl;
-            }
-
-
-            result << fmt::format("{}/**\n", indentation);
-            for (auto &param : parameters) {
-                param.convert_type(); // change to JS types
-                result << fmt::format("{} * @param {} {{{}}} {}\n", indentation, param.name, param.type,
-                                      param.description);
-            }
-            return_value_info.convert_type();
-            result << fmt::format("{} * @return {{{}}} {}\n", indentation, return_value_info.type,
-                                  return_value_info.description);
-            result << fmt::format("{} */\n", indentation);
-            if (method_decl->isStatic()) {
-                result << fmt::format("{}static ", indentation);
-            }
-
-            result << fmt::format("{}{}(", indentation, method_decl->getNameAsString());
-            bool first_parameter = true;
-            for (auto &param : parameters) {
-                if (!first_parameter) {
-                    result << ", ";
-                }
-                first_parameter = false;
-                result << fmt::format("{}", param.name);
-            }
-            result << fmt::format("){{}}\n\n");
-
-        }
-
-
-        result << fmt::format("}}\n\n\n");
-        fprintf(stderr, "%s", result.str().c_str());
-        return result.str();
-    }
+    WrappedClass(const std::string class_name, CompilerInstance & compiler_instance);
 
 
     // for classes actually in the code being parsed
-    WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
-        decl(decl),
-        class_name(get_canonical_name_for_decl(decl)),
-        name_alias(decl->getNameAsString()),
-        compiler_instance(compiler_instance),
+    WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
-        my_include(get_include_for_type_decl(compiler_instance, decl)),
-        annotations(decl),
-        found_method(found_method)
-    {
-        fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
-        string using_name = Annotations::names_for_record_decls[decl];
-        if (!using_name.empty()) {
-            cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
-            name_alias = using_name;
-        }
-
-
-        cerr << "Top of WrappedClass constructor body" << endl;
-        if (class_name == "") {
-            fprintf(stderr, "%p\n", (void *)decl);
-            llvm::report_fatal_error("Empty name string for decl");
-        }
-
-        auto pattern = this->decl->getTemplateInstantiationPattern();
-        if (pattern && pattern != this->decl) {
-            if (!pattern->isDependentType()) {
-                llvm::report_fatal_error(fmt::format("template instantiation class's pattern isn't dependent - this is not expected from my understanding: {}", class_name));
-            }
-        }
-
-        //	    instantiation_pattern = pattern;
-        // annotations.merge(Annotations(instantiation_pattern));
-
-
-
-        if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->decl)) {
-            annotations.merge(Annotations(specialization->getSpecializedTemplate()));
-        }
-
-        cerr << "Final wrapped class annotations: " << endl;
-        print_vector(annotations.get());
-    }
+    std::string generate_js_stub();
 
     std::string get_derived_classes_string(int level = 0, const std::string indent = ""){
         vector<string> results;
@@ -475,7 +268,7 @@ struct WrappedClass {
         result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
         for(auto & method : methods) {
-            result << method;
+            result << method->get_wrapper_string();
         }
         for(auto & member : members) {
             result << member;
@@ -504,5 +297,59 @@ struct WrappedClass {
         result << indentation << "}\n\n";
         return result.str();
     }
+
+    static void insert_wrapped_class(WrappedClass * wrapped_class) {
+        WrappedClass::wrapped_classes.push_back(wrapped_class);
+    }
+
+    static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
+                                               CompilerInstance & compiler_instance,
+                                               FOUND_METHOD found_method) {
+
+        if (decl->isDependentType()) {
+            llvm::report_fatal_error("unpexpected dependent type");
+        }
+
+        auto class_name = get_canonical_name_for_decl(decl);
+
+        // if this decl isn't a definition, get the actual definition
+        if (!decl->isThisDeclarationADefinition()) {
+
+            cerr << class_name << " is not a definition - getting definition..." << endl;
+            if (!decl->hasDefinition()) {
+
+                llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
+            }
+
+            decl = decl->getDefinition();
+        }
+
+
+        //fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
+        //fprintf(stderr, " -- class name %s\n", class_name.c_str());
+        for (auto & wrapped_class : wrapped_classes) {
+
+            if (wrapped_class->class_name == class_name) {
+
+                // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
+                //   if it is the base of a wrapped type
+                if (found_method == FOUND_BASE_CLASS) {
+
+                    // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
+                    if (!wrapped_class->should_be_wrapped()) {
+                        wrapped_class->force_no_constructors = true;
+                    }
+                    wrapped_class->found_method = FOUND_BASE_CLASS;
+                }
+                //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
+                return *wrapped_class;
+            }
+        }
+        auto new_wrapped_class = new WrappedClass(decl, compiler_instance, found_method);
+        WrappedClass::wrapped_classes.push_back(new_wrapped_class);
+        return *new_wrapped_class;
+
+    }
+
 
 };

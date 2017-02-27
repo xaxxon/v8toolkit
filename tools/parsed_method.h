@@ -1,6 +1,7 @@
 #pragma once
 
 #include "class_parser.h"
+#include "helper_functions.h"
 
 struct WrappedClass;
 struct ParsedMethod {
@@ -47,4 +48,6 @@ struct ParsedMethod {
             parameter_types.push_back(param_qual_type);
         }
     }
+
+    std::string get_wrapper_string();
 };

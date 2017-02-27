@@ -1,0 +1,19 @@
+
+ast_action.h/cpp
+PrintFunctionNamesAction : PluginASTAction
+ - This is what is registered with clang
+
+
+ast_consumer.h
+ASTConsumer:
+ - sets up matchers to define what data is of interest
+ - binds different sets of data with a string name
+ - specifies a class to be used for processing the matcher matches
+  - ClassHandler
+
+
+class_handler.h
+ClassHandler : MatchFinder::MatchCallback
+ - run() callback called for each matcher match
+
+
