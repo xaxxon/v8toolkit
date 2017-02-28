@@ -306,40 +306,41 @@ string ParsedMethod::get_bindings() {
 
 
 std::string ParsedMethod::get_bidirectional() {
-
-    if (!this->method_decl->isVirtual()) {
-        return "";
-    }
-
-    // skip pure virtual functions
-    if (this->method_decl->isPure()) {
-        return "";
-    }
-
-    auto num_params = this->method_decl->getNumParams();
-//            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
-    std::stringstream result;
-
-
-    result << "  JS_ACCESS_" << num_params << (this->method_decl->isConst() ? "_CONST(" : "(");
-
-    result << this->return_type.name << ", ";
-
-
-    result << this->short_name;
-
-    if (num_params > 0) {
-        auto types = get_method_param_qual_types(this->compiler_instance, this->method_decl);
-        vector<string>type_names;
-        for (auto & type : types) {
-            type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
-        }
-
-        result << join(type_names, ", ", true);
-    }
-
-    result  << ");\n";
-
-    return result.str();
+    llvm::report_fatal_error("Shouldn't be calling this anymore");
+//
+//    if (!this->method_decl->isVirtual()) {
+//        return "";
+//    }
+//
+//    // skip pure virtual functions
+//    if (this->method_decl->isPure()) {
+//        return "";
+//    }
+//
+//    auto num_params = this->method_decl->getNumParams();
+////            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
+//    std::stringstream result;
+//
+//
+//    result << "  JS_ACCESS_" << num_params << (this->method_decl->isConst() ? "_CONST(" : "(");
+//
+//    result << this->return_type.name << ", ";
+//
+//
+//    result << this->short_name;
+//
+//    if (num_params > 0) {
+//        auto types = get_method_param_qual_types(this->compiler_instance, this->method_decl);
+//        vector<string>type_names;
+//        for (auto & type : types) {
+//            type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+//        }
+//
+//        result << join(type_names, ", ", true);
+//    }
+//
+//    result  << ");\n";
+//
+//    return result.str();
 
 }

@@ -20,6 +20,7 @@ struct WrappedClass {
     set<string> include_files;
     int declaration_count = 3;
 
+    string my_header_filename = "";
     set<unique_ptr<ParsedMethod>> methods;
     set<unique_ptr<DataMember>> members;
     set<string> constructors;

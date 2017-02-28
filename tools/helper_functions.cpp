@@ -6,6 +6,8 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+#include <clang/AST/CXXInheritance.h>
+
 #include "wrapped_class.h"
 
 
@@ -368,38 +370,94 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             continue;
         }
 
-        ofstream bidirectional_file(
-            fmt::format("v8toolkit_generated_bidirectional_{}.h", wrapped_class->name_alias));
+        auto base_type = *wrapped_class->base_types.begin();
+
+        ofstream bidirectional_file(wrapped_class->my_include);
 
         bidirectional_file << "#pragma once\n\n";
 
+
+        // need to include all the includes from the parent types because the implementation of this bidirectional
+        //   type may need the types for things the parent type .h files don't need (like unique_ptr contained types)
+        auto all_base_type_includes = wrapped_class->get_base_type_includes();
+
+        for (auto & include : all_base_type_includes) {
+            std::cerr << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->name_alias, include) << std::endl;
+            bidirectional_file << "#include " << include << "\n";
+        }
+
+std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
         for (auto & include : wrapped_class->include_files) {
             if (include == "") {
                 continue;
             }
             bidirectional_file << "#include " << include << "\n";
         }
-
+std::cerr << fmt::format("done with includes, building class and constructor") << std::endl;
         bidirectional_file << fmt::format(
             "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:\n", // {{ is escaped {
-            wrapped_class->name_alias, wrapped_class->name_alias, wrapped_class->name_alias);
+            base_type->name_alias, base_type->name_alias, base_type->name_alias);
+
+        std::cerr << fmt::format("1") << std::endl;
         bidirectional_file
             << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n",
-                           wrapped_class->name_alias);
+                           base_type->name_alias);
+        std::cerr << fmt::format("2") << std::endl;
         bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by");
-        bidirectional_file << get_method_parameters(compiler_instance, *wrapped_class, wrapped_class->bidirectional_constructor, true, true) << endl;
-
+        std::cerr << fmt::format("3") << std::endl;
+        bidirectional_file << get_method_parameters(compiler_instance, *wrapped_class, base_type->bidirectional_constructor, true, true) << endl;
+std::cerr << fmt::format("4") << std::endl;
         bidirectional_file << fmt::format(") :\n");
 
         //                auto variable_names = generate_variable_names(construtor_parameter_count);
-        auto variable_names = generate_variable_names(get_method_param_qual_types(compiler_instance, wrapped_class->bidirectional_constructor), true);
+        auto variable_names = generate_variable_names(get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);
+std::cerr << fmt::format("5") << std::endl;
+        bidirectional_file << fmt::format("      {}({}),\n", base_type->name_alias, join(variable_names));
+        bidirectional_file << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", base_type->name_alias); // {{}} is escaped {}
 
-        bidirectional_file << fmt::format("      {}({}),\n", wrapped_class->name_alias, join(variable_names));
-        bidirectional_file << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", wrapped_class->name_alias); // {{}} is escaped {}
+
+        // go through all the virtual functions in the base class of the bidirectional type
+        CXXFinalOverriderMap override_map;
+        base_type->decl->getFinalOverriders(override_map);
+        std::cerr << fmt::format("6") << std::endl;
+        for(auto & overrider_pair : override_map) {
+            CXXMethodDecl const * bidirectional_virtual_method = overrider_pair.first;
+std::cerr << fmt::format("7") << std::endl;
+            if (!bidirectional_virtual_method->isVirtual()) {
+                llvm::report_fatal_error("Assuming this must be virtual");
+            }
 
 
-        for(auto & method : wrapped_class->methods) {
-            bidirectional_file << method->get_bidirectional();
+            // skip pure virtual functions
+            if (bidirectional_virtual_method->isPure()) {
+                continue;
+            }
+
+            auto num_params = bidirectional_virtual_method->getNumParams();
+//            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
+            std::stringstream result;
+
+
+            bidirectional_file << "  JS_ACCESS_" << num_params << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
+
+            bidirectional_file << bidirectional_virtual_method->getReturnType().getAsString() << ", ";
+
+
+            bidirectional_file << bidirectional_virtual_method->getName().str();
+
+            if (num_params > 0) {
+                auto types = get_method_param_qual_types(wrapped_class->compiler_instance, bidirectional_virtual_method);
+                vector<string>type_names;
+                for (auto & type : types) {
+                    type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+                }
+
+                result << join(type_names, ", ", true);
+            }
+
+            bidirectional_file  << ");\n";
+
+
         }
 
         bidirectional_file << "};\n";
