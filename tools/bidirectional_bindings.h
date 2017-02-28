@@ -67,43 +67,7 @@ public:
         return results;
     }
 
-    std::string handle_virtual(const CXXMethodDecl * method) {
-
-        // skip pure virtual functions
-        if (method->isPure()) {
-            return "";
-        }
-
-        auto num_params = method->getNumParams();
-//            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
-        std::stringstream result;
-
-
-        result << "  JS_ACCESS_" << num_params << (method->isConst() ? "_CONST(" : "(");
-
-        auto return_type_string = method->getReturnType().getAsString();
-        result << return_type_string << ", ";
-
-        auto method_name = method->getName();
-
-        result << method_name.str();
-
-        if (num_params > 0) {
-            auto types = get_method_param_qual_types(this->compiler_instance, method);
-            vector<string>type_names;
-            for (auto & type : types) {
-                type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
-            }
-
-            result << join(type_names, ", ", true);
-        }
-
-        result  << ");\n";
-
-        return result.str();
-
-    }
-
+#if 0
     std::string handle_class(const CXXRecordDecl * klass) {
         std::stringstream result;
         auto virtuals = get_all_virtual_methods_for_class(klass);
@@ -115,5 +79,6 @@ public:
     }
 
     void generate_bindings();
+#endif
 };
 

@@ -24,9 +24,6 @@ Need to change debugging to use v8's built-in debugging
 ClassParser:
 -------------
 
-finish rework on binding generation
-
-finish rework on bidirectional generation
-
 js-api.js file still uses c++ syntax for specifying default values - need to convert them
 
+bidirectional class files don't have the right includes, including JSWrapper

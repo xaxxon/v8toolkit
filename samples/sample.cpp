@@ -31,6 +31,7 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 #define SAMPLE_DEBUG true
 
+
 struct FooParent {
     // must be polymorphic for most derived type to be returned
     virtual ~FooParent() {};

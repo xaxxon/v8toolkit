@@ -14,6 +14,15 @@ ASTConsumer:
 
 class_handler.h
 ClassHandler : MatchFinder::MatchCallback
- - run() callback called for each matcher match
+Two phases - build up data structures with all relevant data then
+  a second phase to dump that data to appropriate output files
+
+ - run() callback called for each matcher match (basically called once for each class)
+  - builds up data structure of LOTS of things, many will not be present in the output files
+
+ - onEndOfTranslationUnit() called after every match has been handled
+  - uses all the built-up data structures to generate the js stub, bindings, and bidirectional types
+
+
 
 

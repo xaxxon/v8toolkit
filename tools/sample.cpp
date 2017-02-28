@@ -31,9 +31,7 @@ public:
 };
 
 
-// This puts the annotation on each instantiated type of the template, not the template itself
 
-// Doesn't match because it inherits from JSWrapper -- don't want re-wrap existing bidirectional types
 
 
 class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
@@ -84,6 +82,7 @@ public:
 
 
 class UnwrappedClassThatIsUsed {};
+
 
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)

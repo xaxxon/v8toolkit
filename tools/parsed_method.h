@@ -72,6 +72,7 @@ struct ParsedMethod {
 
     string get_js_stub();
     string get_bindings();
+    string get_bidirectional();
 };
 
 

@@ -430,7 +430,7 @@ void ClassHandler::onEndOfTranslationUnit () {
 
 
     generate_javascript_stub("js-api.js");
-    generate_bidirectional_classes();
+    generate_bidirectional_classes(this->ci);
     generate_bindings();
 }
 

@@ -109,7 +109,7 @@ std::string get_method_string(CompilerInstance & compiler_instance,
                               const CXXMethodDecl * method);
 
 void generate_javascript_stub(string const &);
-void generate_bidirectional_classes();
+void generate_bidirectional_classes(CompilerInstance & compiler_instance);
 void generate_bindings();
 
 void data_error(const string & error);

@@ -13,8 +13,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     found_method(found_method)
 {
 
-
-
     std::cerr << fmt::format("*** Creating WrappedClass for {}", this->name_alias) << std::endl;
     fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
     string using_name = Annotations::names_for_record_decls[decl];
@@ -136,6 +134,29 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
     cerr << "Final wrapped class annotations: " << endl;
     print_vector(annotations.get());
+
+    // Handle bidirectional class if appropriate
+    if (this->annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+
+        this->bidirectional = true;
+
+        // find bidirectional constructor
+        int constructor_parameter_count;
+        vector<QualType> constructor_parameters;
+
+        // iterate through all constructors with the specified annotation
+        foreach_constructor(this->decl, [&](auto constructor_decl) {
+            if (bidirectional_constructor) {
+                data_error(fmt::format("ERROR: Got more than one bidirectional constructor for {}", this->name_alias));
+                return;
+            }
+            this->bidirectional_constructor = constructor_decl;
+        }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
+
+        if (this->bidirectional_constructor == nullptr) {
+            this->set_error(fmt::format("Bidirectional class {} doesn't have a bidirectional constructor explicitly set", this->name_alias));
+        }
+    }
 
     std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
 }
@@ -454,8 +475,15 @@ std::string WrappedClass::get_bindings(){
 void WrappedClass::add_name(string const & name) {
     // it's ok to have duplicate names, but then this class can not be wrapped
     if (this->used_names.count(name) > 0) {
-        this->data_errors.emplace_back(fmt::format("duplicate name: {}", name));
-        this->valid = false;
+        this->set_error(fmt::format("duplicate name: {}", name));
     }
     this->used_names.insert(name);
+}
+
+
+
+
+void WrappedClass::set_error(string const & error_message) {
+    this->data_errors.push_back(error_message);
+    this->valid = false;
 }

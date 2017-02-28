@@ -40,6 +40,12 @@ struct WrappedClass {
     FOUND_METHOD found_method;
     bool force_no_constructors = false;
 
+    // it's ok for types that won't be exposed to javascript to have wrapping errors associated with them
+    void set_error(string const & error_message);
+
+    bool bidirectional = false;
+    CXXConstructorDecl const * bidirectional_constructor = nullptr;
+
     std::string get_short_name() const {
         if (decl == nullptr) {
             llvm::report_fatal_error(fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());

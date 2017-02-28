@@ -25,6 +25,7 @@ DataMember::DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl) :
     type(field_decl->getType())
 {
     wrapped_class.add_name(this->short_name);
+    wrapped_class.declaration_count++;
 }
 
 
@@ -103,7 +104,7 @@ ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, 
         std::cerr << fmt::format("6") << std::endl;
         this->default_value = "";
     }
-std::cerr << fmt::format("7") << std::endl;
+    std::cerr << fmt::format("7") << std::endl;
 
 }
 
@@ -132,6 +133,9 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
     } else {
         std::cerr << fmt::format("not overriding method name {}", this->short_name) << std::endl;
     }
+
+    this->wrapped_class.add_name(this->short_name);
+    this->wrapped_class.declaration_count++;
 
     std::cerr << fmt::format("***** Parsing method {}", this->full_name) << std::endl;
     auto parameter_count = method_decl->getNumParams();
@@ -296,4 +300,46 @@ string ParsedMethod::get_bindings() {
     }
 
     return result.str();
+}
+
+
+
+
+std::string ParsedMethod::get_bidirectional() {
+
+    if (!this->method_decl->isVirtual()) {
+        return "";
+    }
+
+    // skip pure virtual functions
+    if (this->method_decl->isPure()) {
+        return "";
+    }
+
+    auto num_params = this->method_decl->getNumParams();
+//            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
+    std::stringstream result;
+
+
+    result << "  JS_ACCESS_" << num_params << (this->method_decl->isConst() ? "_CONST(" : "(");
+
+    result << this->return_type.name << ", ";
+
+
+    result << this->short_name;
+
+    if (num_params > 0) {
+        auto types = get_method_param_qual_types(this->compiler_instance, this->method_decl);
+        vector<string>type_names;
+        for (auto & type : types) {
+            type_names.push_back(std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+        }
+
+        result << join(type_names, ", ", true);
+    }
+
+    result  << ");\n";
+
+    return result.str();
+
 }

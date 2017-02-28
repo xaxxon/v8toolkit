@@ -360,9 +360,56 @@ void generate_javascript_stub(std::string const & filename) {
 
 }
 
-void generate_bidirectional_classes() {
+void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
 
-};
+    for (auto *wrapped_class : WrappedClass::wrapped_classes) {
+
+        if (!wrapped_class->bidirectional) {
+            continue;
+        }
+
+        ofstream bidirectional_file(
+            fmt::format("v8toolkit_generated_bidirectional_{}.h", wrapped_class->name_alias));
+
+        bidirectional_file << "#pragma once\n\n";
+
+        for (auto & include : wrapped_class->include_files) {
+            if (include == "") {
+                continue;
+            }
+            bidirectional_file << "#include " << include << "\n";
+        }
+
+        bidirectional_file << fmt::format(
+            "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:\n", // {{ is escaped {
+            wrapped_class->name_alias, wrapped_class->name_alias, wrapped_class->name_alias);
+        bidirectional_file
+            << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n",
+                           wrapped_class->name_alias);
+        bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by");
+        bidirectional_file << get_method_parameters(compiler_instance, *wrapped_class, wrapped_class->bidirectional_constructor, true, true) << endl;
+
+        bidirectional_file << fmt::format(") :\n");
+
+        //                auto variable_names = generate_variable_names(construtor_parameter_count);
+        auto variable_names = generate_variable_names(get_method_param_qual_types(compiler_instance, wrapped_class->bidirectional_constructor), true);
+
+        bidirectional_file << fmt::format("      {}({}),\n", wrapped_class->name_alias, join(variable_names));
+        bidirectional_file << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}\n", wrapped_class->name_alias); // {{}} is escaped {}
+
+
+        for(auto & method : wrapped_class->methods) {
+            bidirectional_file << method->get_bidirectional();
+        }
+
+        bidirectional_file << "};\n";
+
+
+
+        bidirectional_file.close();
+
+    }
+}
 
 // converts from c++ type to javascript type
 string convert_type_to_jsdoc(std::string const & type_name_input) {

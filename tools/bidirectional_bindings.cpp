@@ -1,5 +1,5 @@
 #include "bidirectional_bindings.h"
-
+#if 0
 void BidirectionalBindings::generate_bindings() {
     std::stringstream result;
     auto matches = wrapped_class.annotations.get_regex("v8toolkit_generate_(.*)");
@@ -75,3 +75,5 @@ void BidirectionalBindings::generate_bindings() {
 
 
 }
+
+#endif
