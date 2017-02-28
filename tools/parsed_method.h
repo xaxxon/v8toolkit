@@ -50,6 +50,7 @@ struct ParsedMethod {
         // description of parameter pulled from doxygen comment
         string description = "";
 
+
     public:
         ParameterInfo(ParsedMethod & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance);
 
@@ -62,6 +63,8 @@ struct ParsedMethod {
     string full_name;
     string short_name;
     CompilerInstance & compiler_instance;
+    Annotations annotations;
+
 
     ParsedMethod(CompilerInstance & compiler_instance,
                  WrappedClass & wrapped_class,

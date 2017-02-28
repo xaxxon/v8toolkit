@@ -24,7 +24,7 @@ DataMember::DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl) :
     long_name(field_decl->getQualifiedNameAsString()),
     type(field_decl->getType())
 {
-
+    wrapped_class.add_name(this->short_name);
 }
 
 
@@ -62,26 +62,48 @@ ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, 
     position(position),
     type(parameter_decl->getType())
 {
-    std::cerr << fmt::format("parsing parameter {}", name) << std::endl;
+    std::cerr << fmt::format("parameterinfo constructor: parsing parameter {}", name) << std::endl;
     // set the name, give placeholder name if unnamed
+    std::cerr << fmt::format("1") << std::endl;
     this->name = this->parameter_decl->getNameAsString();
+    std::cerr << fmt::format("2") << std::endl;
     if (this->name == "") {
+        std::cerr << fmt::format("3") << std::endl;
         this->name = fmt::format("unspecified_position_{}", this->position);
 
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
                                  this->method.wrapped_class.name_alias, this->method.short_name, this->position));
     }
+    std::cerr << fmt::format("4") << std::endl;
 
     // set default argument or "" if none
     if (parameter_decl->hasDefaultArg()) {
+        std::cerr << fmt::format("5") << std::endl;
         auto default_argument = parameter_decl->getDefaultArg();
-        auto source_range = default_argument->getSourceRange();
-        auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
-        this->default_value = source;
+        if (default_argument != nullptr) {
+            std::cerr << fmt::format("5.1") << std::endl;
+            auto source_range = default_argument->getSourceRange();
+            std::cerr << fmt::format("5.2") << std::endl;
+            if (source_range.isValid()) {
+                std::cerr << fmt::format("5.3") << std::endl;
+
+                auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
+                std::cerr << fmt::format("5.31") << std::endl;
+
+                this->default_value = source;
+
+            } else {
+                std::cerr << fmt::format("5.4") << std::endl;
+
+            }
+        } else {
+            std::cerr << fmt::format("5.01") << std::endl;
+        }
     } else {
+        std::cerr << fmt::format("6") << std::endl;
         this->default_value = "";
     }
-
+std::cerr << fmt::format("7") << std::endl;
 
 }
 
@@ -96,13 +118,25 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
     short_name(method_decl->getNameAsString()),
     wrapped_class(wrapped_class),
     is_static(method_decl->isStatic()),
-    is_virtual(method_decl->isVirtual())
+    is_virtual(method_decl->isVirtual()),
+    annotations(this->method_decl)
 {
+
+    // check to see if there's a name annotation on the method giving it a different JavaScript name
+    auto annotated_custom_name = annotations.get_regex(
+        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+    if (!annotated_custom_name.empty()) {
+        std::cerr << fmt::format("Overriding method name {} => {}", this->short_name, annotated_custom_name[0]) << std::endl;
+        this->short_name = annotated_custom_name[0];
+        std::cerr << fmt::format("short name is now {}", this->short_name) << std::endl;
+    } else {
+        std::cerr << fmt::format("not overriding method name {}", this->short_name) << std::endl;
+    }
 
     std::cerr << fmt::format("***** Parsing method {}", this->full_name) << std::endl;
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
-        std::cerr << fmt::format("parsing parameter {}", i) << std::endl;
+        std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
         parameters.emplace_back(*this, i, method_decl->getParamDecl(i), this->compiler_instance);
     }
 
@@ -119,8 +153,9 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
         cerr << "FullComment: " << comment_text << endl;
 
         // go through each portion (child) of the full commetn
+        int j = 0;
         for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-
+            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
             auto child_comment_source_range = (*i)->getSourceRange();
             if (child_comment_source_range.isValid()) {
 
@@ -128,20 +163,40 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
                     this->compiler_instance.getPreprocessor().getSourceManager(),
                     child_comment_source_range);
 
+                cerr << "Child comment kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+
                 // if the child comment is a param command comment (describes a parameter)
                 if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
                     cerr << "Is ParamCommandComment" << endl;
-                    auto command_param_name = param_command->getParamName(comment).str();
+                    if (param_command == nullptr) {
+                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
+                    }
+                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str()) << std::endl;
 
-                    auto matching_param_iterator =
-                        std::find_if(parameters.begin(), parameters.end(),
-                                     [&command_param_name](auto &param) {
-                                         return command_param_name == param.name;
-                                     });
+                    // cannot use getParamName() because it crashes if the name doesn't match a parameter
+                    auto command_param_name = param_command->getParamNameAsWritten().str();
+                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
 
-                    if (param_command->hasParamName() && matching_param_iterator != parameters.end()) {
+                    ParameterInfo * matching_parameter_info_ptr = nullptr;
+                    for(auto & parameter : this->parameters) {
+                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name) << std::endl;
+                        if (command_param_name == parameter.name) {
+                            std::cerr << fmt::format("found match!") << std::endl;
+                            matching_parameter_info_ptr = &parameter;
+                            break;
+                        }
+                    }
+//                    auto matching_param_iterator =
+//                        std::find_if(parameters.begin(), parameters.end(),
+//                                     [&command_param_name](auto &param) {
+//                                         return command_param_name == param.name;
+//                                     });
 
-                        auto &param_info = *matching_param_iterator;
+                    std::cerr << fmt::format("found parameter (not matching .end()) {}", matching_parameter_info_ptr != nullptr) << std::endl;
+                    std::cerr << fmt::format("has param name?  {}", param_command->hasParamName()) << std::endl;
+                    if (param_command->hasParamName() && matching_parameter_info_ptr != nullptr) {
+
+                        auto &param_info = *matching_parameter_info_ptr;
                         if (param_command->getParagraph() != nullptr) {
                             param_info.description = get_source_for_source_range(
                                 this->compiler_instance.getPreprocessor().getSourceManager(),
@@ -155,7 +210,6 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
                 } else {
                     cerr << "is not param command comment" << endl;
                 }
-                cerr << "Child comment " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
             }
         }
     } else {
@@ -197,7 +251,7 @@ std::string ParsedMethod::get_js_stub() {
             result << fmt::format("{}static ", indentation);
         }
 
-        result << fmt::format("{}{}(", indentation, method_decl->getNameAsString());
+        result << fmt::format("{}{}(", indentation, this->short_name);
         bool first_parameter = true;
         for (auto &param : parameters) {
             if (!first_parameter) {

@@ -127,6 +127,13 @@ public:
    virtual void fooparent_purevirtual_tobeoverridden();
    virtual char const_virtual(int) const;
 
+
+    /**
+     * description
+     * @param a something
+     */
+    void broken_comment(int );
+
     /**
      * Test comment for foo_int_method
      * @param a some string
@@ -160,6 +167,12 @@ public:
 
     V8TOOLKIT_CUSTOM_EXTENSION
     static void custom_extension(v8::Local<v8::FunctionTemplate> & function_template);
+
+
+    void same_name(int);
+
+    V8TOOLKIT_USE_NAME(same_name_2)
+    void same_name(char*);
 
 };
 

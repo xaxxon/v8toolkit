@@ -55,9 +55,13 @@ add_custom_target(class_parser_driver
 
 add_custom_target(copy_driver_resources)
 add_custom_command(TARGET copy_driver_resources POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/sample.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sample2.h ${CMAKE_CURRENT_SOURCE_DIR}/class_parser.h
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/sample.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/sample2.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/class_parser.h
         ${PROJECT_BINARY_DIR}/tools/)
 
 add_dependencies(class_parser_driver class_parser_plugin copy_driver_resources)
 
+install(TARGETS class_parser_plugin DESTINATION ${INSTALL_LIB_DIR})
 

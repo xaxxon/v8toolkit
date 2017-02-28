@@ -13,6 +13,9 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 
     // if the current result is matched from the "not std:: class"-bound matcher
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
+        
+        std::cerr << fmt::format("Got a class that's not a std:: class") << std::endl;
+        
         auto class_name = get_canonical_name_for_decl(klass);
 
         if (klass->isDependentType()) {
@@ -226,53 +229,16 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 #endif // end TEMPLATE_INFO_ONLY
 }
 
+#if 0
 void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
                   bool top_level,
                   const std::string & indentation) {
 
 
-    // update the includes for the type for itself -- if it's a templated type, make sure it has includes for the types it is
-    //   templated with
-    PrintLoggingGuard lg;
-    if (top_level) {
-
-        if (std::regex_search(wrapped_class.class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
-            lg.log();
-        }
 
 
 
 
-
-#ifdef TEMPLATE_INFO_ONLY
-        return;
-#endif
-        if (!is_good_record_decl(wrapped_class.decl)) {
-            cerr << "Skipping 'bad' CXXRecordDecl" << endl;
-            wrapped_class.valid = false;
-            return;
-        }
-
-        names_used.clear();
-
-        //                printf("Handling top level class %s\n", top_level_class->class_name.c_str());
-
-
-        if (print_logging)
-            cerr << "Adding include for class being handled: " << wrapped_class.class_name << " : "
-                 << get_include_for_type_decl(ci, wrapped_class.decl) << endl;
-
-        // get the .h file the type is defined in
-        wrapped_class.include_files.insert(get_include_for_type_decl(this->ci, wrapped_class.decl));
-
-
-    } // end if top level class
-    else {
-        cerr << fmt::format("{} Handling class (NOT top level) {}", indentation, wrapped_class.class_name)
-             << endl;
-    }
-
-    auto class_name = wrapped_class.decl->getQualifiedNameAsString();
 
     // prints out source for decl
     //fprintf(stderr,"class at %s", decl2str(klass,  this->ci).c_str());
@@ -296,137 +262,24 @@ void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently
 
 //
     // non-top-level methods handled by javascript prototype
-    if (top_level) {
-        if (print_logging) cerr << "About to process methods" << endl;
-        for (CXXMethodDecl *method : wrapped_class.decl->methods()) {
-            if (method->hasInheritedPrototype()) {
-                cerr << fmt::format("Skipping method {} because it has inherited prototype",
-                                    method->getNameAsString()) << endl;
-                continue;
-            }
-
-            handle_method(*top_level_class, method);
-        }
-    }
+//    if (top_level) {
+//        if (print_logging) cerr << "About to process methods" << endl;
+//        for (CXXMethodDecl *method : wrapped_class.decl->methods()) {
+//            if (method->hasInheritedPrototype()) {
+//                cerr << fmt::format("Skipping method {} because it has inherited prototype",
+//                                    method->getNameAsString()) << endl;
+//                continue;
+//            }
+//
+//            handle_method(*top_level_class, method);
+//        }
+//    }
 
     if (print_logging) cerr << "About to process fields for " << wrapped_class.name_alias << endl;
 //
 
     if (print_logging) cerr << "About to process base class info" << endl;
     // if this is true and the type ends up with no base type, it's an error
-    bool must_have_base_type = false;
-    auto annotation_base_types_to_ignore = wrapped_class.annotations.get_regex(
-    "^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
-    auto annotation_base_type_to_use = wrapped_class.annotations.get_regex(
-    "^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
-    if (annotation_base_type_to_use.size() > 1) {
-        data_error(fmt::format("More than one base type specified to use for type", wrapped_class.class_name));
-    }
-
-    // if a base type to use is specified, then it must match an actual base type or error
-    if (!annotation_base_type_to_use.empty()) {
-        must_have_base_type = true;
-    }
-
-
-    print_vector(annotation_base_types_to_ignore, "base types to ignore");
-    print_vector(annotation_base_type_to_use, "base type to use");
-
-
-    bool found_base_type = false;
-    if (print_logging) cerr << "About to process base classes" << endl;
-    for (auto base_class : wrapped_class.decl->bases()) {
-
-        auto base_qual_type = base_class.getType();
-        auto base_type_decl = base_qual_type->getAsCXXRecordDecl();
-        auto base_type_name = base_type_decl->getNameAsString();
-        auto base_type_canonical_name = get_canonical_name_for_decl(base_type_decl);
-
-        if (base_type_canonical_name == "class v8toolkit::WrappedClassBase" &&
-            base_class.getAccessSpecifier() != AS_public) {
-            data_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}",
-                                   wrapped_class.class_name).c_str());
-        }
-
-        cerr << "Base type: " << base_type_canonical_name << endl;
-        if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(),
-                      base_type_canonical_name) !=
-            annotation_base_types_to_ignore.end()) {
-            cerr << "Skipping base type because it was explicitly excluded in annotation on class: "
-                 << base_type_name << endl;
-            continue;
-        } else {
-            cerr << "Base type was not explicitly excluded via annotation" << endl;
-        }
-        if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), base_type_canonical_name) !=
-            base_types_to_ignore.end()) {
-            cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: "
-                 << base_type_name << endl;
-            continue;
-        } else {
-            cerr << "Base type was not explicitly excluded via global ignore list" << endl;
-        }
-        if (!annotation_base_type_to_use.empty() && annotation_base_type_to_use[0] != base_type_name) {
-            cerr << "Skipping base type because it was not the one specified to use via annotation: "
-                 << base_type_name << endl;
-            continue;
-        }
-
-        if (base_qual_type->isDependentType()) {
-            cerr << indentation << "-- base type is dependent" << endl;
-        }
-
-
-        found_base_type = true;
-        auto base_record_decl = base_qual_type->getAsCXXRecordDecl();
-
-//                fprintf(stderr, "%s -- type class: %d\n", indentation.c_str(), base_qual_type->getTypeClass());
-//                cerr << indentation << "-- base type has a cxxrecorddecl" << (record_decl != nullptr) << endl;
-//                cerr << indentation << "-- base type has a tagdecl: " << (base_tag_decl != nullptr) << endl;
-//                cerr << indentation << "-- can be cast to tagtype: " << (dyn_cast<TagType>(base_qual_type) != nullptr) << endl;
-//                cerr << indentation << "-- can be cast to attributed type: " << (dyn_cast<AttributedType>(base_qual_type) != nullptr) << endl;
-//                cerr << indentation << "-- can be cast to injected class name type: " << (dyn_cast<InjectedClassNameType>(base_qual_type) != nullptr) << endl;
-
-
-        if (base_record_decl == nullptr) {
-            llvm::report_fatal_error("Got null base type record decl - this should be caught ealier");
-        }
-        //  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
-
-        cerr << "getting base type wrapped class object" << endl;
-        WrappedClass &current_base = WrappedClass::get_or_insert_wrapped_class(base_record_decl, this->ci,
-                                                                               FOUND_BASE_CLASS);
-
-        // if the base type hasn't been independently processed, do that right now
-        if (!current_base.done) {
-            cerr << fmt::format("interupting handle_class of {} to fully handle class of base type: {}",
-                                wrapped_class.class_name, current_base.class_name) << endl;
-            auto top_level_class_backup = top_level_class;
-            top_level_class = &current_base;
-            handle_class(current_base, true);
-            top_level_class = top_level_class_backup;
-        }
-
-        auto current_base_include = get_include_for_type_decl(this->ci, current_base.decl);
-        auto current_include = get_include_for_type_decl(this->ci, wrapped_class.decl);
-        //                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
-
-        wrapped_class.include_files.insert(current_base_include);
-        current_base.include_files.insert(current_include);
-        wrapped_class.base_types.insert(&current_base);
-        current_base.derived_types.insert(&wrapped_class);
-
-        //printf("%s now has %d base classes\n", current->class_name.c_str(), (int)current->base_types.size());
-        //printf("%s now has %d derived classes\n", current_base->class_name.c_str(), (int)current_base->derived_types.size());
-
-        handle_class(current_base, false, indentation + "  ");
-    }
-
-    if (print_logging) cerr << "done with base classes" << endl;
-    if (must_have_base_type && !found_base_type) {
-        data_error(
-            fmt::format("base_type_to_use specified but no base type found: {}", wrapped_class.class_name));
-    }
 
 
 
@@ -555,7 +408,7 @@ void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently
 
     } // if top level
 } // end method
-
+#endif
 
 
 void ClassHandler::onEndOfTranslationUnit () {
@@ -582,7 +435,7 @@ void ClassHandler::onEndOfTranslationUnit () {
 }
 
 
-
+#if 0
 void ClassHandler::handle_method(WrappedClass & klass, CXXMethodDecl * method) {
 
 
@@ -591,12 +444,7 @@ void ClassHandler::handle_method(WrappedClass & klass, CXXMethodDecl * method) {
 
     Annotations annotations(method);
 
-    // check to see if there's a name annotation on the method giving it a different JavaScript name
-    auto annotated_custom_name = annotations.get_regex(
-        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
-    if (!annotated_custom_name.empty()) {
-        short_method_name = annotated_custom_name[0];
-    }
+
 
 
     if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("Handling method: {}", full_method_name) << endl;
@@ -715,10 +563,10 @@ void ClassHandler::handle_method(WrappedClass & klass, CXXMethodDecl * method) {
 
 } // end handle_method
 
+#endif
 
 
-
-
+#if 0
 std::string ClassHandler::handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation) {
     std::stringstream result;
     auto export_type = get_export_type(field, EXPORT_ALL);
@@ -760,3 +608,4 @@ std::string ClassHandler::handle_data_member(WrappedClass & containing_class, Fi
 //                   field->getType().getAsString().c_str());
     return result.str();
 }
+#endif

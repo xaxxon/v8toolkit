@@ -347,7 +347,7 @@ template<class T>
 struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
 
 
-    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::cerr << fmt::format("PB1") << std::endl;
@@ -381,7 +381,7 @@ struct ParameterBuilder<T,
     using NoRefT = std::remove_reference_t<T>;
 
 
-    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::cerr << fmt::format("pb2") << std::endl;
@@ -394,14 +394,14 @@ struct ParameterBuilder<T,
 };
 
 
-template <int default_arg_position, class NoRefT, class DefaultArgsTuple>
+template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
 std::enable_if_t<default_arg_position < 0> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple) {
     stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(NoRefT(cast_to_native_no_value<NoRefT>()(info, i++))));
 
 }
 
-template <int default_arg_position, class NoRefT, class DefaultArgsTuple>
+template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
 std::enable_if_t<(default_arg_position >= 0)> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple) {
     stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(NoRefT(std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)))));
@@ -423,7 +423,7 @@ struct ParameterBuilder<T,
     using NoConstRefT = std::remove_const_t<NoRefT>;
 
 
-    template<int default_arg_position, class DefaultArgsTuple>
+    template<int default_arg_position = -1, class DefaultArgsTuple>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::cerr << fmt::format("pb3") << std::endl;
@@ -458,7 +458,7 @@ struct ParameterBuilder<T,
         return *static_cast<Stuff<NoRefT> &>(*stuff.back()).get();
     }
 
-    template<int default_arg_position>
+    template<int default_arg_position = -1>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    std::tuple<> const & default_args_tuple =  std::tuple<>()) {
         std::cerr << fmt::format("pb3") << std::endl;
@@ -481,7 +481,7 @@ struct ParameterBuilder<T,
 template<>
 struct ParameterBuilder<char *> {
 
-    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                       DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::string string;

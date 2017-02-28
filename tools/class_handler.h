@@ -37,15 +37,6 @@ public:
     std::string handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation);
 
 
-
-
-
-    /*************************/
-    /***** HANDLE_METHOD *****/
-    /*************************/
-    void handle_method(WrappedClass & klass, CXXMethodDecl * method);
-
-
     void handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
                       bool top_level = true,
                       const std::string & indentation = "");

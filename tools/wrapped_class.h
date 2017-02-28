@@ -23,7 +23,8 @@ struct WrappedClass {
     set<unique_ptr<ParsedMethod>> methods;
     set<unique_ptr<DataMember>> members;
     set<string> constructors;
-    set<string> names;
+    set<string> used_names;
+    vector<string> data_errors;
     set<WrappedClass *> derived_types;
     set<WrappedClass *> base_types;
     set<string> wrapper_extension_methods;
@@ -50,6 +51,11 @@ struct WrappedClass {
         return dyn_cast<ClassTemplateSpecializationDecl>(decl);
     }
 
+    /**
+     * Adds the specified name and sets valid = false if it's alrady used
+     * @param name name to add
+     */
+    void add_name(string const & name);
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
     void update_data() {
