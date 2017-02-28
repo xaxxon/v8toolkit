@@ -310,9 +310,7 @@ void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently
     }
 
     if (print_logging) cerr << "About to process fields for " << wrapped_class.name_alias << endl;
-    for (FieldDecl *field : wrapped_class.decl->fields()) {
-        top_level_class->members.insert(handle_data_member(wrapped_class, field, indentation + "  "));
-    }
+//
 
     if (print_logging) cerr << "About to process base class info" << endl;
     // if this is true and the type ends up with no base type, it's an error
@@ -562,6 +560,22 @@ void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently
 
 void ClassHandler::onEndOfTranslationUnit () {
 
+    for (auto & warning : data_warnings) {
+        cerr << warning << endl;
+    }
+
+
+
+    if (!data_errors.empty()) {
+        cerr << "Errors detected:" << endl;
+        for(auto & error : data_errors) {
+            cerr << error << endl;
+        }
+        llvm::report_fatal_error("Errors detected in source data");
+        exit(1);
+    }
+
+
     generate_javascript_stub("js-api.js");
     generate_bidirectional_classes();
     generate_bindings();
@@ -699,43 +713,6 @@ void ClassHandler::handle_method(WrappedClass & klass, CXXMethodDecl * method) {
 
     auto parsed_method = make_unique<ParsedMethod>(this->ci, klass, method);
 
-
-    if (method->isStatic()) {
-        cerr << "method is static" << endl;
-        std::cerr << fmt::format("incrementing declaration count for {} - static function", top_level_class->name_alias) << std::endl;
-        top_level_class->declaration_count++;
-
-        if (static_method_renames.find(short_method_name) != static_method_renames.end()) {
-            short_method_name = static_method_renames[short_method_name];
-        }
-
-//                result << fmt::format("class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
-//                                      get_method_return_type_and_parameters(ci, *top_level_class, klass.decl, method),
-//                                      short_method_name, full_method_name);
-//                klass.methods.insert(parsed_method);
-        klass.has_static_method = true;
-    } else {
-        cerr << "Method is not static" << endl;
-        std::cerr << fmt::format("incrementing declaration count for {} - non-static function", top_level_class->name_alias) << std::endl;
-        top_level_class->declaration_count++;
-        klass.methods.insert(std::move(parsed_method));
-
-        // overloaded operator type names (like OO_Call) defined here:
-        //   http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
-        // name is "OO_" followed by the first field in each line
-        if (OO_Call == method->getOverloadedOperator()) {
-//                    result << fmt::format("class_wrapper.make_callable<{}>(&{});\n",
-//                                          get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl,
-//                                                                                      method),
-//                                          full_method_name);
-        } else {
-//                    result << fmt::format("class_wrapper.add_method<{}>(\"{}\", &{});\n",
-//                                          get_method_return_type_class_and_parameters(ci, *top_level_class, klass.decl,
-//                                                                                      method),
-//                                          short_method_name, full_method_name);
-        }
-
-    }
 } // end handle_method
 
 
@@ -761,29 +738,9 @@ std::string ClassHandler::handle_data_member(WrappedClass & containing_class, Fi
 //            full_field_name = std::regex_replace(full_field_name, regex, replacement);
 //            if (print_logging) cerr << full_field_name << endl;
 
-    Annotations annotations(field);
-    if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-        if (PRINT_SKIPPED_EXPORT_REASONS) printf("%sSkipping data member %s because not supposed to be exported %d\n",
-                                                 indentation.c_str(),
-                                                 short_field_name.c_str(), export_type);
-        return "";
-    }
 
-    if (field->getAccess() != AS_public) {
-        if (PRINT_SKIPPED_EXPORT_REASONS) printf("%s**%s is not public, skipping\n", indentation.c_str(), short_field_name.c_str());
-        return "";
-    }
-
-    if (top_level_class->names.count(short_field_name)) {
-        data_error(fmt::format("ERROR: duplicate name {}/{} :: {}\n",
-                               top_level_class->class_name,
-                               containing_class.class_name,
-                               short_field_name));
-        return "";
-    }
     top_level_class->names.insert(short_field_name);
 
-    containing_class.fields.insert(field);
 
     // made up number to represent the overhead of making a new wrapped class
     //   even before adding methods/members
@@ -796,15 +753,7 @@ std::string ClassHandler::handle_data_member(WrappedClass & containing_class, Fi
 
     std::cerr << fmt::format("incrementing declaration count for {} - data member", top_level_class->name_alias) << std::endl;
 
-    if (annotations.has(V8TOOLKIT_READONLY_STRING) || field->getType().isConstQualified()) {
-        result << fmt::format("{}class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n", indentation,
-                              full_type_name,
-                              containing_class.class_name, full_field_name, short_field_name);
-    } else {
-        result << fmt::format("{}class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n", indentation,
-                              full_type_name,
-                              containing_class.class_name, full_field_name, short_field_name);
-    }
+
 //            printf("%sData member %s, type: %s\n",
 //                   indentation.c_str(),
 //                   field->getNameAsString().c_str(),

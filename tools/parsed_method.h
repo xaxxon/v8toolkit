@@ -4,7 +4,11 @@
 #include "helper_functions.h"
 
 
-struct WrappedClass;
+
+
+
+
+
 struct ParsedMethod {
 
 
@@ -12,7 +16,6 @@ struct ParsedMethod {
     WrappedClass & wrapped_class;
     bool is_static;
     bool is_virtual;
-
 
 
     struct TypeInfo {
@@ -26,7 +29,11 @@ struct ParsedMethod {
         string jsdoc_type_name;
 
         TypeInfo(QualType const & type);
+
+        // returns if the type (or the type being pointed/referred to) is const (not is the pointer const)
+        bool is_const() const;
     };
+
 
     /* PARAMETER INFO */
     class ParameterInfo {
@@ -52,12 +59,30 @@ struct ParsedMethod {
     string return_type_comment;
     vector<ParameterInfo> parameters;
     CXXMethodDecl const * method_decl;
-    string name;
+    string full_name;
+    string short_name;
     CompilerInstance & compiler_instance;
 
     ParsedMethod(CompilerInstance & compiler_instance,
                  WrappedClass & wrapped_class,
                  CXXMethodDecl const * method_decl);
 
-    std::string get_wrapper_string();
+    string get_js_stub();
+    string get_bindings();
+};
+
+
+struct WrappedClass;
+struct DataMember {
+    WrappedClass & wrapped_class;
+    string short_name;
+    string long_name;
+    ParsedMethod::TypeInfo type;
+    FieldDecl const * field_decl;
+
+    DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl);
+
+    string get_js_stub();
+    string get_bindings();
+
 };

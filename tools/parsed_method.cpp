@@ -12,6 +12,47 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
 }
 
 
+bool ParsedMethod::TypeInfo::is_const() const {
+    return this->plain_type.isConstQualified();
+}
+
+
+
+DataMember::DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl) :
+    wrapped_class(wrapped_class),
+    short_name(field_decl->getNameAsString()),
+    long_name(field_decl->getQualifiedNameAsString()),
+    type(field_decl->getType())
+{
+
+}
+
+
+string DataMember::get_js_stub() {
+
+    stringstream result;
+
+    result << fmt::format(" * @property {{{}}} {} \n", this->type.jsdoc_type_name, this->short_name);
+
+    return result.str();
+}
+
+string DataMember::get_bindings() {
+    stringstream result;
+
+    if (this->type.is_const()) {
+        result << fmt::format("    class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n",
+                              this->type.name,
+                              this->wrapped_class.class_name, this->long_name, this->short_name);
+
+    } else {
+        result << fmt::format("    class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n",
+                              this->type.name,
+                              this->wrapped_class.class_name, this->long_name, this->short_name);
+    }
+
+    return result.str();
+}
 
 
 ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance) :
@@ -28,7 +69,7 @@ ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, 
         this->name = fmt::format("unspecified_position_{}", this->position);
 
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
-                                 this->method.wrapped_class.name_alias, this->method.name, this->position));
+                                 this->method.wrapped_class.name_alias, this->method.short_name, this->position));
     }
 
     // set default argument or "" if none
@@ -51,12 +92,14 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
     compiler_instance(compiler_instance),
     return_type(method_decl->getReturnType()),
     method_decl(method_decl),
-    name(method_decl->getName().str()),
+    full_name(method_decl->getQualifiedNameAsString()),
+    short_name(method_decl->getNameAsString()),
     wrapped_class(wrapped_class),
     is_static(method_decl->isStatic()),
     is_virtual(method_decl->isVirtual())
 {
-    std::cerr << fmt::format("***** Parsing method {}", this->name) << std::endl;
+
+    std::cerr << fmt::format("***** Parsing method {}", this->full_name) << std::endl;
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
         std::cerr << fmt::format("parsing parameter {}", i) << std::endl;
@@ -124,7 +167,7 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
 
 
 
-std::string ParsedMethod::get_wrapper_string() {
+std::string ParsedMethod::get_js_stub() {
 
     string indentation = "    ";
     stringstream result;
@@ -132,7 +175,7 @@ std::string ParsedMethod::get_wrapper_string() {
     string method_description;
     auto parameter_count = this->parameters.size();
 
-    std::cerr << fmt::format("looking through {} parameters", this->parameters.size()) << std::endl;
+//    std::cerr << fmt::format("looking through {} parameters", this->parameters.size()) << std::endl;
     for (auto &parameter_info : this->parameters) {
 
 
@@ -165,5 +208,38 @@ std::string ParsedMethod::get_wrapper_string() {
         }
         result << fmt::format("){{}}\n\n");
     }
+    return result.str();
+}
+
+
+
+string ParsedMethod::get_bindings() {
+    stringstream result;
+
+    stringstream return_class_and_parameter_types;
+    return_class_and_parameter_types << fmt::format("{}, {}", this->return_type.name, this->wrapped_class.name_alias);
+    for (auto & parameter : this->parameters) {
+        return_class_and_parameter_types << fmt::format(", {}", parameter.type.name);
+    }
+
+
+    if (this->method_decl->isStatic()) {
+        if (static_method_renames.find(this->short_name) != static_method_renames.end()) {
+            this->short_name = static_method_renames[this->short_name];
+        }
+    } else {
+
+        // overloaded operator type names (like OO_Call) defined here:
+        //   http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
+        // name is "OO_" followed by the first field in each line
+        if (OO_Call == method_decl->getOverloadedOperator()) {
+                            result << fmt::format("    class_wrapper.make_callable<{}>(&{});\n",
+                                                  return_class_and_parameter_types.str(), this->full_name);
+        } else {
+                            result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{});\n",
+                                                  return_class_and_parameter_types.str(), this->short_name, this->full_name);
+        }
+    }
+
     return result.str();
 }

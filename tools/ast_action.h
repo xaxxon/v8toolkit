@@ -17,10 +17,6 @@ public:
     // This is called when all parsing is done
     void EndSourceFileAction();
 
-    // takes a file number starting at 1 and incrementing 1 each time
-    // a list of WrappedClasses to print
-    // and whether or not this is the last file to be written
-    void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_one);
 
 protected:
     // The value returned here is used internally to run checks against

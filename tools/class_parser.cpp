@@ -85,7 +85,8 @@ map<string, string> cpp_to_js_type_conversions = {{"^(?:std::)?vector[<]\\s*([^>
                                                   {"^(?:const)?\\s*(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
                                                   {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Boolean"},
                                                   {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$", "String"},
-                                                  {"^void$", "Undefined"}};
+                                                  {"^void$", "Undefined"},
+                                                  {"^(?:std::)?unique_ptr[<]\\s*([^>]+?)\\s*[>]\\s*$", "$1"}};
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
 

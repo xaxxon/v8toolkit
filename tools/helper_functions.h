@@ -82,6 +82,12 @@ void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
                                    WrappedClass & wrapped_class,
                                    QualType qual_type);
 
+// takes a file number starting at 1 and incrementing 1 each time
+// a list of WrappedClasses to print
+// and whether or not this is the last file to be written
+void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_one);
+
+
 vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instance,
                                              const CXXMethodDecl * method,
                                              string const & annotation = "");
