@@ -48,7 +48,7 @@ add_custom_target(class_parser_driver
         ${PROJECT_BINARY_DIR}/tools/sample.cpp
         -fsyntax-only -std=c++14 -O0
         -Xclang -load
-        -Xclang ${CMAKE_BINARY_DIR}/tools/libclass_parser_plugin.dylib
+        -Xclang ${CMAKE_BINARY_DIR}/tools/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
     )
