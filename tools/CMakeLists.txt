@@ -32,11 +32,12 @@ cotire(class_parser_plugin)
 # `$CLANG_HOME/bin/llvm-config --ldflags --libs --system-libs`
 
 # Not actually sure which of these are actually needed, but some of them are
+# Do not link against LLVMSupport - causes: CommandLine Error: Option 'view-background' registered more than once!
 target_link_libraries(class_parser_plugin clangFrontend clangSerialization clangASTMatchers clangSema
         clangAnalysis clangRewriteFrontend clangEdit clangDriver clangLex
         LLVMSymbolize LLVMDebugInfoPDB LLVMScalarOpts LLVMInstCombine LLVMInstrumentation LLVMBitWriter
         LLVMTransformUtils LLVMExecutionEngine LLVMTarget LLVMAnalysis LLVMRuntimeDyld
-        LLVMObject LLVMBitReader LLVMCore LLVMSupport clangParse clangAST
+        LLVMObject LLVMBitReader LLVMCore clangParse clangAST
         clangBasic clangParse)
 
 target_link_libraries(class_parser_plugin fmt)
@@ -48,7 +49,7 @@ add_custom_target(class_parser_driver
         ${PROJECT_BINARY_DIR}/tools/sample.cpp
         -fsyntax-only -std=c++14 -O0
         -Xclang -load
-        -Xclang ${CMAKE_BINARY_DIR}/tools/libclass_parser_plugin.dylib
+        -Xclang ${CMAKE_BINARY_DIR}/tools/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
     )
