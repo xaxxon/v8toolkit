@@ -331,7 +331,25 @@ struct cast_to_native_no_value<T, std::enable_if_t<std::result_of_t<CastToNative
 
 
 
-/**
+// Helper function for when a required parameter isn't specified in javascript but may have a "global" default value for the type
+template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
+std::enable_if_t<default_arg_position < 0> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                                                           DefaultArgsTuple const & default_args_tuple) {
+    stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(NoRefT(cast_to_native_no_value<NoRefT>()(info, i++))));
+
+}
+
+
+// Helper function for when a required parameter isn't specified in ajvascript but has a function-specific default value specified for it
+template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
+std::enable_if_t<(default_arg_position >= 0)> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                                                              DefaultArgsTuple const & default_args_tuple) {
+    stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(NoRefT(std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)))));
+
+}
+
+
+    /**
 * Class for turning a function parameter list into a parameter pack useful for calling the function
  * depth is the current index into the FunctionCallbackInfo object's parameter list
  * Function is the complete type of the function to call
@@ -352,11 +370,8 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::cerr << fmt::format("PB1") << std::endl;
         if (i >= info.Length()) {
-            if (default_arg_position >= 0) {
-                stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(),
-                                                                                  std::get<default_arg_position>(default_args_tuple) )));
-            }
-            stuff.emplace_back(std::make_unique<Stuff < T>>(cast_to_native_no_value<T>()(info, i++)));
+            set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
+
         } else {
             stuff.emplace_back(std::make_unique<Stuff < T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
         }
@@ -393,20 +408,6 @@ struct ParameterBuilder<T,
     }
 };
 
-
-template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
-std::enable_if_t<default_arg_position < 0> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
-                                     DefaultArgsTuple const & default_args_tuple) {
-    stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(NoRefT(cast_to_native_no_value<NoRefT>()(info, i++))));
-
-}
-
-template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple>
-std::enable_if_t<(default_arg_position >= 0)> set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
-                                     DefaultArgsTuple const & default_args_tuple) {
-    stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(NoRefT(std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)))));
-
-}
 
 
 template<class T>

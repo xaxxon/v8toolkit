@@ -54,9 +54,7 @@ struct WrappedClass {
         return decl->getNameAsString();
     }
 
-    bool is_template_specialization() {
-        return dyn_cast<ClassTemplateSpecializationDecl>(decl);
-    }
+    bool is_template_specialization();
 
     /**
      * Adds the specified name and sets valid = false if it's alrady used
@@ -96,35 +94,9 @@ struct WrappedClass {
     bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const;
 
     // return all the header files for all the types used by all the base types of the specified type
-    std::set<string> get_base_type_includes() {
-        set<string> results{this->my_include};
-        results.insert(this->include_files.begin(), this->include_files.end());
-        std::cerr << fmt::format("adding base type include for {}", this->class_name) << std::endl;
+    std::set<string> get_base_type_includes();
 
-        for (WrappedClass * base_class : this->base_types) {
-            auto base_results = base_class->get_base_type_includes();
-            results.insert(base_results.begin(), base_results.end());
-        }
-
-        return results;
-    }
-
-    std::set<string> get_derived_type_includes() {
-        cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
-        set<string> results;
-        results.insert(my_include);
-        for (auto derived_type : derived_types) {
-
-            results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
-
-            auto derived_includes = derived_type->get_derived_type_includes();
-            results.insert(derived_includes.begin(), derived_includes.end());
-
-            cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias, derived_type->class_name, join(derived_includes)) << endl;
-
-        }
-        return results;
-    }
+    std::set<string> get_derived_type_includes();
 
 
     WrappedClass(const WrappedClass &) = delete;

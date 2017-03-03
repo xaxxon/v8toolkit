@@ -509,3 +509,49 @@ void WrappedClass::set_error(string const & error_message) {
     this->data_errors.push_back(error_message);
     this->valid = false;
 }
+
+
+
+// return all the header files for all the types used by all the base types of the specified type
+std::set<string> WrappedClass::get_base_type_includes() {
+    set<string> results{this->my_include};
+    results.insert(this->include_files.begin(), this->include_files.end());
+    std::cerr << fmt::format("adding base type include for {}", this->class_name) << std::endl;
+
+    for (WrappedClass * base_class : this->base_types) {
+        auto base_results = base_class->get_base_type_includes();
+        results.insert(base_results.begin(), base_results.end());
+    }
+
+    return results;
+}
+
+std::set<string> WrappedClass::get_derived_type_includes() {
+    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
+    set<string> results;
+    results.insert(my_include);
+    for (auto derived_type : derived_types) {
+
+        std::cerr << fmt::format("1 - derived type loop for {}", derived_type->name_alias) << std::endl;
+        results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
+        std::cerr << fmt::format("2") << std::endl;
+        auto derived_includes = derived_type->get_derived_type_includes();
+        std::cerr << fmt::format("3") << std::endl;
+        results.insert(derived_includes.begin(), derived_includes.end());
+        std::cerr << fmt::format("4") << std::endl;
+        cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias, derived_type->class_name, join(derived_includes)) << endl;
+
+    }
+    std::cerr << fmt::format("aaa") << std::endl;
+    return results;
+}
+
+
+
+bool WrappedClass::is_template_specialization() {
+    if (this->decl == nullptr) {
+        return false;
+    }
+    return dyn_cast<ClassTemplateSpecializationDecl>(decl);
+}
+

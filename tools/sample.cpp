@@ -129,9 +129,9 @@ public:
 
     /**
      * description
-     * @param a something
+     * @param a something -- missing a named parameter shouldn't cause the plugin to crash
      */
-    void broken_comment(int );
+    void broken_comment(int);
 
     /**
      * Test comment for foo_int_method

@@ -382,6 +382,9 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
         auto all_base_type_includes = wrapped_class->get_base_type_includes();
 
         for (auto & include : all_base_type_includes) {
+            if (include == "") {
+                continue;
+            }
             std::cerr << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->name_alias, include) << std::endl;
             bidirectional_file << "#include " << include << "\n";
         }
@@ -403,7 +406,7 @@ std::cerr << fmt::format("done with includes, building class and constructor") <
             << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,\n",
                            base_type->name_alias);
         std::cerr << fmt::format("2") << std::endl;
-        bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by");
+        bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by\n");
         std::cerr << fmt::format("3") << std::endl;
         bidirectional_file << get_method_parameters(compiler_instance, *wrapped_class, base_type->bidirectional_constructor, true, true) << endl;
 std::cerr << fmt::format("4") << std::endl;
@@ -421,31 +424,40 @@ std::cerr << fmt::format("5") << std::endl;
         base_type->decl->getFinalOverriders(override_map);
         std::cerr << fmt::format("6") << std::endl;
         for(auto & overrider_pair : override_map) {
+
             CXXMethodDecl const * bidirectional_virtual_method = overrider_pair.first;
-std::cerr << fmt::format("7") << std::endl;
+
+            // skip virtual destructors
+            if (dyn_cast<CXXDestructorDecl>(bidirectional_virtual_method)) {
+                continue;
+            }
+
+            std::cerr << fmt::format("Looking at overrider pair for virtual method {}", bidirectional_virtual_method->getNameAsString()) << std::endl;
+            std::cerr << fmt::format("7") << std::endl;
             if (!bidirectional_virtual_method->isVirtual()) {
                 llvm::report_fatal_error("Assuming this must be virtual");
             }
 
-
+std::cerr << fmt::format("8") << std::endl;
             // skip pure virtual functions
             if (bidirectional_virtual_method->isPure()) {
                 continue;
             }
-
+std::cerr << fmt::format("9") << std::endl;
             auto num_params = bidirectional_virtual_method->getNumParams();
 //            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
             std::stringstream result;
 
-
+std::cerr << fmt::format("10") << std::endl;
             bidirectional_file << "  JS_ACCESS_" << num_params << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
 
             bidirectional_file << bidirectional_virtual_method->getReturnType().getAsString() << ", ";
 
-
+std::cerr << fmt::format("11") << std::endl;
             bidirectional_file << bidirectional_virtual_method->getName().str();
 
             if (num_params > 0) {
+                std::cerr << fmt::format("12") << std::endl;
                 auto types = get_method_param_qual_types(wrapped_class->compiler_instance, bidirectional_virtual_method);
                 vector<string>type_names;
                 for (auto & type : types) {
@@ -454,7 +466,7 @@ std::cerr << fmt::format("7") << std::endl;
 
                 result << join(type_names, ", ", true);
             }
-
+std::cerr << fmt::format("13") << std::endl;
             bidirectional_file  << ");\n";
 
 
