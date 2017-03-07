@@ -429,6 +429,8 @@ void ClassHandler::onEndOfTranslationUnit () {
     }
 
 
+    cerr << "*************" << endl << "ABOUT TO GENERATE OUTPUT FILES" << endl << "*****************" << endl;
+
     generate_javascript_stub("js-api.js");
     generate_bidirectional_classes(this->ci);
     generate_bindings();

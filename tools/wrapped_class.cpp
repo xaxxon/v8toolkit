@@ -6,7 +6,7 @@
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
     decl(decl),
     class_name(get_canonical_name_for_decl(decl)),
-    name_alias(decl->getNameAsString()),
+    name_alias(decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()),
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
@@ -21,6 +21,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         name_alias = using_name;
     }
 
+    // strip off any leading "class " or "struct " off the type name
+    name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");
 
 
     cerr << "Top of WrappedClass constructor body" << endl;
@@ -57,11 +59,72 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         template_instantiations[template_name]++;
     }
 
+    cerr << "Final wrapped class annotations: " << endl;
+    print_vector(annotations.get());
 
-    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
+
+    // Handle bidirectional class if appropriate
+    if (this->annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
+
+        // find bidirectional constructor
+        int constructor_parameter_count;
+        vector<QualType> constructor_parameters;
+
+        // iterate through all constructors with the specified annotation
+        foreach_constructor(this->decl, [&](auto constructor_decl) {
+            if (bidirectional_constructor) {
+                data_error(fmt::format("ERROR: Got more than one bidirectional constructor for {}", this->name_alias));
+                return;
+            }
+            this->bidirectional_constructor = constructor_decl;
+        }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
+
+        if (this->bidirectional_constructor == nullptr) {
+            this->set_error(fmt::format("Bidirectional class {} doesn't have a bidirectional constructor explicitly set", this->name_alias));
+        }
+
+        string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
+
+        // created a WrappedClass for the non-AST JSWrapper class
+        WrappedClass * js_wrapped_class = new WrappedClass(bidirectional_class_name,
+                                            this->compiler_instance);
+        js_wrapped_class->bidirectional = true;
+        js_wrapped_class->my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
+        cerr << fmt::format("my_include for bidirectional class: {}" , js_wrapped_class->my_include) << endl;
+
+        WrappedClass::insert_wrapped_class(js_wrapped_class);
+
+        js_wrapped_class->base_types.insert(this);
+
+        cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
+                            js_wrapped_class->class_name, this->name_alias) << endl;
+
+        // set the bidirectional class as being a subclass of the non-bidirectional type
+        this->derived_types.insert(js_wrapped_class);
+
+        //js_wrapped_class->include_files.insert(js_wrapped_class->my_header_filename);
+        cerr << fmt::format("my_include for bidirectional class: {}" , js_wrapped_class->my_include) << endl;
+    }
+
+    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
+}
+
+
+
+set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
+    if (this->decl == nullptr) {
+        llvm::report_fatal_error(fmt::format("Can't get_methods on type without decl: {}", this->name_alias).c_str());
+    }
+    if (this->methods_parsed) {
+        return this->methods;
+    }
+
+    this->methods_parsed = true;
+     std::cerr << fmt::format("*** Parsing class methods") << std::endl;
     for (CXXMethodDecl * method : this->decl->methods()) {
 
         std::string full_method_name(method->getQualifiedNameAsString());
+        cerr << fmt::format("looking at {}", full_method_name) << endl;
 
         if (method->hasInheritedPrototype()) {
             cerr << fmt::format("Skipping method because it has inherited prototype"
@@ -110,16 +173,24 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
         this->methods.insert(make_unique<ParsedMethod>(this->compiler_instance, *this, method));
     }
+    return this->methods;
+}
 
 
+set<unique_ptr<DataMember>> & WrappedClass::get_members() {
+    if (this->members_parsed) {
+        return this->members;
+    }
+    this->members_parsed = true;
     for (FieldDecl * field : this->decl->fields()) {
 
         string field_name = field->getQualifiedNameAsString();
 
         auto export_type = get_export_type(field, EXPORT_ALL);
         if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("Skipping data member %s because not supposed to be exported %d\n",
-                                                     field_name.c_str(), export_type);
+            if (PRINT_SKIPPED_EXPORT_REASONS)
+                printf("Skipping data member %s because not supposed to be exported %d\n",
+                       field_name.c_str(), export_type);
             continue;
         }
 
@@ -130,58 +201,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         this->members.emplace(make_unique<DataMember>(*this, field));
     }
-
-
-    cerr << "Final wrapped class annotations: " << endl;
-    print_vector(annotations.get());
-
-    // Handle bidirectional class if appropriate
-    if (this->annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
-
-        // find bidirectional constructor
-        int constructor_parameter_count;
-        vector<QualType> constructor_parameters;
-
-        // iterate through all constructors with the specified annotation
-        foreach_constructor(this->decl, [&](auto constructor_decl) {
-            if (bidirectional_constructor) {
-                data_error(fmt::format("ERROR: Got more than one bidirectional constructor for {}", this->name_alias));
-                return;
-            }
-            this->bidirectional_constructor = constructor_decl;
-        }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
-
-        if (this->bidirectional_constructor == nullptr) {
-            this->set_error(fmt::format("Bidirectional class {} doesn't have a bidirectional constructor explicitly set", this->name_alias));
-        }
-
-
-
-
-
-        string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
-
-        // created a WrappedClass for the non-AST JSWrapper class
-        WrappedClass * js_wrapped_class = new WrappedClass(bidirectional_class_name,
-                                            this->compiler_instance);
-        js_wrapped_class->bidirectional = true;
-        js_wrapped_class->my_include = fmt::format("v8toolkit_generated_bidirectional_{}.h", this->name_alias);
-        WrappedClass::insert_wrapped_class(js_wrapped_class);
-
-        js_wrapped_class->base_types.insert(this);
-
-        cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-                            js_wrapped_class->class_name, this->name_alias) << endl;
-
-        // set the bidirectional class as being a subclass of the non-bidirectional type
-        this->derived_types.insert(js_wrapped_class);
-
-        js_wrapped_class->include_files.insert(js_wrapped_class->my_header_filename);
-
-    }
-
-    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
+    return this->members;
 }
+
 
 WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
     decl(nullptr),
@@ -197,6 +219,8 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
 
 
 std::string WrappedClass::generate_js_stub() {
+
+    cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
 
     stringstream result;
     string indentation = "    ";
@@ -218,8 +242,12 @@ std::string WrappedClass::generate_js_stub() {
     }
     result << "{\n";
 
+    CXXFinalOverriderMap override_map;
+    this->decl->getFinalOverriders(override_map);
+
     //    std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
     for (auto & method : this->methods) {
+
         result << method->get_js_stub();
     }
 
@@ -459,7 +487,7 @@ std::string WrappedClass::get_bindings(){
     result << indentation << "{\n";
     result << fmt::format("{}  // {}", indentation, class_name) << "\n";
     result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
-                          indentation, class_name, class_name);
+                          indentation, name_alias, name_alias);
     result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
     for(auto & method : methods) {

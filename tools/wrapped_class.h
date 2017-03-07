@@ -8,7 +8,15 @@
 
 
 struct WrappedClass {
+private:
 
+    bool methods_parsed = false;
+    set<unique_ptr<ParsedMethod>> methods;
+
+    bool members_parsed = false;
+    set<unique_ptr<DataMember>> members;
+
+public:
     static vector<WrappedClass *> wrapped_classes;
 
     CXXRecordDecl const * decl = nullptr;
@@ -21,8 +29,10 @@ struct WrappedClass {
     int declaration_count = 3;
 
     string my_header_filename = "";
-    set<unique_ptr<ParsedMethod>> methods;
-    set<unique_ptr<DataMember>> members;
+
+    set<unique_ptr<ParsedMethod>> & get_methods();
+    set<unique_ptr<DataMember>> & get_members();
+
     set<string> constructors;
     set<string> used_names;
     vector<string> data_errors;
@@ -31,7 +41,8 @@ struct WrappedClass {
     set<string> wrapper_extension_methods;
     set<string> wrapper_custom_extensions;
     CompilerInstance & compiler_instance;
-    string my_include; // the include for getting my type
+
+    string my_include; // the include for getting my type, including "" or <>
     bool done = false;
     bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
     Annotations annotations;

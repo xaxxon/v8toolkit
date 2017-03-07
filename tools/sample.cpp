@@ -73,7 +73,8 @@ namespace v8toolkit {
 
 
 
-template<class T> class  DerivedFromWrappedClassBase : public Test::MyTemplate<vector<int>>, public v8toolkit::WrappedClassBase {
+template<class T>
+class  DerivedFromWrappedClassBase : public Test::MyTemplate<vector<int>>, public v8toolkit::WrappedClassBase {
 public:
     void function_in_templated_class(T t){
 
@@ -172,6 +173,12 @@ public:
 
     V8TOOLKIT_USE_NAME(same_name_2)
     void same_name(char*);
+
+
+    // just iterating through methods got foo_parent_virtual, foo_parent_pure_virtual
+    virtual void foo_parent_virtual(int, int, int) override;
+    virtual void foo_parent_pure_virtual(char, char, char, char) override;
+
 
 };
 

@@ -1,6 +1,6 @@
 #include "parsed_method.h"
 #include "wrapped_class.h"
-
+#include <cstdbool>
 
 ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     type(type),
@@ -9,6 +9,11 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     plain_name(this->plain_type.getAsString())
 {
     this->jsdoc_type_name = convert_type_to_jsdoc(this->plain_name);
+    name = regex_replace(name, std::regex("^(struct|class) "), "");
+
+    // do any required textual type conversions
+    static std::regex bool_conversion = std::regex("^_Bool$");
+    name = std::regex_replace(this->name, bool_conversion, "bool");
 }
 
 
@@ -44,12 +49,12 @@ string DataMember::get_bindings() {
     if (this->type.is_const()) {
         result << fmt::format("    class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->wrapped_class.class_name, this->long_name, this->short_name);
+                              this->wrapped_class.name_alias, this->long_name, this->short_name);
 
     } else {
         result << fmt::format("    class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->wrapped_class.class_name, this->long_name, this->short_name);
+                              this->wrapped_class.name_alias, this->long_name, this->short_name);
     }
 
     return result.str();

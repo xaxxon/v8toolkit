@@ -27,7 +27,12 @@ class OnlyUsedInTemplate{};
 template<class T, int i>
 class TemplatedClass{};
 
-class V8TOOLKIT_WRAPPED_CLASS FooParent {
+class  V8TOOLKIT_WRAPPED_CLASS FooGrandParent {
+public:
+    virtual void foo_grandparent_but_not_foo_virtual();
+};
+
+class V8TOOLKIT_WRAPPED_CLASS FooParent : public FooGrandParent {
 public:
 //    FooParent();
 //    virtual void fooparent_purevirtual_tobeoverridden() = 0;
@@ -39,6 +44,11 @@ public:
 //
 //    char fooparent_char();
 //    int fp_i;
+
+    virtual void foo_parent_virtual(int, int, int);
+    virtual void foo_parent_pure_virtual(char, char, char, char) = 0;
+    virtual void foo_grandparent_but_not_foo_virtual() override;
+
 };
 
 

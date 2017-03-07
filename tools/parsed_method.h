@@ -17,6 +17,8 @@ struct ParsedMethod {
     bool is_static;
     bool is_virtual;
 
+    // if this virtual function doesn't exist in a parent class
+    bool new_virtual;
 
     struct TypeInfo {
         QualType type;
@@ -73,6 +75,9 @@ struct ParsedMethod {
     string get_js_stub();
     string get_bindings();
     string get_bidirectional();
+
+    // returns true if the methods have the same name and input parameters
+    bool compare_signatures(ParsedMethod const & other);
 };
 
 
