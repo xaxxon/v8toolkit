@@ -27,3 +27,9 @@ ClassParser:
 js-api.js file still uses c++ syntax for specifying default values - need to convert them
 
 bidirectional class files don't have the right includes, including JSWrapper
+
+Need to figure out how to properly get which virtual methods are associated with a bidirectional type
+ - get ones that aren't directly in parent type
+ - don't repeat ones that are in multiple parent/grandparent/etc types
+ - need a set of name and parameter strings corresponding to each one most likely
+

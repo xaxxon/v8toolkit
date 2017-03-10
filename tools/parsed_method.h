@@ -67,6 +67,9 @@ struct ParsedMethod {
     CompilerInstance & compiler_instance;
     Annotations annotations;
 
+    // returns string containing function name and input parameters - this function is likely not exactly correct
+    //   per c++ standard
+    string get_signature_string();
 
     ParsedMethod(CompilerInstance & compiler_instance,
                  WrappedClass & wrapped_class,

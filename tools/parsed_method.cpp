@@ -68,48 +68,48 @@ ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, 
     position(position),
     type(parameter_decl->getType())
 {
-    std::cerr << fmt::format("parameterinfo constructor: parsing parameter {}", name) << std::endl;
+    //std::cerr << fmt::format("parameterinfo constructor: parsing parameter {}", name) << std::endl;
     // set the name, give placeholder name if unnamed
-    std::cerr << fmt::format("1") << std::endl;
+    //std::cerr << fmt::format("1") << std::endl;
     this->name = this->parameter_decl->getNameAsString();
-    std::cerr << fmt::format("2") << std::endl;
+    //std::cerr << fmt::format("2") << std::endl;
     if (this->name == "") {
-        std::cerr << fmt::format("3") << std::endl;
+        //std::cerr << fmt::format("3") << std::endl;
         this->name = fmt::format("unspecified_position_{}", this->position);
 
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
                                  this->method.wrapped_class.name_alias, this->method.short_name, this->position));
     }
-    std::cerr << fmt::format("4") << std::endl;
+    //std::cerr << fmt::format("4") << std::endl;
 
     // set default argument or "" if none
     if (parameter_decl->hasDefaultArg()) {
-        std::cerr << fmt::format("5") << std::endl;
+        //std::cerr << fmt::format("5") << std::endl;
         auto default_argument = parameter_decl->getDefaultArg();
         if (default_argument != nullptr) {
-            std::cerr << fmt::format("5.1") << std::endl;
+            //std::cerr << fmt::format("5.1") << std::endl;
             auto source_range = default_argument->getSourceRange();
-            std::cerr << fmt::format("5.2") << std::endl;
+            //std::cerr << fmt::format("5.2") << std::endl;
             if (source_range.isValid()) {
-                std::cerr << fmt::format("5.3") << std::endl;
+                //std::cerr << fmt::format("5.3") << std::endl;
 
                 auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
-                std::cerr << fmt::format("5.31") << std::endl;
+                //std::cerr << fmt::format("5.31") << std::endl;
 
                 this->default_value = source;
 
             } else {
-                std::cerr << fmt::format("5.4") << std::endl;
+                //std::cerr << fmt::format("5.4") << std::endl;
 
             }
         } else {
-            std::cerr << fmt::format("5.01") << std::endl;
+            //std::cerr << fmt::format("5.01") << std::endl;
         }
     } else {
-        std::cerr << fmt::format("6") << std::endl;
+        //std::cerr << fmt::format("6") << std::endl;
         this->default_value = "";
     }
-    std::cerr << fmt::format("7") << std::endl;
+    //std::cerr << fmt::format("7") << std::endl;
 
 }
 
@@ -348,4 +348,23 @@ std::string ParsedMethod::get_bidirectional() {
 //
 //    return result.str();
 
+}
+
+
+
+string ParsedMethod::get_signature_string() {
+    stringstream result;
+    result << this->short_name << "(";
+
+    bool first = true;
+    for (auto & p : this->parameters) {
+        if (!first) {
+            result << ",";
+        }
+        first = false;
+        result << p.type.name;
+    }
+
+    result << ")";
+    return result.str();
 }

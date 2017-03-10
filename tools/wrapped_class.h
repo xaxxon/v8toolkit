@@ -26,6 +26,9 @@ public:
     string class_name;
     string name_alias; // if no alias, is equal to class_name
     set<string> include_files;
+
+     // value here is the "compilation cost" of creating the class itself even if it's empty.
+    // increase if too many empty classes end up in one file and make the compilation too big/take too long
     int declaration_count = 3;
 
     string my_header_filename = "";
