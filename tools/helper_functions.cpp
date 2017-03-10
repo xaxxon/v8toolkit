@@ -14,8 +14,7 @@
 // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
 //   then calls out to get how to include that most basic type definition
 //   and puts it in wrapped_class.include_files
-void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
-                                   WrappedClass & wrapped_class,
+void update_wrapped_class_for_type(WrappedClass & wrapped_class,
     // don't capture qualtype by ref since it is changed in this function
                                    QualType qual_type) {
 
@@ -44,12 +43,12 @@ void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
             cerr << "IS A FUNCTION PROTOTYPE" << endl;
 
             cerr << "Recursing on return type" << endl;
-            update_wrapped_class_for_type(compiler_instance, wrapped_class, function_prototype->getReturnType());
+            update_wrapped_class_for_type(wrapped_class, function_prototype->getReturnType());
 
             for ( auto param : function_prototype->param_types()) {
 
                 cerr << "Recursing on param type" << endl;
-                update_wrapped_class_for_type(compiler_instance, wrapped_class, param);
+                update_wrapped_class_for_type(wrapped_class, param);
             }
         } else {
             cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
@@ -65,13 +64,13 @@ void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
         return;
     }
 
-    auto actual_include_string = get_include_for_type_decl(compiler_instance, base_type_record_decl);
+    auto actual_include_string = get_include_for_type_decl(wrapped_class.compiler_instance, base_type_record_decl);
 
     if (print_logging) cerr << &wrapped_class << "Got include string for " << qual_type.getAsString() << ": " << actual_include_string << endl;
 
     // if there's no wrapped type, it may be something like a std::function or STL container -- those are ok to not be wrapped
     if (has_wrapped_class(base_type_record_decl)) {
-        auto & used_wrapped_class = WrappedClass::get_or_insert_wrapped_class(base_type_record_decl, compiler_instance, FOUND_UNSPECIFIED);
+        auto & used_wrapped_class = WrappedClass::get_or_insert_wrapped_class(base_type_record_decl, wrapped_class.compiler_instance, FOUND_UNSPECIFIED);
         wrapped_class.used_classes.insert(&used_wrapped_class);
     }
 
@@ -101,7 +100,7 @@ void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
                 continue;
             }
             if (print_logging) cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
-            update_wrapped_class_for_type(compiler_instance, wrapped_class, template_arg_qual_type);
+            update_wrapped_class_for_type(wrapped_class, template_arg_qual_type);
         }
     } else {
         if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;

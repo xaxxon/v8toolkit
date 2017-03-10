@@ -263,12 +263,13 @@ template<class T, class Head, class... Tail>
 
 	
  
+ template<class T, class = void> class V8ClassWrapper;
+
+
 /**
  * The real template is quite expensive to make for types that don't need it,
  *   so here's an alternative for when it isn't actually going to be used
  */
- template<class T, class = void> class V8ClassWrapper;
-
  template<class T>
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:

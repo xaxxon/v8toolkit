@@ -78,8 +78,7 @@ std::string get_method_parameters(CompilerInstance & compiler_instance,
                                   bool add_leading_comma = false,
                                   bool insert_variable_names = false,
                                   const string & annotation = "");
-void update_wrapped_class_for_type(CompilerInstance & compiler_instance,
-                                   WrappedClass & wrapped_class,
+void update_wrapped_class_for_type(WrappedClass & wrapped_class,
                                    QualType qual_type);
 
 // takes a file number starting at 1 and incrementing 1 each time

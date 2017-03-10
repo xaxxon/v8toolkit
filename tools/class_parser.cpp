@@ -800,7 +800,7 @@ std::string get_method_parameters(CompilerInstance & compiler_instance,
         if (insert_variable_names) {
             result << " " << var_names[count++];
         }
-        update_wrapped_class_for_type(compiler_instance, wrapped_class, param_qual_type);
+        update_wrapped_class_for_type(wrapped_class, param_qual_type);
 
     }
     return result.str();
@@ -818,7 +818,7 @@ std::string get_return_type(CompilerInstance & compiler_instance,
 //        wrapped_class.include_files.insert(header_file);
 //
 
-    update_wrapped_class_for_type(compiler_instance, wrapped_class, qual_type);
+    update_wrapped_class_for_type(wrapped_class, qual_type);
 
     return result;
 

@@ -48,7 +48,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
-    update_wrapped_class_for_type(compiler_instance, *this,
+    update_wrapped_class_for_type(*this,
                                   this->decl->getTypeForDecl()->getCanonicalTypeInternal());
 
 
@@ -388,7 +388,6 @@ bool WrappedClass::should_be_wrapped() const {
     }
     if (found_method == FOUND_GENERATED) {
         cerr << fmt::format("should be wrapped {}- found generated", this->name_alias) << endl;
-
         return false;
     }
 
@@ -545,12 +544,19 @@ void WrappedClass::set_error(string const & error_message) {
 std::set<string> WrappedClass::get_base_type_includes() {
     set<string> results{this->my_include};
     results.insert(this->include_files.begin(), this->include_files.end());
-    std::cerr << fmt::format("adding base type include for {}", this->class_name) << std::endl;
+    std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
+
+    cerr << "Includes at this level: " << endl;
+    for (auto include : results) {
+        cerr << include << endl;
+    }
 
     for (WrappedClass * base_class : this->base_types) {
+        cerr << fmt::format("...base type: {}", base_class->name_alias) << endl;
         auto base_results = base_class->get_base_type_includes();
         results.insert(base_results.begin(), base_results.end());
     }
+    std::cerr << fmt::format("done adding base type include for {}", this->class_name) << std::endl;
 
     return results;
 }

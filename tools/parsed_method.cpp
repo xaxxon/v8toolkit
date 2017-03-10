@@ -143,10 +143,16 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
     this->wrapped_class.declaration_count++;
 
     std::cerr << fmt::format("***** Parsing method {}", this->full_name) << std::endl;
+
+    update_wrapped_class_for_type(this->wrapped_class, this->return_type.type);
+
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
         std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
         parameters.emplace_back(*this, i, method_decl->getParamDecl(i), this->compiler_instance);
+
+        // make sure the wrapped class has includes for all the types in the method
+        update_wrapped_class_for_type(this->wrapped_class, this->parameters.back().type.type);
     }
 
 
@@ -154,7 +160,6 @@ ParsedMethod::ParsedMethod(CompilerInstance & compiler_instance,
     std::cerr << fmt::format("Parsing doxygen comments") << std::endl;
     FullComment *comment = this->compiler_instance.getASTContext().getCommentForDecl(this->method_decl, nullptr);
     if (comment != nullptr) {
-
 
         auto comment_text = get_source_for_source_range(
             this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
