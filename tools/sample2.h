@@ -4,6 +4,9 @@
 #include <map>
 #include <vector>
 #include <set>
+
+#include <EASTL/vector_set.h>
+
 using namespace std;
 #include "class_parser.h"
 

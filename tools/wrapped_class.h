@@ -6,7 +6,8 @@
 
 #include <sstream>
 
-
+// should be named "ParsedClass" or something, since both classes that will and will not be wrapped
+//   are put into this data structure
 struct WrappedClass {
 private:
 
@@ -208,6 +209,9 @@ public:
         return *new_wrapped_class;
 
     }
+
+    // returns true if the found_method on this class means the class will be wrapped
+    bool found_method_means_wrapped();
 
 
 };

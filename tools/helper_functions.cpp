@@ -321,11 +321,8 @@ void generate_bindings() {
 
     cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
 
-    cerr << "Classes used that were not wrapped" << endl;
 
-
-
-
+    cerr << "Classes used that were not wrapped:" << endl;
     for ( auto & wrapped_class : WrappedClass::wrapped_classes) {
         if (!wrapped_class->dumped) { continue; }
         for (auto used_class : wrapped_class->used_classes) {
@@ -472,7 +469,7 @@ std::cerr << fmt::format("done with includes, building class and constructor") <
                 js_access_virtual_method_string << "  JS_ACCESS_" << num_params
                                                 << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
 
-                js_access_virtual_method_string << bidirectional_virtual_method->getReturnType().getAsString() << ", ";
+                js_access_virtual_method_string << method->return_type.name << ", ";
 
                 //std::cerr << fmt::format("11 - num_params: {}", num_params) << std::endl;
                 js_access_virtual_method_string << bidirectional_virtual_method->getName().str();

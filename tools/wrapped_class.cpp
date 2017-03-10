@@ -13,7 +13,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     found_method(found_method)
 {
 
-    std::cerr << fmt::format("*** Creating WrappedClass for {}", this->name_alias) << std::endl;
+    std::cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << std::endl;
     fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
@@ -146,7 +146,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         cerr << "getting base type wrapped class object" << endl;
         WrappedClass &current_base = WrappedClass::get_or_insert_wrapped_class(base_record_decl, this->compiler_instance,
-                                                                               FOUND_BASE_CLASS);
+                                                                               this->found_method_means_wrapped() ? FOUND_BASE_CLASS : FOUND_UNSPECIFIED);
 
 
         auto current_base_include = get_include_for_type_decl(this->compiler_instance, current_base.decl);
@@ -171,9 +171,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
-    if (base_types.size() > 1) {
-        data_error(fmt::format("trying to see if type should be wrapped but it has more than one base type -- unsupported", class_name));
-    }
 
 
     // END NEW CODE
@@ -376,31 +373,33 @@ std::string WrappedClass::generate_js_stub() {
 
 
 bool WrappedClass::should_be_wrapped() const {
-    auto a = class_name;
-    auto b = found_method;
-    auto c = join(annotations.get());
-//        cerr << fmt::format("In 'should be wrapped' with class {}, found_method: {}, annotations: {}", a, b, c) << endl;
+
+    cerr << fmt::format("In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get())) << endl;
 
     if (annotations.has(V8TOOLKIT_NONE_STRING) &&
         annotations.has(V8TOOLKIT_ALL_STRING)) {
+        cerr << "data error - none and all" << endl;
         data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
     }
 
     if (found_method == FOUND_BASE_CLASS) {
+        cerr << fmt::format("should be wrapped {}- found base class", this->name_alias) << endl;
         return true;
     }
     if (found_method == FOUND_GENERATED) {
-        return true;
+        cerr << fmt::format("should be wrapped {}- found generated", this->name_alias) << endl;
+
+        return false;
     }
 
     if (found_method == FOUND_INHERITANCE) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING" << endl;
+            cerr << "Found NONE_STRING" << endl;
             return false;
         }
     } else if (found_method == FOUND_ANNOTATION) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING" << endl;
+            cerr << "Found NONE_STRING" << endl;
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
@@ -408,13 +407,14 @@ bool WrappedClass::should_be_wrapped() const {
         }
     } else if (found_method == FOUND_UNSPECIFIED) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
+            cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-//            cerr << "didn't find all string on UNSPECIFIED" << endl;
+            cerr << "didn't find all string on UNSPECIFIED" << endl;
             return false;
         }
+        return false;
     }
 
     /*
@@ -432,6 +432,12 @@ bool WrappedClass::should_be_wrapped() const {
     }
     */
 
+    // if it should be wrapped but there are too many base types, error out
+    if (base_types.size() > 1) {
+        data_error(fmt::format("trying to see if {} should be wrapped but it has more than one base type -- unsupported", class_name));
+    }
+
+    cerr << "should be wrapped -- fall through returning true" << endl;
     return true;
 }
 
@@ -578,3 +584,13 @@ bool WrappedClass::is_template_specialization() {
     return dyn_cast<ClassTemplateSpecializationDecl>(decl);
 }
 
+
+
+bool WrappedClass::found_method_means_wrapped() {
+    return
+            this->found_method == FOUND_ANNOTATION ||
+            this->found_method == FOUND_INHERITANCE ||
+            this->found_method == FOUND_GENERATED ||
+            this->found_method == FOUND_BASE_CLASS;
+
+}

@@ -24,10 +24,14 @@ struct ParsedMethod {
         QualType type;
         QualType plain_type;
 
+        /// name of actual type
         string name;
+
+        /// name of type without reference or pointers
         string plain_name;
         string description;
 
+        /// corresponding javascript type
         string jsdoc_type_name;
 
         TypeInfo(QualType const & type);

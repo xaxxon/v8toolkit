@@ -42,9 +42,9 @@ string convert_type_to_jsdoc(std::string const & type_name_input);
 
 // how was a wrapped class determined to be a wrapped class?
 enum FOUND_METHOD {
-    FOUND_UNSPECIFIED = 0,
-    FOUND_ANNOTATION,
-    FOUND_INHERITANCE,
+    FOUND_UNSPECIFIED = 0, // no information on why this class is being wrapped - may change later if more information found
+    FOUND_ANNOTATION, // this class was annotated as being wrapped
+    FOUND_INHERITANCE, // this class is a base of a function that is wrapped
     FOUND_GENERATED,
     FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
     FOUND_NEVER_WRAP
