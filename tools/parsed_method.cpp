@@ -4,7 +4,8 @@
 
 ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     type(type),
-    name(this->type.getAsString()),
+    //name(this->type.getAsString()),
+    name(get_type_string(this->type)),
     plain_type(get_plain_type(this->type)),
     plain_name(this->plain_type.getAsString())
 {

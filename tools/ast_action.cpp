@@ -42,6 +42,9 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
 
     for (WrappedClass * wrapped_class : classes) {
 
+        // force methods to be parsed
+        wrapped_class->get_methods();
+
         for (auto derived_type : wrapped_class->derived_types) {
             extern_templates.insert(derived_type);
         }
@@ -64,9 +67,9 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
         //std::cerr << fmt::format("aa1") << std::endl;
         include_files.insert(base_type_includes.begin(), base_type_includes.end());
         //std::cerr << fmt::format("aa2") << std::endl;
-        for(auto & include_file : include_files) {
+        for(auto & include_file : wrapped_class->get_base_type_includes()) {
             //std::cerr << fmt::format("aa3") << std::endl;
-            //  printf("%s ", include_file.c_str());
+            printf("base type include: %s ", include_file.c_str());
             if (include_file != "" && already_included_this_file.count(include_file) == 0) {
                 //std::cerr << fmt::format("aa4") << std::endl;
                 // skip "internal looking" includes - look at 1 because 0 is < or "

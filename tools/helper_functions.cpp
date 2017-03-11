@@ -11,6 +11,10 @@
 #include "wrapped_class.h"
 
 
+string make_macro_safe_comma(string const & input) {
+    return std::regex_replace(input, std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA ");
+}
+
 // Gets the "most basic" type in a type.   Strips off ref, pointer, CV
 //   then calls out to get how to include that most basic type definition
 //   and puts it in wrapped_class.include_files
@@ -77,7 +81,7 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
 
 
     wrapped_class.include_files.insert(actual_include_string);
-
+    cerr << fmt::format("{} now has {} include files having added {}", wrapped_class.name_alias, wrapped_class.include_files.size(), actual_include_string) << endl;
 
 
     if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {
@@ -395,14 +399,16 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             bidirectional_file << "#include " << include << "\n";
         }
 
-std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
+        std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
         for (auto & include : wrapped_class->include_files) {
             if (include == "") {
                 continue;
             }
             bidirectional_file << "#include " << include << "\n";
         }
-std::cerr << fmt::format("done with includes, building class and constructor") << std::endl;
+        bidirectional_file << endl; // blank line between includes and class definition
+
+        std::cerr << fmt::format("done with includes, building class and constructor") << std::endl;
         bidirectional_file << fmt::format(
             "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:", // {{ is escaped {
             base_type->name_alias, base_type->name_alias, base_type->name_alias) << endl;
@@ -468,7 +474,7 @@ std::cerr << fmt::format("done with includes, building class and constructor") <
                 js_access_virtual_method_string << "  JS_ACCESS_" << num_params
                                                 << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
 
-                js_access_virtual_method_string << method->return_type.name << ", ";
+                js_access_virtual_method_string << make_macro_safe_comma(method->return_type.name) << ", ";
 
                 //std::cerr << fmt::format("11 - num_params: {}", num_params) << std::endl;
                 js_access_virtual_method_string << bidirectional_virtual_method->getName().str();
@@ -479,8 +485,7 @@ std::cerr << fmt::format("done with includes, building class and constructor") <
                                                              bidirectional_virtual_method);
                     vector<string> type_names;
                     for (auto &type : types) {
-                        type_names.push_back(
-                                std::regex_replace(type.getAsString(), std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA "));
+                        type_names.push_back(make_macro_safe_comma(type.getAsString()));
                     }
 
                     js_access_virtual_method_string << join(type_names, ", ", true);

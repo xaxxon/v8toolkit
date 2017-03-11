@@ -80,6 +80,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
+    this->include_files.insert(get_include_for_type_decl(this->compiler_instance, this->decl));
+
+
     print_vector(annotation_base_types_to_ignore, "base types to ignore");
     print_vector(annotation_base_type_to_use, "base type to use");
 
@@ -215,7 +218,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         // set the bidirectional class as being a subclass of the non-bidirectional type
         this->derived_types.insert(js_wrapped_class);
 
-        //js_wrapped_class->include_files.insert(js_wrapped_class->my_header_filename);
+        js_wrapped_class->include_files.insert("<v8toolkit/bidirectional.h>");
         cerr << fmt::format("my_include for bidirectional class: {}" , js_wrapped_class->my_include) << endl;
     }
 
@@ -355,8 +358,6 @@ std::string WrappedClass::generate_js_stub() {
     }
     result << "{\n";
 
-    CXXFinalOverriderMap override_map;
-    this->decl->getFinalOverriders(override_map);
 
     //    std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
     for (auto & method : this->methods) {
@@ -490,7 +491,7 @@ std::string WrappedClass::get_bindings(){
                           indentation, name_alias, name_alias);
     result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
-    for(auto & method : methods) {
+    for(auto & method : this->get_methods()) {
         result << method->get_bindings();
     }
     for(auto & member : members) {

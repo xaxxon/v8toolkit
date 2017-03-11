@@ -96,9 +96,15 @@ struct ProxyType<T,void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
 };
 
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
-    
+
+// use V8TOOLKIT_MACRO_TYPE instead
 #define V8TOOLKIT_COMMA ,
-  
+
+// protects and allows subsequent calls to additional macros for types with commas (templated types)
+#define V8TOOLKIT_MACRO_TYPE(...) __VA_ARGS__
+
+
+
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
