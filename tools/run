@@ -8,7 +8,7 @@
                   sample.cpp \
               -fsyntax-only -std=c++14 -O0 \
           -Xclang -load \
-          -Xclang class_parser.dylib \
+          -Xclang libclass_parser.dylib \
           -Xclang -plugin \
           -Xclang v8toolkit-generate-bindings
 

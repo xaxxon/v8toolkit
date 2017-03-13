@@ -219,6 +219,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         this->derived_types.insert(js_wrapped_class);
 
         js_wrapped_class->include_files.insert("<v8toolkit/bidirectional.h>");
+        js_wrapped_class->include_files.insert(js_wrapped_class->my_include);
         cerr << fmt::format("my_include for bidirectional class: {}" , js_wrapped_class->my_include) << endl;
     }
 

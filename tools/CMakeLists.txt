@@ -9,17 +9,15 @@ link_directories(${CLANG_HOME}/lib  )
 include_directories(${V8_INCLUDE_DIR})
 include_directories(${CLANG_HOME}/include)
 
-#;;;; NEED TO ADD LDFLAGS PROGRAM THING!!!  `$CLANG_HOME/bin/llvm-config --ldflags --libs --system-libs`
 execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-libs
         OUTPUT_VARIABLE llvm_config_output
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
-
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic" )
-set(CMAKE_SHARED_LINKER_FLAGS ${llvm_config_output})
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 
 add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
         annotations.cpp class_handler.cpp bidirectional_bindings.cpp ast_consumer.cpp wrapped_class.cpp
