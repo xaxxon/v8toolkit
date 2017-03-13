@@ -399,7 +399,7 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             bidirectional_file << "#include " << include << "\n";
         }
 
-        std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
+        // std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
         for (auto & include : wrapped_class->include_files) {
             if (include == "") {
                 continue;

@@ -179,6 +179,7 @@ public:
     virtual void foo_parent_virtual(int, int, int) override;
     virtual void foo_parent_pure_virtual(char, char, char, char) override;
 
+    operator int();
 
 };
 

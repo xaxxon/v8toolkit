@@ -13,10 +13,10 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 
     // if the current result is matched from the "not std:: class"-bound matcher
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
+                auto class_name = get_canonical_name_for_decl(klass);
+
+        std::cerr << fmt::format("Got a class that's not a std:: class {}", class_name) << std::endl;
         
-        std::cerr << fmt::format("Got a class that's not a std:: class") << std::endl;
-        
-        auto class_name = get_canonical_name_for_decl(klass);
 
         if (klass->isDependentType()) {
             cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;

@@ -230,7 +230,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
     if (this->decl == nullptr) {
-        llvm::report_fatal_error(fmt::format("Can't get_methods on type without decl: {}", this->name_alias).c_str());
+        return this->methods;
+        // llvm::report_fatal_error(fmt::format("Can't get_methods on type without decl: {}", this->name_alias).c_str());
     }
     if (this->methods_parsed) {
         return this->methods;
@@ -284,6 +285,10 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
         }
         if (dyn_cast<CXXDestructorDecl>(method)) {
             if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping destructor %s\n", full_method_name.c_str());
+            continue;
+        }
+        if (dyn_cast<CXXConversionDecl>(method)) {
+            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping conversion operator %s\n", full_method_name.c_str());
             continue;
         }
 
@@ -385,12 +390,12 @@ bool WrappedClass::should_be_wrapped() const {
     }
 
     if (found_method == FOUND_BASE_CLASS) {
-        cerr << fmt::format("should be wrapped {}- found base class", this->name_alias) << endl;
+        cerr << fmt::format("should be wrapped {}- found base class (YES)", this->name_alias) << endl;
         return true;
     }
     if (found_method == FOUND_GENERATED) {
-        cerr << fmt::format("should be wrapped {}- found generated", this->name_alias) << endl;
-        return false;
+        cerr << fmt::format("should be wrapped {}- found generated (YES)", this->name_alias) << endl;
+        return true;
     }
 
     if (found_method == FOUND_INHERITANCE) {
@@ -415,6 +420,7 @@ bool WrappedClass::should_be_wrapped() const {
             cerr << "didn't find all string on UNSPECIFIED" << endl;
             return false;
         }
+        cerr << "FOUND_UNSPECIFIED" << endl;
         return false;
     }
 
@@ -438,7 +444,7 @@ bool WrappedClass::should_be_wrapped() const {
         data_error(fmt::format("trying to see if {} should be wrapped but it has more than one base type -- unsupported", class_name));
     }
 
-    cerr << "should be wrapped -- fall through returning true" << endl;
+    cerr << "should be wrapped -- fall through returning true (YES)" << endl;
     return true;
 }
 
@@ -489,7 +495,7 @@ std::string WrappedClass::get_bindings(){
     result << indentation << "{\n";
     result << fmt::format("{}  // {}", indentation, class_name) << "\n";
     result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
-                          indentation, name_alias, name_alias);
+                          indentation, this->class_name, this->class_name);
     result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
     for(auto & method : this->get_methods()) {
@@ -546,19 +552,19 @@ void WrappedClass::set_error(string const & error_message) {
 std::set<string> WrappedClass::get_base_type_includes() {
     set<string> results{this->my_include};
     results.insert(this->include_files.begin(), this->include_files.end());
-    std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
+    //std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
 
-    cerr << "Includes at this level: " << endl;
-    for (auto include : results) {
-        cerr << include << endl;
-    }
+    //cerr << "Includes at this level: " << endl;
+//    for (auto include : results) {
+//        cerr << include << endl;
+//    }
 
     for (WrappedClass * base_class : this->base_types) {
-        cerr << fmt::format("...base type: {}", base_class->name_alias) << endl;
+        //cerr << fmt::format("...base type: {}", base_class->name_alias) << endl;
         auto base_results = base_class->get_base_type_includes();
         results.insert(base_results.begin(), base_results.end());
     }
-    std::cerr << fmt::format("done adding base type include for {}", this->class_name) << std::endl;
+    // std::cerr << fmt::format("done adding base type include for {}", this->class_name) << std::endl;
 
     return results;
 }

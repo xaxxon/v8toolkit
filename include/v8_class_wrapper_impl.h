@@ -284,7 +284,7 @@ namespace v8toolkit {
             throw V8Exception(this->isolate, fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
         }
         if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize(wrap_as_most_derived_flag);
         }
 	    this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
         this->finalized = true;

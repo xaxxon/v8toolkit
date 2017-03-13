@@ -39,6 +39,7 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
 
 
     std::set<WrappedClass *> extern_templates;
+    set<string> includes_for_this_file;
 
     for (WrappedClass * wrapped_class : classes) {
 
@@ -62,28 +63,31 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
 
         // Combine the includes needed for types in members/methods with the includes for the wrapped class's
         //   derived types
-        auto include_files = wrapped_class->include_files;
-        auto base_type_includes = wrapped_class->get_derived_type_includes();
         //std::cerr << fmt::format("aa1") << std::endl;
-        include_files.insert(base_type_includes.begin(), base_type_includes.end());
         //std::cerr << fmt::format("aa2") << std::endl;
-        for(auto & include_file : wrapped_class->get_base_type_includes()) {
-            //std::cerr << fmt::format("aa3") << std::endl;
-            printf("base type include: %s ", include_file.c_str());
-            if (include_file != "" && already_included_this_file.count(include_file) == 0) {
-                //std::cerr << fmt::format("aa4") << std::endl;
-                // skip "internal looking" includes - look at 1 because 0 is < or "
-                if (include_file.find("__") == 1) {
-                    continue;
-                }
-                //std::cerr << fmt::format("aa5") << std::endl;
-                class_wrapper_file << fmt::format("#include {}\n", include_file);
-                already_included_this_file.insert(include_file);
+
+        auto base_type_includes = wrapped_class->get_base_type_includes();
+        includes_for_this_file.insert(base_type_includes.begin(), base_type_includes.end());
+
+        auto derived_type_includes = wrapped_class->get_derived_type_includes();
+        includes_for_this_file.insert(derived_type_includes.begin(), derived_type_includes.end());
+
+
+    } // end loop through all classes for this file
+
+
+     for(auto & include_file : includes_for_this_file) {
+        if (include_file != "") {
+            // skip "internal looking" includes - look at 1 because 0 is < or "
+            if (include_file.find("__") == 1) {
+                continue;
             }
+            //std::cerr << fmt::format("aa5") << std::endl;
+            class_wrapper_file << fmt::format("#include {}\n", include_file);
         }
-        //std::cerr << fmt::format("aa6") << std::endl;
-        //                printf("\n");
     }
+
+
 //std::cerr << fmt::format("aa7") << std::endl;
     // remove any types that are wrapped in this file since it will be explicitly instantiated here
     for (auto wrapped_class : classes) {
