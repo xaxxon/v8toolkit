@@ -302,53 +302,7 @@ void ClassHandler::handle_class(WrappedClass & wrapped_class, // class currently
                     "About to process constructors for {} -- passed all checks to skip class constructors.",
                     wrapped_class.class_name) << endl;
 
-            foreach_constructor(wrapped_class.decl, [&](auto constructor) {
 
-//                        auto full_source_loc = FullSourceLoc(constructor->getLocation(), this->ci);
-//                        fprintf(stderr,"%s %s constructor Decl at line %d, file id: %d %s\n", indentation.c_str(),
-//                                top_level_class_decl->getName().str().c_str(),
-//                                full_source_loc.getExpansionLineNumber(),
-//                                full_source_loc.getFileID().getHashValue(),
-//                                this->ci.getBufferName(full_source_loc));
-
-
-                if (constructor->isCopyConstructor()) {
-                    fprintf(stderr, "Skipping copy constructor\n");
-                    return;
-                } else if (constructor->isMoveConstructor()) {
-                    fprintf(stderr, "Skipping move constructor\n");
-                    return;
-                } else if (constructor->isDeleted()) {
-                    if (print_logging) cerr << "Skipping deleted constructor" << endl;
-                    return;
-                }
-                Annotations annotations(constructor);
-                auto constructor_name_annotation = annotations.get_regex(V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-                // fprintf(stderr,"Got %d annotations on constructor\n", (int)annotations.size());
-                std::string constructor_name = wrapped_class.name_alias;
-                if (!constructor_name_annotation.empty()) {
-                    constructor_name = constructor_name_annotation[0];
-                }
-                if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
-                    used_constructor_names.end()) {
-                    data_error(
-                        fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
-                                    constructor_name.c_str(), wrapped_class.class_name));
-                    for (auto &name : used_constructor_names) {
-                        cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
-                    }
-                } else {
-                    cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.class_name,
-                                        constructor_name) << endl;
-                    used_constructor_names.push_back(constructor_name);
-
-                    top_level_class->constructors.insert(
-                        fmt::format("{}  class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                    indentation, get_method_parameters(this->ci,
-                                                                       *top_level_class,
-                                                                       constructor), constructor_name));
-                }
-            });
 
         }
         // if there's no constructor but there is a static method, then add the special command to expose

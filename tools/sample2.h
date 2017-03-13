@@ -5,7 +5,7 @@
 #include <vector>
 #include <set>
 
-//#include <EASTL/vector_set.h>
+#include <EASTL/vector_set.h>
 
 using namespace std;
 #include "class_parser.h"
@@ -32,6 +32,7 @@ class TemplatedClass{};
 
 class  V8TOOLKIT_WRAPPED_CLASS FooGrandParent {
 public:
+    FooGrandParent(char, char, char);
     virtual void foo_grandparent_but_not_foo_virtual();
 };
 

@@ -35,7 +35,10 @@ public:
 
 
 class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
-class WrappedClass : public v8toolkit::WrappedClassBase {};
+class WrappedClass : public v8toolkit::WrappedClassBase {
+public:
+    WrappedClass(int, int, int);
+};
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;
 class DoNotWrapEvenThoughInheritsFromWrapped : public WrappedClass {};
 

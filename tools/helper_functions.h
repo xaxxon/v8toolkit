@@ -166,12 +166,19 @@ template<class Callback>
 void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
                          const std::string & annotation) {
 
-    if (print_logging) cerr << "Enumerating constructors for " << klass->getNameAsString() << " with optional annotation: " << annotation << endl;
+    if (klass == nullptr) {
+        cerr << fmt::format("Skipping foreach_constructor because decl was nullptr") << endl;
+        return;
+    }
+
+    string class_name = klass->getNameAsString();
+    if (print_logging) cerr << "Enumerating constructors for " << class_name << " with optional annotation: " << annotation << endl;
 
     for(CXXMethodDecl * method : klass->methods()) {
         CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
         bool skip = false;
         Annotations annotations(method);
+
         // check if method is a constructor
         if (constructor == nullptr) {
             continue;
@@ -204,6 +211,7 @@ void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
             callback(constructor);
         }
     }
+    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
 }
 
 

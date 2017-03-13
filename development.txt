@@ -35,3 +35,6 @@ Need to figure out how to properly get which virtual methods are associated with
 
 Not skipping conversion operator functions properly anymore - maybe other kinds too?
 
+add #include for input parameter types in function types
+need to get includes for types in constructors
+

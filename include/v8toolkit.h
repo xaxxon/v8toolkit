@@ -792,10 +792,10 @@ struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value
     template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
+                    std::index_sequence<ArgIndexes...>,
                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        if (!std::is_same<DefaultArgsTuple, std::tuple<>>::value) {
-            throw InvalidCallException("Cannot have default arguments for function taking a v8::FunctionCallbackInfo object");
-        }
+        static_assert(std::is_same<DefaultArgsTuple, std::tuple<>>::value,
+                      "function taking a v8::FunctionCallbackInfo object cannot have default parameters");
         function(info);
     }
 };
