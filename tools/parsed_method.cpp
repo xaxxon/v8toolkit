@@ -292,6 +292,28 @@ std::string ParsedMethod::get_js_stub() {
 }
 
 
+string ParsedMethod::get_default_argument_tuple_string() const {
+    stringstream types;
+    stringstream values;
+    bool first_default_argument = true;
+    for (auto & param : this->parameters) {
+        if (param.default_value == "") {
+            assert(first_default_argument); // if it's not true then there's a gap somehow
+            continue;
+        }
+        if (!first_default_argument) {
+            types << ", ";
+            values << ", ";
+        }
+        first_default_argument = false;
+
+        types << param.type.name;
+        values << param.default_value;
+    }
+
+    return fmt::format("std::tuple<{}>({})", types.str(), values.str());
+}
+
 
 string ParsedMethod::get_bindings() {
     stringstream result;
@@ -325,8 +347,9 @@ string ParsedMethod::get_bindings() {
         result << fmt::format("    class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
                                return_and_parameter_types.str(), this->short_name, this->full_name);
     } else {
-        result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                              return_class_and_parameter_types.str(), this->short_name, this->full_name);
+        result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{}, {});\n",
+                              return_class_and_parameter_types.str(), this->short_name, this->full_name,
+        this->get_default_argument_tuple_string());
     }
 
 

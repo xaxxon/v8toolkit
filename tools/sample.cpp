@@ -51,8 +51,9 @@ public:
 class WrappedClassDerived : public WrappedClass {
 public:
     double double_member_readwrite2;
-
-    static void static_method_with_no_constructor_on_class();
+WrappedClassDerived();
+    static void static_method_with_no_constructor_on_class(int, int=5, char * = "five");
+    void method_with_no_constructor_on_class(int, int=5, char * = "five", WrappedClassDerived const & = {});
 };
 
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;

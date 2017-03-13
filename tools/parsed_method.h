@@ -76,6 +76,8 @@ struct ParsedMethod {
     CompilerInstance & compiler_instance;
     Annotations annotations;
 
+    string get_default_argument_tuple_string() const;
+
     // returns string containing function name and input parameters - this function is likely not exactly correct
     //   per c++ standard
     string get_signature_string();
