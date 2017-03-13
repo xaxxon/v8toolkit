@@ -368,7 +368,6 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("PB1") << std::endl;
         if (i >= info.Length()) {
             set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
 
@@ -399,7 +398,6 @@ struct ParameterBuilder<T,
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb2") << std::endl;
         if (i >= info.Length()) {
             return cast_to_native_no_value<NoRefT>()(info, i++);
         } else {
@@ -427,7 +425,6 @@ struct ParameterBuilder<T,
     template<int default_arg_position = -1, class DefaultArgsTuple>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb3") << std::endl;
         if (i >= info.Length()) {
             set_unspecified_parameter_value<default_arg_position, NoRefT>(info, i, stuff, default_args_tuple);
 //            boost::hana::eval_if((std::is_same<DefaultArgsTuple, std::tuple<> >::value || default_arg_position < 0),
@@ -462,7 +459,6 @@ struct ParameterBuilder<T,
     template<int default_arg_position = -1>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    std::tuple<> const & default_args_tuple =  std::tuple<>()) {
-        std::cerr << fmt::format("pb3") << std::endl;
         if (i >= info.Length()) {
 
             stuff.emplace_back(std::make_unique<Stuff<NoRefT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
@@ -486,7 +482,6 @@ struct ParameterBuilder<char *> {
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                       DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::string string;
-        std::cerr << fmt::format("pb4") << std::endl;
         if (i >= info.Length()) {
             // leave the string empty
         } else {
@@ -514,7 +509,6 @@ struct ParameterBuilder<char *> {
          template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-             std::cerr << fmt::format("pb5") << std::endl;
          if (i >= info.Length()) {
     //         static_assert(false, "implement me");
              throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified", i+1 + sizeof(Rest)..., info.Length()));
@@ -549,7 +543,6 @@ struct ParameterBuilder<char *> {
          template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
          ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-             std::cerr << fmt::format("pb6") << std::endl;
              if (i >= info.Length()) {
 //         static_assert(false, "implement me");
 
@@ -580,7 +573,6 @@ struct ParameterBuilder<const char *> {
     const char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                             DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         std::string string;
-std::cerr << fmt::format("pb7") << std::endl;
         // if there is a value, use it, otherwise just use empty string
         if (i < info.Length()) {
 //            static_assert(false, "implement me");
@@ -603,7 +595,6 @@ struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
                                                            int & i,
                                                            std::vector<std::unique_ptr<StuffBase>> & stuff,
                                                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb8") << std::endl;
         return info;
     }
 };
@@ -614,7 +605,6 @@ struct ParameterBuilder<v8::Isolate *> {
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
     v8::Isolate * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                              DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb10") << std::endl;
         return info.GetIsolate();
     }
 };
@@ -625,7 +615,6 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
     v8::Local<v8::Context> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                                       DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb11") << std::endl;
         return info.GetIsolate()->GetCurrentContext();
     }
 };
@@ -638,7 +627,6 @@ struct ParameterBuilder<v8::Local<v8::Object>> {
     v8::Local<v8::Object> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                                      std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        std::cerr << fmt::format("pb12") << std::endl;
         return info.This();
     }
 };

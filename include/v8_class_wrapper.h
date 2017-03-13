@@ -1322,7 +1322,6 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-                    std::cerr << fmt::format("HERE!!!") << std::endl;
                     CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, default_args_tuple
                      );
                 } catch (std::exception &e) {

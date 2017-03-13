@@ -24,14 +24,25 @@ bool ParsedMethod::TypeInfo::is_const() const {
 
 
 
-DataMember::DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl) :
+DataMember::DataMember(WrappedClass & wrapped_class,
+                       WrappedClass & declared_in,
+                       FieldDecl * field_decl) :
     wrapped_class(wrapped_class),
+    declared_in(declared_in),
     short_name(field_decl->getNameAsString()),
     long_name(field_decl->getQualifiedNameAsString()),
-    type(field_decl->getType())
+    type(field_decl->getType()),
+    field_decl(field_decl),
+    annotations(this->field_decl)
 {
     wrapped_class.add_name(this->short_name);
     wrapped_class.declaration_count++;
+
+    update_wrapped_class_for_type(wrapped_class, this->type.type);
+
+    // the member will be wrapped as const if the actual data type is const or there's an attribute saying it should be const
+    this->is_const = this->type.is_const() || annotations.has(V8TOOLKIT_READONLY_STRING);
+
 }
 
 
@@ -47,15 +58,15 @@ string DataMember::get_js_stub() {
 string DataMember::get_bindings() {
     stringstream result;
 
-    if (this->type.is_const()) {
+    if (this->is_const) {
         result << fmt::format("    class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->wrapped_class.name_alias, this->long_name, this->short_name);
+                              this->declared_in.name_alias, this->long_name, this->short_name);
 
     } else {
         result << fmt::format("    class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->wrapped_class.name_alias, this->long_name, this->short_name);
+                              this->declared_in.name_alias, this->long_name, this->short_name);
     }
 
     return result.str();
@@ -285,30 +296,39 @@ std::string ParsedMethod::get_js_stub() {
 string ParsedMethod::get_bindings() {
     stringstream result;
 
+    // for add_method
     stringstream return_class_and_parameter_types;
+
+    // for add_static_method
+    stringstream return_and_parameter_types;
+
     return_class_and_parameter_types << fmt::format("{}, {}", this->return_type.name, this->wrapped_class.name_alias);
+    return_and_parameter_types << fmt::format("{}", this->return_type.name, this->wrapped_class.name_alias);
     for (auto & parameter : this->parameters) {
         return_class_and_parameter_types << fmt::format(", {}", parameter.type.name);
+        return_and_parameter_types << fmt::format(", {}", parameter.type.name);
     }
 
 
-    if (this->method_decl->isStatic()) {
+    // overloaded operator type names (like OO_Call) defined here:
+    //   http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
+    // name is "OO_" followed by the first field in each line
+    if (OO_Call == method_decl->getOverloadedOperator()) {
+        result << fmt::format("    class_wrapper.make_callable<{}>(&{});\n",
+                              return_class_and_parameter_types.str(), this->full_name);
+    } else if (this->is_static) {
+
         if (static_method_renames.find(this->short_name) != static_method_renames.end()) {
             this->short_name = static_method_renames[this->short_name];
         }
+        this->wrapped_class.has_static_method = true;
+        result << fmt::format("    class_wrapper.add_static_method<{}>(\"{}\", &{});\n",
+                               return_and_parameter_types.str(), this->short_name, this->full_name);
     } else {
-
-        // overloaded operator type names (like OO_Call) defined here:
-        //   http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
-        // name is "OO_" followed by the first field in each line
-        if (OO_Call == method_decl->getOverloadedOperator()) {
-                            result << fmt::format("    class_wrapper.make_callable<{}>(&{});\n",
-                                                  return_class_and_parameter_types.str(), this->full_name);
-        } else {
-                            result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{});\n",
-                                                  return_class_and_parameter_types.str(), this->short_name, this->full_name);
-        }
+        result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{});\n",
+                              return_class_and_parameter_types.str(), this->short_name, this->full_name);
     }
+
 
     return result.str();
 }

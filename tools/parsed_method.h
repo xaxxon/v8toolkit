@@ -22,6 +22,10 @@ struct ParsedMethod {
 
     struct TypeInfo {
         QualType type;
+
+        // removes reference and all pointers, but keeps qualifications on the "plain type"
+        // double const * const **& => double const
+        // double * const **& => double
         QualType plain_type;
 
         /// name of actual type
@@ -35,7 +39,9 @@ struct ParsedMethod {
 
         TypeInfo(QualType const & type);
 
-        // returns if the type (or the type being pointed/referred to) is const (not is the pointer const)
+        // return if the type (or the type being pointed/referred to) is const (not is the pointer const)
+        // double * const => false
+        // double const * => true
         bool is_const() const;
     };
 
@@ -90,12 +96,17 @@ struct ParsedMethod {
 struct WrappedClass;
 struct DataMember {
     WrappedClass & wrapped_class;
+    WrappedClass & declared_in; // level in the hierarchy the member is actually declared at - may match wrapped_class
     string short_name;
     string long_name;
     ParsedMethod::TypeInfo type;
     FieldDecl const * field_decl;
+    Annotations annotations;
 
-    DataMember(WrappedClass & wrapped_class, FieldDecl * field_decl);
+    // whether the WRAPPING should be const, not necessarily whether the actual c++ type is
+    bool is_const = false;
+
+    DataMember(WrappedClass & wrapped_class, WrappedClass & declared_in, FieldDecl * field_decl);
 
     string get_js_stub();
     string get_bindings();

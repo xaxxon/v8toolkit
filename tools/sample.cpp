@@ -38,7 +38,23 @@ class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::W
 class WrappedClass : public v8toolkit::WrappedClassBase {
 public:
     WrappedClass(int, int, int);
+    double double_member_readwrite;
+    V8TOOLKIT_READONLY double double_member_readonly1;
+    double const double_member_readonly2;
+
+    V8TOOLKIT_EXTEND_WRAPPER static void extend_wrapper();
+    V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
+
 };
+
+
+class WrappedClassDerived : public WrappedClass {
+public:
+    double double_member_readwrite2;
+
+    static void static_method_with_no_constructor_on_class();
+};
+
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;
 class DoNotWrapEvenThoughInheritsFromWrapped : public WrappedClass {};
 

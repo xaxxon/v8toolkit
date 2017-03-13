@@ -33,8 +33,6 @@ Need to figure out how to properly get which virtual methods are associated with
  - don't repeat ones that are in multiple parent/grandparent/etc types
  - need a set of name and parameter strings corresponding to each one most likely
 
-Not skipping conversion operator functions properly anymore - maybe other kinds too?
 
-add #include for input parameter types in function types
-need to get includes for types in constructors
 
+need to get data members from the entire class hierarchy for wrapped classes.

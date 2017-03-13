@@ -318,6 +318,8 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
      std::cerr << fmt::format("*** Parsing class methods") << std::endl;
     for (CXXMethodDecl * method : this->decl->methods()) {
 
+        Annotations method_annotations(method);
+
         std::string full_method_name(method->getQualifiedNameAsString());
         //cerr << fmt::format("looking at {}", full_method_name) << endl;
 
@@ -369,6 +371,29 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
             continue;
         }
 
+
+        if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
+            // cerr << "has extend wrapper string" << endl;
+            if (!method->isStatic()) {
+                data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
+
+            }
+            if (PRINT_SKIPPED_EXPORT_REASONS)
+                cerr << fmt::format("**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping") << endl;
+            this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
+            continue; // don't wrap the method as a normal method
+        }
+
+        // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
+        if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
+            if (!method->isStatic()) {
+                data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static", full_method_name.c_str()));
+            }
+            if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("**skipping static method marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping") << endl;
+            this->wrapper_custom_extensions.insert(fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});", full_method_name));
+            continue; // don't wrap the method as a normal method
+        }
+
         std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
         this->methods.insert(make_unique<ParsedMethod>(this->compiler_instance, *this, method));
     }
@@ -376,30 +401,48 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
 }
 
 
+void WrappedClass::foreach_inheritance_level(function<void(WrappedClass &)> callback) {
+    WrappedClass * current_class = this;
+    while (true) {
+
+        callback(*current_class);
+
+        if (current_class->base_types.empty()) {
+            break;
+        }
+        current_class = *current_class->base_types.begin();
+    }
+
+}
+
 set<unique_ptr<DataMember>> & WrappedClass::get_members() {
     if (this->members_parsed) {
         return this->members;
     }
     this->members_parsed = true;
-    for (FieldDecl * field : this->decl->fields()) {
 
-        string field_name = field->getQualifiedNameAsString();
 
-        auto export_type = get_export_type(field, EXPORT_ALL);
-        if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-            if (PRINT_SKIPPED_EXPORT_REASONS)
-                printf("Skipping data member %s because not supposed to be exported %d\n",
-                       field_name.c_str(), export_type);
-            continue;
+    this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
+        for (FieldDecl *field : wrapped_class.decl->fields()) {
+
+            string field_name = field->getQualifiedNameAsString();
+
+            auto export_type = get_export_type(field, EXPORT_ALL);
+            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
+                if (PRINT_SKIPPED_EXPORT_REASONS)
+                    printf("Skipping data member %s because not supposed to be exported %d\n",
+                           field_name.c_str(), export_type);
+                continue;
+            }
+
+            if (field->getAccess() != AS_public) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", field_name.c_str());
+                continue;
+            }
+
+            this->members.emplace(make_unique<DataMember>(*this, wrapped_class, field));
         }
-
-        if (field->getAccess() != AS_public) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", field_name.c_str());
-            continue;
-        }
-
-        this->members.emplace(make_unique<DataMember>(*this, field));
-    }
+    });
     return this->members;
 }
 
@@ -427,8 +470,8 @@ std::string WrappedClass::generate_js_stub() {
     result << "/**\n";
     result << fmt::format(" * @class {}\n", this->name_alias);
 
-    //    std::cerr << fmt::format("generating stub for {} data members", this->members.size()) << std::endl;
-    for (auto & member : this->members) {
+    //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
+    for (auto & member : this->get_members()) {
         result << member->get_js_stub();
     }
     result << fmt::format(" **/\n", indentation);
@@ -598,8 +641,15 @@ std::string WrappedClass::get_bindings(){
     }
     result << fmt::format("{}  class_wrapper.finalize(true);\n", indentation);
 
-    for(auto & constructor : this->get_constructors()) {
-        result << indentation << "  " << constructor;
+    // if there are no constructors but there are static methods, expose the static methods with this non-constructor name
+    if (this->get_constructors().empty() && this->has_static_method) {
+        result << fmt::format("{} class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, this->name_alias);
+    }
+    // otherwise just create any constructors that may need wrapping (none is fine)
+    else {
+        for (auto &constructor : this->get_constructors()) {
+            result << indentation << "  " << constructor;
+        }
     }
 
     result << indentation << "}\n\n";

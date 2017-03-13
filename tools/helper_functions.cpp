@@ -211,9 +211,9 @@ void data_warning(const string & warning) {
 }
 
 QualType get_plain_type(QualType qual_type) {
-    auto type = qual_type.getNonReferenceType().getUnqualifiedType();
+    auto type = qual_type.getNonReferenceType();//.getUnqualifiedType();
     while(!type->getPointeeType().isNull()) {
-        type = type->getPointeeType().getUnqualifiedType();
+        type = type->getPointeeType();//.getUnqualifiedType();
     }
     return type;
 }

@@ -72,6 +72,9 @@ public:
 
     bool is_template_specialization();
 
+    void foreach_inheritance_level(function<void(WrappedClass &)> callback);
+
+
     /**
      * Adds the specified name and sets valid = false if it's alrady used
      * @param name name to add

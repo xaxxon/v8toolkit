@@ -480,27 +480,6 @@ void ClassHandler::handle_method(WrappedClass & klass, CXXMethodDecl * method) {
 
 
 
-    if (annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
-        // cerr << "has extend wrapper string" << endl;
-        if (!method->isStatic()) {
-            data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
-
-        }
-        if (PRINT_SKIPPED_EXPORT_REASONS)
-            cerr << fmt::format("**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping") << endl;
-        top_level_class->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
-
-        return;
-    }
-
-    // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
-    if (annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
-        if (!method->isStatic()) {
-            data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static", full_method_name.c_str()));
-        }
-        if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("**skipping static method marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping") << endl;
-        top_level_class->wrapper_custom_extensions.insert(fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});", full_method_name));
-    }
 
 
 
