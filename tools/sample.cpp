@@ -53,7 +53,7 @@ public:
     double double_member_readwrite2;
 WrappedClassDerived();
     static void static_method_with_no_constructor_on_class(int, int=5, char * = "five");
-    void method_with_no_constructor_on_class(int, int=5, char * = "five", WrappedClassDerived const & = {});
+    void method_with_no_constructor_on_class(int, int const & =5, char * = "five", WrappedClassDerived const & s = {});
 };
 
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;

@@ -23,6 +23,13 @@ bool ParsedMethod::TypeInfo::is_const() const {
 }
 
 
+ParsedMethod::TypeInfo ParsedMethod::TypeInfo::plain_without_const() const {
+    QualType non_const = this->plain_type;
+    non_const.removeLocalConst();
+    return TypeInfo(non_const);
+}
+
+
 
 DataMember::DataMember(WrappedClass & wrapped_class,
                        WrappedClass & declared_in,
@@ -92,36 +99,33 @@ ParsedMethod::ParameterInfo::ParameterInfo(ParsedMethod & method, int position, 
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
                                  this->method.wrapped_class.name_alias, this->method.short_name, this->position));
     }
-    //std::cerr << fmt::format("4") << std::endl;
 
     // set default argument or "" if none
     if (parameter_decl->hasDefaultArg()) {
-        //std::cerr << fmt::format("5") << std::endl;
         auto default_argument = parameter_decl->getDefaultArg();
         if (default_argument != nullptr) {
-            //std::cerr << fmt::format("5.1") << std::endl;
             auto source_range = default_argument->getSourceRange();
-            //std::cerr << fmt::format("5.2") << std::endl;
             if (source_range.isValid()) {
-                //std::cerr << fmt::format("5.3") << std::endl;
 
                 auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
-                //std::cerr << fmt::format("5.31") << std::endl;
 
-                this->default_value = source;
+                // certain default values return the = sign, others don't.  specifically  "= {}" comes back with the =, so strip it off
+                // is this a clang bug?
+                this->default_value = std::regex_replace(source, std::regex("^\\s*=\\s*"), "");
+
+                if (this->default_value == "{}") {
+
+                    this->default_value = fmt::format("{}{{}}", this->type.plain_without_const().name);
+                }
 
             } else {
-                //std::cerr << fmt::format("5.4") << std::endl;
 
             }
         } else {
-            //std::cerr << fmt::format("5.01") << std::endl;
         }
     } else {
-        //std::cerr << fmt::format("6") << std::endl;
         this->default_value = "";
     }
-    //std::cerr << fmt::format("7") << std::endl;
 
 }
 
@@ -307,7 +311,11 @@ string ParsedMethod::get_default_argument_tuple_string() const {
         }
         first_default_argument = false;
 
-        types << param.type.name;
+        //types << param.type.name; // still has const and references on it, which doesn't work well for tuples
+        types << param.type.plain_without_const().name;
+
+        // this may have a problem with using type names not visible outside where the default argument is specified
+        // may need to substitute the type name instead if it's not a constant and is instead some sort of name
         values << param.default_value;
     }
 

@@ -36,3 +36,10 @@ Need to figure out how to properly get which virtual methods are associated with
 
 
 need to get data members from the entire class hierarchy for wrapped classes.
+
+
+samples/sample.cpp thing2 with default parameter is broken - many ParameterBuilders aren't properly handling default types, including the one for char const *
+
+default values are often broken.
+ - uses type names not visible in wrapper code but the syntax is valid in the class definition
+ -

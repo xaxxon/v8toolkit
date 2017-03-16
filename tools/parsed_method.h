@@ -43,6 +43,8 @@ struct ParsedMethod {
         // double * const => false
         // double const * => true
         bool is_const() const;
+
+        TypeInfo plain_without_const() const;
     };
 
 

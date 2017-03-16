@@ -1019,9 +1019,9 @@ public:
 
 
 
-    template<class R, class TBase, class... Args,
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
+      V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const, DefaultArgs const & default_args = DefaultArgs()) {
         if (!std::is_const<T>::value) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>());
         }
@@ -1029,9 +1029,9 @@ public:
     }
 
 
-    template<class R, class TBase, class... Args,
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const &) {
+      V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
         if (!std::is_const<T>::value) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>());
         }
@@ -1039,9 +1039,9 @@ public:
     }
 
 
-    template<class R, class TBase, class... Args,
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>, 
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&) {
+      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&, DefaultArgs const & default_args = DefaultArgs()) {
         static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
 
@@ -1322,7 +1322,9 @@ public:
                     // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
                     //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
                     // }
-                    CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, default_args_tuple
+
+					// make a copy of default_args_tuple so it's non-const
+                    CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, std::tuple<DefaultArgTypes...>(default_args_tuple)
                      );
                 } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));

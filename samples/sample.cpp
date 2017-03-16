@@ -59,6 +59,8 @@ public:
     ~Point(){instance_count--;}
     int x_, y_;
     int thing(int z, char zz = 'a'){if (SAMPLE_DEBUG) fprintf(stderr, "In Point::Thing with this %p x: %d y: %d and input value z = %d zz = %c\n", this, this->x_, this->y_, z, zz); return z*2;}
+  char const * thing2(int z, char const * zz = "asdf"){ fprintf(stderr, "In Point::thing2 with z=%d, zz=%s\n", z, zz); return zz; }
+  void thing3(char *, char*, bool val = false){fprintf(stderr, "thing3 %d\n", val);}
     int overloaded_method(char * foo){return 0;}
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
@@ -238,6 +240,8 @@ int main(int argc, char* argv[])
             wrapped_point.add_static_method("", &Point::static_method_same_name);
 
             wrapped_point.add_method("thing", &Point::thing, std::tuple<char>('f'));
+	    wrapped_point.add_method("thing2", &Point::thing2, std::tuple<char const *>("asdf"));
+	    wrapped_point.add_method("thing3", &Point::thing3, std::tuple<bool>(true));
 	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
 
@@ -478,6 +482,24 @@ int main(int argc, char* argv[])
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                                    "p = new Point(); p.thing(3);")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); println(`should print specified value qwer`);  println(p.thing2(5, \"qwer\")); println(`should print default value asdf`); println(p.thing2(5));")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); p.thing3(\"a\", \"b\");")).ToLocalChecked();
                 v8::TryCatch tc4(isolate);
                 (void)script->Run(context);
                 v8toolkit::ReportException(isolate, &tc4);
