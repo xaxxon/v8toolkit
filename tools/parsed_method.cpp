@@ -7,7 +7,7 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     //name(this->type.getAsString()),
     name(get_type_string(this->type)),
     plain_type(get_plain_type(this->type)),
-    plain_name(this->plain_type.getAsString())
+    plain_name(get_type_string(this->plain_type))
 {
     name = regex_replace(name, std::regex("^(struct|class) "), "");
 
@@ -17,8 +17,74 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
 }
 
 
+string ParsedMethod::TypeInfo::convert_simple_typename_to_jsdoc(string simple_type_name) {
+
+
+    simple_type_name = regex_replace(simple_type_name, regex("std::__(cxx\\d\\d|\\d)::"), "std::");
+    simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)\\s*"), "");
+
+
+    std::smatch matches;
+
+    for(auto & conversion_pattern : cpp_to_js_type_conversions) {
+        for (auto &pair : cpp_to_js_type_conversions) {
+            if (regex_match(simple_type_name, matches, std::regex(pair.first))) {
+                std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
+                return pair.second;
+            }
+        }
+    }
+
+    // no match, return unchanged
+    std::cerr << fmt::format("returning simple type name unchanged {}", simple_type_name) << std::endl;
+    return simple_type_name;
+}
+
+
 string ParsedMethod::TypeInfo::get_jsdoc_type_name() {
-    return convert_type_to_jsdoc(this->plain_without_const().name);
+    std::cerr << fmt::format("converting {}", this->name) << std::endl;
+
+    vector<string> template_type_jsdoc_conversions;
+    if (this->is_templated()) {
+
+        // convert each templated type
+        this->for_each_templated_type([&](QualType qualtype){
+            auto typeinfo = TypeInfo(qualtype);
+            std::cerr << fmt::format("converting templated type {}", typeinfo.plain_name) << std::endl;
+            template_type_jsdoc_conversions.push_back(typeinfo.get_jsdoc_type_name());
+        });
+
+        // convert the specialized template name
+        string specialized_template_name;
+        if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->get_plain_type_decl())) {
+            if (auto spec_tmpl = specialization->getSpecializedTemplate()) {
+                specialized_template_name = spec_tmpl->getQualifiedNameAsString();
+                fprintf(stderr, "Specialized template: %p, %s\n", (void *) spec_tmpl,
+                        specialized_template_name.c_str());
+                print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
+            } else {
+                llvm::report_fatal_error("couldn't determine name of template being specialized");
+            }
+        } else {
+            llvm::report_fatal_error("Template being specialized couldn't be cast to class template spec decl (shouldn't happen)");
+        }
+
+        specialized_template_name = this->convert_simple_typename_to_jsdoc(specialized_template_name);
+
+
+        // go through each capturing match and...
+        for (size_t i = 0; i < template_type_jsdoc_conversions.size(); i++) {
+            // look for $1, $2, etc in replacement and substitute in the matching position
+            specialized_template_name = std::regex_replace(specialized_template_name, std::regex(fmt::format("\\${}", i+1)),
+                                          template_type_jsdoc_conversions[i]);
+        }
+        std::cerr << fmt::format("final jsdoc conversion: {} =? {}", this->plain_name, specialized_template_name) << std::endl;
+        return specialized_template_name;
+    }
+    // Handle non-templated types
+    else {
+        return this->convert_simple_typename_to_jsdoc(this->plain_name);
+    }
 }
 
 bool ParsedMethod::TypeInfo::is_const() const {
@@ -32,8 +98,24 @@ ParsedMethod::TypeInfo ParsedMethod::TypeInfo::plain_without_const() const {
     return TypeInfo(non_const);
 }
 
+
+
+CXXRecordDecl const * ParsedMethod::TypeInfo::get_plain_type_decl() const {
+    auto decl = this->plain_type->getAsCXXRecordDecl();
+    if (decl == nullptr) {
+        return nullptr;
+    }
+    return dyn_cast<ClassTemplateSpecializationDecl>(decl);
+}
+
+
+
 bool ParsedMethod::TypeInfo::is_templated() const {
-    if (dyn_cast<ClassTemplateSpecializationDecl>(this->plain_type->getAsCXXRecordDecl())) {
+    auto decl = this->get_plain_type_decl();
+    if (decl == nullptr) {
+        return false;
+    }
+    if (dyn_cast<ClassTemplateSpecializationDecl>(decl) != nullptr) {
         return true;
     } else {
         return false;
@@ -64,8 +146,6 @@ void ParsedMethod::TypeInfo::for_each_templated_type(std::function<void(QualType
         if (print_logging) cerr << "Not a template specializaiton type " << this->plain_type.getAsString() << endl;
     }
 }
-
-
 
 
 DataMember::DataMember(WrappedClass & wrapped_class,

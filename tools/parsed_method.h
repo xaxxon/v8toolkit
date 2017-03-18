@@ -21,12 +21,19 @@ struct ParsedMethod {
     bool new_virtual;
 
     struct TypeInfo {
+
+    private:
+        static string convert_simple_typename_to_jsdoc(string simple_type_name);
+
+    public:
         QualType type;
 
         // removes reference and all pointers, but keeps qualifications on the "plain type"
         // double const * const **& => double const
         // double * const **& => double
         QualType plain_type;
+
+        CXXRecordDecl const * get_plain_type_decl() const;
 
         /// name of actual type
         string name;
@@ -70,6 +77,7 @@ struct ParsedMethod {
 
     public:
         ParameterInfo(ParsedMethod & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance);
+
 
     }; // end ParameterInfo
 

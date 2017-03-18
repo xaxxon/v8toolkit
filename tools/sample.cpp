@@ -41,6 +41,8 @@ public:
     double double_member_readwrite;
     V8TOOLKIT_READONLY double double_member_readonly1;
     double const double_member_readonly2;
+//    std::vector<std::string> vector_of_ints;
+    std::vector<WrappedClass *> vector_of_selfs;
 
     V8TOOLKIT_EXTEND_WRAPPER static void extend_wrapper();
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
@@ -52,8 +54,8 @@ class WrappedClassDerived : public WrappedClass {
 public:
     double double_member_readwrite2;
 WrappedClassDerived();
-    static void static_method_with_no_constructor_on_class(int, int=5, char * = "five");
-    void method_with_no_constructor_on_class(int, int const & =5, char * = "five", WrappedClassDerived const & s = {});
+    static void static_method_with_no_constructor_on_class(int, int=5, char const * = "five");
+    void method_with_no_constructor_on_class(int, int const & =5, char const * = "five", WrappedClassDerived const & s = {});
 };
 
 class V8TOOLKIT_SKIP DoNotWrapEvenThoughInheritsFromWrapped;

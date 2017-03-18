@@ -568,44 +568,47 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
 
     }
 }
-
-// converts from c++ type to javascript type
-string convert_type_to_jsdoc(std::string const & type_name_input) {
-    string type_name = type_name_input;
-    std::smatch matches;
-    std::cerr << fmt::format("converting {}...", type_name) << std::endl;
-
-    // remove any leading struct/class text
-    type_name = regex_replace(type_name, std::regex("^(struct|class) "), "");
-
-    // things like: change vector<int> to Array.[Number]
-    for (auto &pair : cpp_to_js_type_conversions) {
-
-        if (regex_match(type_name, matches, std::regex(pair.first))) {
-             std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
-
-            string replacement_type = pair.second; // need a temp because the regex matches point into the current this->type
-
-            // go through each capturing match and...
-            for (size_t i = 1; i < matches.size(); i++) {
-//                // recursively convert the matched type
-                string converted_captured_type_name = convert_type_to_jsdoc(matches[i].str());
-
-                // look for $1, $2, etc in replacement and substitute in the matching position
-                replacement_type = std::regex_replace(replacement_type, std::regex(fmt::format("\\${}", i)),
-                                              converted_captured_type_name);
-            }
-            type_name = replacement_type;
-            std::cerr << fmt::format("... final conversion to: {}", replacement_type) << std::endl;
-            break;
-        }
-    }
-
-    std::cerr << fmt::format("returning jsdoc converted type: {}", type_name) << std::endl;
-    return type_name;
-}
-
-
+//
+//// converts from c++ type to javascript type
+//string convert_type_to_jsdoc(std::string const & type_name_input) {
+//    string type_name = type_name_input;
+//    std::smatch matches;
+//    std::cerr << fmt::format("converting {}...", type_name) << std::endl;
+//
+//    // remove any leading struct/class text
+//    type_name = regex_replace(type_name, std::regex("^(struct|class) "), "");
+//
+//
+//
+//
+////    // things like: change vector<int> to Array.[Number]
+////    for (auto &pair : cpp_to_js_type_conversions) {
+////
+////        if (regex_match(type_name, matches, std::regex(pair.first))) {
+////             std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
+////
+////            string replacement_type = pair.second; // need a temp because the regex matches point into the current this->type
+////
+////            // go through each capturing match and...
+////            for (size_t i = 1; i < matches.size(); i++) {
+//////                // recursively convert the matched type
+////                string converted_captured_type_name = convert_type_to_jsdoc(matches[i].str());
+////
+////                // look for $1, $2, etc in replacement and substitute in the matching position
+////                replacement_type = std::regex_replace(replacement_type, std::regex(fmt::format("\\${}", i)),
+////                                              converted_captured_type_name);
+////            }
+////            type_name = replacement_type;
+////            std::cerr << fmt::format("... final conversion to: {}", replacement_type) << std::endl;
+////            break;
+////        }
+////    }
+//
+//    std::cerr << fmt::format("returning jsdoc converted type: {}", type_name) << std::endl;
+//    return type_name;
+//}
+//
+//
 
 
 
