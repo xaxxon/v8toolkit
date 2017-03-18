@@ -9,7 +9,6 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     plain_type(get_plain_type(this->type)),
     plain_name(this->plain_type.getAsString())
 {
-    this->jsdoc_type_name = convert_type_to_jsdoc(this->plain_name);
     name = regex_replace(name, std::regex("^(struct|class) "), "");
 
     // do any required textual type conversions
@@ -17,6 +16,10 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
     name = std::regex_replace(this->name, bool_conversion, "bool");
 }
 
+
+string ParsedMethod::TypeInfo::get_jsdoc_type_name() {
+    return convert_type_to_jsdoc(this->plain_without_const().name);
+}
 
 bool ParsedMethod::TypeInfo::is_const() const {
     return this->plain_type.isConstQualified();
@@ -28,6 +31,40 @@ ParsedMethod::TypeInfo ParsedMethod::TypeInfo::plain_without_const() const {
     non_const.removeLocalConst();
     return TypeInfo(non_const);
 }
+
+bool ParsedMethod::TypeInfo::is_templated() const {
+    if (dyn_cast<ClassTemplateSpecializationDecl>(this->plain_type->getAsCXXRecordDecl())) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void ParsedMethod::TypeInfo::for_each_templated_type(std::function<void(QualType)> callback) const {
+    if (auto specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(this->plain_type->getAsCXXRecordDecl())) {
+
+
+        // go through the template args
+        auto & template_arg_list = specialization_decl->getTemplateArgs();
+        for (decltype(template_arg_list.size()) i = 0; i < template_arg_list.size(); i++) {
+            auto & arg = template_arg_list[i];
+
+            // this code only cares about types, so skip non-type template arguments
+            if (arg.getKind() != clang::TemplateArgument::Type) {
+                continue;
+            }
+            auto template_arg_qual_type = arg.getAsType();
+            if (template_arg_qual_type.isNull()) {
+                if (print_logging) cerr << "qual type is null" << endl;
+                continue;
+            }
+            callback(template_arg_qual_type);
+        }
+    } else {
+        if (print_logging) cerr << "Not a template specializaiton type " << this->plain_type.getAsString() << endl;
+    }
+}
+
 
 
 
@@ -57,7 +94,7 @@ string DataMember::get_js_stub() {
 
     stringstream result;
 
-    result << fmt::format(" * @property {{{}}} {} \n", this->type.jsdoc_type_name, this->short_name);
+    result << fmt::format(" * @property {{{}}} {} \n", this->type.get_jsdoc_type_name(), this->short_name);
 
     return result.str();
 }
@@ -257,41 +294,41 @@ std::string ParsedMethod::get_js_stub() {
     stringstream result;
 
     string method_description;
-    auto parameter_count = this->parameters.size();
+
+    result << fmt::format("{}/**\n", indentation);
 
 //    std::cerr << fmt::format("looking through {} parameters", this->parameters.size()) << std::endl;
     for (auto &parameter_info : this->parameters) {
 
 
-        result << fmt::format("{}/**\n", indentation);
         for (auto &param : this->parameters) {
             if (param.default_value != "") {
-                result << fmt::format("{} * @param {{{}}} [{} = {}] {}\n", indentation, param.type.jsdoc_type_name, param.name,
+                result << fmt::format("{} * @param {{{}}} [{} = {}] {}\n", indentation, param.type.get_jsdoc_type_name(),
+                                      param.name,
                                       param.default_value,
                                       param.description);
             } else {
-                result << fmt::format("{} * @param {{{}}} {}\n", indentation, param.type.jsdoc_type_name, param.name,
+                result << fmt::format("{} * @param {{{}}} {}\n", indentation, param.type.get_jsdoc_type_name(), param.name,
                                       param.description);
             }
         }
-        result << fmt::format("{} * @return {{{}}} {}\n", indentation, this->return_type.jsdoc_type_name,
-                              this->return_type_comment);
-        result << fmt::format("{} */\n", indentation);
-        if (method_decl->isStatic()) {
-            result << fmt::format("{}static ", indentation);
-        }
-
-        result << fmt::format("{}{}(", indentation, this->short_name);
-        bool first_parameter = true;
-        for (auto &param : parameters) {
-            if (!first_parameter) {
-                result << ", ";
-            }
-            first_parameter = false;
-            result << fmt::format("{}", param.name);
-        }
-        result << fmt::format("){{}}\n\n");
     }
+    result << fmt::format("{} * @return {{{}}} {}\n", indentation, this->return_type.get_jsdoc_type_name(),
+                          this->return_type_comment);
+    result << fmt::format("{} */\n", indentation);
+
+    result << fmt::format("{}{}{}(", indentation, this->is_static ? "static " : "", this->short_name);
+
+    bool first_parameter = true;
+    for (auto &param : parameters) {
+        if (!first_parameter) {
+            result << ", ";
+        }
+        first_parameter = false;
+        result << fmt::format("{}", param.name);
+    }
+    result << fmt::format(") {{}}\n\n");
+
     return result.str();
 }
 

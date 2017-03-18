@@ -79,8 +79,9 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
 // http://usejsdoc.org/tags-type.html
-map<string, string> cpp_to_js_type_conversions = {{"^(?:std::)?vector[<]\\s*([^>]+?)\\s*[>]\\s*$", "Array.{$1}"},
-                                                  {"^(?:std::)?map[<]\\s*([^>]+?)\\s*,\\s*([^>]+?)\\s*[>]\\s*$", "Object.{$1, $2}"},
+map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?vector[<]\\s*([^>]+?)\\s*[>]\\s*$", "Array.{$1}"},
+                                                  {"^(?:std::|eastl::)?(?:vector_)?map[<]\\s*([^>]+?)\\s*,\\s*([^>]+?)\\s*[>]\\s*$", "Object.{$1, $2}"},
+                                                  {"^(?:std::)?multimap[<]\\s*([^>]+?)\\s*,\\s*([^>]+?)\\s*[>]\\s*$", "Object.{$1, $2}"},
                                                   {"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
                                                   {"^(?:const)?\\s*(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
                                                   {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Boolean"},

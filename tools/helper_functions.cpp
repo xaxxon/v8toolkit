@@ -582,7 +582,7 @@ string convert_type_to_jsdoc(std::string const & type_name_input) {
     for (auto &pair : cpp_to_js_type_conversions) {
 
         if (regex_match(type_name, matches, std::regex(pair.first))) {
-            // std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
+             std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
 
             string replacement_type = pair.second; // need a temp because the regex matches point into the current this->type
 

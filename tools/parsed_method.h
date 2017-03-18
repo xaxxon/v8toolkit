@@ -35,7 +35,7 @@ struct ParsedMethod {
         string plain_name;
 
         /// corresponding javascript type
-        string jsdoc_type_name;
+        string get_jsdoc_type_name();
 
         TypeInfo(QualType const & type);
 
@@ -45,6 +45,10 @@ struct ParsedMethod {
         bool is_const() const;
 
         TypeInfo plain_without_const() const;
+
+        bool is_templated() const;
+        void for_each_templated_type(std::function<void(QualType)>) const;
+
     };
 
 

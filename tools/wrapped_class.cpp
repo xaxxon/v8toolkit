@@ -470,7 +470,7 @@ std::string WrappedClass::generate_js_stub() {
     result << "/**\n";
     result << fmt::format(" * @class {}\n", this->name_alias);
 
-    //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
+        std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
     for (auto & member : this->get_members()) {
         result << member->get_js_stub();
     }
@@ -485,9 +485,9 @@ std::string WrappedClass::generate_js_stub() {
     result << "{\n";
 
 
-    //    std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
-    for (auto & method : this->methods) {
-
+        std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
+    for (auto & method : this->get_methods()) {
+      std::cerr << fmt::format("js stub for {}", method->full_name) << std::endl;
         result << method->get_js_stub();
     }
 
