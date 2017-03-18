@@ -97,7 +97,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE);
     }
 
-    // Store annotatinos associated with a "using" statement to be merged with the "real" type
+    // Store annotations associated with a "using" statement to be merged with the "real" type
     // only pick off the typedefNameDecl entries, but in 3.8, typedefNameDecl() matcher isn't available
     if (auto typedef_decl = Result.Nodes.getNodeAs<clang::TypedefNameDecl>("named decl")) {
         auto qual_type = typedef_decl->getUnderlyingType();
@@ -118,7 +118,15 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
         Annotations::annotations_for_record_decls[record_decl].merge(Annotations(typedef_decl));
 
         if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
-            Annotations::names_for_record_decls[record_decl] = typedef_decl->getNameAsString();
+            string name_alias = typedef_decl->getNameAsString();
+            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString()) << std::endl;
+            Annotations::names_for_record_decls[record_decl] = name_alias;
+
+            // if the class has already been parsed, update it now
+           if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
+               wrapped_class->name_alias = name_alias;
+           }
+
         }
 
     }

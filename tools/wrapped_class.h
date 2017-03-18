@@ -25,8 +25,13 @@ public:
 
     // if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
     CXXRecordDecl const * instantiation_pattern = nullptr;
-    string class_name;
-    string name_alias; // if no alias, is equal to class_name
+
+  // name of type that is guaranteed valid c++ (with appropriate included headers)
+  string class_name;
+
+    /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
+    string name_alias;
+  
     set<string> include_files;
 
      // value here is the "compilation cost" of creating the class itself even if it's empty.
@@ -42,7 +47,10 @@ public:
     set<string> used_names;
     vector<string> data_errors;
     set<WrappedClass *> derived_types;
+
+  /// tracked base_types - if it's more than one, that's a data error because javascript only allows one
     set<WrappedClass *> base_types;
+  
     set<string> wrapper_extension_methods;
     set<string> wrapper_custom_extensions;
     CompilerInstance & compiler_instance;
@@ -70,13 +78,19 @@ public:
         return decl->getNameAsString();
     }
 
+  /**
+   * @return whether this type is a specialization of a template
+   */
     bool is_template_specialization();
 
+  /**
+   * @param callback called on each parameterized type for this template specialization
+   */
     void foreach_inheritance_level(function<void(WrappedClass &)> callback);
 
 
     /**
-     * Adds the specified name and sets valid = false if it's alrady used
+     * Adds the specified name and sets valid = false if it's already used
      * @param name name to add
      */
     void add_name(string const & name);
@@ -163,6 +177,23 @@ public:
 
     static void insert_wrapped_class(WrappedClass * wrapped_class) {
         WrappedClass::wrapped_classes.push_back(wrapped_class);
+    }
+
+    /**
+     * Returns the wrapped class corresponding to the decl if it exists
+     * @param decl the decl to search for in existing wrapped classes
+     * @return the existing wrapped class or nullptr if no match found
+     */
+    static WrappedClass * get_if_exists(const CXXRecordDecl * decl) {
+        if (decl == nullptr) {
+            return nullptr;
+        }
+        for (auto * wrapped_class : WrappedClass::wrapped_classes) {
+            if (wrapped_class->decl == decl) {
+                return wrapped_class;
+            }
+        }
+        return nullptr;
     }
 
     static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,

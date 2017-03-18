@@ -188,12 +188,12 @@ string DataMember::get_bindings() {
     if (this->is_const) {
         result << fmt::format("    class_wrapper.add_member_readonly<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->declared_in.name_alias, this->long_name, this->short_name);
+                              this->declared_in.class_name, this->long_name, this->short_name);
 
     } else {
         result << fmt::format("    class_wrapper.add_member<{}, {}, &{}>(\"{}\");\n",
                               this->type.name,
-                              this->declared_in.name_alias, this->long_name, this->short_name);
+                              this->declared_in.class_name, this->long_name, this->short_name);
     }
 
     return result.str();
@@ -381,21 +381,18 @@ std::string ParsedMethod::get_js_stub() {
     result << fmt::format("{}/**\n", indentation);
 
 //    std::cerr << fmt::format("looking through {} parameters", this->parameters.size()) << std::endl;
-    for (auto &parameter_info : this->parameters) {
-
-
-        for (auto &param : this->parameters) {
-            if (param.default_value != "") {
-                result << fmt::format("{} * @param {{{}}} [{} = {}] {}\n", indentation, param.type.get_jsdoc_type_name(),
-                                      param.name,
-                                      param.default_value,
-                                      param.description);
-            } else {
-                result << fmt::format("{} * @param {{{}}} {}\n", indentation, param.type.get_jsdoc_type_name(), param.name,
-                                      param.description);
-            }
-        }
+    for (auto &param : this->parameters) {
+      if (param.default_value != "") {
+	result << fmt::format("{} * @param {{{}}} [{} = {}] {}\n", indentation, param.type.get_jsdoc_type_name(),
+			      param.name,
+			      param.default_value,
+			      param.description);
+      } else {
+	result << fmt::format("{} * @param {{{}}} {}\n", indentation, param.type.get_jsdoc_type_name(), param.name,
+			      param.description);
+      }
     }
+
     result << fmt::format("{} * @return {{{}}} {}\n", indentation, this->return_type.get_jsdoc_type_name(),
                           this->return_type_comment);
     result << fmt::format("{} */\n", indentation);
@@ -410,7 +407,7 @@ std::string ParsedMethod::get_js_stub() {
         first_parameter = false;
         result << fmt::format("{}", param.name);
     }
-    result << fmt::format(") {{}}\n\n");
+    result << fmt::format("){{}}\n\n");
 
     return result.str();
 }
@@ -421,6 +418,14 @@ string ParsedMethod::get_default_argument_tuple_string() const {
     stringstream values;
     bool first_default_argument = true;
     for (auto & param : this->parameters) {
+
+
+      // this should go away once there's proper support
+      if (std::regex_search(param.type.plain_name, std::regex("^(class|struct)?\\s*std::function"))) {
+	std::cerr << fmt::format("Cannot handle std::function default parameters yet -- skipping") << std::endl;
+	continue;
+      }
+      
         if (param.default_value == "") {
             assert(first_default_argument); // if it's not true then there's a gap somehow
             continue;
@@ -452,8 +457,8 @@ string ParsedMethod::get_bindings() {
     // for add_static_method
     stringstream return_and_parameter_types;
 
-    return_class_and_parameter_types << fmt::format("{}, {}", this->return_type.name, this->wrapped_class.name_alias);
-    return_and_parameter_types << fmt::format("{}", this->return_type.name, this->wrapped_class.name_alias);
+    return_class_and_parameter_types << fmt::format("{}, {}", this->return_type.name, this->wrapped_class.class_name);
+    return_and_parameter_types << fmt::format("{}", this->return_type.name, this->wrapped_class.class_name);
     for (auto & parameter : this->parameters) {
         return_class_and_parameter_types << fmt::format(", {}", parameter.type.name);
         return_and_parameter_types << fmt::format(", {}", parameter.type.name);

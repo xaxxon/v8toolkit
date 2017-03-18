@@ -8,8 +8,7 @@ class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
 
 
 namespace v8 {
-  template<class> class Local;
-
+    template<class> class Local;
     class FunctionTemplate;
 };
 
@@ -46,6 +45,8 @@ public:
 
     V8TOOLKIT_EXTEND_WRAPPER static void extend_wrapper();
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
+
+  void std_function_default_parameter(std::function<void()> = std::function<void()>());
 
 };
 
@@ -84,10 +85,9 @@ namespace v8toolkit {
     
     template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase>
     class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase> :
-	public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
+	    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
     };
 
-    using MyType V8TOOLKIT_NAME_ALIAS V8TOOLKIT_WRAPPED_CLASS = v8toolkit::CppFactory<int, char, v8toolkit::TypeList<double>>;
 
 
 }
@@ -234,6 +234,9 @@ public:
 //// this is the only one that should match
 //struct SPECIAL Baz { };
 //
+
+    using MyType V8TOOLKIT_NAME_ALIAS V8TOOLKIT_WRAPPED_CLASS = DerivedFromWrappedClassBase<int>;
+
 
 int main() {
 
