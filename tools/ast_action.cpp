@@ -90,12 +90,20 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
 
 //std::cerr << fmt::format("aa7") << std::endl;
     // remove any types that are wrapped in this file since it will be explicitly instantiated here
-    for (auto wrapped_class : classes) {
+    for (auto & wrapped_class : classes) {
 //::cerr << fmt::format("aa8") << std::endl;
         // DO NOT EXPLICITLY INSTANTIATE THE WRAPPED TYPE
 //		if (wrapped_class->is_template_specialization()) {
 //		    class_wrapper_file << "template " << wrapped_class->class_name << ";" << endl;
 //		}
+        class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
+
+        // the const type will be used by the 'third party' extension function, so it needs to be instantiated
+        if (!wrapped_class->wrapper_extension_methods.empty()) {
+            class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{} const>;\n", wrapped_class->class_name);
+        }
+
+
         class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
         // if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
         extern_templates.erase(wrapped_class);

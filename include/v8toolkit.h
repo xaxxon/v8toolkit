@@ -396,7 +396,7 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
     T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-      std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
+      //std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
             set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
 
@@ -457,7 +457,7 @@ struct ParameterBuilder<T,
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-      std::cerr << fmt::format("ParameterBuilder type: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
+      //std::cerr << fmt::format("ParameterBuilder type: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
             set_unspecified_parameter_value<default_arg_position, NoRefT>(info, i, stuff, default_args_tuple);
         } else {
@@ -481,7 +481,7 @@ struct ParameterBuilder<char *> {
     char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                       DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-        std::cerr << fmt::format("ParameterBuilder type: char* default_arg_position = {}", default_arg_position) << std::endl;
+        //std::cerr << fmt::format("ParameterBuilder type: char* default_arg_position = {}", default_arg_position) << std::endl;
 
         // if there is a value, use it, otherwise just use empty string
         if (i >= info.Length()) {
@@ -513,7 +513,7 @@ struct ParameterBuilder<char *> {
      ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
                            DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-	   std::cerr << fmt::format("ParameterBuilder type: Container<char*,...> deafult_arg_position = {}", default_arg_position) << std::endl;
+	   //std::cerr << fmt::format("ParameterBuilder type: Container<char*,...> deafult_arg_position = {}", default_arg_position) << std::endl;
 	   
          if (i >= info.Length()) {
     //         static_assert(false, "implement me");
@@ -550,7 +550,7 @@ struct ParameterBuilder<char *> {
          template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
          ResultType operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuffs,
                            DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-	   std::cerr << fmt::format("parameterbuilder type: Container<char const *,...> default_arg_position = {}", default_arg_position) << std::endl;
+	   //std::cerr << fmt::format("parameterbuilder type: Container<char const *,...> default_arg_position = {}", default_arg_position) << std::endl;
              if (i >= info.Length()) {
 //         static_assert(false, "implement me");
 
@@ -585,7 +585,7 @@ struct ParameterBuilder<char const *> {
                             std::vector<std::unique_ptr<StuffBase>> & stuff,
                             DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-      std::cerr << fmt::format("ParameterBuilder type: char const *, default_arg_position = {}", default_arg_position) << std::endl;
+      //std::cerr << fmt::format("ParameterBuilder type: char const *, default_arg_position = {}", default_arg_position) << std::endl;
 
         // if there is a value, use it, otherwise just use empty string
         if (i >= info.Length()) {

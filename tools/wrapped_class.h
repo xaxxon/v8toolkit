@@ -16,7 +16,7 @@ private:
 
     bool members_parsed = false;
     set<unique_ptr<DataMember>> members;
-    set<string> constructors;
+    map<CXXConstructorDecl const *, string> constructors;
 
 public:
     static vector<WrappedClass *> wrapped_classes;
@@ -42,7 +42,7 @@ public:
 
     set<unique_ptr<ParsedMethod>> & get_methods();
     set<unique_ptr<DataMember>> & get_members();
-    set<string> const & get_constructors();
+    map<CXXConstructorDecl const *, string> const & get_constructors();
 
     set<string> used_names;
     vector<string> data_errors;

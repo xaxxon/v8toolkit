@@ -24,20 +24,24 @@ Need to change debugging to use v8's built-in debugging
 ClassParser:
 -------------
 
-js-api.js file still uses c++ syntax for specifying default values - need to convert them
-
-bidirectional class files don't have the right includes, including JSWrapper
-
-Need to figure out how to properly get which virtual methods are associated with a bidirectional type
- - get ones that aren't directly in parent type
- - don't repeat ones that are in multiple parent/grandparent/etc types
- - need a set of name and parameter strings corresponding to each one most likely
 
 
 
-default values are often broken.
- - uses type names not visible in wrapper code but the syntax is valid in the class definition
 
-std::function default parameters are not supported - ignored with warning message
+FEATURE: std::function default parameters are not supported - ignored with warning message
  - cast to js then back to native trick doesn't work for them because there's no casttojs for them
 
+
+
+
+Need to make sure to get include files for constructor input parameter types
+ - it looks like we are, but it's not showing up in the output file for GroundRegionCollection's constructor:
+   -     class_wrapper.add_constructor<class Map &, class GroundRegion &&>("GroundRegionCollection", isolate);
+Logs:
+Went from class Map & to class Map
+is not a FUNCTION TYPE
+0x137572e0Got include string for class Map: "map.h"
+GroundRegionCollection now has 9 include files having added "map.h"
+
+
+js stubs don't have constructors

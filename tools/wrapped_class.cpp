@@ -225,7 +225,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
 
-set<string> const & WrappedClass::get_constructors() {
+map<CXXConstructorDecl const *, string> const & WrappedClass::get_constructors() {
 
 
 
@@ -290,13 +290,8 @@ set<string> const & WrappedClass::get_constructors() {
                         // make sure the wrapped class has includes for all the types in the method
                         update_wrapped_class_for_type(*this, constructor->getParamDecl(i)->getType());
                     }
+                    this->constructors.emplace(constructor, constructor_name);
 
-
-                    this->constructors.insert(
-                        fmt::format("class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                    get_method_parameters(this->compiler_instance,
-                                                                       *this,
-                                                                       constructor), constructor_name));
                 }
             });
 
@@ -484,10 +479,22 @@ std::string WrappedClass::generate_js_stub() {
     }
     result << "{\n";
 
+    for (auto & constructor_pair : this->get_constructors()) {
+        auto & constructor = constructor_pair.first;
+        auto & constructor_name = constructor_pair.second;
+        result << fmt::format("/**") << endl;
+        for (auto & param : constructor->parameters()) {
+            result << fmt::format(" * @param {{{}}}", get_type_string(param->getType())) << endl;
+        }
+        result << fmt::format("/**") << endl;
+           result << fmt::format("constructor",
+                                    get_method_parameters(this->compiler_instance,
+                                                                       *this,
+                                                                       constructor), constructor_name) << endl;
+    }
 
-        std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
+    std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
     for (auto & method : this->get_methods()) {
-      std::cerr << fmt::format("js stub for {}", method->full_name) << std::endl;
         result << method->get_js_stub();
     }
 
@@ -647,8 +654,13 @@ std::string WrappedClass::get_bindings(){
     }
     // otherwise just create any constructors that may need wrapping (none is fine)
     else {
-        for (auto &constructor : this->get_constructors()) {
-            result << indentation << "  " << constructor;
+        for (auto & constructor_pair : this->get_constructors()) {
+            auto &constructor = constructor_pair.first;
+            auto &constructor_name = constructor_pair.second;
+            result << fmt::format("class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
+                                  get_method_parameters(this->compiler_instance,
+                                                        *this,
+                                                        constructor), constructor_name) << endl;
         }
     }
 
