@@ -19,8 +19,11 @@ ParsedMethod::TypeInfo::TypeInfo(QualType const & type) :
 
 string ParsedMethod::TypeInfo::convert_simple_typename_to_jsdoc(string simple_type_name) {
 
-
+    // picks off the middle namespace of things like:
+    //   std::__cxx11::string as well as std::__1::vector so type names are more predictable
     simple_type_name = regex_replace(simple_type_name, regex("std::__(cxx\\d\\d|\\d)::"), "std::");
+
+    // clang generates type names with class/struct prefixes, remove them
     simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)\\s*"), "");
 
 
