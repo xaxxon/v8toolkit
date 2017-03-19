@@ -8,15 +8,19 @@
 
 // should be named "ParsedClass" or something, since both classes that will and will not be wrapped
 //   are put into this data structure
+class MemberFunction;
+class StaticFunction;
 struct WrappedClass {
 private:
 
     bool methods_parsed = false;
-    set<unique_ptr<ParsedMethod>> methods;
+    set<unique_ptr<MemberFunction>> member_functions;
+    set<unique_ptr<StaticFunction>> static_functions;
 
     bool members_parsed = false;
     set<unique_ptr<DataMember>> members;
-    map<CXXConstructorDecl const *, string> constructors;
+    set<unique_ptr<ConstructorFunction>> constructors;
+
 
 public:
     static vector<WrappedClass *> wrapped_classes;
@@ -25,6 +29,12 @@ public:
 
     // if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
     CXXRecordDecl const * instantiation_pattern = nullptr;
+
+    /**
+     * Builds data structures associated with the methods of this class
+     */
+    void parse_all_methods();
+
 
   // name of type that is guaranteed valid c++ (with appropriate included headers)
   string class_name;
@@ -40,11 +50,13 @@ public:
 
     string my_header_filename = "";
 
-    set<unique_ptr<ParsedMethod>> & get_methods();
+    set<unique_ptr<MemberFunction>> const & get_member_functions();
+    set<unique_ptr<StaticFunction>> const & get_static_functions();
     set<unique_ptr<DataMember>> & get_members();
-    map<CXXConstructorDecl const *, string> const & get_constructors();
+    set<unique_ptr<ConstructorFunction>> const & get_constructors();
 
-    set<string> used_names;
+    set<string> used_member_names;
+    set<string> used_static_names;
     vector<string> data_errors;
     set<WrappedClass *> derived_types;
 
@@ -61,7 +73,6 @@ public:
     Annotations annotations;
     bool dumped = false; // this class has been dumped to file
     set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
-    bool has_static_method = false;
     FOUND_METHOD found_method;
     bool force_no_constructors = false;
 
@@ -78,6 +89,8 @@ public:
         return decl->getNameAsString();
     }
 
+    bool has_static_method(){return !this->static_functions.empty();}
+
   /**
    * @return whether this type is a specialization of a template
    */
@@ -90,10 +103,13 @@ public:
 
 
     /**
-     * Adds the specified name and sets valid = false if it's already used
+     * Sets a member name as being in use and sets valid = false if it was already in use
+     * For member functions and data members (not constructors or static methods)
      * @param name name to add
      */
-    void add_name(string const & name);
+    void add_member_name(string const & name);
+
+    void add_static_name(string const & name);
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
     void update_data() {

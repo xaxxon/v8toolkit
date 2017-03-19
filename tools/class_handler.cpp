@@ -1,4 +1,4 @@
-
+#include "wrapped_class.h"
 #include "class_handler.h"
 
 

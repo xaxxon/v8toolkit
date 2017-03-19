@@ -44,7 +44,7 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
     for (WrappedClass * wrapped_class : classes) {
 
         // force methods to be parsed
-        wrapped_class->get_methods();
+        wrapped_class->parse_all_methods();
 
         for (auto derived_type : wrapped_class->derived_types) {
             extern_templates.insert(derived_type);
@@ -104,7 +104,6 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
         }
 
 
-        class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{}>;\n", wrapped_class->class_name);
         // if it's not a template specialization it shouldn't be in the extern_template set, but delete it anyhow
         extern_templates.erase(wrapped_class);
         //std::cerr << fmt::format("aa7.5") << std::endl;

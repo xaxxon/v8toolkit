@@ -9,7 +9,7 @@
 
 
 
-struct ParsedMethod {
+struct ClassFunction {
 
 
     // class the method is in
@@ -42,7 +42,7 @@ struct ParsedMethod {
         string plain_name;
 
         /// corresponding javascript type
-        string get_jsdoc_type_name();
+        string get_jsdoc_type_name() const;
 
         TypeInfo(QualType const & type);
 
@@ -56,19 +56,19 @@ struct ParsedMethod {
         bool is_templated() const;
         void for_each_templated_type(std::function<void(QualType)>) const;
 
+        bool is_void() const {return this->type->isVoidType();}
     };
 
 
     /* PARAMETER INFO */
     class ParameterInfo {
-        friend class ParsedMethod;
+        friend class ClassFunction;
     protected:
-        ParsedMethod & method;
+        ClassFunction & method;
         CompilerInstance & compiler_instance;
         ParmVarDecl const * parameter_decl;
         int position;
         string name;
-        TypeInfo type;
         string default_value;
 
         // description of parameter pulled from doxygen comment
@@ -76,7 +76,10 @@ struct ParsedMethod {
 
 
     public:
-        ParameterInfo(ParsedMethod & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance);
+        ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance);
+        string generate_js_stub();
+
+        TypeInfo const type;
 
 
     }; // end ParameterInfo
@@ -85,8 +88,12 @@ struct ParsedMethod {
     string return_type_comment;
     vector<ParameterInfo> parameters;
     CXXMethodDecl const * method_decl;
-    string full_name;
-    string short_name;
+
+    // c++ name
+    string name;
+
+    // name used in javascript
+    string js_name;
     CompilerInstance & compiler_instance;
     Annotations annotations;
 
@@ -96,18 +103,49 @@ struct ParsedMethod {
     //   per c++ standard
     string get_signature_string();
 
-    ParsedMethod(CompilerInstance & compiler_instance,
-                 WrappedClass & wrapped_class,
+    ClassFunction(WrappedClass & wrapped_class,
                  CXXMethodDecl const * method_decl);
 
-    string get_js_stub();
-    string get_bindings();
-    string get_bidirectional();
+
 
     // returns true if the methods have the same name and input parameters
-    bool compare_signatures(ParsedMethod const & other);
+    bool compare_signatures(ClassFunction const & other);
+
+    string get_parameter_types_string() const;
+    string get_return_and_class_and_parameter_types_string() const;
+    string get_return_and_parameter_types_string() const;
+    string get_js_input_parameter_string() const;
+
+
 };
 
+
+class MemberFunction : public ClassFunction {
+public:
+    MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl);
+    string generate_js_bindings();
+    string generate_js_stub();
+    string generate_bidirectional();
+};
+
+class StaticFunction : public ClassFunction {
+public:
+    StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl);
+    string generate_js_bindings();
+    string generate_js_stub();
+};
+
+class ConstructorFunction : public ClassFunction {
+
+public:
+    ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl);
+
+    string generate_js_bindings();
+    string generate_js_stub();
+
+    CXXConstructorDecl const * const constructor_decl;
+
+};
 
 struct WrappedClass;
 struct DataMember {
@@ -115,7 +153,7 @@ struct DataMember {
     WrappedClass & declared_in; // level in the hierarchy the member is actually declared at - may match wrapped_class
     string short_name;
     string long_name;
-    ParsedMethod::TypeInfo type;
+    ClassFunction::TypeInfo type;
     FieldDecl const * field_decl;
     Annotations annotations;
 

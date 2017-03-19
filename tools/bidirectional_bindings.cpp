@@ -1,4 +1,3 @@
-#include "bidirectional_bindings.h"
 #if 0
 void BidirectionalBindings::generate_bindings() {
     std::stringstream result;

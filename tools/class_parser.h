@@ -66,13 +66,6 @@
     __attribute__((annotate(V8TOOLKIT_USE_NAME_PREFIX #name)))
 
 
-/**
- * Use this to create a JavaScript constructor function with the specified name
- */
-#define V8TOOLKIT_CONSTRUCTOR_PREFIX "v8toolkit_bidirectional_constructor_"
-#define V8TOOLKIT_CONSTRUCTOR(name) \
-    __attribute__((annotate(V8TOOLKIT_CONSTRUCTOR_PREFIX #name)))
-
 
 /**
  * Use this to create a JavaScript constructor function with the specified name

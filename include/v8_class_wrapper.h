@@ -862,8 +862,8 @@ public:
 	std::string class_name = demangle<T>();
 
 	
-	template<class R, class... Params>
-	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
+	template<class R, class... Params, class DefaultArgs = std::tuple<>>
+	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...), DefaultArgs const & default_args_tuple = DefaultArgs{}) {
 
         static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
                                                           "length", "name", "prototype"};
@@ -899,8 +899,8 @@ public:
 
 
 
-	template<class Callable>
-	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
+	template<class Callable, class DefaultArgs = std::tuple<>>
+	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable, DefaultArgs const & default_args_tuple = DefaultArgs{}) {
 
 		if (!std::is_const<T>::value) {
 			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);

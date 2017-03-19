@@ -225,89 +225,31 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
 
-map<CXXConstructorDecl const *, string> const & WrappedClass::get_constructors() {
-
-
-
-    // don't add constructors for abstract base classes
-    if (!this->constructors.empty() || this->decl == nullptr || this->decl->isAbstract()) {
-        return this->constructors;
-    }
-
-    if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
-        return this->constructors;
-    }
-    if (this->force_no_constructors) {
-        return this->constructors;
-    }
-
-
-    foreach_constructor(this->decl, [&](CXXConstructorDecl const * constructor) {
-                        cerr << "About to get full source for constructor in " << this->name_alias << endl;
-                        auto full_source_loc = FullSourceLoc(constructor->getLocation(),
-                                                             this->compiler_instance.getSourceManager());
-                        fprintf(stderr,"%s constructor Decl at line %d, file id: %d\n",
-                                this->name_alias.c_str(),
-                                full_source_loc.getExpansionLineNumber(),
-                                full_source_loc.getFileID().getHashValue());
-
-
-                if (constructor->isCopyConstructor()) {
-                    fprintf(stderr, "Skipping copy constructor\n");
-                    return;
-                } else if (constructor->isMoveConstructor()) {
-                    fprintf(stderr, "Skipping move constructor\n");
-                    return;
-                } else if (constructor->isDeleted()) {
-                    if (print_logging) cerr << "Skipping deleted constructor" << endl;
-                    return;
-                }
-                Annotations constructor_annotations(constructor);
-                auto constructor_name_annotation = constructor_annotations.get_regex(V8TOOLKIT_CONSTRUCTOR_PREFIX "(.*)");
-                // fprintf(stderr,"Got %d annotations on constructor\n", (int)constructor_annotations.size());
-                std::string constructor_name = this->name_alias;
-                if (!constructor_name_annotation.empty()) {
-                    constructor_name = constructor_name_annotation[0];
-                }
-                if (std::find(used_constructor_names.begin(), used_constructor_names.end(), constructor_name) !=
-                    used_constructor_names.end()) {
-                    data_error(
-                        fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
-                                    constructor_name.c_str(), this->class_name));
-                    for (auto &name : used_constructor_names) {
-                        cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
-                    }
-                } else {
-                    cerr << fmt::format("for {}, wrapping constructor {}", this->class_name,
-                                        constructor_name) << endl;
-                    used_constructor_names.push_back(constructor_name);
-
-                    update_wrapped_class_for_type(*this, constructor->getReturnType());
-
-                    auto parameter_count = constructor->getNumParams();
-                    for (int i = 0; i < parameter_count; i++) {
-                        std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
-                        // make sure the wrapped class has includes for all the types in the method
-                        update_wrapped_class_for_type(*this, constructor->getParamDecl(i)->getType());
-                    }
-                    this->constructors.emplace(constructor, constructor_name);
-
-                }
-            });
-
+set<unique_ptr<ConstructorFunction>> const & WrappedClass::get_constructors() {
+    this->parse_all_methods();
     return this->constructors;
-
 }
 
 
-set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
-    if (this->decl == nullptr) {
-        return this->methods;
-        // llvm::report_fatal_error(fmt::format("Can't get_methods on type without decl: {}", this->name_alias).c_str());
+set<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() {
+    this->parse_all_methods();
+    return this->member_functions;
+}
+
+
+set<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() {
+    this->parse_all_methods();
+    return this->static_functions;
+}
+
+
+void WrappedClass::parse_all_methods() {
+
+
+    if (this->methods_parsed || this->decl == nullptr) {
+        return;
     }
-    if (this->methods_parsed) {
-        return this->methods;
-    }
+
 
     this->methods_parsed = true;
      std::cerr << fmt::format("*** Parsing class methods") << std::endl;
@@ -353,8 +295,32 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
                 continue;
             }
         }
-        if (dyn_cast<CXXConstructorDecl>(method)) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping constructor %s\n", full_method_name.c_str());
+        if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
+
+            // don't deal with constructors on abstract types
+            if (this->decl->isAbstract()) {
+                continue;
+            }
+            if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+                continue;
+            }
+            if (this->force_no_constructors) {
+                continue;
+            }
+
+
+            if (constructor_decl->isCopyConstructor()) {
+                fprintf(stderr, "Skipping copy constructor\n");
+                continue;
+            } else if (constructor_decl->isMoveConstructor()) {
+                fprintf(stderr, "Skipping move constructor\n");
+                continue;
+            } else if (constructor_decl->isDeleted()) {
+                if (print_logging) cerr << "Skipping deleted constructor" << endl;
+                continue;
+            }
+
+            this->constructors.insert(std::make_unique<ConstructorFunction>(*this, constructor_decl));
             continue;
         }
         if (dyn_cast<CXXDestructorDecl>(method)) {
@@ -390,9 +356,13 @@ set<unique_ptr<ParsedMethod>> & WrappedClass::get_methods() {
         }
 
         std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
-        this->methods.insert(make_unique<ParsedMethod>(this->compiler_instance, *this, method));
+
+        if (method->isStatic()) {
+            this->static_functions.insert(make_unique<StaticFunction>(*this, method));
+        } else {
+            this->member_functions.insert(make_unique<MemberFunction>(*this, method));
+        }
     }
-    return this->methods;
 }
 
 
@@ -479,23 +449,18 @@ std::string WrappedClass::generate_js_stub() {
     }
     result << "{\n";
 
-    for (auto & constructor_pair : this->get_constructors()) {
-        auto & constructor = constructor_pair.first;
-        auto & constructor_name = constructor_pair.second;
-        result << fmt::format("/**") << endl;
-        for (auto & param : constructor->parameters()) {
-            result << fmt::format(" * @param {{{}}}", get_type_string(param->getType())) << endl;
-        }
-        result << fmt::format("/**") << endl;
-           result << fmt::format("constructor",
-                                    get_method_parameters(this->compiler_instance,
-                                                                       *this,
-                                                                       constructor), constructor_name) << endl;
+    for (auto & constructor : this->get_constructors()) {
+        result << constructor->generate_js_stub();
     }
 
-    std::cerr << fmt::format("generating stub for {} methods", this->methods.size()) << std::endl;
-    for (auto & method : this->get_methods()) {
-        result << method->get_js_stub();
+    std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
+    for (auto & method : this->get_member_functions()) {
+        result << method->generate_js_stub();
+    }
+
+    std::cerr << fmt::format("generating stub for {} methods", this->get_static_functions().size()) << std::endl;
+    for (auto & method : this->get_static_functions()) {
+        result << method->generate_js_stub();
     }
 
 
@@ -625,9 +590,14 @@ std::string WrappedClass::get_bindings(){
                           indentation, this->class_name, this->class_name);
     result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
 
-    for(auto & method : this->get_methods()) {
-        result << method->get_bindings();
+    for(auto & method : this->get_member_functions()) {
+        result << method->generate_js_bindings();
     }
+
+    for(auto & method : this->get_static_functions()) {
+        result << method->generate_js_bindings();
+    }
+
     for(auto & member : members) {
         result << member->get_bindings();
     }
@@ -649,18 +619,13 @@ std::string WrappedClass::get_bindings(){
     result << fmt::format("{}  class_wrapper.finalize(true);\n", indentation);
 
     // if there are no constructors but there are static methods, expose the static methods with this non-constructor name
-    if (this->get_constructors().empty() && this->has_static_method) {
+    if (this->get_constructors().empty() && this->has_static_method()) {
         result << fmt::format("{} class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, this->name_alias);
     }
     // otherwise just create any constructors that may need wrapping (none is fine)
     else {
-        for (auto & constructor_pair : this->get_constructors()) {
-            auto &constructor = constructor_pair.first;
-            auto &constructor_name = constructor_pair.second;
-            result << fmt::format("class_wrapper.add_constructor<{}>(\"{}\", isolate);\n",
-                                  get_method_parameters(this->compiler_instance,
-                                                        *this,
-                                                        constructor), constructor_name) << endl;
+        for (auto & constructor : this->get_constructors()) {
+            result << constructor->generate_js_bindings();
         }
     }
 
@@ -669,12 +634,20 @@ std::string WrappedClass::get_bindings(){
 }
 
 
-void WrappedClass::add_name(string const & name) {
+void WrappedClass::add_member_name(string const & name) {
     // it's ok to have duplicate names, but then this class can not be wrapped
-    if (this->used_names.count(name) > 0) {
+    if (this->used_member_names.count(name) > 0) {
         this->set_error(fmt::format("duplicate name: {}", name));
     }
-    this->used_names.insert(name);
+    this->used_member_names.insert(name);
+}
+
+void WrappedClass::add_static_name(string const & name) {
+    // it's ok to have duplicate names, but then this class can not be wrapped
+    if (this->used_static_names.count(name) > 0) {
+        this->set_error(fmt::format("duplicate name: {}", name));
+    }
+    this->used_static_names.insert(name);
 }
 
 
@@ -747,3 +720,5 @@ bool WrappedClass::found_method_means_wrapped() {
             this->found_method == FOUND_BASE_CLASS;
 
 }
+
+

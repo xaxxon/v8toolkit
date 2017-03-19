@@ -87,7 +87,9 @@ map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?vector", "A
                                                   {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$", "String"},
                                                   {"^void$", "Undefined"},
                                                   {"^(?:std::)?unique_ptr", "$1"},
-                                                  {"^(?:std::)?basic_string", "String"}};
+                                                  {"^(?:std::)?basic_string", "String"},
+                                                  {"^\\s*nullptr\\s*$", "null"}
+};
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
 
@@ -788,78 +790,9 @@ vector<string> generate_variable_names(vector<QualType> qual_types, bool with_st
     return results;
 }
 
-std::string get_method_parameters(CompilerInstance & compiler_instance,
-                                  WrappedClass & wrapped_class,
-                                  const CXXMethodDecl * method,
-                                  bool add_leading_comma,
-                                  bool insert_variable_names,
-                                  const string & annotation) {
-    std::stringstream result;
-    bool first_param = true;
-    auto type_list = get_method_param_qual_types(compiler_instance, method, annotation);
-
-    if (!type_list.empty() && add_leading_comma) {
-        result << ", ";
-    }
-    int count = 0;
-    auto var_names = generate_variable_names(type_list, false);
-    for (auto & param_qual_type : type_list) {
-
-        if (!first_param) {
-            result << ", ";
-        }
-        first_param = false;
 
 
-        auto type_string = get_type_string(param_qual_type);
-        result << type_string;
 
-        if (insert_variable_names) {
-            result << " " << var_names[count++];
-        }
-        update_wrapped_class_for_type(wrapped_class, param_qual_type);
-
-    }
-    return result.str();
-}
-
-std::string get_return_type(CompilerInstance & compiler_instance,
-                            WrappedClass & wrapped_class,
-                            const CXXMethodDecl * method) {
-    auto qual_type = method->getReturnType();
-    auto result = get_type_string(qual_type);
-//        auto return_type_decl = qual_type->getAsCXXRecordDecl();
-//        auto full_source_loc = FullSourceLoc(return_type_decl->getLocStart(), compiler_instance);
-//        auto header_file = strip_path_from_filename(compiler_instance.getFilename(full_source_loc).str());
-//        if (print_logging) cerr << fmt::format("{} needs {}", wrapped_class.class_name, header_file) << endl;
-//        wrapped_class.include_files.insert(header_file);
-//
-
-    update_wrapped_class_for_type(wrapped_class, qual_type);
-
-    return result;
-
-}
-
-
-std::string get_method_return_type_class_and_parameters(CompilerInstance & compiler_instance,
-                                                        WrappedClass & wrapped_class,
-                                                        const CXXRecordDecl * klass, const CXXMethodDecl * method) {
-    std::stringstream results;
-    results << get_return_type(compiler_instance, wrapped_class, method);
-    results << ", " << get_canonical_name_for_decl(klass);
-    results << get_method_parameters(compiler_instance, wrapped_class, method, true);
-    return results.str();
-}
-
-std::string get_method_return_type_and_parameters(CompilerInstance & compiler_instance,
-                                                  WrappedClass & wrapped_class,
-                                                  const CXXRecordDecl * klass, const CXXMethodDecl * method) {
-    std::stringstream results;
-    results << get_return_type(compiler_instance, wrapped_class, method);
-    results << get_method_parameters(compiler_instance, wrapped_class, method, true);
-    return results.str();
-}
 
 
 void print_specialization_info(const CXXRecordDecl * decl) {
@@ -893,26 +826,6 @@ void print_specialization_info(const CXXRecordDecl * decl) {
     cerr << "*****END" << endl;
 
 }
-
-
-
-std::string get_method_string(CompilerInstance & compiler_instance,
-                              WrappedClass & wrapped_class,
-                              const CXXMethodDecl * method) {
-    std::stringstream result;
-    result << method->getReturnType().getAsString();
-
-    result << method->getName().str();
-
-    result << "(";
-
-    result << get_method_parameters(compiler_instance, wrapped_class, method);
-
-    result << ")";
-
-    return result.str();
-}
-
 
 
 

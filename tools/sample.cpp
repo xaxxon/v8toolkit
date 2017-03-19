@@ -2,7 +2,6 @@
 
 #include "sample2.h"
 
-
 template<class T>
 class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
 
@@ -32,24 +31,25 @@ public:
 
 
 
-
 class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
 class WrappedClass : public v8toolkit::WrappedClassBase {
 public:
-    WrappedClass(int, int, int);
+    WrappedClass(int a, int b = 2, int c = 3);
     double double_member_readwrite;
     V8TOOLKIT_READONLY double double_member_readonly1;
     double const double_member_readonly2;
-//    std::vector<std::string> vector_of_ints;
+    std::vector<std::string> vector_of_ints;
     std::vector<WrappedClass *> vector_of_selfs;
 
     V8TOOLKIT_EXTEND_WRAPPER static void extend_wrapper();
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
 
-  void std_function_default_parameter(std::function<void()> = std::function<void()>());
+    int simple_member_function(char const * some_string = "asdf");
+    static std::string simple_static_function(double some_double);
+
+    void std_function_default_parameter(std::function<void()> some_function = std::function<void()>());
 
 };
-
 
 class WrappedClassDerived : public WrappedClass {
 public:
@@ -144,7 +144,7 @@ public:
 
    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
 
-   V8TOOLKIT_CONSTRUCTOR(FooInt) Foo(int); // This constructor gets different JS name - FooInt
+   V8TOOLKIT_USE_NAME(FooInt) Foo(int); // This constructor gets different JS name - FooInt
    V8TOOLKIT_SKIP void foo_explicitly_skipped();
    virtual void fooparent_purevirtual_tobeoverridden();
    virtual char const_virtual(int) const;
