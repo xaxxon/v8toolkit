@@ -15,7 +15,11 @@ execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-
         )
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
+if(UNIX AND NOT APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libstdc++")
+else()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libc++")
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic" )
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
@@ -26,8 +30,6 @@ add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_ac
 
 cotire(class_parser_plugin)
 
-# how to add the result of this to the compile command?
-# `$CLANG_HOME/bin/llvm-config --ldflags --libs --system-libs`
 
 # Not actually sure which of these are actually needed, but some of them are
 # Do not link against LLVMSupport - causes: CommandLine Error: Option 'view-background' registered more than once!

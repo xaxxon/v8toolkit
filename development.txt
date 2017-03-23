@@ -19,6 +19,10 @@ No support for pointer to l/r-value ref qualified member function
 
 Need to change debugging to use v8's built-in debugging
 
+fake methods don't support default arguments yet
+
+constructors don't support default arguments yet
+
 
 
 ClassParser:
@@ -34,6 +38,8 @@ FEATURE: std::function default parameters are not supported - ignored with warni
 
 
 
+
+
 Need to make sure to get include files for constructor input parameter types
  - it looks like we are, but it's not showing up in the output file for GroundRegionCollection's constructor:
    -     class_wrapper.add_constructor<class Map &, class GroundRegion &&>("GroundRegionCollection", isolate);
@@ -42,6 +48,3 @@ Went from class Map & to class Map
 is not a FUNCTION TYPE
 0x137572e0Got include string for class Map: "map.h"
 GroundRegionCollection now has 9 include files having added "map.h"
-
-
-js stubs don't have constructors
