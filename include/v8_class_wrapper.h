@@ -1116,7 +1116,7 @@ public:
         std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
 	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
                                         DefaultArgs const & default_args = DefaultArgs()) {
-		V8ClassWrapper<ConstT>::get_instance(isolate)._add_fake_method(method_name, method);
+		V8ClassWrapper<ConstT>::get_instance(isolate)._add_fake_method(method_name, method, default_args);
 	};
 
 
@@ -1142,7 +1142,7 @@ public:
 					 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
 	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method,
                     DefaultArgs const & default_args = DefaultArgs()) {
-		_add_fake_method(method_name, method);
+		_add_fake_method(method_name, method, default_args);
 	}
 
 
@@ -1158,7 +1158,7 @@ public:
 	void add_method(const std::string & method_name, R(*method)(Head, Args...),
                     DefaultArgs const & default_args = DefaultArgs()) {
 
-		_add_fake_method(method_name, func::function<R(Head, Args...)>(method));
+		_add_fake_method(method_name, func::function<R(Head, Args...)>(method), default_args);
 	}
 
 
@@ -1169,7 +1169,7 @@ public:
 	void add_method(const std::string & method_name, Callback && callback,
                                    DefaultArgs const & default_args = DefaultArgs()) {
 		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
-		this->_add_fake_method(method_name, f);
+		this->_add_fake_method(method_name, f, default_args);
 
 	}
 
@@ -1184,10 +1184,10 @@ public:
 	}
 
 
-	template<class R, class Head, class... Tail,
+	template<class R, class Head, class... Tail, class DefaultArgsTuple,
 		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, std::remove_const_t<T>>::value, int> = 0>
-	void _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method)
+	void _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method, DefaultArgsTuple const & default_args)
 	{
 		assert(this->finalized == false);
 
@@ -1199,7 +1199,7 @@ public:
 
 		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
 		// Object template that will be passed in later when the list is traversed
-		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
+		fake_method_adders.emplace_back([this, default_args, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
 
 			using CopyFunctionType = func::function<R(Head, Tail...)>;
 			CopyFunctionType * copy = new func::function<R(Head, Tail...)>(method);
@@ -1207,7 +1207,7 @@ public:
 
 			// This is the actual code associated with "method_name" and called when javascript calls the method
 			StdFunctionCallbackType * method_caller =
-					new StdFunctionCallbackType([method_name, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
+					new StdFunctionCallbackType([method_name, default_args, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
 
 
 				auto fake_method = *(func::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
@@ -1225,7 +1225,7 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>()); // just Tail..., not Head, Tail...
+                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
