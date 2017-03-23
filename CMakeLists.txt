@@ -12,7 +12,7 @@ ucm_set_runtime(STATIC)
 file(GLOB HEADER_FILES
         include/*.h
 	include/*.hpp
-	tools/class_parser.h
+	class_parser/class_parser.h
 	)
 
 file(GLOB SOURCE_FILES
@@ -171,4 +171,4 @@ add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
 
 
-add_subdirectory(tools)
+add_subdirectory(class_parser)

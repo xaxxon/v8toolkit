@@ -756,11 +756,13 @@ public:
 	* Creates a javascript method with the specified name inside `parent_template` which, when called with the "new" keyword, will return
 	*   a new object of this type.
 	*/
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	void add_constructor(const std::string & js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES, class DefaultArgsTuple = std::tuple<>>
+	void add_constructor(const std::string & js_constructor_name,
+						 v8::Local<v8::ObjectTemplate> parent_template,
+						 DefaultArgsTuple const & default_args = DefaultArgsTuple())
 	{				
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
-
+		static_assert(std::is_same<DefaultArgsTuple, std::tuple<>>::value, "constructor default arguments not supported yet");
 		check_if_constructor_name_used(js_constructor_name);
 
 	    auto constructor_template =

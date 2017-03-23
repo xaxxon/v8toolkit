@@ -46,10 +46,10 @@ target_link_libraries(class_parser_plugin fmt)
 add_custom_target(class_parser_driver
         ${CLANG_HOME}/bin/clang++ -D_GNU_SOURCE -D_DEBUG -D__STDC_CONSTANT_MACROS
         -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D_GNU_SOURCE
-        ${PROJECT_BINARY_DIR}/tools/sample.cpp
+        ${PROJECT_BINARY_DIR}/class_parser/sample.cpp
         -fsyntax-only -std=c++14 -O0
         -Xclang -load
-        -Xclang ${CMAKE_BINARY_DIR}/tools/$<TARGET_FILE_NAME:class_parser_plugin>
+        -Xclang ${CMAKE_BINARY_DIR}/class_parser/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
     )
@@ -60,7 +60,7 @@ add_custom_command(TARGET copy_driver_resources POST_BUILD
             ${CMAKE_CURRENT_SOURCE_DIR}/sample.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/sample2.h
             ${CMAKE_CURRENT_SOURCE_DIR}/class_parser.h
-        ${PROJECT_BINARY_DIR}/tools/)
+        ${PROJECT_BINARY_DIR}/class_parser/)
 
 add_dependencies(class_parser_driver class_parser_plugin copy_driver_resources)
 

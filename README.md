@@ -26,7 +26,7 @@ until then, the existing code has some of the functionality.
 
 ## New Feature: ClassParser - Automatic class binding generator
 
-`tools/` directory now contains a clang plugin that can automatically generate bindings for your existing
+`class_parser/` directory now contains a clang plugin that can automatically generate bindings for your existing
 C++ classes using the actual clang compiler AST data.  From this, it generates `V8ClassWrapper` bindings, 
 creates `bidirectional` classes, and creates a javascript 'stub' file for hinting editor
 autocompletion.

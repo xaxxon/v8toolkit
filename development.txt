@@ -19,18 +19,13 @@ No support for pointer to l/r-value ref qualified member function
 
 Need to change debugging to use v8's built-in debugging
 
-fake methods don't support default arguments yet
 
 constructors don't support default arguments yet
-
+ - fairly difficult to route the parameters through
 
 
 ClassParser:
 -------------
-
-
-
-
 
 FEATURE: std::function default parameters are not supported - ignored with warning message
  - cast to js then back to native trick doesn't work for them because there's no casttojs for them
