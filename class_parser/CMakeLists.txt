@@ -15,7 +15,11 @@ execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-
         )
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
+if(UNIX AND NOT APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libstdc++")
+else()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libc++")
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic" )
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
@@ -26,8 +30,6 @@ add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_ac
 
 cotire(class_parser_plugin)
 
-# how to add the result of this to the compile command?
-# `$CLANG_HOME/bin/llvm-config --ldflags --libs --system-libs`
 
 # Not actually sure which of these are actually needed, but some of them are
 # Do not link against LLVMSupport - causes: CommandLine Error: Option 'view-background' registered more than once!
@@ -44,10 +46,10 @@ target_link_libraries(class_parser_plugin fmt)
 add_custom_target(class_parser_driver
         ${CLANG_HOME}/bin/clang++ -D_GNU_SOURCE -D_DEBUG -D__STDC_CONSTANT_MACROS
         -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D_GNU_SOURCE
-        ${PROJECT_BINARY_DIR}/tools/sample.cpp
+        ${PROJECT_BINARY_DIR}/class_parser/sample.cpp
         -fsyntax-only -std=c++14 -O0
         -Xclang -load
-        -Xclang ${CMAKE_BINARY_DIR}/tools/$<TARGET_FILE_NAME:class_parser_plugin>
+        -Xclang ${CMAKE_BINARY_DIR}/class_parser/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
     )
@@ -58,7 +60,7 @@ add_custom_command(TARGET copy_driver_resources POST_BUILD
             ${CMAKE_CURRENT_SOURCE_DIR}/sample.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/sample2.h
             ${CMAKE_CURRENT_SOURCE_DIR}/class_parser.h
-        ${PROJECT_BINARY_DIR}/tools/)
+        ${PROJECT_BINARY_DIR}/class_parser/)
 
 add_dependencies(class_parser_driver class_parser_plugin copy_driver_resources)
 

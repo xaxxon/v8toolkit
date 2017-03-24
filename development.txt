@@ -20,16 +20,18 @@ No support for pointer to l/r-value ref qualified member function
 Need to change debugging to use v8's built-in debugging
 
 
+constructors don't support default arguments yet
+ - fairly difficult to route the parameters through
+
 
 ClassParser:
 -------------
 
 
-
-
-
-FEATURE: std::function default parameters are not supported - ignored with warning messaged
+FEATURE: std::function default parameters are not supported - ignored with warning message
  - cast to js then back to native trick doesn't work for them because there's no casttojs for them
+
+
 
 
 
@@ -43,6 +45,5 @@ is not a FUNCTION TYPE
 0x137572e0Got include string for class Map: "map.h"
 GroundRegionCollection now has 9 include files having added "map.h"
 
-static_methods take default arguments, don't don't actually do anything with them
 
 constructors don't take default arguments and once they do, it needs to be added to class_parser
