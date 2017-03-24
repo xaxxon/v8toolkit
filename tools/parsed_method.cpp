@@ -51,7 +51,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
     if (this->is_templated()) {
 
         // convert each templated type
-        this->for_each_templated_type([&](QualType qualtype){
+        this->for_each_templated_type([&](QualType qualtype) {
             auto typeinfo = TypeInfo(qualtype);
             std::cerr << fmt::format("converting templated type {}", typeinfo.plain_name) << std::endl;
             template_type_jsdoc_conversions.push_back(typeinfo.get_jsdoc_type_name());
@@ -86,7 +86,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
     }
     // Handle non-templated types
     else {
-        return this->convert_simple_typename_to_jsdoc(this->plain_name);
+        return this->convert_simple_typename_to_jsdoc(this->plain_without_const().name);
     }
 }
 
@@ -682,9 +682,15 @@ string ConstructorFunction::generate_js_bindings() {
 
 string MemberFunction::generate_js_bindings() {
     stringstream result;
+    if (OO_Call == method_decl->getOverloadedOperator()) {
+        result << fmt::format("    class_wrapper.make_callable<{}>(&{});\n",
+                              this->get_return_and_class_and_parameter_types_string(), this->name);
+
+    } else {
         result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{}, {});\n",
                               this->get_return_and_class_and_parameter_types_string(), this->js_name, this->name,
                               this->get_default_argument_tuple_string());
+    }
     return result.str();
 }
 

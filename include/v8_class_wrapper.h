@@ -1010,7 +1010,7 @@ public:
 	* Adds the ability to call the specified class instance function when the javascript is called as `my_object();`
 	*/
 	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
+			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
 	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
 	{
 	    return _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);

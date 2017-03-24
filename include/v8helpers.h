@@ -457,7 +457,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
 
 
  struct AnyBase

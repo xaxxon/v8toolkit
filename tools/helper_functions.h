@@ -13,7 +13,7 @@
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 // TODO: This should be a command line parameter to the plugin
-#define MAX_DECLARATIONS_PER_FILE 40;
+#define MAX_DECLARATIONS_PER_FILE 100;
 
 
 extern map<string, string> cpp_to_js_type_conversions;

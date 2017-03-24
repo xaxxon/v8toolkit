@@ -18,7 +18,7 @@
 #endif
 
 
-#define V8_TOOLKIT_DEBUG true
+#define V8_TOOLKIT_DEBUG false
 
 
 /** TODO LIST
@@ -428,7 +428,7 @@ struct ParameterBuilder<T,
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-            std::cerr << fmt::format("ParameterBuilder type that returns a reference: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
+//        std::cerr << fmt::format("ParameterBuilder type that returns a reference: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
 	    
         if (i >= info.Length()) {
             return cast_to_native_no_value<NoRefT>()(info, i++);
