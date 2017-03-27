@@ -457,7 +457,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-#define ANYBASE_DEBUG
+//#define ANYBASE_DEBUG
 
 
  struct AnyBase
@@ -526,9 +526,9 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
-        print_v8_value_details(value);
-	    throw v8toolkit::CastException("Couldn't cast value to requested type");
+        //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
+        //print_v8_value_details(value);
+	    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
     }
 }
 
@@ -576,7 +576,10 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
+std::string stringify_value(v8::Isolate * isolate,
+                            const v8::Local<v8::Value> & value,
+                            bool show_all_properties=false,
+                            std::vector<v8::Local<v8::Value>> && processed_values = std::vector<v8::Local<v8::Value>>{});
 
 /**
  * Tests if the given name conflicts with a reserved javascript top-level name

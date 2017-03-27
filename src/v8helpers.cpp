@@ -181,17 +181,16 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
 
 #define STRINGIFY_VALUE_DEBUG false
 
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool top_level, bool show_all_properties)
+std::string stringify_value(v8::Isolate * isolate,
+                            const v8::Local<v8::Value> & value,
+                            bool show_all_properties,
+                            std::vector<v8::Local<v8::Value>> && processed_values)
 {
-    static std::vector<v8::Local<v8::Value>> processed_values;
 
     if (value.IsEmpty()) {
         return "<Empty v8::Local<v8::Value>>";
     }
 
-    if (top_level) {
-        processed_values.clear();
-    };
 
     auto context = isolate->GetCurrentContext();
 
@@ -247,7 +246,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
+            output << stringify_value(isolate, value.ToLocalChecked(), show_all_properties, std::move(processed_values));
         }
         output << "]";
     } else {
@@ -274,7 +273,7 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
                 output << key;
                 output << ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output << stringify_value(isolate, value.ToLocalChecked(), false, show_all_properties);
+                output << stringify_value(isolate, value.ToLocalChecked(), show_all_properties, std::move(processed_values));
             }
             output << "}";
         }

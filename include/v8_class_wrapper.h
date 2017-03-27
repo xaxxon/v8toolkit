@@ -1017,11 +1017,7 @@ public:
 	 */
 	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-<<<<<<< HEAD
-	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
-=======
 	void make_callable(R(TBase::*method)(Args...))
->>>>>>> e1c97afccccfd278836fb75ba4c6a8687a50a7c2
 	{
 	    _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}

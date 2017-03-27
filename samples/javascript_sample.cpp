@@ -469,7 +469,7 @@ void test_asserts()
     c->run("if({}){println('{} is true');} else{println('{} is false');}");
     c->run("assert('({})')"); // the program "{}" is an empty program, not an empty object
 
-    printf("Dont testing asserts\n");   
+    printf("Done testing asserts\n");
 }
 
 

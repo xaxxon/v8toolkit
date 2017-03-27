@@ -176,7 +176,7 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
     add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i], true, true) + "\n");
+            callback(stringify_value(isolate, info[i], true) + "\n");
         }
     });
 	
@@ -199,11 +199,11 @@ void add_print(const v8::Local<v8::Context> context, func::function<void(const s
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i], true, true) + "\n");
+            callback(stringify_value(isolate, info[i], true) + "\n");
         }
     });
-
 }
+
 
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template)
 {
@@ -361,7 +361,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
 
         ReportException(isolate, &try_catch);
 
-            // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
+        // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
         error = try_catch.Exception();
         printf("%s\n", stringify_value(isolate, try_catch.Exception()).c_str());
         if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
@@ -382,7 +382,7 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
 
     auto maybe_result = script->Run(context);
     if (try_catch.HasCaught()) {
-        printf("Context::run threw exception - about to print details:\n");
+//        printf("Context::run threw exception - about to print details:\n");
         ReportException(isolate, &try_catch);
     } else {
 //	printf("Context::run ran without throwing exception\n");
