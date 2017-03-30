@@ -183,15 +183,15 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
 
-//#ifdef ANYBASE_DEBUG
-//        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
-//        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-//            std::cerr
-//                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
-//                << std::endl;
-//            assert(false);
-//        }
-//#endif
+#ifdef ANYBASE_DEBUG
+        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
+            std::cerr
+                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
+                << std::endl;
+            assert(false);
+        }
+#endif
 
         return SUPER::check(any_base);
     }
@@ -447,7 +447,7 @@ private:
 
 		auto isolate = info.GetIsolate();
 
-		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.This());
+		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
         MemberType & value = cpp_object->*member_pointer;
 
         // add lvalue ref as to know not to delete the object if the JS object is garbage collected
@@ -469,7 +469,7 @@ private:
 
 	    auto isolate = info.GetIsolate();
 
-	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.This());
+	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
 		cpp_object->*member_pointer = CastToNative<MemberType>()(isolate, value);
 
 	    // call any registered change callbacks
@@ -1017,11 +1017,7 @@ public:
 	 */
 	template<class R, class TBase, class... Args,
 			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-<<<<<<< HEAD
-	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
-=======
 	void make_callable(R(TBase::*method)(Args...))
->>>>>>> e1c97afccccfd278836fb75ba4c6a8687a50a7c2
 	{
 	    _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}
@@ -1225,7 +1221,7 @@ public:
                 assert(holder->InternalFieldCount() == 1);
 
                 // a crash here may have something to do with a native override of toString
-				auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.This());
+				auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
 
 
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control

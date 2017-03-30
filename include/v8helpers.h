@@ -457,7 +457,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-#define ANYBASE_DEBUG
+//#define ANYBASE_DEBUG
 
 
  struct AnyBase
@@ -526,7 +526,7 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
+        printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
         print_v8_value_details(value);
 	    throw v8toolkit::CastException("Couldn't cast value to requested type");
     }

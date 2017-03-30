@@ -47,3 +47,27 @@ GroundRegionCollection now has 9 include files having added "map.h"
 
 
 constructors don't take default arguments and once they do, it needs to be added to class_parser
+
+
+BUG: ClassParser generates code for multiple constructors with the same name -- also puts an extra newline after each constructor
+       instead of only after last one
+
+TRIVIAL: ClassParser generated code - expose_static_methods indentation is off:
+
+           class_wrapper.finalize(true);
+   class_wrapper.expose_static_methods("InputEvent", isolate);
+
+
+
+Add support for enums.  Here is sample code for how to get enums from a CXXRecordDecl:
+
+ for(auto & childdecl : record_decl->decls()) {
+        if (auto enum_decl = dyn_cast<EnumDecl>(childdecl)) {
+            // prints name of enum class
+            std::cerr << fmt::format("enum decl name: {}", enum_decl->getName().str()) << std::endl;
+            for(auto enumerator : enum_decl->enumerators()) {
+                // prints the name of each value in the enum
+                std::cerr << fmt::format("Enumerator: {}", enumerator->getNameAsString(), enumerator->) << std::endl;
+            }
+        }
+    }
