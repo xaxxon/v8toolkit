@@ -486,7 +486,7 @@ int main(int argc, char* argv[])
                                                                                    "p = new Point(); p.thing(3);")).ToLocalChecked();
                 v8::TryCatch tc4(isolate);
                 (void)script->Run(context);
-                v8toolkit::ReportException(isolate, &tc4);
+//                v8toolkit::ReportException(isolate, &tc4);
                 assert(!tc4.HasCaught());
 
             }
@@ -495,7 +495,7 @@ int main(int argc, char* argv[])
                                                                                    "p = new Point(); println(`should print specified value qwer`);  println(p.thing2(5, \"qwer\")); println(`should print default value asdf`); println(p.thing2(5));")).ToLocalChecked();
                 v8::TryCatch tc4(isolate);
                 (void)script->Run(context);
-                v8toolkit::ReportException(isolate, &tc4);
+//                v8toolkit::ReportException(isolate, &tc4);
                 assert(!tc4.HasCaught());
 
             }
@@ -504,7 +504,7 @@ int main(int argc, char* argv[])
                                                                                    "p = new Point(); p.thing3(\"a\", \"b\");")).ToLocalChecked();
                 v8::TryCatch tc4(isolate);
                 (void)script->Run(context);
-                v8toolkit::ReportException(isolate, &tc4);
+//                v8toolkit::ReportException(isolate, &tc4);
                 assert(!tc4.HasCaught());
 
             }
@@ -534,6 +534,7 @@ int main(int argc, char* argv[])
                 (void) script->Run(context);
                 if (tc5.HasCaught()) {
                     v8toolkit::ReportException(isolate, &tc5);
+                    assert(false);
                 }
             }
 

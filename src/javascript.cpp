@@ -107,7 +107,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
     auto local_script = v8::Local<v8::Script>::New(isolate, script);
     auto maybe_result = local_script->Run(context.Get(isolate));
     if (try_catch.HasCaught()) {
-        printf("Context::run threw exception - about to print details:\n");
+//        printf("Context::run threw exception - about to print details:\n");
         ReportException(isolate, &try_catch);
     } else {
 //        printf("Context::run ran without throwing exception\n");
@@ -126,7 +126,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
             // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
             std::rethrow_exception(anyptr_exception_ptr->get());
         } else {
-            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
+//            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -476,7 +476,7 @@ Script::Script(std::shared_ptr<Context> context_helper,
     script(v8::Global<v8::Script>(isolate, script)),
     script_source_code(source_code)
 {
-    std::cerr << "source code length: " << source_code.length() << std::endl;
+//    std::cerr << "source code length: " << source_code.length() << std::endl;
 }
 
 std::thread Script::run_thread()
