@@ -47,3 +47,7 @@ GroundRegionCollection now has 9 include files having added "map.h"
 
 
 constructors don't take default arguments and once they do, it needs to be added to class_parser
+
+Bidirectional types without a specified bidirectional constructor aren't properly setting an error - or error isn't being
+  looked at - program crashes when trying to write out the null constructor later (right after log message cc3 is printed)
+
