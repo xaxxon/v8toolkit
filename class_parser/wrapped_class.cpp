@@ -12,14 +12,15 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     annotations(decl),
     found_method(found_method)
 {
-
-    std::cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << std::endl;
+    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
     fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *)decl);
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
         cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
         name_alias = using_name;
     }
+
+
 
     // strip off any leading "class " or "struct " off the type name
     name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");

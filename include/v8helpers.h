@@ -526,6 +526,7 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
+
         //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
         //print_v8_value_details(value);
 	    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));

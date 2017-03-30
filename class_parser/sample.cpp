@@ -49,6 +49,8 @@ public:
 
     void std_function_default_parameter(std::function<void()> some_function = std::function<void()>());
 
+    enum class EnumClass{A, B, C, D};
+
 };
 
 class WrappedClassDerived : public WrappedClass {
