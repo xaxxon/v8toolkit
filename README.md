@@ -10,9 +10,11 @@
 * Resuming execution
 
 
-To debug, you must start chrome with the `--remote-debugging-port=9222` flag (port can be whatever port you choose).
-Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002` (9002 or whatever port you have your
-application listening on - set in the `v8toolkit::Debugger` constructor)
+To debug, you must start chrome with the `--remote-debugging-port=9222`.
+Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002`.
+
+Note the two different ports above.  The first is a local port to serve the debugger from, the second is the port
+in the program you wish to debug.
 
 This code will be rewritten using the newly implemented debugging interface in V8, but
 until then, the existing code has some of the functionality.
