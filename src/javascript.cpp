@@ -2,7 +2,7 @@
 #include <memory>
 #include <v8-debug.h>
 
-#include "javascript.h"
+#include "debugger.h"
 
 
 namespace v8toolkit {
@@ -14,8 +14,9 @@ std::atomic<int> script_id_counter(0);
 
 Context::Context(std::shared_ptr<Isolate> isolate_helper,
                  v8::Local<v8::Context> context) :
-    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()),
-    context(v8::Global<v8::Context>(isolate, context))
+    isolate_helper(isolate_helper),
+    isolate(isolate_helper->get_isolate()),
+    context(v8::Global<v8::Context>(*isolate_helper, context))
 {}
 
 void Context::shutdown() {
@@ -327,8 +328,28 @@ std::shared_ptr<Context> Isolate::create_context()
     auto context_helper = new Context(shared_from_this(), context);
 
     return std::shared_ptr<Context>(context_helper);
-	
 }
+
+std::shared_ptr<DebugContext> Isolate::create_debug_context(short port) {
+    ISOLATE_SCOPED_RUN(this->isolate);
+    v8::TryCatch tc(this->isolate);
+
+    auto ot = this->get_object_template();
+    auto context = v8::Context::New(this->isolate, NULL, ot);
+
+
+    if (tc.HasCaught() || context.IsEmpty()) {
+	    throw V8ExecutionException(this->isolate, tc);
+    }
+
+
+    // can't use make_shared since the constructor is private
+    auto debug_context = new DebugContext(shared_from_this(), context, port);
+
+    return std::shared_ptr<DebugContext>(debug_context);
+
+}
+
 
 v8::Local<v8::ObjectTemplate> Isolate::get_object_template()
 {

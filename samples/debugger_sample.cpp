@@ -8,7 +8,7 @@ int main(int, char**) {
     v8toolkit::Platform::init(0, nullptr);
     auto isolate = v8toolkit::Platform::create_isolate();
     isolate->add_print();
-    auto context = isolate->create_context();
+    auto context = isolate->create_debug_context(9002);
 
     auto script = context->compile("a = 1;\r\na+=1;", "hard-coded-text-a.js");
     auto script2 = context->compile("b = 2;\r\nb+=2;", "hard-coded-text-b.js");
@@ -22,11 +22,6 @@ int main(int, char**) {
 
 
 
-
-
-    InspectorClient client(*context, 9002);
-    auto session = client.GetSession(*context);
-
     using namespace v8toolkit::literals;
     v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(*isolate, (std::string("v8toolkit://") + context->get_uuid_string() + "/" + "compile_function_in_context").c_str()), 1_v8);
     v8::ScriptCompiler::Source source("println(\"in code from CompileFunctionInContext\");"_v8, script_origin);
@@ -36,7 +31,7 @@ int main(int, char**) {
     std::cerr << fmt::format("infinite loop waiting for debugger operations") << std::endl;
     while(true) {
         script3->run();
-        client.channel_->poll();
+        context->get_channel().poll();
         usleep(1000000);
     }
 }

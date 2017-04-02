@@ -1,5 +1,6 @@
 #pragma once
 
+#define V8TOOLKIT_DEBUGGING_ACTIVE
 
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
@@ -12,10 +13,14 @@
 #include <v8-inspector.h>
 #include <v8-debug.h>
 
+
+#include <nlohmann/json.hpp>
+
 #include "javascript.h"
 
 namespace v8toolkit {
 
+class DebugContext;
 
 /**
 Inspector types:
@@ -44,36 +49,67 @@ V8InspectorSession:
 */
 
 class DebugMessage {
-private:
-    std::string method_name;
 
 public:
-    DebugMessage(std::string const & message_payload);
-    std::string const & get_method_name();
+    DebugMessage(v8toolkit::DebugContext & debug_context, int id) :
+        debug_context(debug_context), id(id) {}
+    DebugMessage(DebugMessage const &) = default;
+    int const id;
+    v8toolkit::DebugContext & debug_context;
+
 };
+
 
 class RequestMessage : public DebugMessage {
-
+private:
+    std::string method_name;
 public:
-    // takes a message and returns the appropriate RequestMessage object type for it
-    static std::unique_ptr<RequestMessage> process_message(std::string const & message_payload);
+    RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json);
+
 };
+
 
 class ResponseMessage : public DebugMessage {
 
 public:
-    static std::unique_ptr<ResponseMessage> create_response(std::string const & method_name);
+    ResponseMessage(RequestMessage const & request_message);
+    static std::unique_ptr<ResponseMessage> create_response(std::string const &method_name);
 };
 
-class DebugMessageManager {
+
+/**
+ * Stores mapping between
+ */
+class MessageManager {
+public:
     // map type between
-    using MessageMap = std::map<std::string, std::function<void(std::string const &)>>;
+    using MessageMap = std::map<std::string, std::function<std::unique_ptr<RequestMessage>(std::string const &)>>;
+private:
+
+    MessageMap message_map;
+
+    v8toolkit::DebugContext & debug_context;
+
+public:
+    MessageManager(v8toolkit::DebugContext & context);
+
+    template<class RequestMessageT, std::enable_if_t<std::is_base_of<RequestMessage, RequestMessageT>::value, int> = 0>
+    void add_message_handler() {
+        this->message_map[RequestMessageT::message_name] = [this](std::string const & message_payload){
+            nlohmann::json const & json = nlohmann::json::parse(message_payload);
+            return std::make_unique<RequestMessageT>(this->debug_context, json);
+        };
+    };
+
+    std::unique_ptr<ResponseMessage> generate_response_message(RequestMessage const & request_message);
+
+    void process_request_message(std::string const &message_payload);
 };
 
 // implements sending data to debugger
 class WebsocketChannel : public v8_inspector::V8Inspector::Channel {
 public:
-    WebsocketChannel(v8::Local<v8::Context> context, short port);
+    WebsocketChannel(v8toolkit::DebugContext & debug_context, short port);
 
     virtual ~WebsocketChannel();
 
@@ -96,7 +132,7 @@ private:
     void Send(const v8_inspector::StringView &string);
 
     v8::Isolate *isolate;
-    v8::Global<v8::Context> context;
+    v8toolkit::DebugContext & debug_context;
 
     using DebugServerType = websocketpp::server<websocketpp::config::asio>;
     DebugServerType debug_server;
@@ -124,80 +160,66 @@ private:
 
 public:
     void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
+
     void poll();
+
     void poll_one();
 
+    MessageManager message_manager;
 };
 
 
 enum {
     // The debugger reserves the first slot in the Context embedder data.
-    kDebugIdIndex = v8::Context::kDebugIdIndex,
+        kDebugIdIndex = v8::Context::kDebugIdIndex,
     kModuleEmbedderDataIndex,
     kInspectorClientIndex
 };
 
 
-class InspectorClient : public v8_inspector::V8InspectorClient {
+class DebugContext : public v8_inspector::V8InspectorClient, public v8toolkit::Context {
+private:
+    std::string frame_id = "12345.1"; // arbitrary value
+
+    std::unique_ptr<v8_inspector::V8Inspector> inspector;
+    std::unique_ptr<v8_inspector::V8InspectorSession> session;
+    std::unique_ptr<WebsocketChannel> channel;
+
+
 public:
-    InspectorClient(v8::Local<v8::Context> context, short port) {
-        isolate_ = context->GetIsolate();
-        channel_.reset(new WebsocketChannel(context, port));
-        inspector_ = v8_inspector::V8Inspector::create(isolate_, this);
-        session_ =
-                inspector_->connect(1, channel_.get(), v8_inspector::StringView());
-        context->SetAlignedPointerInEmbedderData(kInspectorClientIndex, this);
-        inspector_->contextCreated(v8_inspector::V8ContextInfo(
-                context, kContextGroupId, v8_inspector::StringView()));
+    DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port);
 
-        v8::Debug::SetLiveEditEnabled(isolate_, true);
-
-        context_.Reset(isolate_, context);
-    }
 
     virtual void runMessageLoopOnPause(int contextGroupId) override {
         this->paused = true;
-        while(this->paused) {
+        while (this->paused) {
             std::cerr << fmt::format("runMessageLoopOnPause") << std::endl;
             sleep(1);
-            this->channel_->poll();
+            this->channel->poll();
         }
         std::cerr << fmt::format("exiting runMessageLoopOnPause") << std::endl;
     }
 
-    virtual void quitMessageLoopOnPause() override{
+    virtual void quitMessageLoopOnPause() override {
         std::cerr << fmt::format("quitMessageLoopOnPause, setting paused=false") << std::endl;
         this->paused = false;
     }
 
+    std::string const & get_frame_id() const {return this->frame_id;}
+    std::string get_base_url() const {return this->get_uuid_string();}
+
 public:
-    static v8_inspector::V8InspectorSession *GetSession(v8::Local<v8::Context> context) {
-        InspectorClient *inspector_client = static_cast<InspectorClient *>(
-                context->GetAlignedPointerFromEmbedderData(kInspectorClientIndex));
-        return inspector_client->session_.get();
-    }
-
-    v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override {
-        return context_.Get(isolate_);
-    }
-
-    static void SendInspectorMessage(v8::Local<v8::Context> context, std::string const & message) {
-        auto isolate = context->GetIsolate();
-        auto session = GetSession(context);
-        v8_inspector::StringView message_view((uint8_t const *)message.c_str(), message.length());
-        session->dispatchProtocolMessage(message_view);
+       v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override {
+        return *this;
     }
 
     static const int kContextGroupId = 1;
     bool paused = false;
 
-    std::unique_ptr<v8_inspector::V8Inspector> inspector_;
-    std::unique_ptr<v8_inspector::V8InspectorSession> session_;
-    std::unique_ptr<WebsocketChannel> channel_;
-    v8::Global<v8::Context> context_;
-    v8::Isolate *isolate_;
+    WebsocketChannel & get_channel() {return *this->channel;}
+    v8_inspector::V8InspectorSession & get_session() {return *this->session;}
+
 };
 ///// END NEW DEBUG CODE
 
-
-};
+} // end v8toolkit namespace

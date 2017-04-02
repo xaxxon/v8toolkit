@@ -14,6 +14,8 @@
 
 namespace v8toolkit {
 
+class DebugContext;
+
 extern boost::uuids::random_generator uuid_generator;
 
 class Isolate;
@@ -31,7 +33,10 @@ using ScriptPtr = std::shared_ptr<Script>;
 class Context : public std::enable_shared_from_this<Context>
 {
     friend class Isolate;
-public:
+protected:
+	/// constructor should only be called by an Isolate or derived class
+	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
+
 
 private:
 	std::atomic<int> script_id_counter;
@@ -46,14 +51,10 @@ private:
 	/// The Isolate that created this Context will be kept around as long as a Context it created is still around
 	std::shared_ptr<Isolate> isolate_helper;
 	
-	/// shortcut to the v8::isolate object instead of always going through the Isolate
-	v8::Isolate * isolate;
-	
+
 	/// The actual v8::Context object backing this Context
 	v8::Global<v8::Context> context;
     
-    /// constructor should only be called by an Isolate
-	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
 
     /// stores the list of scripts --
     /// TODO: These should be weak_ptr's or no script/context will ever be cleaned up
@@ -71,6 +72,9 @@ private:
 
 
 public:
+
+	/// shortcut to the v8::isolate object instead of always going through the Isolate
+	v8::Isolate * const isolate;
 
 	virtual ~Context();
 
@@ -531,6 +535,8 @@ public:
     *   created.
     */
 	std::shared_ptr<Context> create_context();
+
+    std::shared_ptr<DebugContext> create_debug_context(short port);
 
     /**
     * Returns the isolate associated with this Isolate

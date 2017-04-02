@@ -7,7 +7,7 @@
 #include <websocketpp/endpoint.hpp>
 
 #include <nlohmann/json.hpp>
-#include <codecvt>
+#include "debugger_message_types/frame_resource_tree.h"
 
 namespace v8toolkit {
 
@@ -15,13 +15,63 @@ using namespace ::v8toolkit::literals;
 
 using json = nlohmann::json;
 
+
+RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
+        DebugMessage(context, json["id"].get<int>()),
+        method_name(json["method"].get<std::string>())
+{}
+
+ResponseMessage::ResponseMessage(RequestMessage const & request_message) :
+        DebugMessage(request_message)
+{}
+
+MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
+        debug_context(debug_context)
+{
+    this->add_message_handler<Page_GetResourceTree>();
+
+    std::cerr << fmt::format("mapped method names:") << std::endl;
+    for(auto & pair : this->message_map) {
+        std::cerr << fmt::format("{}", pair.first) << std::endl;
+    }
+};
+
+
 WebsocketChannel::~WebsocketChannel() {}
 
 
-WebsocketChannel::WebsocketChannel(v8::Local<v8::Context> context, short port) :
-            isolate(context->GetIsolate()),
+void MessageManager::process_request_message(std::string const & message_payload) {
+
+    json json = json::parse(message_payload);
+    std::string method_name = json["method"];
+    std::cerr << fmt::format("processing request message with method name: {}", method_name) << std::endl;
+
+    // Try to find a custom handler for the message
+    auto matching_message_pair = this->message_map.find(method_name);
+
+    // if a custom matcher is found, use that
+    if (matching_message_pair != this->message_map.end()) {
+        std::cerr << fmt::format("found custom handler for message type") << std::endl;
+        auto request_message = matching_message_pair->second(message_payload);
+
+
+
+    }
+    // otherwise, if no custom behavior is specified for this message type, send it to v8-inspector to handle
+    else {
+        std::cerr << fmt::format("sending message type to v8 inspector") << std::endl;
+        v8_inspector::StringView message_view((uint8_t const *)message_payload.c_str(), message_payload.length());
+        this->debug_context.get_session().dispatchProtocolMessage(message_view);
+    }
+}
+
+
+WebsocketChannel::WebsocketChannel(v8toolkit::DebugContext & debug_context, short port) :
+            isolate(debug_context.get_isolate()),
             port(port),
-            context(isolate, context) {
+            debug_context(debug_context),
+            message_manager(debug_context)
+{
     // disables all websocketpp debugging messages
     //websocketpp::set_access_channels(websocketpp::log::alevel::none);
     this->debug_server.get_alog().clear_channels(websocketpp::log::alevel::all);
@@ -73,12 +123,9 @@ void WebsocketChannel::on_http(websocketpp::connection_hdl hdl) {
 
 void WebsocketChannel::on_message(websocketpp::connection_hdl hdl, WebsocketChannel::DebugServerType::message_ptr msg) {
     std::smatch matches;
-    std::string message = msg->get_payload();
-    std::cerr << "Got debugger message: " << message << std::endl;
-
-    nlohmann::json json = json::parse(msg->get_payload());
-
-    InspectorClient::SendInspectorMessage(this->context.Get(this->isolate), message);
+    std::string message_payload = msg->get_payload();
+    std::cerr << "Got debugger message: " << message_payload << std::endl;
+    this->message_manager.process_request_message(message_payload);
 }
 
 
@@ -169,5 +216,21 @@ void WebsocketChannel::wait_for_connection(std::chrono::duration<float> sleep_be
     }
 }
 
+DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port) :
+        v8toolkit::Context(isolate_helper, context),
+        channel(new WebsocketChannel(*this, port)),
+        inspector(v8_inspector::V8Inspector::create(this->get_isolate(), this))
+{
+
+        session =
+                inspector->connect(1, channel.get(), v8_inspector::StringView());
+        this->get_context()->SetAlignedPointerInEmbedderData(kInspectorClientIndex, this);
+
+        inspector->contextCreated(v8_inspector::V8ContextInfo(*this, kContextGroupId, v8_inspector::StringView()));
+
+        v8::Debug::SetLiveEditEnabled(this->isolate, true);
 
 }
+
+
+} // end v8toolkit namespace

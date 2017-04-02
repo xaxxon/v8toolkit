@@ -13,10 +13,12 @@ file(GLOB HEADER_FILES
         include/*.h
 	include/*.hpp
 	class_parser/class_parser.h
+	debugger_message_types/*.h
 	)
 
 file(GLOB SOURCE_FILES
         src/*.cpp
+		src/debugger_message_types/*.cpp
         )
 
 set(V8_STATIC_LIBS
@@ -30,7 +32,9 @@ set(V8_STATIC_LIBS
 set(V8_SHARED_LIBS
 	icui18n
 	icuuc 
-	v8 v8_libbase)
+	v8
+	v8_libbase
+		v8_libplatform)
 
 # https://github.com/fmtlib/fmt
 find_package(fmt REQUIRED)
@@ -70,7 +74,7 @@ include_directories(./include ${V8_INCLUDE_DIR})
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase)
+target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS})
 
 # Linux doesn't need to link to this to make a shared object
 target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
