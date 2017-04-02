@@ -704,7 +704,6 @@ struct CallCallable<func::function<ReturnType(InitialArg, Args...)>, InitialArg>
 template<class InitialArg, class... Args>
 struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
-
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
@@ -751,7 +750,7 @@ struct CallCallable<func::function<ReturnType(Args...)>> {
 	// 2 - 2 = 0 (lookup at std::get<0>(default_args_tuple)
         constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
 
-	
+
 
         std::vector<std::unique_ptr<StuffBase>> stuff;
 

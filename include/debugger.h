@@ -9,229 +9,110 @@
 #include <fmt/ostream.h>
 
 #include <v8-debug.h>
-
+#include <v8-inspector.h>
+#include <v8-debug.h>
 
 #include "javascript.h"
 
 namespace v8toolkit {
 
-using namespace ::std::chrono_literals;
 
-class Debugger;
+/**
+Inspector types:
 
-template<class T>
-std::string make_response(int message_id, T const &response_object) {
-    return fmt::format("{{\"id\":{},\"result\":{}}}", message_id, response_object);
-}
-
-template<class T>
-std::string make_method(T const &method_object) {
-    return fmt::format("{{\"method\":\"{}\",\"params\":{}}}", method_object.get_name(), method_object);
-}
+v8_inspector::V8Inspector::Channel
+ - Interface: sendResponse, sendNotification, flushProtocol
+  - basically takes a string and sends it out
 
 
 
+v8_inspector::V8InspectorClient
+  - has a "channel"
+  - has an V8Inspector
+  - creates a V8InspectorSesssion when an inspector is "connected" to a channel
 
-// https://chromedevtools.github.io/debugger-protocol-viewer/
+V8InspectorSession:
+ - Does the "main work"
+ - Received messages are sent to session::dispatchProtocolMessage
 
-struct PageFrame {
-    PageFrame(Debugger const &debugger);
 
-    std::string frame_id;
-    std::string parent_id = "";
-    std::string network_loader_id;
-    std::string name; // optional
-    std::string url;
-    std::string security_origin;
-    std::string mime_type = "text/html";
+
+ v8_inspector::V8Inspector
+  - associated and 'connected' to a v8::Context
+
+
+*/
+
+class DebugMessage {
+private:
+    std::string method_name;
+
+public:
+    DebugMessage(std::string const & message_payload);
+    std::string const & get_method_name();
 };
 
-std::ostream &operator<<(std::ostream &os, const PageFrame &page_frame);
+class RequestMessage : public DebugMessage {
 
-
-struct FrameResource {
-    FrameResource(Debugger const &debugger, v8toolkit::Script const &script);
-
-    std::string url;
-    std::string type = "Script";
-    std::string mime_type = "text/javascript";
-    //bool failed = false;
-    //bool canceled = false;
+public:
+    // takes a message and returns the appropriate RequestMessage object type for it
+    static std::unique_ptr<RequestMessage> process_message(std::string const & message_payload);
 };
 
-std::ostream &operator<<(std::ostream &os, const FrameResource &frame_resource);
+class ResponseMessage : public DebugMessage {
 
-struct Runtime_ExecutionContextDescription {
-    Runtime_ExecutionContextDescription(Debugger const &debugger);
-
-    int execution_context_id = 1;
-    bool is_default = true;
-    std::string origin;
-    std::string name = "";
-    std::string frame_id;
+public:
+    static std::unique_ptr<ResponseMessage> create_response(std::string const & method_name);
 };
 
-std::ostream &operator<<(std::ostream &os, const Runtime_ExecutionContextDescription &context);
-
-struct Runtime_ExecutionContextCreated {
-    Runtime_ExecutionContextCreated(Debugger const &debugger);
-
-    Runtime_ExecutionContextDescription execution_context_description;
-
-    std::string get_name() const { return "Runtime.executionContextCreated"; }
+class DebugMessageManager {
+    // map type between
+    using MessageMap = std::map<std::string, std::function<void(std::string const &)>>;
 };
 
-std::ostream &operator<<(std::ostream &os, const Runtime_ExecutionContextCreated &context);
+// implements sending data to debugger
+class WebsocketChannel : public v8_inspector::V8Inspector::Channel {
+public:
+    WebsocketChannel(v8::Local<v8::Context> context, short port);
+
+    virtual ~WebsocketChannel();
+
+private:
+    void sendResponse(int callId,
+                      std::unique_ptr<v8_inspector::StringBuffer> message) override {
+        Send(message->string());
+    }
 
 
+    void sendNotification(std::unique_ptr<v8_inspector::StringBuffer> message) override {
 
-struct FrameResourceTree {
-    FrameResourceTree(Debugger const &debugger);
-
-    PageFrame page_frame;
-    std::vector<FrameResourceTree> child_frames;
-    std::vector<FrameResource> resources;
-};
-
-std::ostream &operator<<(std::ostream &os, const FrameResourceTree &frame_resource_tree);
-
-struct ScriptSource {
-    ScriptSource(v8toolkit::Script const &script);
-    ScriptSource(v8::Local<v8::Function> function);
-
-    std::string source;
-};
-
-std::ostream &operator<<(std::ostream &os, const ScriptSource &script_source);
+        Send(message->string());
+    }
 
 
-struct Debugger_ScriptParsed {
-    Debugger_ScriptParsed(Debugger const &debugger, v8toolkit::Script const &script);
-    Debugger_ScriptParsed(Debugger const &debugger, v8::Local<v8::Function> const function);
-
-    int64_t script_id;
-    std::string url; // optional
-    int start_line = 0;
-    int start_column = 0;
-    int end_line;
-    int end_column; // length of last line of script
-    bool is_content_script; // optional
-    std::string source_map_url;
-    bool has_source_url = false;
-
-    std::string get_name() const { return "Debugger.scriptParsed"; }
-};
-
-std::ostream &operator<<(std::ostream &os, const Debugger_ScriptParsed &script_parsed);
-
-struct Network_LoadingFinished {
-    std::string request_id;
-    double timestamp; // fractional seconds since epoch
-};
+    void flushProtocolNotifications() override {}
 
 
-// response to a getResourceContent request
-struct Page_Content {
-    Page_Content(std::string const &content);
+    void Send(const v8_inspector::StringView &string);
 
-    std::string content;
-    bool base64_encoded = false;
-};
+    v8::Isolate *isolate;
+    v8::Global<v8::Context> context;
 
-std::ostream &operator<<(std::ostream &os, const Page_Content &content);
-
-
-// https://chromedevtools.github.io/debugger-protocol-viewer/tot/Runtime/#type-RemoteObject
-struct RemoteObject {
-    RemoteObject(v8::Isolate *isolate, v8::Local<v8::Value> value);
-
-    // object, function, undefined, string, number, boolean, symbol
-    std::string type;
-    std::string value_string;
-    std::string subtype; // optional - only used for object types
-    std::string className; // constructor name
-    std::string description; // string representation of the value
-    bool exception_thrown = false;
-};
-
-std::ostream &operator<<(std::ostream &os, const RemoteObject &remote_object);
-
-struct Location {
-    Location(int64_t script_id, int line_number, int column_number = 0);
-
-    int64_t script_id;
-    int line_number;
-    int column_number;
-};
-
-std::ostream &operator<<(std::ostream &os, const Location &location);
-
-
-struct Breakpoint {
-
-    Breakpoint(std::string const & location, int64_t script_id, int line_number, int column_number = 0  );
-
-    std::string breakpoint_id;
-    std::vector<Location> locations;
-};
-
-std::ostream &operator<<(std::ostream &os, const Breakpoint &breakpoint);
-
-
-struct Scope {
-};
-
-struct CallFrame {
-    CallFrame(v8::Local<v8::StackFrame> stack_frame, v8::Isolate *isolate, v8::Local<v8::Value>);
-
-    std::string call_frame_id = "bogus call frame id";
-    std::string function_name;
-    Location location;
-    std::vector<Scope> scope_chain; // ?
-    RemoteObject javascript_this; // attribute name is just 'this'
-};
-
-std::ostream &operator<<(std::ostream &os, const CallFrame &call_frame);
-
-
-struct Debugger_Paused {
-    Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTrace> stack_trace, int64_t script_id,
-                    int line_number, int column_number = 0);
-
-    Debugger_Paused(Debugger const &debugger, v8::Local<v8::StackTrace> stack_trace);
-
-    std::vector<CallFrame> call_frames;
-
-    // XHR, DOM, EventListener, exception, assert, debugCommand, promiseRejection, other.
-    std::string reason = "other";
-    std::vector<std::string> hit_breakpoints;
-
-    static std::string get_name() { return "Debugger.paused"; }
-};
-
-std::ostream &operator<<(std::ostream &os, const Debugger_Paused &paused);
-
-struct Debugger_Resumed {
-    // No fields
-};
-
-std::ostream &operator<<(std::ostream &os, const Debugger_Resumed &resumed);
-
-
-class Debugger {
     using DebugServerType = websocketpp::server<websocketpp::config::asio>;
-
     DebugServerType debug_server;
+
     unsigned short port = 0;
 
     using WebSocketConnections = std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>>;
     WebSocketConnections connections;
 
     void send_message(std::string const &message);
+//    void send_message(std::wstring const &message);
 
 
     bool websocket_validation_handler(websocketpp::connection_hdl hdl);
 
+    // registered callbacks with websocketpp
     void on_open(websocketpp::connection_hdl hdl);
 
     void on_close(websocketpp::connection_hdl hdl);
@@ -240,53 +121,83 @@ class Debugger {
 
     void on_http(websocketpp::connection_hdl hdl);
 
-    v8toolkit::ContextPtr context;
-
-    std::string frame_id = "12345.1";
-
-
-    struct DebugEventCallbackData {
-        DebugEventCallbackData(Debugger *debugger) : debugger(debugger) {}
-
-        Debugger *debugger;
-    };
-
-
-    static void debug_event_callback(v8::Debug::EventDetails const &event_details);
-
-    bool paused_on_breakpoint = false;
-
-    // only valid if paused_on_breakpoint == true
-    int64_t breakpoint_paused_on = -1;
-
-    // only valid if paused_on_breakpoint == true
-    v8::Global<v8::Object> breakpoint_execution_state;
-
-    // helper function that set everything to be ready for resuming javascript execution
-    void resume_execution();
 
 public:
-    static int STACK_TRACE_DEPTH;
-
-    Debugger(v8toolkit::ContextPtr &context, unsigned short port);
-    Debugger(Debugger const &) = delete; // not copyable
-    Debugger & operator=(Debugger const &) = delete;
-    Debugger(Debugger &&) = default; // moveable
-    Debugger & operator=(Debugger &&) = default;
-
+    void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
     void poll();
     void poll_one();
 
-    void helper(websocketpp::connection_hdl hdl);
-
-    std::string const &get_frame_id() const;
-
-    std::string get_base_url() const;
-
-    v8toolkit::Context &get_context() const;
-
-    void wait_for_connection(std::chrono::duration<float> sleep_between_polls = std::chrono::milliseconds(200));
 };
+
+
+enum {
+    // The debugger reserves the first slot in the Context embedder data.
+    kDebugIdIndex = v8::Context::kDebugIdIndex,
+    kModuleEmbedderDataIndex,
+    kInspectorClientIndex
+};
+
+
+class InspectorClient : public v8_inspector::V8InspectorClient {
+public:
+    InspectorClient(v8::Local<v8::Context> context, short port) {
+        isolate_ = context->GetIsolate();
+        channel_.reset(new WebsocketChannel(context, port));
+        inspector_ = v8_inspector::V8Inspector::create(isolate_, this);
+        session_ =
+                inspector_->connect(1, channel_.get(), v8_inspector::StringView());
+        context->SetAlignedPointerInEmbedderData(kInspectorClientIndex, this);
+        inspector_->contextCreated(v8_inspector::V8ContextInfo(
+                context, kContextGroupId, v8_inspector::StringView()));
+
+        v8::Debug::SetLiveEditEnabled(isolate_, true);
+
+        context_.Reset(isolate_, context);
+    }
+
+    virtual void runMessageLoopOnPause(int contextGroupId) override {
+        this->paused = true;
+        while(true) {
+            std::cerr << fmt::format("runMessageLoopOnPause") << std::endl;
+            sleep(1);
+            this->channel_->poll();
+        }
+        std::cerr << fmt::format("exiting runMessageLoopOnPause") << std::endl;
+    }
+
+    virtual void quitMessageLoopOnPause() override{
+        std::cerr << fmt::format("quitMessageLoopOnPause, setting paused=false") << std::endl;
+        this->paused = false;
+    }
+
+public:
+    static v8_inspector::V8InspectorSession *GetSession(v8::Local<v8::Context> context) {
+        InspectorClient *inspector_client = static_cast<InspectorClient *>(
+                context->GetAlignedPointerFromEmbedderData(kInspectorClientIndex));
+        return inspector_client->session_.get();
+    }
+
+    v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override {
+        return context_.Get(isolate_);
+    }
+
+    static void SendInspectorMessage(v8::Local<v8::Context> context, std::string const & message) {
+        auto isolate = context->GetIsolate();
+        auto session = GetSession(context);
+        v8_inspector::StringView message_view((uint8_t const *)message.c_str(), message.length());
+        session->dispatchProtocolMessage(message_view);
+    }
+
+    static const int kContextGroupId = 1;
+    bool paused = false;
+
+    std::unique_ptr<v8_inspector::V8Inspector> inspector_;
+    std::unique_ptr<v8_inspector::V8InspectorSession> session_;
+    std::unique_ptr<WebsocketChannel> channel_;
+    v8::Global<v8::Context> context_;
+    v8::Isolate *isolate_;
+};
+///// END NEW DEBUG CODE
 
 
 };

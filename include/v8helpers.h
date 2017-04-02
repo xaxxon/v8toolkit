@@ -233,9 +233,6 @@ struct static_all_of<false, tail...> : std::false_type {};
 template <> struct static_all_of<> : std::true_type {};
 
 
-
-#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
-
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -457,7 +454,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
 
 
  struct AnyBase

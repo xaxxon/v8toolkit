@@ -4,9 +4,9 @@
 using namespace v8toolkit;
 
 int main(int, char**) {
-    Platform::expose_debug_as("v8debug");
-    Platform::init(0, nullptr);
-    auto isolate = Platform::create_isolate();
+//    v8toolkit::Platform::expose_debug_as("v8debug");
+    v8toolkit::Platform::init(0, nullptr);
+    auto isolate = v8toolkit::Platform::create_isolate();
     isolate->add_print();
     auto context = isolate->create_context();
 
@@ -19,21 +19,23 @@ int main(int, char**) {
 
     ISOLATE_SCOPED_RUN(*isolate);
 
-    // set up chrome debug protocol compatible http server on port 9002
-    // To connect, start chrome with --remote-debugging-port=9222 http://localhost:9222/devtools/inspector.html?ws=localhost:9002
-    // The debugger javascript application is served from chrome, but then it connects to our websocket
-    Debugger debugger(context, 9002);
+
+
+
+
+
+    InspectorClient client(*context, 9002);
+    auto session = client.GetSession(*context);
+
     using namespace v8toolkit::literals;
     v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(*isolate, (std::string("v8toolkit://") + context->get_uuid_string() + "/" + "compile_function_in_context").c_str()), 1_v8);
     v8::ScriptCompiler::Source source("println(\"in code from CompileFunctionInContext\");"_v8, script_origin);
     auto maybe_function = v8::ScriptCompiler::CompileFunctionInContext(*context, &source, 0, nullptr, 0, nullptr);
     assert(!maybe_function.IsEmpty());
     auto function = maybe_function.ToLocalChecked();
-
-    context->register_external_function(v8::Global<v8::Function>(*isolate, function));
-    for (;;) {
+    std::cerr << fmt::format("infinite loop waiting for debugger operations") << std::endl;
+    while(true) {
         script3->run();
-        debugger.poll();
-        usleep(1000000);
-    }
+        client.channel_->poll();
+        usleep(1000000);    }
 }

@@ -15,16 +15,21 @@ Solution is to just symlink in your global ld.gold something like this:
 
 ~/v8$ ln -is `which ld.gold`  third_party/binutils/Linux_x64/Release/bin/ld.gold 
 
-
-    export CLANG_DIR="/home/xaxxon/Downloads/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04"
-    export CXX="$CLANG_DIR/bin/clang++ -std=c++11 -stdlib=libc++"
-    export CC="$CLANG_DIR/bin/clang"
-    export CPP="$CLANG_DIR/bin/clang -E"
-    export LINK="$CLANG_DIR/bin/clang++ -std=c++11 -stdlib=libc++"
-    export CXX_host="$CLANG_DIR/bin/clang++"
-    export CC_host="$CLANG_DIR/bin/clang"
-    export CPP_host="$CLANG_DIR/bin/clang -E"
-    export LINK_host="$CLANG_DIR/bin/clang++"
+    export CLANG_HOME="/path/to/clang/root"
+    export CXX="$CLANG_HOME/bin/clang++ -std=c++11 -stdlib=libc++"
+    export CC="$CLANG_HOME/bin/clang"
+    export CPP="$CLANG_HOME/bin/clang -E"
+    export LINK="$CLANG_HOME/bin/clang++ -std=c++11 -stdlib=libc++"
+    export CXX_host="$CLANG_HOME/bin/clang++"
+    export CC_host="$CLANG_HOME/bin/clang"
+    export CPP_host="$CLANG_HOME/bin/clang -E"
+    export LINK_host="$CLANG_HOME/bin/clang++"
     export GYP_DEFINES="clang=1"
 				    
 make x64.debug library=shared snapshot=off 
+
+new way:
+
+in v8 directory:
+`./tools/dev/v8gen.py is_component_build=true is_debug=true v8_use_snapshot=false`
+\
