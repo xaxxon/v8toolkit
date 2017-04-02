@@ -157,7 +157,7 @@ public:
 
     virtual void runMessageLoopOnPause(int contextGroupId) override {
         this->paused = true;
-        while(true) {
+        while(this->paused) {
             std::cerr << fmt::format("runMessageLoopOnPause") << std::endl;
             sleep(1);
             this->channel_->poll();

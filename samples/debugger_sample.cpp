@@ -37,5 +37,6 @@ int main(int, char**) {
     while(true) {
         script3->run();
         client.channel_->poll();
-        usleep(1000000);    }
+        usleep(1000000);
+    }
 }
