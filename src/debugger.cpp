@@ -62,12 +62,12 @@ void MessageManager::process_request_message(std::string const & message_payload
         auto request_message = matching_message_pair->second(message_payload);
 
         // send the required response message
-        ;
-        this->debug_context.get_channel().send_message(nlohmann::json{*request_message->generate_response_message()}.dump());
+        this->debug_context.get_channel().send_message(nlohmann::json(*request_message->generate_response_message()).dump());
 
         // send any other messages which may be generated based on actions taken because of RequestMessage
         for (auto & debug_message : request_message->generate_additional_messages()) {
-            this->debug_context.get_channel().send_message(nlohmann::json{*debug_message}.dump());
+            nlohmann::json json = *debug_message;
+            this->debug_context.get_channel().send_message(json.dump());
         }
     }
     // otherwise, if no custom behavior is specified for this message type, send it to v8-inspector to handle
@@ -156,6 +156,8 @@ void WebsocketChannel::on_close(websocketpp::connection_hdl hdl) {
     this->connections.erase(hdl);
     assert(this->connections.size() == 0);
 
+    // not sure if this is right, but unpause when debugger disconnects
+    this->debug_context.paused = false;
 }
 
 
@@ -229,6 +231,7 @@ void WebsocketChannel::wait_for_connection(std::chrono::duration<float> sleep_be
     }
 }
 
+
 DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port) :
         v8toolkit::Context(isolate_helper, context),
         channel(new WebsocketChannel(*this, port)),
@@ -255,7 +258,7 @@ void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
 
 
 void to_json(nlohmann::json &j, const InformationalMessage & informational_message) {
-    j = informational_message;
+    j = informational_message.to_json();
 }
 
 

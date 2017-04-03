@@ -62,14 +62,14 @@ void to_json(nlohmann::json &j, const FrameResourceTree &frame_resource_tree) {
 
 
 void to_json(nlohmann::json &j, const PageFrame & page_frame) {
-    j = {{{"id", page_frame.frame_id},
+    j = {{"id", page_frame.frame_id},
          {"parentId", page_frame.parent_id},
          {"loaderId", page_frame.network_loader_id},
          {"name", page_frame.name},
          {"url", page_frame.url},
          {"securityOrigin", page_frame.security_origin},
          {"mimeType", page_frame.mime_type}
-    }};
+    };
 }
 
 
