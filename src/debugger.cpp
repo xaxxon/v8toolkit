@@ -17,24 +17,31 @@ using json = nlohmann::json;
 
 
 RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
-        DebugMessage(context, json["id"].get<int>()),
+        RequestResponseMessage(context, json["id"].get<int>()),
         method_name(json["method"].get<std::string>())
 {}
 
+json RequestMessage::to_json() const {
+    throw InvalidCallException("Request message types shouldn't every be re-serialized to json");
+}
+
 ResponseMessage::ResponseMessage(RequestMessage const & request_message) :
-        DebugMessage(request_message)
+        RequestResponseMessage(request_message)
 {}
+
 
 MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
         debug_context(debug_context)
 {
-    this->add_message_handler<Page_GetResourceTree>();
+    this->add_request_message_handler<Page_GetResourceTree>();
 
     std::cerr << fmt::format("mapped method names:") << std::endl;
     for(auto & pair : this->message_map) {
         std::cerr << fmt::format("{}", pair.first) << std::endl;
     }
 };
+
+
 
 
 WebsocketChannel::~WebsocketChannel() {}
@@ -54,8 +61,14 @@ void MessageManager::process_request_message(std::string const & message_payload
         std::cerr << fmt::format("found custom handler for message type") << std::endl;
         auto request_message = matching_message_pair->second(message_payload);
 
+        // send the required response message
+        ;
+        this->debug_context.get_channel().send_message(nlohmann::json{*request_message->generate_response_message()}.dump());
 
-
+        // send any other messages which may be generated based on actions taken because of RequestMessage
+        for (auto & debug_message : request_message->generate_additional_messages()) {
+            this->debug_context.get_channel().send_message(nlohmann::json{*debug_message}.dump());
+        }
     }
     // otherwise, if no custom behavior is specified for this message type, send it to v8-inspector to handle
     else {
@@ -230,6 +243,19 @@ DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v
 
         v8::Debug::SetLiveEditEnabled(this->isolate, true);
 
+}
+
+
+void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
+    j = {
+        {"id",     response_message.message_id},
+        {"result", response_message.to_json()}
+    };
+}
+
+
+void to_json(nlohmann::json &j, const InformationalMessage & informational_message) {
+    j = informational_message;
 }
 
 

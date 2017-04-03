@@ -48,33 +48,88 @@ V8InspectorSession:
 
 */
 
+class ResponseMessage;
+
 class DebugMessage {
 
 public:
-    DebugMessage(v8toolkit::DebugContext & debug_context, int id) :
-        debug_context(debug_context), id(id) {}
+    DebugMessage(v8toolkit::DebugContext & debug_context) :
+        debug_context(debug_context)
+    {}
+
     DebugMessage(DebugMessage const &) = default;
-    int const id;
+
+    // the message id associated with this message (either the incoming ID of a
+    //   RequestMessage or the ID of the request a ResponseMessage is for
     v8toolkit::DebugContext & debug_context;
+
+    virtual nlohmann::json to_json() const = 0;
+};
+
+/**
+ *sent from the application to the debugger as informational data, not in direct response to a
+ * request
+ */
+class InformationalMessage : public DebugMessage {
+
+public:
+    InformationalMessage(v8toolkit::DebugContext & debug_context) :
+        DebugMessage(debug_context)
+    {}
 
 };
 
+void to_json(nlohmann::json& j, const InformationalMessage & informational_message);
 
-class RequestMessage : public DebugMessage {
+
+
+class RequestResponseMessage : public DebugMessage {
+
+public:
+    RequestResponseMessage(v8toolkit::DebugContext & debug_context, int message_id) :
+        DebugMessage(debug_context),
+        message_id(message_id)
+    {}
+
+    int const message_id;
+};
+
+
+class RequestMessage : public RequestResponseMessage {
 private:
     std::string method_name;
 public:
     RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json);
 
+    /**
+     * Every RequestMessage must generate a ResponseMessage
+     * @return the corresponding ResponseMessage to this RequestMessage
+     */
+    virtual std::unique_ptr<ResponseMessage> generate_response_message() const = 0;
+
+    /**
+     * A RequestMessage generates 0 or more InformationalMessage objects
+     * @return Any InformationalMessage objects which need to be sent back to the debugger
+     */
+    virtual std::vector<std::unique_ptr<InformationalMessage> > generate_additional_messages() const {return {};}
+
+
+    nlohmann::json to_json() const override;
 };
 
+/**
+ * Any message involved in a query/response from the debugger
+ */
+class ResponseMessage : public RequestResponseMessage {
+    friend class RequestMessage;
 
-class ResponseMessage : public DebugMessage {
+protected:
+    ResponseMessage(RequestMessage const & request_message);
 
 public:
-    ResponseMessage(RequestMessage const & request_message);
-    static std::unique_ptr<ResponseMessage> create_response(std::string const &method_name);
+
 };
+void to_json(nlohmann::json& j, const ResponseMessage & response_message);
 
 
 /**
@@ -94,14 +149,14 @@ public:
     MessageManager(v8toolkit::DebugContext & context);
 
     template<class RequestMessageT, std::enable_if_t<std::is_base_of<RequestMessage, RequestMessageT>::value, int> = 0>
-    void add_message_handler() {
+    void add_request_message_handler() {
         this->message_map[RequestMessageT::message_name] = [this](std::string const & message_payload){
             nlohmann::json const & json = nlohmann::json::parse(message_payload);
             return std::make_unique<RequestMessageT>(this->debug_context, json);
         };
     };
 
-    std::unique_ptr<ResponseMessage> generate_response_message(RequestMessage const & request_message);
+    std::vector<std::unique_ptr<ResponseMessage>> generate_response_message(RequestMessage const & request_message);
 
     void process_request_message(std::string const &message_payload);
 };
@@ -142,7 +197,6 @@ private:
     using WebSocketConnections = std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>>;
     WebSocketConnections connections;
 
-    void send_message(std::string const &message);
 //    void send_message(std::wstring const &message);
 
 
@@ -160,10 +214,11 @@ private:
 
 public:
     void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
-
     void poll();
-
     void poll_one();
+
+    void send_message(std::string const &message);
+
 
     MessageManager message_manager;
 };
@@ -185,6 +240,7 @@ private:
     std::unique_ptr<v8_inspector::V8InspectorSession> session;
     std::unique_ptr<WebsocketChannel> channel;
 
+    std::vector<std::string> message_types_handled_by_v8_inspector = {};
 
 public:
     DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port);

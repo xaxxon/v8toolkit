@@ -11,9 +11,10 @@ ucm_set_runtime(STATIC)
 
 file(GLOB HEADER_FILES
         include/*.h
-	include/*.hpp
-	class_parser/class_parser.h
-	debugger_message_types/*.h
+		include/*.hpp
+		include/debugger_message_types/*.h
+
+		class_parser/class_parser.h
 	)
 
 file(GLOB SOURCE_FILES
