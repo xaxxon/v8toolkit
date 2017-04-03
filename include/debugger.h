@@ -47,7 +47,7 @@ V8InspectorSession:
 
 
 */
-
+#if 0
 class ResponseMessage;
 
 class DebugMessage {
@@ -160,6 +160,7 @@ public:
 
     void process_request_message(std::string const &message_payload);
 };
+#endif
 
 // implements sending data to debugger
 class WebsocketChannel : public v8_inspector::V8Inspector::Channel {
@@ -220,7 +221,7 @@ public:
     void send_message(std::string const &message);
 
 
-    MessageManager message_manager;
+//    MessageManager message_manager;
 };
 
 
@@ -234,11 +235,11 @@ enum {
 
 class DebugContext : public v8_inspector::V8InspectorClient, public v8toolkit::Context {
 private:
+    short port;
     std::string frame_id = "12345.1"; // arbitrary value
-
+    std::unique_ptr<WebsocketChannel> channel;
     std::unique_ptr<v8_inspector::V8Inspector> inspector;
     std::unique_ptr<v8_inspector::V8InspectorSession> session;
-    std::unique_ptr<WebsocketChannel> channel;
 
     std::vector<std::string> message_types_handled_by_v8_inspector = {};
 
@@ -274,6 +275,7 @@ public:
 
     WebsocketChannel & get_channel() {return *this->channel;}
     v8_inspector::V8InspectorSession & get_session() {return *this->session;}
+    void reset_session();
 
 };
 ///// END NEW DEBUG CODE

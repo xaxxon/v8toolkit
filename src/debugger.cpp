@@ -15,7 +15,7 @@ using namespace ::v8toolkit::literals;
 
 using json = nlohmann::json;
 
-
+#if 0
 RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
         RequestResponseMessage(context, json["id"].get<int>()),
         method_name(json["method"].get<std::string>())
@@ -33,7 +33,7 @@ ResponseMessage::ResponseMessage(RequestMessage const & request_message) :
 MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
         debug_context(debug_context)
 {
-    this->add_request_message_handler<Page_GetResourceTree>();
+//    this->add_request_message_handler<Page_GetResourceTree>();
 
     std::cerr << fmt::format("mapped method names:") << std::endl;
     for(auto & pair : this->message_map) {
@@ -44,7 +44,6 @@ MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
 
 
 
-WebsocketChannel::~WebsocketChannel() {}
 
 
 void MessageManager::process_request_message(std::string const & message_payload) {
@@ -77,13 +76,16 @@ void MessageManager::process_request_message(std::string const & message_payload
         this->debug_context.get_session().dispatchProtocolMessage(message_view);
     }
 }
+#endif
 
+WebsocketChannel::~WebsocketChannel() {}
 
 WebsocketChannel::WebsocketChannel(v8toolkit::DebugContext & debug_context, short port) :
             isolate(debug_context.get_isolate()),
             port(port),
-            debug_context(debug_context),
-            message_manager(debug_context)
+            debug_context(debug_context)
+//    ,
+//            message_manager(debug_context)
 {
     // disables all websocketpp debugging messages
     //websocketpp::set_access_channels(websocketpp::log::alevel::none);
@@ -138,7 +140,10 @@ void WebsocketChannel::on_message(websocketpp::connection_hdl hdl, WebsocketChan
     std::smatch matches;
     std::string message_payload = msg->get_payload();
     std::cerr << "Got debugger message: " << message_payload << std::endl;
-    this->message_manager.process_request_message(message_payload);
+//    this->message_manager.process_request_message(message_payload);
+    v8_inspector::StringView message_view((uint8_t const *)message_payload.c_str(), message_payload.length());
+    this->debug_context.get_session().dispatchProtocolMessage(message_view);
+
 }
 
 
@@ -157,6 +162,7 @@ void WebsocketChannel::on_close(websocketpp::connection_hdl hdl) {
     assert(this->connections.size() == 0);
 
     // not sure if this is right, but unpause when debugger disconnects
+    this->debug_context.reset_session();
     this->debug_context.paused = false;
 }
 
@@ -231,24 +237,29 @@ void WebsocketChannel::wait_for_connection(std::chrono::duration<float> sleep_be
     }
 }
 
+void DebugContext::reset_session() {
+}
 
 DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port) :
         v8toolkit::Context(isolate_helper, context),
-        channel(new WebsocketChannel(*this, port)),
-        inspector(v8_inspector::V8Inspector::create(this->get_isolate(), this))
+        port(port),
+        channel(std::make_unique<WebsocketChannel>(*this, port)),
+        inspector(v8_inspector::V8Inspector::create(this->get_isolate(), this)),
+        session(inspector->connect(1, channel.get(), v8_inspector::StringView()))
+
 {
 
-        session =
-                inspector->connect(1, channel.get(), v8_inspector::StringView());
-        this->get_context()->SetAlignedPointerInEmbedderData(kInspectorClientIndex, this);
 
-        inspector->contextCreated(v8_inspector::V8ContextInfo(*this, kContextGroupId, v8_inspector::StringView()));
+    this->reset_session();
+    this->get_context()->SetAlignedPointerInEmbedderData(kInspectorClientIndex, this);
 
-        v8::Debug::SetLiveEditEnabled(this->isolate, true);
+    inspector->contextCreated(v8_inspector::V8ContextInfo(*this, kContextGroupId, v8_inspector::StringView()));
+
+    v8::Debug::SetLiveEditEnabled(this->isolate, true);
 
 }
 
-
+#if 0
 void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
     j = {
         {"id",     response_message.message_id},
@@ -260,6 +271,6 @@ void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
 void to_json(nlohmann::json &j, const InformationalMessage & informational_message) {
     j = informational_message.to_json();
 }
-
+#endif
 
 } // end v8toolkit namespace
