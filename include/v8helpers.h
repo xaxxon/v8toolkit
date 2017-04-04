@@ -454,7 +454,15 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-#define ANYBASE_DEBUG
+//#define ANYBASE_DEBUG
+
+
+#ifdef ANYBASE_DEBUG
+#define ANYBASE_PRINT(format_string, ...) \
+std::cerr << fmt::format(format_string, ##__VA_ARGS__); << std::endl;
+#else
+#define ANYBASE_PRINT(format_string, ...)
+#endif
 
 
  struct AnyBase
