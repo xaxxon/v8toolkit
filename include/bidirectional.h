@@ -176,7 +176,9 @@ public:
      */
     virtual Base * operator()(ConstructorArgs&&... constructor_args) const = 0;
 
-    Base * create(ConstructorArgs&&... constructor_args) const {return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);}
+    Base * create(ConstructorArgs&&... constructor_args) const {
+        return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
+    }
 
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
@@ -184,7 +186,7 @@ public:
     template <class U = Base>
     std::unique_ptr<U> get_unique(ConstructorArgs&&... args) const {
 
-	// call operator() on the factory and put the results in a unique pointer
+	    // call operator() on the factory and put the results in a unique pointer
         return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(args)...));
     }
 
@@ -225,40 +227,42 @@ class CppFactory;
                     Child,
                     TypeList<FixedParams...>,
                     TypeList<ExternalConstructorParams...>,
-     FactoryBase,
-         Deleter> :
- public virtual FactoryBase {
+                    FactoryBase,
+                    Deleter> : public virtual FactoryBase {
 
-     using TupleType = std::tuple<FixedParams...>;
-     TupleType fixed_param_tuple;
-     
- public:
-     
-     
-     
- CppFactory(FixedParams&&... fixed_param_values) :
-     fixed_param_tuple(fixed_param_values...)
-	 {}
-     
-     CppFactory(const CppFactory &) = delete;
-     CppFactory(CppFactory &&) = default;
-     CppFactory & operator=(const CppFactory &) = delete;
-     CppFactory & operator=(CppFactory &&) = default;
+    private:
+        using TupleType = std::tuple<FixedParams...>;
+        TupleType fixed_param_tuple;
+
+    public:
 
 
-    template<std::size_t... Is>
-	Base * call_operator_helper(ExternalConstructorParams&&... constructor_args, std::index_sequence<Is...>) const {
+        CppFactory(FixedParams &&... fixed_param_values) :
+                fixed_param_tuple(fixed_param_values...) {}
 
-	// must const cast it since this method is const, so the tuple becomes const
-	return new Child(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType&>(fixed_param_tuple)))...,
-			 std::forward<ExternalConstructorParams>(constructor_args)...);
-    }
-     
-     virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
-	 return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
-				     std::index_sequence_for<FixedParams...>());
-    }
-};
+        CppFactory(const CppFactory &) = delete;
+
+        CppFactory(CppFactory &&) = default;
+
+        CppFactory &operator=(const CppFactory &) = delete;
+
+        CppFactory &operator=(CppFactory &&) = default;
+
+
+        template<std::size_t... Is>
+        Base *call_operator_helper(ExternalConstructorParams &&... constructor_args, std::index_sequence<Is...>) const {
+
+            // must const cast it since this method is const, so the tuple becomes const
+            return new Child(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType &>(fixed_param_tuple)))...,
+                             std::forward<ExternalConstructorParams>(constructor_args)...);
+        }
+
+        virtual Base *operator()(ExternalConstructorParams &&... constructor_args) const override {
+            std::cerr << fmt::format("cppfactory operator()") << std::endl;
+            return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
+                                        std::index_sequence_for<FixedParams...>());
+        }
+    };
 
 
 /**
@@ -410,7 +414,8 @@ public:
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
         // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
-        this->make_jswrapper_object = [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+        this->make_jswrapper_object =
+                [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
 //            printf("Using JSFactory object at %p\n", (void*)this);
 
             auto context = this->global_context.Get(this->isolate);
@@ -455,7 +460,8 @@ public:
      *   extends the C++ functionality in javascript
      */
     virtual Base * operator()(ExternalConstructorParams&&... constructor_parameters) const override {
-       return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
+        std::cerr << fmt::format("jsfactory operator()") << std::endl;
+        return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
     }
 
 

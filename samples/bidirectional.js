@@ -38,6 +38,7 @@ assert(thing.get_string() === cpp_method_result);
 
 let count = 0;
 let thing21 = thing2_factory.create("hello" + ++count);
+println("About to print thing21");
 printobjall(thing21);
 let thing22 = thing2_factory.create("hello" + ++count);
 

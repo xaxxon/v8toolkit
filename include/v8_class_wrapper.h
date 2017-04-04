@@ -171,7 +171,6 @@ template<class T>
     struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
 		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {
-			std::cerr << fmt::format("Creating type checker 1 {}", demangle<T>()) << std::endl;
 		}
     virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
@@ -192,7 +191,6 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
 
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {
-					std::cerr << fmt::format("Creating type checker 2 {}", demangle<T>()) << std::endl;
 	}
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
@@ -212,7 +210,7 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 // tests an AnyBase * against a list of types compatible with T
 //   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
-    struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     // if it's *not* the condition of the specialization above
     std::enable_if_t<std::is_const<T>::value ||
@@ -222,8 +220,6 @@ template<class T, class Head, class... Tail>
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {
-					std::cerr << fmt::format("Creating type checker 3 {}", demangle<T>()) << std::endl;
-
 	}
 
 	virtual T * check(AnyBase * any_base, bool first_call = true) const override;
@@ -656,7 +652,10 @@ public:
     
 
 	// Common tasks to do for any new js object regardless of how it is created
-	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object, DestructorBehavior const & destructor_behavior)
+	static void initialize_new_js_object(v8::Isolate * isolate,
+										 v8::Local<v8::Object> js_object,
+										 T * cpp_object,
+										 DestructorBehavior const & destructor_behavior)
 	{
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
