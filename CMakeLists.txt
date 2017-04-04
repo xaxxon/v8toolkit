@@ -96,9 +96,15 @@ install(TARGETS v8toolkit_static v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR}
 
 link_directories(${PROJECT_BINARY_DIR})
 
+
+add_custom_target(copy_snapshots)
+add_custom_command(TARGET copy_snapshots PRE_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${V8_BASE_SHARED_LIB_DIR}/*_blob.bin ${PROJECT_BINARY_DIR})
+
+
 add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
 #add_dependencies(bidirectional_sample v8toolkit_static copy_bidirectional_sample_resources)
-add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample_resources)
+add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample_resources copy_snapshots)
 #target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
 target_link_libraries(bidirectional_sample ${V8_SHARED_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit_shared)
@@ -109,7 +115,7 @@ add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js ${PROJECT_BINARY_DIR})
 
 add_executable(exception_sample samples/exception_sample.cpp)
-add_dependencies(exception_sample v8toolkit_shared)
+add_dependencies(exception_sample v8toolkit_shared copy_snapshots)
 #target_link_libraries(exception_sample ${V8_STATIC_LIBS})
 target_link_libraries(exception_sample ${V8_SHARED_LIBS})
 target_link_libraries(exception_sample v8toolkit_shared fmt)
@@ -119,13 +125,13 @@ target_link_libraries(exception_sample v8toolkit_shared fmt)
 
 
 add_executable(thread_sample samples/thread_sample.cpp)
-add_dependencies(thread_sample v8toolkit_shared)
+add_dependencies(thread_sample v8toolkit_shared copy_snapshots)
 target_link_libraries(thread_sample ${V8_SHARED_LIBS})
 #target_link_libraries(thread_sample ${V8_STATIC_LIBS})
 target_link_libraries(thread_sample v8toolkit_shared fmt)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
-add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources)
+add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources copy_snapshots)
 target_link_libraries(toolbox_sample ${V8_SHARED_LIBS})
 #target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
 target_link_libraries(toolbox_sample v8toolkit_shared fmt)
@@ -139,14 +145,14 @@ add_custom_command(TARGET copy_toolbox_sample_resources POST_BUILD
         ${PROJECT_BINARY_DIR})
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
-add_dependencies(javascript_sample v8toolkit_shared)
+add_dependencies(javascript_sample v8toolkit_shared copy_snapshots)
 #target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample ${V8_SHARED_LIBS})
 target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
 
 
 add_executable(sample samples/sample.cpp)
-add_dependencies(sample v8toolkit_shared copy_sample_resources)
+add_dependencies(sample v8toolkit_shared copy_sample_resources copy_snapshots)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
 target_link_libraries(sample v8toolkit_shared fmt EASTL)
@@ -159,7 +165,7 @@ add_custom_command(TARGET copy_sample_resources POST_BUILD
 
 # DEBUGGER SAMPLE
 add_executable(debugger_sample samples/debugger_sample.cpp)
-add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources)
+add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources copy_snapshots)
 target_link_libraries(debugger_sample ${V8_SHARED_LIBS} v8toolkit_shared fmt)
 add_custom_target(copy_debugger_resources)
 add_custom_command(TARGET copy_debugger_resources POST_BUILD
@@ -168,10 +174,10 @@ add_custom_command(TARGET copy_debugger_resources POST_BUILD
 
 
 add_custom_target(samples)
-add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample)
+add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample copy_snapshots)
 
 add_custom_target(run_samples)
-add_dependencies(run_samples samples)
+add_dependencies(run_samples samples copy_snapshots)
 add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
 

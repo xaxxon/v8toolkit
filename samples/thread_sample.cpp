@@ -35,7 +35,7 @@ void print_future(Context & context, 	std::future<std::pair<v8::Global<v8::Value
 int main(int argc, char ** argv)
 {
         
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
     auto isolate = Platform::create_isolate();
     isolate->add_function("sleep", [](int i){sleep(i);});
     isolate->add_print();

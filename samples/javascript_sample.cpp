@@ -549,7 +549,7 @@ void run_inheritance_test()
 
 int main(int argc, char ** argv) {
     
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
 
     run_type_conversion_test();
 

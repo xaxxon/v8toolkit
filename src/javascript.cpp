@@ -433,9 +433,8 @@ void Platform::expose_debug_as(const std::string & debug_object_name) {
     expose_debug_name = debug_object_name;    
 }
 
-    
 
-void Platform::init(int argc, char ** argv) 
+void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
     assert(!initialized);
     process_v8_flags(argc, argv);
@@ -451,12 +450,11 @@ void Platform::init(int argc, char ** argv)
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
-    
-    // if being built for snapshot use, must call this, otherwise must not call this
-#ifdef USE_SNAPSHOTS
-    v8::V8::InitializeExternalStartupData(argv[0]);
-#endif
-    
+
+    if (snapshot_directory != "") {
+        v8::V8::InitializeExternalStartupData(snapshot_directory.c_str());
+    }
+
     Platform::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();

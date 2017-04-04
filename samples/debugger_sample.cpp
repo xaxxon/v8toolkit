@@ -1,11 +1,13 @@
+#include <regex>
+
 #include "stdlib.h"
 #include "debugger.h"
 
 using namespace v8toolkit;
 
-int main(int, char**) {
+int main(int argc, char** argv) {
 //    v8toolkit::Platform::expose_debug_as("v8debug");
-    v8toolkit::Platform::init(0, nullptr);
+    v8toolkit::Platform::init(argc, argv, argv[0]);
     auto isolate = v8toolkit::Platform::create_isolate();
     isolate->add_print();
     auto context = isolate->create_debug_context(9002);

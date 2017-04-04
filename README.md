@@ -119,7 +119,7 @@ Here is the simplest program you can write to execute some javascript using the 
     
     int main(int argc, char ** argv) {
         // any v8-specific command-line arguments will be stripped out
-        Platform::init(argc, argv); 
+        Platform::init(argc, argv, argv[0]); 
         
         // creates a v8toolkit::Isolate which can manage some number of contexts
         auto isolate = Platform::create_isolate();

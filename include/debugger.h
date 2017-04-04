@@ -216,7 +216,16 @@ private:
 public:
     void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
     void poll();
+
+    /**
+     * runs a single request if available, otherwise returns immediately
+     */
     void poll_one();
+
+    /**
+     * blocks until a request is handled
+     */
+    void run_one();
 
     void send_message(std::string const &message);
 
@@ -250,9 +259,7 @@ public:
     virtual void runMessageLoopOnPause(int contextGroupId) override {
         this->paused = true;
         while (this->paused) {
-            std::cerr << fmt::format("runMessageLoopOnPause") << std::endl;
-            sleep(1);
-            this->channel->poll();
+            this->channel->run_one();
         }
         std::cerr << fmt::format("exiting runMessageLoopOnPause") << std::endl;
     }

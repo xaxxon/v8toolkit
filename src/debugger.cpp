@@ -156,7 +156,6 @@ void WebsocketChannel::on_open(websocketpp::connection_hdl hdl) {
 
 
 void WebsocketChannel::on_close(websocketpp::connection_hdl hdl) {
-    std::cerr << fmt::format("on close") << std::endl;
     assert(this->connections.size() == 1);
     this->connections.erase(hdl);
     assert(this->connections.size() == 0);
@@ -215,6 +214,9 @@ void WebsocketChannel::send_message(std::string const & message) {
 }
 
 
+void WebsocketChannel::run_one() {
+    this->debug_server.run_one();
+}
 
 void WebsocketChannel::poll() {
     this->debug_server.poll();
