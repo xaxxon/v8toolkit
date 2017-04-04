@@ -5,12 +5,11 @@
 
 class ExampleFixture : public ::testing::Test {
 public:
-    k_time();
 
-    WorkflowFixture()
+    ExampleFixture()
     {}
 
-	~WorkflowFixture() {}
+	~ExampleFixture() {}
 
     virtual void SetUp() {
     }
