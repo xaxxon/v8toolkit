@@ -147,3 +147,6 @@ Need to try to make TypeChecker and WrapAsMostDerived to not use V8ClassWrapper 
  Got it "working" except it doesn't do anything.   It responds to all the messages from chrome, but it doesn't actually
  expose anything.   I saw some things like "inspectable" and such that probably need to be subclassed or something
  but I don't have any references/samples that I've found yet to look at to see what to do.
+
+
+ class parser should use V8TOOLKIT_USE_NAME for constructor name for class - not respecting that

@@ -214,7 +214,7 @@ private:
 
 
 public:
-    void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
+    void wait_for_connection(std::chrono::duration<float> sleep_between_polls = std::chrono::duration<float>(0.1f));
     void poll();
 
     /**

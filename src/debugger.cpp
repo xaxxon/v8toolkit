@@ -142,6 +142,8 @@ void WebsocketChannel::on_message(websocketpp::connection_hdl hdl, WebsocketChan
     std::cerr << "Got debugger message: " << message_payload << std::endl;
 //    this->message_manager.process_request_message(message_payload);
     v8_inspector::StringView message_view((uint8_t const *)message_payload.c_str(), message_payload.length());
+
+    GLOBAL_CONTEXT_SCOPED_RUN(this->debug_context.get_isolate(), this->debug_context.get_global_context());
     this->debug_context.get_session().dispatchProtocolMessage(message_view);
 
 }

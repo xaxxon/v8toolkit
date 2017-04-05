@@ -12,6 +12,8 @@ int main(int argc, char** argv) {
     isolate->add_print();
     auto context = isolate->create_debug_context(9002);
 
+    context->get_channel().wait_for_connection();
+
     auto script = context->compile("a = 1;\r\na+=1;", "hard-coded-text-a.js");
     auto script2 = context->compile("b = 2;\r\nb+=2;", "hard-coded-text-b.js");
     const char * debugger_sample_js_filename = "debugger_sample.js";

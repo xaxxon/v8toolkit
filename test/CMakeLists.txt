@@ -21,6 +21,6 @@ message("${MY_SRC}")
 
 set(CMAKE_CXX_STANDARD 14)
 
-target_link_libraries(test-v8toolkit v8toolkit_shared fmt gmock gmock_main ${V8_SHARED_LIBS} boost_system eastl )
+target_link_libraries(test-v8toolkit v8toolkit_shared fmt gmock gmock_main ${V8_SHARED_LIBS} boost_system EASTL )
 
 
