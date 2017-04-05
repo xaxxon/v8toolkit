@@ -170,8 +170,8 @@ struct TypeChecker;
 template<class T>
     struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
-		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {
-		}
+
+		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
     virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
 #ifdef ANYBASE_DEBUG
@@ -190,12 +190,11 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
 
-	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {
-	}
+	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
 #ifdef ANYBASE_DEBUG
-        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
+        	std::cerr << fmt::format("In Type Checker<{}> Const mismatch: {} (string: {})", demangle<T>(), demangle<Head>(), any_base->type_name) << std::endl;
         if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
             std::cerr << fmt::format("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?", demangle<T>(), demangle<Head>()) << std::endl;
             assert(false);
@@ -219,8 +218,7 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
-	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {
-	}
+	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
 	virtual T * check(AnyBase * any_base, bool first_call = true) const override;
 
@@ -657,10 +655,11 @@ public:
 										 T * cpp_object,
 										 DestructorBehavior const & destructor_behavior)
 	{
+		auto any_ptr = new AnyPtr<T>(cpp_object);
 #ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
+        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p and any_ptr at %p\n", demangle<T>().c_str(), *js_object, cpp_object, (void*)any_ptr);
 #endif
-	    WrappedData<T> * wrapped_data = new WrappedData<T>(new AnyPtr<T>(cpp_object));
+	    WrappedData<T> * wrapped_data = new WrappedData<T>(any_ptr);
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
@@ -1920,23 +1919,26 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
             std::enable_if_t<std::is_const<T>::value ||
 					         !std::is_const<Head>::value>
            >::check(AnyBase * any_base, bool first_call) const {
-
-	if(auto any = dynamic_cast<AnyPtr<T> *>(any_base)) {
-#ifdef ANYBASE_DEBUG
-		std::cerr << fmt::format("Got match on: {}, returning {}", demangle<Head>(), (void*)(any->get())) << std::endl;
-#endif
+	assert(any_base != nullptr);
+	ANYBASE_PRINT("typechecker::check for {}  with anyptr {} (string: {})", demangle<Head>(), (void*)any_base, any_base->type_name);
+	if(auto any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
+		ANYBASE_PRINT("Got match on: {}, returning {}", demangle<Head>(), (void*)(any->get()));
 		return static_cast<T*>(any->get());
 	}
+	
+	ANYBASE_PRINT("didn't find match, testing const type now...");
 
 	// TODO: Expensive
 	// if goal type is const and the type to check isn't const, try checking for the const type now
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
-		if(auto any = dynamic_cast<AnyPtr<T const> *>(any_base)) {
+		if(auto any = dynamic_cast<AnyPtr<Head const> *>(any_base)) {
 			// if T is const, this doesn't do anything, if T isn't const but Head is, this entire specialization (and therefor this code),
 			//  won't get used (because of the sfinae), so this won't actually convert a real const to non-const
 			return const_cast<T *>(static_cast<T const *>(any->get()));
 		}
 	}
+	
+	ANYBASE_PRINT("no match on const type either, continuing down chain");
 
 	return SUPER::check(any_base, false);
 }

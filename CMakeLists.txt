@@ -183,3 +183,4 @@ add_custom_command(TARGET run_samples POST_BUILD
 
 
 add_subdirectory(class_parser)
+add_subdirectory(test)
