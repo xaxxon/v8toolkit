@@ -11,7 +11,7 @@
 #include <utility>
 #include <assert.h>
 
-// vector_map compiles a LOT faster than std::map
+// vector_map compiles a LOT faster than std::map as the number of wrapped classes increases
 #define USE_EASTL_FOR_INTERNALS
 
 #ifdef USE_EASTL_FOR_INTERNALS

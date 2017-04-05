@@ -145,7 +145,7 @@ void WebsocketChannel::on_message(websocketpp::connection_hdl hdl, WebsocketChan
 
     GLOBAL_CONTEXT_SCOPED_RUN(this->debug_context.get_isolate(), this->debug_context.get_global_context());
     this->debug_context.get_session().dispatchProtocolMessage(message_view);
-
+    this->message_received_time = std::chrono::high_resolution_clock::now();
 }
 
 
@@ -212,7 +212,7 @@ void WebsocketChannel::send_message(std::string const & message) {
     } else {
         std::cerr << fmt::format("Not sending message because no connections: {}", message) << std::endl;
     }
-
+    this->message_sent_time = std::chrono::high_resolution_clock::now();
 }
 
 
@@ -226,6 +226,12 @@ void WebsocketChannel::poll() {
 
 void WebsocketChannel::poll_one() {
     this->debug_server.poll_one();
+}
+
+void WebsocketChannel::poll_until_idle(float idle_time) {
+    do {
+        this->poll();
+    } while(this->seconds_since_message() > idle_time);
 }
 
 
@@ -276,5 +282,25 @@ void to_json(nlohmann::json &j, const InformationalMessage & informational_messa
     j = informational_message.to_json();
 }
 #endif
+
+
+float WebsocketChannel::seconds_since_message_received() {
+    std::chrono::duration<float> duration = std::chrono::high_resolution_clock::now() - this->message_received_time;
+    return duration.count();
+}
+
+float WebsocketChannel::seconds_since_message_sent() {
+    std::chrono::duration<float> duration = std::chrono::high_resolution_clock::now() - this->message_sent_time;
+    return duration.count();
+
+}
+
+
+float WebsocketChannel::seconds_since_message() {
+    auto sent_time = this->seconds_since_message_sent();
+    auto received_time = this->seconds_since_message_received();
+    return sent_time < received_time ? sent_time : received_time;
+}
+
 
 } // end v8toolkit namespace
