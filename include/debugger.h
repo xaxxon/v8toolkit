@@ -212,6 +212,8 @@ private:
 
     void on_http(websocketpp::connection_hdl hdl);
 
+    std::chrono::time_point<std::chrono::high_resolution_clock> message_received_time = std::chrono::high_resolution_clock::now();
+    std::chrono::time_point<std::chrono::high_resolution_clock> message_sent_time = std::chrono::high_resolution_clock::now();
 
 public:
     void wait_for_connection(std::chrono::duration<float> sleep_between_polls);
@@ -223,12 +225,36 @@ public:
     void poll_one();
 
     /**
+     * polls until connection has been idle for  specified amount of time
+     * @param idle_time amount of time between messages to wait until returning
+     */
+    void poll_until_idle(float idle_time = 1.0f);
+
+    /**
      * blocks until a request is handled
      */
     void run_one();
 
     void send_message(std::string const &message);
 
+
+    /**
+     * How long ago was most recent message received
+     * @return number of seconds
+     */
+    float seconds_since_message_received();
+
+    /**
+     * How long ago was most recent message sent
+     * @return number of sceonds
+     */
+    float seconds_since_message_sent();
+
+    /**
+     * how long ago was a message either sent or received
+     * @return number of seconds
+     */
+    float seconds_since_message();
 
 //    MessageManager message_manager;
 };
@@ -251,6 +277,7 @@ private:
     std::unique_ptr<v8_inspector::V8InspectorSession> session;
 
     std::vector<std::string> message_types_handled_by_v8_inspector = {};
+
 
 public:
     DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port);
@@ -283,6 +310,8 @@ public:
     WebsocketChannel & get_channel() {return *this->channel;}
     v8_inspector::V8InspectorSession & get_session() {return *this->session;}
     void reset_session();
+
+
 
 };
 ///// END NEW DEBUG CODE
