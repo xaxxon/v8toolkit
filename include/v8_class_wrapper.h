@@ -1927,11 +1927,9 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	// TODO: Expensive
 	// if goal type is const and the type to check isn't const, try checking for the const type now
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
-		if(auto any = dynamic_cast<AnyPtr<Head const> *>(any_base)) {
-			// if T is const, this doesn't do anything, if T isn't const but Head is, this entire specialization (and therefor this code),
-			//  won't get used (because of the sfinae), so this won't actually convert a real const to non-const
-			return const_cast<T *>(static_cast<T const *>(any->get()));
-		}
+        if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
+            return derived_result;
+        }
 	}
 	
 	ANYBASE_PRINT("no match on const type either, continuing down chain");

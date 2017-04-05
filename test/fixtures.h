@@ -15,3 +15,14 @@ public:
     }
 
 };
+
+
+class TypeCheckerFixture : public ::testing::Test {
+
+public:
+    TypeCheckerFixture() {
+
+    }
+
+
+};
