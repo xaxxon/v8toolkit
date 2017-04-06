@@ -1809,12 +1809,12 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 
 	auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
 	T * t = nullptr;
-	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
+//	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
 		fprintf(stderr, "Failed to convert types: want:  %d %s\n", std::is_const<T>::value, typeid(T).name());
 		throw CastException(fmt::format("Cannot convert AnyBase to {}", demangle<T>()));
 	}
-		std::cerr << fmt::format("Successfully converted") << std::endl;
+//		std::cerr << fmt::format("Successfully converted") << std::endl;
 	return *t;
 }
 
@@ -1957,7 +1957,6 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
 				// TODO: Expensive
-				std::cerr << fmt::format("return here 1") << std::endl;
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived);
 			}
 		}
@@ -1976,7 +1975,6 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(&cpp_object))) {
 				// TODO: Expensive
-				std::cerr << fmt::format("return here 2") << std::endl;
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(std::move(*derived));
 			}
 		}
