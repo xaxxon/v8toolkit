@@ -258,7 +258,6 @@ class CppFactory;
         }
 
         virtual Base *operator()(ExternalConstructorParams &&... constructor_args) const override {
-            std::cerr << fmt::format("cppfactory operator()") << std::endl;
             return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
                                         std::index_sequence_for<FixedParams...>());
         }
@@ -460,7 +459,6 @@ public:
      *   extends the C++ functionality in javascript
      */
     virtual Base * operator()(ExternalConstructorParams&&... constructor_parameters) const override {
-        std::cerr << fmt::format("jsfactory operator()") << std::endl;
         return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
     }
 
