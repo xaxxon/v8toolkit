@@ -7,6 +7,9 @@
 namespace v8toolkit {
 
 
+bool AnybaseDebugPrintFlag = false;
+
+
 MethodAdderData::MethodAdderData() = default;
 MethodAdderData::MethodAdderData(std::string const & method_name,
                                  StdFunctionCallbackType const & callback) :

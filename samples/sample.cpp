@@ -38,7 +38,7 @@ struct FooParent {
 };
 
 struct Foo : public FooParent {
-    Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
+    Foo(int, Foo *){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
     Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n"); assert(allow_copy_constructor);}
     ~Foo(){if (SAMPLE_DEBUG) printf("deleted Foo %p\n", this);}
     int i = 42;
@@ -78,7 +78,7 @@ public:
     // Foo & get_foo(Foo & f)  {return f;}
     
     // Leave this as an r-value return for testing purposes Foo f;
-    Foo get_foo() {return Foo();}
+    Foo get_foo() {return Foo(0, nullptr);}
     
     static int get_instance_count(){ return instance_count; }
     static int instance_count;
@@ -203,9 +203,7 @@ int main(int argc, char* argv[])
         
     // Initialize V8.
     v8::V8::InitializeICU();
-#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
-#endif
     v8::Platform* platform = v8::platform::CreateDefaultPlatform();
     v8::V8::InitializePlatform(platform);
     v8::V8::Initialize();
@@ -383,6 +381,7 @@ int main(int argc, char* argv[])
             wrapped_foo.set_parent_type<FooParent>();
             wrapped_foo.add_member<int, Foo, &Foo::i>("i");
             wrapped_foo.finalize();
+            wrapped_foo.add_constructor<int, Foo*>("Foo", global_templ, std::tuple<Foo*>(nullptr));
 
             
                 v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
@@ -582,7 +581,7 @@ int main(int argc, char* argv[])
 
 #endif
 
-            Foo most_derived_foo_test;
+            Foo most_derived_foo_test(0, nullptr);
             v8::Local<v8::Object> most_derived_fooparent_js_object =
                 wrapped_fooparent.wrap_existing_cpp_object(context, &most_derived_foo_test, *wrapped_fooparent.destructor_behavior_leave_alone);
 

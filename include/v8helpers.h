@@ -456,10 +456,17 @@ auto reducer(const Container & container, Callable callable) ->
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
 //#define ANYBASE_DEBUG
 
+/**
+ * If ANYBASE_DEBUG is defined, then this flag controls whether type conversion information logs are printed to stderr
+ */
+extern bool AnybaseDebugPrintFlag;
+
 
 #ifdef ANYBASE_DEBUG
 #define ANYBASE_PRINT(format_string, ...) \
-std::cerr << fmt::format(format_string, ##__VA_ARGS__) << std::endl;
+if (AnybaseDebugPrintFlag) { \
+    std::cerr << fmt::format(format_string, ##__VA_ARGS__) << std::endl; \
+}
 #else
 #define ANYBASE_PRINT(format_string, ...)
 #endif

@@ -174,10 +174,7 @@ template<class T>
 		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
     virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
-#ifdef ANYBASE_DEBUG
-        std::cerr << fmt::format("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name)
-                  << std::endl;
-#endif
+       ANYBASE_PRINT("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name);
         return nullptr;
     }
 };
@@ -193,13 +190,10 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
-#ifdef ANYBASE_DEBUG
-        	std::cerr << fmt::format("In Type Checker<{}> Const mismatch: {} (string: {})", demangle<T>(), demangle<Head>(), any_base->type_name) << std::endl;
+		ANYBASE_PRINT("In Type Checker<{}> Const mismatch: {} (string: {})", demangle<T>(), demangle<Head>(), any_base->type_name);
         if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-            std::cerr << fmt::format("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?", demangle<T>(), demangle<Head>()) << std::endl;
-            assert(false);
+            ANYBASE_PRINT("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?", demangle<T>(), demangle<Head>());
         }
-#endif
         return SUPER::check(any_base);
     }
 
@@ -595,18 +589,25 @@ private:
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto isolate = args.GetIsolate();
+	template<typename DefaultArgsTupleType, typename ... CONSTRUCTOR_PARAMETER_TYPES>
+	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& info) {
+		auto isolate = info.GetIsolate();
+
+		// default arguments are in tuple
+		DefaultArgsTupleType * default_args_tuple_ptr =
+			static_cast<DefaultArgsTupleType *>(v8::Local<v8::External>::Cast(info.Data())->Value());
 
 		T * new_cpp_object = nullptr;
 		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
-				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
+				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... info)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(info)...);};
 
 		// route any cpp exceptions through javascript
 		try {
-			CallCallable<decltype(constructor)>()(constructor, args,
-												  std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>{});
+			CallCallable<decltype(constructor)>()(constructor,
+												  info,
+												  std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>{},
+												  DefaultArgsTupleType(*default_args_tuple_ptr));
+
 		} catch(std::exception & e) {
 			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 			return;
@@ -616,10 +617,10 @@ private:
 		// if the object was created by calling new in javascript, it should be deleted when the garbage collector
 		//   GC's the javascript object, there should be no c++ references to it
 		auto & deleter = *v8toolkit::V8ClassWrapper<T>::get_instance(isolate).destructor_behavior_delete;
-		initialize_new_js_object(isolate, args.This(), new_cpp_object, deleter);
+		initialize_new_js_object(isolate, info.This(), new_cpp_object, deleter);
 
 		// // return the object to the javascript caller
-		args.GetReturnValue().Set(args.This());
+		info.GetReturnValue().Set(info.This());
 	}
 	
 	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
@@ -830,12 +831,11 @@ public:
 						 DefaultArgsTuple const & default_args = DefaultArgsTuple())
 	{
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
-		static_assert(std::is_same<DefaultArgsTuple, std::tuple<>>::value, "constructor default arguments not supported yet");
 		check_if_constructor_name_used(js_constructor_name);
 
 	    auto constructor_template =
-		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
-						v8::Local<v8::Value>());
+		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<DefaultArgsTuple, CONSTRUCTOR_PARAMETER_TYPES...>,
+						v8::External::New(this->isolate, new DefaultArgsTuple(std::move(default_args))));
 
 	    // Add the constructor function to the parent object template (often the global template)
 //	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
@@ -1831,7 +1831,10 @@ struct CastToNative<T*, std::enable_if_t<std::is_reference<
 		>// end template
 {
 	   T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-			return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
+           if (value->IsUndefined()) {
+               return nullptr;
+           }
+           return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
 		}
 };
 
