@@ -254,114 +254,160 @@ void WrappedClass::parse_all_methods() {
 
     this->methods_parsed = true;
      std::cerr << fmt::format("*** Parsing class methods") << std::endl;
-    for (CXXMethodDecl * method : this->decl->methods()) {
 
-        Annotations method_annotations(method);
+    // use decls not methods because methods doesn't give templated functions
+    for (Decl * current_decl : this->decl->decls()) {
 
-        std::string full_method_name(method->getQualifiedNameAsString());
-        //cerr << fmt::format("looking at {}", full_method_name) << endl;
+        if (auto template_method = dyn_cast<FunctionTemplateDecl>(current_decl)) {
+            std::string full_method_name(template_method->getQualifiedNameAsString());
+            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
-        if (method->hasInheritedPrototype()) {
-            cerr << fmt::format("Skipping method because it has inherited prototype"
-                                /*, method->getNameAsString()  - this crashes due to "not simple identifier" */) << endl;
-            continue;
+            auto template_parameters = template_method->getTemplateParameters();
+            for (auto i = template_parameters->begin(); i != template_parameters->end(); i++) {
+                std::cerr << fmt::format("template parameter: {}", (*i)->getNameAsString()) << std::endl;
+                if (auto template_type_param_decl = dyn_cast<TemplateTypeParmDecl>(*i)) {
+                    std::cerr << fmt::format("--is a type parameter") << std::endl;
+                    if (template_type_param_decl->hasDefaultArgument()) {
+                        auto default_type = template_type_param_decl->getDefaultArgument();
+                        std::cerr << fmt::format("----has default argument: {}", get_type_string(default_type)) << std::endl;
+                    }
+                } else if (auto template_value_param_decl = dyn_cast<ValueDecl>(*i)) {
+                    std::cerr << fmt::format("--is a value parameter") << std::endl;
+
+                } else {
+                    std::cerr << fmt::format("--is unknown type of parameter") << std::endl;
+                }
+            }
+
+//            // find the CXXMethodDecl
+//            for(auto actual_method_decl : template_method->) {
+//
+//            }
         }
 
-        auto export_type = get_export_type(method, EXPORT_ALL);
+        if (auto method = dyn_cast<CXXMethodDecl>(current_decl)) {
 
-        if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("Skipping method %s because not supposed to be exported %d\n",
-                                                     full_method_name.c_str(), export_type);
-            continue;
-        }
+            Annotations method_annotations(method);
 
-        // only deal with public methods
-        if (method->getAccess() != AS_public) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", full_method_name.c_str());
-            continue;
-        }
+            std::string full_method_name(method->getQualifiedNameAsString());
+            cerr << fmt::format("looking at {}", full_method_name) << endl;
 
-        // list of overloaded operator enumerated values
-        // http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
-        if (method->isOverloadedOperator()) {
+            if (method->isTemplateDecl()) {
+                std::cerr << fmt::format("{} is template decl", full_method_name) << std::endl;
+            }
 
-            // if it's a call operator (operator()), grab it
-            if (OO_Call == method->getOverloadedOperator()) {
-                // nothing specific to do, just don't skip it only because it's an overloaded operator
-            } else {
+            if (method->hasInheritedPrototype()) {
+                cerr << fmt::format("Skipping method %s because it has inherited prototype", full_method_name) << endl;
+                continue;
+            }
 
-                // otherwise skip overloaded operators
+            auto export_type = get_export_type(method, EXPORT_ALL);
+
+            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
                 if (PRINT_SKIPPED_EXPORT_REASONS)
-                    printf("**skipping overloaded operator %s\n", full_method_name.c_str());
-                continue;
-            }
-        }
-        if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
-
-            // don't deal with constructors on abstract types
-            if (this->decl->isAbstract()) {
-                continue;
-            }
-            if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
-                continue;
-            }
-            if (this->force_no_constructors) {
+                    printf("Skipping method %s because not supposed to be exported %d\n",
+                           full_method_name.c_str(), export_type);
                 continue;
             }
 
-
-            if (constructor_decl->isCopyConstructor()) {
-                fprintf(stderr, "Skipping copy constructor\n");
-                continue;
-            } else if (constructor_decl->isMoveConstructor()) {
-                fprintf(stderr, "Skipping move constructor\n");
-                continue;
-            } else if (constructor_decl->isDeleted()) {
-                if (print_logging) cerr << "Skipping deleted constructor" << endl;
+            // only deal with public methods
+            if (method->getAccess() != AS_public) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", full_method_name.c_str());
                 continue;
             }
 
-            this->constructors.insert(std::make_unique<ConstructorFunction>(*this, constructor_decl));
-            continue;
-        }
-        if (dyn_cast<CXXDestructorDecl>(method)) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping destructor %s\n", full_method_name.c_str());
-            continue;
-        }
-        if (dyn_cast<CXXConversionDecl>(method)) {
-            if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping conversion operator %s\n", full_method_name.c_str());
-            continue;
-        }
+            // list of overloaded operator enumerated values
+            // http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
+            if (method->isOverloadedOperator()) {
 
+                // if it's a call operator (operator()), grab it
+                if (OO_Call == method->getOverloadedOperator()) {
+                    // nothing specific to do, just don't skip it only because it's an overloaded operator
+                } else {
 
-        if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
-            // cerr << "has extend wrapper string" << endl;
-            if (!method->isStatic()) {
-                data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static", full_method_name.c_str()));
-
+                    // otherwise skip overloaded operators
+                    if (PRINT_SKIPPED_EXPORT_REASONS)
+                        printf("**skipping overloaded operator %s\n", full_method_name.c_str());
+                    continue;
+                }
             }
-            if (PRINT_SKIPPED_EXPORT_REASONS)
-                cerr << fmt::format("**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping") << endl;
-            this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
-            continue; // don't wrap the method as a normal method
-        }
+            if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
 
-        // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
-        if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
-            if (!method->isStatic()) {
-                data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static", full_method_name.c_str()));
+                // don't deal with constructors on abstract types
+                if (this->decl->isAbstract()) {
+                    continue;
+                }
+                if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+                    continue;
+                }
+                if (this->force_no_constructors) {
+                    continue;
+                }
+
+
+                if (constructor_decl->isCopyConstructor()) {
+                    fprintf(stderr, "Skipping copy constructor\n");
+                    continue;
+                } else if (constructor_decl->isMoveConstructor()) {
+                    fprintf(stderr, "Skipping move constructor\n");
+                    continue;
+                } else if (constructor_decl->isDeleted()) {
+                    if (print_logging) cerr << "Skipping deleted constructor" << endl;
+                    continue;
+                }
+
+                this->constructors.insert(std::make_unique<ConstructorFunction>(*this, constructor_decl));
+                continue;
             }
-            if (PRINT_SKIPPED_EXPORT_REASONS) cerr << fmt::format("**skipping static method marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping") << endl;
-            this->wrapper_custom_extensions.insert(fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});", full_method_name));
-            continue; // don't wrap the method as a normal method
-        }
+            if (dyn_cast<CXXDestructorDecl>(method)) {
+                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping destructor %s\n", full_method_name.c_str());
+                continue;
+            }
+            if (dyn_cast<CXXConversionDecl>(method)) {
+                if (PRINT_SKIPPED_EXPORT_REASONS)
+                    printf("**skipping conversion operator %s\n", full_method_name.c_str());
+                continue;
+            }
 
-        std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
 
-        if (method->isStatic()) {
-            this->static_functions.insert(make_unique<StaticFunction>(*this, method));
-        } else {
-            this->member_functions.insert(make_unique<MemberFunction>(*this, method));
+            if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
+                // cerr << "has extend wrapper string" << endl;
+                if (!method->isStatic()) {
+                    data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static",
+                                           full_method_name.c_str()));
+
+                }
+                if (PRINT_SKIPPED_EXPORT_REASONS)
+                    cerr << fmt::format(
+                            "**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping")
+                         << endl;
+                this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
+                continue; // don't wrap the method as a normal method
+            }
+
+            // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
+            if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
+                if (!method->isStatic()) {
+                    data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
+                                           full_method_name.c_str()));
+                }
+                if (PRINT_SKIPPED_EXPORT_REASONS)
+                    cerr << fmt::format(
+                            "**skipping static method marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping")
+                         << endl;
+                this->wrapper_custom_extensions.insert(
+                        fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});",
+                                    full_method_name));
+                continue; // don't wrap the method as a normal method
+            }
+
+            std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
+
+            if (method->isStatic()) {
+                this->static_functions.insert(make_unique<StaticFunction>(*this, method));
+            } else {
+                this->member_functions.insert(make_unique<MemberFunction>(*this, method));
+            }
         }
     }
 }

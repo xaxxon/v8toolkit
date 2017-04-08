@@ -263,7 +263,11 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
 
 
-	
+/**
+ * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
+ */
+extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
+
  
  template<class T, class = void> class V8ClassWrapper;
 
@@ -290,11 +294,13 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	 void add_method(std::string const &, Callable&&, Tuple&&=Tuple());
 
 
-	 template<class... Args1, class... Args2>
- 	v8toolkit::V8ClassWrapper<T>& add_constructor(Args2&&...);
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES, class DefaultArgsTuple = std::tuple<>>
+	void add_constructor(const std::string & js_constructor_name,
+						 v8::Local<v8::ObjectTemplate> parent_template,
+						 DefaultArgsTuple const & default_args = DefaultArgsTuple());
 
-         template<class Callable>
-         void add_new_constructor_function_template_callback(Callable&&);
+    template<class Callable>
+    void add_new_constructor_function_template_callback(Callable&&);
 
 	void finalize(bool wrap_as_most_derived = false);
 
@@ -413,10 +419,6 @@ private:
      */
     std::vector<std::string> used_static_attribute_name_list;
 
-    /**
-     * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
-     */
-	std::vector<std::string> used_constructor_name_list = reserved_global_names;
 
     /**
      * Mapping between CPP object pointer and JavaScript object for CPP objects which have already been
@@ -1634,7 +1636,7 @@ struct CastToJS {
 struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
 	    if (cpp_object == nullptr) {
-		return v8::Local<v8::Object>();
+		    return v8::Undefined(isolate);
 	    }
 
 	    assert(cpp_object != (void *)0xbebebebebebebebe);

@@ -448,7 +448,9 @@ string ClassFunction::get_default_argument_tuple_string() const {
         first_default_argument = false;
 
         //types << param.type.name; // still has const and references on it, which doesn't work well for tuples
-        types << param.type.plain_without_const().name;
+        QualType default_arg_type = param.type.type.getNonReferenceType();
+        default_arg_type.removeLocalConst();
+        types << get_type_string(default_arg_type);
 
         // this may have a problem with using type names not visible outside where the default argument is specified
         // may need to substitute the type name instead if it's not a constant and is instead some sort of name

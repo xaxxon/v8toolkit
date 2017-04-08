@@ -22,6 +22,7 @@
 
 
 
+
 void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
 	return malloc(size);
@@ -34,6 +35,8 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 namespace v8toolkit {
 
+// used in v8_class_wrapper_impl.h to track which global names have been used
+std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
 
 using namespace ::v8toolkit::literals;
 

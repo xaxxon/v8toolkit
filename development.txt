@@ -150,3 +150,8 @@ Need to try to make TypeChecker and WrapAsMostDerived to not use V8ClassWrapper 
 
 
  class parser should use V8TOOLKIT_USE_NAME for constructor name for class - not respecting that
+
+ class parser not generating explicit templates for jswrapper types -- making extern types instead, which leads to
+ linker errors for undefined symbols
+
+class parser dropping pointer on default values for constructors

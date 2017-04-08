@@ -51,6 +51,11 @@ public:
 
     enum class EnumClass{A, B, C, D};
 
+    template<class A = int, int b = 4>
+    void templated_method();
+
+    void after_templated_method();
+
 };
 
 class WrappedClassDerived : public WrappedClass {

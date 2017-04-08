@@ -55,6 +55,11 @@ namespace v8toolkit {
 
     template<class T> void
     V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_constructor_name_used(const std::string & name) {
+        auto used_constructor_name_list_pair = used_constructor_name_list_map.find(this->isolate);
+        if (used_constructor_name_list_pair == used_constructor_name_list_map.end()) {
+            used_constructor_name_list_map.emplace(this->isolate, reserved_global_names);
+        }
+        auto & used_constructor_name_list = used_constructor_name_list_map[this->isolate];
         if (std::find(used_constructor_name_list.begin(),
                       used_constructor_name_list.end(),
                       name) != used_constructor_name_list.end()) {
