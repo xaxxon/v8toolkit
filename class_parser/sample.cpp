@@ -34,7 +34,7 @@ public:
 class ThisShouldNotMatch : public v8toolkit::JSWrapper<int>, public v8toolkit::WrappedClassBase {};
 class WrappedClass : public v8toolkit::WrappedClassBase {
 public:
-    WrappedClass(int a, int b = 2, int c = 3);
+    WrappedClass(int a, int b = 2, int c = 3, WrappedClass * wc_ptr = nullptr);
     double double_member_readwrite;
     V8TOOLKIT_READONLY double double_member_readonly1;
     double const double_member_readonly2;
