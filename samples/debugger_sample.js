@@ -12,7 +12,7 @@ function a(){
     let some_var = 5;
     some_var += 5;
     b(some_var);
-    println("End of a()");
+   // println("End of a()");
 
 }
 

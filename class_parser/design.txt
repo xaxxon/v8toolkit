@@ -1,0 +1,28 @@
+
+ast_action.h/cpp
+PrintFunctionNamesAction : PluginASTAction
+ - This is what is registered with clang
+
+
+ast_consumer.h
+ASTConsumer:
+ - sets up matchers to define what data is of interest
+ - binds different sets of data with a string name
+ - specifies a class to be used for processing the matcher matches
+  - ClassHandler
+
+
+class_handler.h
+ClassHandler : MatchFinder::MatchCallback
+Two phases - build up data structures with all relevant data then
+  a second phase to dump that data to appropriate output files
+
+ - run() callback called for each matcher match (basically called once for each class)
+  - builds up data structure of LOTS of things, many will not be present in the output files
+
+ - onEndOfTranslationUnit() called after every match has been handled
+  - uses all the built-up data structures to generate the js stub, bindings, and bidirectional types
+
+
+
+

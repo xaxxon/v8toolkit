@@ -7,10 +7,22 @@
 #include <algorithm>
 
 #include <iostream>
-#include <map>
 #include <vector>
 #include <utility>
 #include <assert.h>
+
+// vector_map compiles a LOT faster than std::map as the number of wrapped classes increases
+#define USE_EASTL_FOR_INTERNALS
+
+#ifdef USE_EASTL_FOR_INTERNALS
+#include <EASTL/vector_map.h>
+template<class... ArgTs>
+using MapT=eastl::vector_map<ArgTs...>;
+#else
+#include <map>
+template<class... ArgTs>
+using MapT=std::map<ArgTs...>;
+#endif
 
 #include "wrapped_class_base.h"
 #include "v8toolkit.h"
@@ -158,13 +170,11 @@ struct TypeChecker;
 template<class T>
     struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
+
 		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
     virtual T * check(AnyBase * any_base, bool first_call = true
 		      ) const override {
-#ifdef ANYBASE_DEBUG
-        std::cerr << fmt::format("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name)
-                  << std::endl;
-#endif
+       ANYBASE_PRINT("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name);
         return nullptr;
     }
 };
@@ -173,26 +183,17 @@ template<class T>
 // Specialization for types that cannot possibly work -- casting const value to non-const return
 template<class T, class Head, class... Tail>
 struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
-    // if the type we want isn't const but the type being checked is, it cannot be a match
     std::enable_if_t<!std::is_const<T>::value && std::is_const<Head>::value>> : public TypeChecker<T, TypeList<Tail...>> {
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
 
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
-
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
-
-//#ifdef ANYBASE_DEBUG
-//        //	std::cerr << fmt::format("In Type Checker<{}> SKIPPING CHECKING if it is a (const) {}", demangle<T>(), demangle<Head>()) << std::endl;
-//        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-//            std::cerr
-//                << "ERROR:::: But if I would have checked, it would have been a match!  Should you be casting to a const type instead?"
-//                << std::endl;
-//            assert(false);
-//        }
-//#endif
-
+		ANYBASE_PRINT("In Type Checker<{}> Const mismatch: {} (string: {})", demangle<T>(), demangle<Head>(), any_base->type_name);
+        if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
+            ANYBASE_PRINT("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?", demangle<T>(), demangle<Head>());
+        }
         return SUPER::check(any_base);
     }
 
@@ -202,11 +203,12 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 // tests an AnyBase * against a list of types compatible with T
 //   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
-    struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
+struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
     // if it's *not* the condition of the specialization above
-    std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>
-                     > : public TypeChecker<T, TypeList<Tail...>> {
+    std::enable_if_t<std::is_const<T>::value ||
+					 !std::is_const<Head>::value>
+	                > : public TypeChecker<T, TypeList<Tail...>> {
 
 
     using SUPER = TypeChecker<T, TypeList<Tail...>>;
@@ -263,15 +265,17 @@ template<class T, class Head, class... Tail>
 
 	
  
+ template<class T, class = void> class V8ClassWrapper;
+
+
 /**
  * The real template is quite expensive to make for types that don't need it,
  *   so here's an alternative for when it isn't actually going to be used
  */
- template<class T, class = void> class V8ClassWrapper;
-
  template<class T>
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:
+
      static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
 
 	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context,
@@ -281,11 +285,16 @@ template<class T, class Head, class... Tail>
 
      T * cast(AnyBase * any_base);
 
-	 template<class... Args>
-	 V8ClassWrapper<T> & add_method(Args&&...);
 
-	 template<class... Args>
- 	v8toolkit::V8ClassWrapper<T>& add_constructor(Args&&...);
+     template<class... Args1, class Callable, class Tuple = std::tuple<>>
+	 void add_method(std::string const &, Callable&&, Tuple&&=Tuple());
+
+
+	 template<class... Args1, class... Args2>
+ 	v8toolkit::V8ClassWrapper<T>& add_constructor(Args2&&...);
+
+         template<class Callable>
+         void add_new_constructor_function_template_callback(Callable&&);
 
 	void finalize(bool wrap_as_most_derived = false);
 
@@ -346,162 +355,97 @@ template<class T>
 class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 
 {
+	using ConstT = std::add_const_t<T>;
 private:
 
+	/*** TYPEDEFS ***/
 
-	/**
-	 * Wrapped classes are per-isolate, so this tracks each wrapped class/isolate tuple for later retrieval
-	 */
-	static std::map<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
+    // Callback type to add members to an ObjectTemplate
+	using AttributeAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
 
+    // Callback type to add a static method to an ObjectTemplate
+	using StaticMethodAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
 
-	using AttributeChangeCallback = func::function<void(v8::Isolate * isolate,
+    // Callback type for notifying when a property has been changed
+	using PropertyChangedCallback = func::function<void(v8::Isolate * isolate,
 													   v8::Local<v8::Object> & self,
 													   const std::string &,
 													   const v8::Local<v8::Value> & value)>;
 
+    // Callback type to add a FakeMethod to an ObjectTemplate
+	using FakeMethodAdder = func::function<void(v8::Local<v8::ObjectTemplate>)>;
+
+    // Callback type to add a method
+	using FunctionTemplateCallback = func::function<void(v8::Local<v8::FunctionTemplate> &)>;
+
+
+
+	/*** DATA MEMBERS ***/
+
+    // Callbacks for adding members to an ObjectTemplate
+	std::vector<AttributeAdder> member_adders;
+
+    // Callbacks for adding static methods to an ObjectTemplate
+	std::vector<StaticMethodAdder> static_method_adders;
+
+
 	/// List of callbacks for when attributes change
-	std::vector<AttributeChangeCallback> attribute_callbacks;
+	std::vector<PropertyChangedCallback> property_changed_callbacks;
 
-	V8ClassWrapper() = delete;
-	V8ClassWrapper(const V8ClassWrapper<T> &) = delete;
-	V8ClassWrapper(const V8ClassWrapper<T> &&) = delete;
-	V8ClassWrapper& operator=(const V8ClassWrapper<T> &) = delete;
-	V8ClassWrapper& operator=(const V8ClassWrapper<T> &&) = delete;
 
+	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
+	//   the "this" pointer before any javascript parameters are passed in
+	std::vector<FakeMethodAdder> fake_method_adders;
 
 	/**
-	 * Private constructor that places the newly created object in the "singleton" map.
-	 * Users of the library should call get_instance, not this constructor directly
-	 * @param isolate isolate for which the class wrapper is for
+	 * Name that will be reported from JavaScript `typeof` function
 	 */
-	V8ClassWrapper(v8::Isolate * isolate);
+	std::string class_name = demangle<T>();
 
 	/**
 	 * List of names already in use for methods/static methods/accessors
 	 * Used to make sure duplicate names aren't requested
 	 */
     std::vector<std::string> used_attribute_name_list;
-    std::vector<std::string> used_static_attribute_name_list;
-	std::vector<std::string> used_constructor_name_list;
-
-	/**
-	 * Calls registered callbacks when the specified property name is changed
-	 * @param object JavaScript object on which the property is being changed
-	 * @param property_name property name being changed
-	 * @param value new value of property
-	 */
-	void call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value);
-
-	/**
-	 * Checks to see if a name has already been used because the V8 error message for a duplicate name is not helpful
-	 * @param name name to check
-	 */
-    void check_if_name_used(const std::string & name);
 
     /**
-     * static methods go on the constructor function, so it can have names which overlap with the per-instance object attributes
-     * @param name name of static method to check
+     * List of names already used for properties on the constructor function
      */
-    void check_if_static_name_used(const std::string & name);
+    std::vector<std::string> used_static_attribute_name_list;
 
+    /**
+     * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
+     */
+	std::vector<std::string> used_constructor_name_list = reserved_global_names;
+
+    /**
+     * Mapping between CPP object pointer and JavaScript object for CPP objects which have already been
+     * wrapped so the previous wrapped object can be returned.
+     * Note: this stops any objects from ever being deleted and can cause problems if another object of the same
+     * type is created at the same memory address.
+     */
+	MapT<T *, v8::Global<v8::Object>> existing_wrapped_objects;
+
+    /**
+     * Isolate associated with this V8ClassWrapper
+     */
+	v8::Isolate * isolate;
 
 	/**
-	 * returns whether the name is already used at a global level
-	 * @param name name to check
+	 * Wrapped classes are per-isolate, so this tracks each wrapped class/isolate tuple for later retrieval
 	 */
-	void check_if_constructor_name_used(std::string const &);
+	static MapT<v8::Isolate *, V8ClassWrapper<T> *> isolate_to_wrapper_map;
 
-    // function used to return the value of a C++ variable backing a javascript variable visible
-    //   via the V8 SetAccessor method
-	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer)> // type being returned
-	static void _getter_helper(v8::Local<v8::Name> property,
-							   v8::PropertyCallbackInfo<v8::Value> const & info) {
-
-		auto isolate = info.GetIsolate();
-		v8::Local<v8::Object> self = info.Holder();
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-		WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Getter helper got cpp object: %p\n", cpp_object);
-#endif
-        MemberType & value = cpp_object->*member_pointer;
-
-        // add lvalue ref as to know not to delete the object if the JS object is garbage collected
-        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberType &>>()(isolate, value));
-    }
-
-
-    // function used to set the value of a C++ variable backing a javascript variable visible
-    //   via the V8 SetAccessor method
-	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
-		std::enable_if_t<std::is_copy_assignable<MemberType>::value, int> = 0>
-	static void _setter_helper(v8::Local<v8::Name> property,
-							   v8::Local<v8::Value> value,
-							   v8::PropertyCallbackInfo<void> const & info) {
-
-	    auto isolate = info.GetIsolate();
-	    v8::Local<v8::Object> self = info.Holder();
-	    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
-	    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
-        MemberType & member_reference = cpp_object->*member_pointer;
-
-
-        // assign the new value to the c++ class data member
-        member_reference = CastToNative<MemberType>()(isolate, value);
-
-	    // call any registered change callbacks
-	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(self, *v8::String::Utf8Value(property), value);
-
-	}
-
-
-	template<typename MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
-		std::enable_if_t<!std::is_copy_assignable<MemberType>::value, int> = 0>
-	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
-							   const v8::PropertyCallbackInfo<void>& info)
-    {}
-
-
-	// Helper for creating objects when "new MyClass" is called from javascript
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto isolate = args.GetIsolate();
-
-		T * new_cpp_object = nullptr;
-		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
-				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... args)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(args)...);};
-
-		CallCallable<decltype(constructor)>()(constructor, args);
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "In v8_constructor and created new cpp object at %p\n", new_cpp_object);
-#endif
-
-		// if the object was created by calling new in javascript, it should be deleted when the garbage collector
-		//   GC's the javascript object, there should be no c++ references to it
-		auto & deleter = *v8toolkit::V8ClassWrapper<T>::get_instance(isolate).destructor_behavior_delete;
-		initialize_new_js_object(isolate, args.This(), new_cpp_object, deleter);
-
-		// // return the object to the javascript caller
-		args.GetReturnValue().Set(args.This());
-	}
-	
-	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
-	//   Useful because capturing lambdas don't have a traditional function pointer type
-	static void callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args);
-
-
-	std::map<T *, v8::Global<v8::Object>> existing_wrapped_objects;
-	v8::Isolate * isolate;
 
 	// Stores a functor capable of converting compatible types into a <T> object
 	// do non-const type first, so if it's a match, we don't try converting the non-const type to const and hit a debug assertion
-	std::unique_ptr<TypeCheckerBase<T>> type_checker = std::make_unique<TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>>(this->isolate);
-	std::unique_ptr<WrapAsMostDerivedBase<T>> wrap_as_most_derived_object =
-			std::make_unique<WrapAsMostDerived<T, TypeList<>>>(this->isolate);
-        
+	TypeCheckerBase<T> * type_checker = new TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>(this->isolate); // std::unique_ptr adds too much compilation time
+	WrapAsMostDerivedBase<T> * wrap_as_most_derived_object = new WrapAsMostDerived<T, TypeList<>>(this->isolate); // std::unique_ptr adds too much compilation time
+
+
+
+    /****** METHODS *******/
+
 	/**
 	* Stores a function template with any methods from the parent already in place.
 	* Used as the prototype for any new object
@@ -529,6 +473,161 @@ private:
      */
     bool wrap_as_most_derived_flag = false;
 
+	// Nothing may ever be removed from this vector, as things point into it
+	std::list<MethodAdderData> method_adders;
+
+	// makes a single function to be run when the wrapping javascript object is called with ()
+	MethodAdderData callable_adder;
+
+	func::function<void(v8::Local<v8::ObjectTemplate>)> named_property_adder;
+	v8::IndexedPropertyGetterCallback indexed_property_getter = nullptr;
+
+	std::vector<FunctionTemplateCallback> function_template_callbacks;
+
+
+	/*** METHODS ***/
+
+
+
+
+
+	V8ClassWrapper() = delete;
+	V8ClassWrapper(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper(const V8ClassWrapper<T> &&) = delete;
+	V8ClassWrapper& operator=(const V8ClassWrapper<T> &) = delete;
+	V8ClassWrapper& operator=(const V8ClassWrapper<T> &&) = delete;
+
+
+	/**
+	 * Private constructor that places the newly created object in the "singleton" map.
+	 * Users of the library should call get_instance, not this constructor directly
+	 * @param isolate isolate for which the class wrapper is for
+	 */
+	V8ClassWrapper(v8::Isolate * isolate);
+
+
+
+
+	/**
+	 * Calls registered callbacks when the specified property name is changed
+	 * @param object JavaScript object on which the property is being changed
+	 * @param property_name property name being changed
+	 * @param value new value of property
+	 */
+	void call_callbacks(v8::Local<v8::Object> object, const std::string & property_name, v8::Local<v8::Value> & value);
+
+
+	/**
+	 * Checks to see if a name has already been used because the V8 error message for a duplicate name is not helpful
+	 * @param name name to check
+	 */
+    void check_if_name_used(const std::string & name);
+
+
+    /**
+     * static methods go on the constructor function, so it can have names which overlap with the per-instance object attributes
+     * @param name name of static method to check
+     */
+    void check_if_static_name_used(const std::string & name);
+
+
+	/**
+	 * returns whether the name is already used at a global level
+	 * @param name name to check
+	 */
+	void check_if_constructor_name_used(std::string const &);
+
+
+    // function used to return the value of a C++ variable backing a javascript variable visible
+    //   via the V8 SetAccessor method
+	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer)> // type being returned
+	static void _getter_helper(v8::Local<v8::Name> property,
+							   v8::PropertyCallbackInfo<v8::Value> const & info) {
+
+		auto isolate = info.GetIsolate();
+
+		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
+        MemberType & value = cpp_object->*member_pointer;
+
+        // add lvalue ref as to know not to delete the object if the JS object is garbage collected
+        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberType &>>()(isolate, value));
+    }
+
+
+	/**
+	 * Called when a JavaScript object's property is assigned to
+	 * @param property property name
+	 * @param value new value for property
+	 * @param info general JavaScript state info
+	 */
+	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
+		std::enable_if_t<std::is_copy_assignable<MemberType>::value, int> = 0>
+	static void _setter_helper(v8::Local<v8::Name> property,
+							   v8::Local<v8::Value> value,
+							   v8::PropertyCallbackInfo<void> const & info) {
+	    auto isolate = info.GetIsolate();
+
+	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
+		cpp_object->*member_pointer = CastToNative<MemberType>()(isolate, value);
+
+	    // call any registered change callbacks
+	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(property), value);
+	}
+
+
+	/**
+	 * Setter cannot do anything for types that aren't copy assignable
+	 * @param property ignored
+	 * @param value ignored
+	 * @param info ignored
+	 */
+	template<typename MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
+		std::enable_if_t<!std::is_copy_assignable<MemberType>::value, int> = 0>
+	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
+							   const v8::PropertyCallbackInfo<void>& info)
+    {}
+
+
+	// Helper for creating objects when "new MyClass" is called from javascript
+	template<typename DefaultArgsTupleType, typename ... CONSTRUCTOR_PARAMETER_TYPES>
+	static void v8_constructor(const v8::FunctionCallbackInfo<v8::Value>& info) {
+		auto isolate = info.GetIsolate();
+
+		// default arguments are in tuple
+		DefaultArgsTupleType * default_args_tuple_ptr =
+			static_cast<DefaultArgsTupleType *>(v8::Local<v8::External>::Cast(info.Data())->Value());
+
+		T * new_cpp_object = nullptr;
+		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
+				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... info)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(info)...);};
+
+		// route any cpp exceptions through javascript
+		try {
+			CallCallable<decltype(constructor)>()(constructor,
+												  info,
+												  std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>{},
+												  DefaultArgsTupleType(*default_args_tuple_ptr));
+
+		} catch(std::exception & e) {
+			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+			return;
+		}
+
+
+		// if the object was created by calling new in javascript, it should be deleted when the garbage collector
+		//   GC's the javascript object, there should be no c++ references to it
+		auto & deleter = *v8toolkit::V8ClassWrapper<T>::get_instance(isolate).destructor_behavior_delete;
+		initialize_new_js_object(isolate, info.This(), new_cpp_object, deleter);
+
+		// // return the object to the javascript caller
+		info.GetReturnValue().Set(info.This());
+	}
+	
+	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
+	//   Useful because capturing lambdas don't have a traditional function pointer type
+	static void callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args);
+
+
 public:
 
 	// these probably shouldn't be public, but they are for now
@@ -537,19 +636,31 @@ public:
 
 
 	/**
+     * Returns the embedded C++ object in a JavaScript object
+     * @param object JavaScript object containing an embedded C++ object
+     * @return The embedded C++ object
+     */
+	T * get_cpp_object(v8::Local<v8::Object> object);
+
+
+	/**
      * Experimental
      * @param callback
      */
-    void register_callback(AttributeChangeCallback callback);
+    void register_callback(PropertyChangedCallback callback);
     
 
 	// Common tasks to do for any new js object regardless of how it is created
-	static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object, DestructorBehavior const & destructor_behavior)
+	static void initialize_new_js_object(v8::Isolate * isolate,
+										 v8::Local<v8::Object> js_object,
+										 T * cpp_object,
+										 DestructorBehavior const & destructor_behavior)
 	{
+		auto any_ptr = new AnyPtr<T>(cpp_object);
 #ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", typeid(T).name(), *js_object, cpp_object);
+        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p and any_ptr at %p\n", demangle<T>().c_str(), *js_object, cpp_object, (void*)any_ptr);
 #endif
-	    WrappedData<T> * wrapped_data = new WrappedData<T>(new AnyPtr<T>(cpp_object));
+	    WrappedData<T> * wrapped_data = new WrappedData<T>(any_ptr);
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
@@ -566,7 +677,6 @@ public:
 		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior]() {
 			destructor_behavior(isolate, cpp_object);
 		});
-
     }
 	
 	
@@ -586,12 +696,6 @@ public:
     */
     v8::Local<v8::FunctionTemplate> get_function_template();
 
-    /**
-     * Returns the embedded C++ object in a JavaScript object
-     * @param object JavaScript object containing an embedded C++ object
-     * @return The embedded C++ object
-     */
-    T * get_cpp_object(v8::Local<v8::Object> object);
 
 	
 	/**
@@ -607,33 +711,19 @@ public:
     void init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template);
 
 
-    
+
 	
 	/**
 	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
 	* For each isolate you need to add constructors/methods/members separately.
 	*/
     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate) {
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
-#endif
 
-        if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
-            auto new_object = new V8ClassWrapper<T>(isolate);
-#ifdef V8_CLASS_WRAPPER_DEBUG
-            fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
-#endif
-        }
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
-#endif
-
-        auto object = isolate_to_wrapper_map[isolate];
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Returning v8 wrapper: %p\n", object);
-#endif
-        return *object;
-
+		auto wrapper_find_result = isolate_to_wrapper_map.find(isolate);
+        if ( wrapper_find_result != isolate_to_wrapper_map.end()) {
+			return *wrapper_find_result->second;
+		}
+		return *new V8ClassWrapper<T>(isolate);
     }
 
 
@@ -656,7 +746,7 @@ public:
     *   being a compatible type.
     */
     template<class... CompatibleTypes>
-    std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value, V8ClassWrapper<T>&>
+    std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value>
     set_compatible_types()
     {
         assert(!is_finalized());
@@ -667,9 +757,17 @@ public:
         }
 
         // Try to convert to T any of:  T, non-const T, any explicit compatible types and their const versions
-        type_checker.reset(new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate));
-		this->wrap_as_most_derived_object.reset(new WrapAsMostDerived<T, TypeList<CompatibleTypes...>>(this->isolate));
-        return *this;
+		if (type_checker != nullptr) {
+			// smart pointers are too compile-time expensive
+			delete type_checker;
+		}
+        // TODO: EXPENSIVE
+        type_checker = new TypeChecker<T, TypeList<std::add_const_t<T>, std::remove_const_t<T>, CompatibleTypes..., std::add_const_t<CompatibleTypes>...>>(this->isolate);
+		if (this->wrap_as_most_derived_object != nullptr) {
+			delete this->wrap_as_most_derived_object;
+		}
+		// TODO: EXPENSIVE
+		this->wrap_as_most_derived_object = new WrapAsMostDerived<T, TypeList<CompatibleTypes...>>(this->isolate);
     }
 
 	template<template<class> class Deleter>
@@ -690,29 +788,30 @@ public:
      *   set_compatible_types<>()
      */
     template<class ParentType>
-    std::enable_if_t<std::is_base_of<ParentType, T>::value, V8ClassWrapper<T>&>
-    set_parent_type()
-    {
-        assert(!is_finalized());
-	if (!std::is_const<T>::value) {
-	    using ConstT = std::add_const_t<T>;
-	    using ConstParent = std::add_const_t<ParentType>;
-	    V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParent>();
-	}
+    std::enable_if_t<std::is_base_of<ParentType, T>::value>
+    set_parent_type() {
+		assert(!is_finalized());
+		if (!std::is_const<T>::value) {
+			using ConstT = std::add_const_t<T>;
+			using ConstParent = std::add_const_t<ParentType>;
+			V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParent>();
+		}
 
 
-	if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
-	    fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
-		   demangle<T>().c_str(), demangle<ParentType>().c_str());
 
-	}
-        assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
+		if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
+			fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
+					demangle<T>().c_str(), demangle<ParentType>().c_str());
+
+		}
+		assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
 //	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
-        ISOLATE_SCOPED_RUN(isolate);
-	    global_parent_function_template =
-                v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
-        return *this;
-    }
+		ISOLATE_SCOPED_RUN(isolate);
+		global_parent_function_template =
+			v8::Global<v8::FunctionTemplate>(isolate,
+											 V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
+
+	}
     
     
 	/**
@@ -726,22 +825,21 @@ public:
 	* Creates a javascript method with the specified name inside `parent_template` which, when called with the "new" keyword, will return
 	*   a new object of this type.
 	*/
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES>
-	v8toolkit::V8ClassWrapper<T>& add_constructor(const std::string & js_constructor_name, v8::Local<v8::ObjectTemplate> parent_template)
-	{				
+	template<typename ... CONSTRUCTOR_PARAMETER_TYPES, class DefaultArgsTuple = std::tuple<>>
+	void add_constructor(const std::string & js_constructor_name,
+						 v8::Local<v8::ObjectTemplate> parent_template,
+						 DefaultArgsTuple const & default_args = DefaultArgsTuple())
+	{
 	    assert(((void)"Type must be finalized before calling add_constructor", this->finalized) == true);
-
 		check_if_constructor_name_used(js_constructor_name);
 
 	    auto constructor_template =
-		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<CONSTRUCTOR_PARAMETER_TYPES...>,
-						v8::Local<v8::Value>());
+		make_wrapping_function_template(&V8ClassWrapper<T>::template v8_constructor<DefaultArgsTuple, CONSTRUCTOR_PARAMETER_TYPES...>,
+						v8::External::New(this->isolate, new DefaultArgsTuple(std::move(default_args))));
 
 	    // Add the constructor function to the parent object template (often the global template)
 //	    std::cerr << "Adding constructor to global with name: " << js_constructor_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_constructor_name.c_str()), constructor_template);
-
-	    return *this;
 	}
 
 
@@ -749,8 +847,7 @@ public:
 	 * When you don't want a "constructor" but you still need something to attach the static method names to, use this
 	 * instead of add_constructor
 	 */
-	v8toolkit::V8ClassWrapper<T> &
-    expose_static_methods(const std::string & js_name,
+    void expose_static_methods(const std::string & js_name,
                           v8::Local<v8::ObjectTemplate> parent_template) {
 	    assert(((void)"Type must be finalized before calling expose_static_methods", this->finalized) == true);
 		check_if_constructor_name_used(js_name);
@@ -768,9 +865,6 @@ public:
 	    // Add the constructor function to the parent object template (often the global template)
 //	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
-
-	    return *this;
-	    
 	}
 
 
@@ -781,9 +875,9 @@ public:
     * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
     * \endcode
 	*/
-
 	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false)
 	{
+		// TODO: Expensive - when combined with add_method -- maybe try and move this out of V8ClassWrapper?
 		auto isolate = this->isolate;
 
         assert(existing_cpp_object != nullptr);
@@ -846,24 +940,9 @@ public:
 
 
 
-	using AttributeAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
-	std::vector<AttributeAdder> member_adders;
-
-	using StaticMethodAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
-	std::vector<StaticMethodAdder> static_method_adders;
-
-
-	// stores callbacks to add calls to lambdas whos first parameter is of type T* and are automatically passed
-	//   the "this" pointer before any javascript parameters are passed in
-	using FakeMethodAdder = func::function<void(v8::Local<v8::ObjectTemplate>)>;
-	std::vector<FakeMethodAdder> fake_method_adders;
-
-	std::string class_name = demangle<T>();
-
 	
-	template<class R, class... Params>
-	V8ClassWrapper<T> & add_static_method(const std::string & method_name, R(*callable)(Params...)) {
-
+	template<class R, class... Params, class DefaultArgs = std::tuple<>>
+	void add_static_method(const std::string & method_name, R(*callable)(Params...), DefaultArgs const & default_args_tuple = DefaultArgs{}) {
         static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
                                                           "length", "name", "prototype"};
 
@@ -872,7 +951,7 @@ public:
         }
 
 		if (!std::is_const<T>::value) {
-			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
+			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
 		}
 
 		// must be set before finalization
@@ -892,17 +971,14 @@ public:
 		};
 
 		this->static_method_adders.emplace_back(static_method_adder);
-
-		return *this;
 	};
 
 
 
-	template<class Callable>
-	V8ClassWrapper<T> & add_static_method(const std::string & method_name, Callable callable) {
-
+	template<class Callable, class DefaultArgs = std::tuple<>>
+	void add_static_method(const std::string & method_name, Callable callable, DefaultArgs const & default_args_tuple = DefaultArgs{}) {
 		if (!std::is_const<T>::value) {
-			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).add_static_method(method_name, callable);
+			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
 		}
 
 		// must be set before finalization
@@ -922,8 +998,6 @@ public:
 		};
 
 		this->static_method_adders.emplace_back(static_method_adder);
-
-		return *this;
 	}
 
 	    
@@ -942,7 +1016,6 @@ public:
     */
 	bool is_finalized() {
         return this->finalized;
-
     }
 
     /**
@@ -953,13 +1026,12 @@ public:
 		class MemberClass,
 		MemberType (MemberClass::*member),
 		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member(std::string const & member_name)
+	void add_member(std::string const & member_name)
 	{
-
 	    assert(this->finalized == false);
 
 	    if (!std::is_const<T>::value) {
-			V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).
+			V8ClassWrapper<ConstT>::get_instance(isolate).
 				template add_member_readonly<std::add_const_t<MemberType>, MemberClass, member>(member_name);
 	    }
 
@@ -973,7 +1045,6 @@ public:
 						      _getter_helper<MemberType, MemberClass, member>,
 						      _setter_helper<MemberType, MemberClass, member>);
 		});
-	    return *this;
 	}
 
 
@@ -981,14 +1052,14 @@ public:
 		class MemberClass, 	// allow members from parent types of T
 		MemberType (MemberClass::*member),
 		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_member_readonly(std::string const & member_name)
+	void add_member_readonly(std::string const & member_name)
 	{
 	    // make sure to be using the const version even if it's not passed in
 	    using ConstMemberType = std::add_const_t<MemberType>;
 
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
 	    if (!std::is_const<T>::value) {
-		    V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate).template add_member_readonly<ConstMemberType, MemberClass, member>(member_name);
+		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<ConstMemberType, MemberClass, member>(member_name);
 	    }
 
 	    assert(this->finalized == false);
@@ -1001,65 +1072,102 @@ public:
 						      _getter_helper<MemberType, MemberClass, member>,
 						      0);
 		});
-	    return *this;
 	}
 
 
 	/**
-	* Adds the ability to call the specified class instance function when the javascript is called as `my_object();`
-	*/
+	 * The specified function will be called when the JavaScript object is called like a function
+	 * @param method function to call
+	 */
 	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_same<TBase,T>::value || std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & make_callable(R(TBase::*method)(Args...))
+			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+	void make_callable(R(TBase::*method)(Args...))
 	{
-	    return _add_method("unused name", method, true);
+	    _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}
 
 
 
+	/**
+	 * Adds const-qualified member instance functions
+	 * @param method_name JavaScript property name to use
+	 * @param method member instance function pointer
+	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
+	 */
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
+            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const, DefaultArgs const & default_args = DefaultArgs()) {
+        if (!std::is_const<T>::value) {
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
+        }
+        _add_method(method_name, method, TypeList<Args...>(), default_args);
+    }
 
-    template<class R, class TBase, class... Args,
+	/**
+	 * Adds const-and-lvalue-qualified member instance functions
+	 * @param method_name JavaScript property name to use
+	 * @param method member instance function pointer
+	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
+	 */
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const) {
-        if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
+      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
+     if (!std::is_const<T>::value) {
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
         }
-        return _add_method(method_name, method);
+        _add_method(method_name, method, TypeList<Args...>(), default_args);
     }
-    template<class R, class TBase, class... Args,
+
+
+	/**
+	 * const rvalue instance functions not supported yet.  Using this triggers a static assertion failure
+	 * @param method_name ignored
+	 * @param method member ignored
+	 * @param default_args ignored
+	 */
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) const &) {
-        if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method);
-        }
-        return _add_method(method_name, method);
-    }
-    template<class R, class TBase, class... Args,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&) {
+      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&, DefaultArgs const & default_args = DefaultArgs()) {
         static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
 
-    
+
 	/**
-	* Adds the ability to call the specified class instance method on an object of this type
-	*/
-	template<class R, class TBase, class... Args,
+	 * Adds const-and-lvalue-qualified member instance functions
+	 * @param method_name JavaScript property name to use
+	 * @param method member instance function pointer
+	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
+	 */
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
 			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...))
+	void add_method(const std::string & method_name, R(TBase::*method)(Args...), DefaultArgs const & default_args = DefaultArgs())
 	{
-		return _add_method(method_name, method);
+		_add_method(method_name, method, TypeList<Args...>(), default_args);
 	}
-    template<class R, class TBase, class... Args,
+
+	/**
+	 * Adds lvalue-qualified member instance functions
+	 * @param method_name JavaScript property name to use
+	 * @param method member instance function pointer
+	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
+	 */
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    V8ClassWrapper<T> & add_method(const std::string & method_name, R(TBase::*method)(Args...) &)
+    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &, DefaultArgs const & default_args = DefaultArgs())
     {
-        return _add_method(method_name, method);
+		_add_method(method_name, method, TypeList<Args...>(), default_args);
     }
 
-    template<class R, class TBase, class... Args,
+
+	/**
+	 * rvalue instance functions not supported yet.  Using this triggers a static assertion failure
+	 * @param method_name ignored
+	 * @param method member ignored
+	 * @param default_args ignored
+	 */
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&)
+    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&, DefaultArgs const & default_args = DefaultArgs())
     {
         static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
@@ -1070,17 +1178,21 @@ public:
     /**
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
-	template<class R, class Head, class... Tail, std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
-		V8ClassWrapper<typename std::add_const<T>::type>::get_instance(isolate)._add_fake_method(method_name, method);
+	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
+        std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+                                        DefaultArgs const & default_args = DefaultArgs()) {
+		V8ClassWrapper<ConstT>::get_instance(isolate)._add_fake_method(method_name, method, default_args);
 	};
 
 
 	/**
 	 * If the method is not marked const, don't add it to the const type (since it's incompatible)
 	 */
-	template<class R, class Head, class... Tail, std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method) {
+	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
+        std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
+	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+                                        DefaultArgs const & default_args = DefaultArgs()) {
 		// nothing to do here
 	};
 
@@ -1091,12 +1203,14 @@ public:
 	 * @param method_name JavaScript name to expose this method as
 	 * @param method method to call when JavaScript function invoked
 	 */
-    template<class R, class Head, class... Args,
+    template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
 	std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 					 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method) {
-		_add_fake_method(method_name, method);
+	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method,
+                    DefaultArgs const & default_args = DefaultArgs()) {
+		_add_fake_method(method_name, method, default_args);
 	}
+
 
 	/**
 	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
@@ -1104,25 +1218,25 @@ public:
 	 * @param method_name JavaScript name to expose this method as
 	 * @param method method to call when JavaScript function invoked
 	 */
-	template<class R, class Head, class... Args,
-		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
-						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, R(*method)(Head, Args...)) {
+	template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
+		std::enable_if_t<std::is_pointer<Head>::value &&
+						 std::is_base_of<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
+	void add_method(const std::string & method_name, R(*method)(Head, Args...),
+                    DefaultArgs const & default_args = DefaultArgs()) {
 
-		_add_fake_method(method_name, func::function<R(Head, Args...)>(method));
+		_add_fake_method(method_name, func::function<R(Head, Args...)>(method), default_args);
 	}
-
 
 
 	/**
 	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
 	 */
-	template<class Callback>
-	V8ClassWrapper<T> & add_method(const std::string & method_name, Callback && callback) {
+	template<class Callback, class DefaultArgs = std::tuple<>   >
+	void add_method(const std::string & method_name, Callback && callback,
+                                   DefaultArgs const & default_args = DefaultArgs()) {
 		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
-		this->_add_fake_method(method_name, f);
+		this->_add_fake_method(method_name, f, default_args);
 
-		return *this;
 	}
 
 
@@ -1136,13 +1250,14 @@ public:
 	}
 
 
-	template<class R, class Head, class... Tail,
+	template<class R, class Head, class... Tail, class DefaultArgsTuple,
 		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, std::remove_const_t<T>>::value, int> = 0>
-	V8ClassWrapper<T> & _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method)
+	void _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method, DefaultArgsTuple const & default_args)
 	{
 		assert(this->finalized == false);
 
+		// conditionally add the method to the const type
 		add_fake_method_for_const_type(method_name, method);
 
 		this->check_if_name_used(method_name);
@@ -1150,7 +1265,7 @@ public:
 
 		// This puts a function on a list that creates a new v8::FunctionTemplate and maps it to "method_name" on the
 		// Object template that will be passed in later when the list is traversed
-		fake_method_adders.emplace_back([this, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
+		fake_method_adders.emplace_back([this, default_args, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
 
 			using CopyFunctionType = func::function<R(Head, Tail...)>;
 			CopyFunctionType * copy = new func::function<R(Head, Tail...)>(method);
@@ -1158,7 +1273,7 @@ public:
 
 			// This is the actual code associated with "method_name" and called when javascript calls the method
 			StdFunctionCallbackType * method_caller =
-					new StdFunctionCallbackType([method_name, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
+					new StdFunctionCallbackType([method_name, default_args, copy](const v8::FunctionCallbackInfo<v8::Value>& info) {
 
 
 				auto fake_method = *(func::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
@@ -1170,29 +1285,13 @@ public:
                 assert(holder->InternalFieldCount() == 1);
 
                 // a crash here may have something to do with a native override of toString
-				v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(holder->GetInternalField(0));
-				WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-				T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).cast(static_cast<AnyBase *>(wrapped_data->native_object));
+				auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
 
-
-				// the typelist and func::function parameters don't match because the first parameter doesn't come
-				// from the javascript value array in 'info', it is passed in from this function as the 'this' pointer
-//				using PB_TYPE = v8toolkit::ParameterBuilder<0, func::function<R(Head, Tail...)>, TypeList<Tail...>>;
-//
-//				PB_TYPE pb;
-//				auto arity = PB_TYPE::ARITY;
-				// 1  because the first parameter doesn't count because it's reserved for "this"
-//				if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
-//				  std::stringstream ss;
-//				  ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
-//				  isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
-//				  return; // return now so the exception can be thrown inside the javascript
-//				}
 
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object);
+                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1207,7 +1306,6 @@ public:
 			// methods are put into the protype of the newly created javascript object
 			prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
 		});
-		return *this;
 	}
 
 	/**
@@ -1215,22 +1313,22 @@ public:
 	 */
 
 
-	// Nothing may ever be removed from this vector, as things point into it
-	std::list<MethodAdderData> method_adders;
 
-	// makes a single function to be run when the wrapping javascript object is called with ()
-	MethodAdderData callable_adder;
 
-    template<class M>
-	V8ClassWrapper<T> & _add_method(const std::string & method_name, M method, bool add_as_callable_object_callback = false)
+    template<class M, class... Args, class... DefaultArgTypes>
+	void _add_method(const std::string & method_name,
+                                    M method,
+                                    TypeList<Args...> const &,
+                                    std::tuple<DefaultArgTypes...> const & default_args_tuple,
+                                    bool add_as_callable_object_callback = false)
     {
+        // TODO: EXPENSIVE - when combined with
         assert(this->finalized == false);
 
 		this->check_if_name_used(method_name);
 
-
     		MethodAdderData method_adder_data = MethodAdderData{method_name,
-                                                 StdFunctionCallbackType([this, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
+                                                 StdFunctionCallbackType([this, default_args_tuple, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
                 auto isolate = info.GetIsolate();
 
                 // get the behind-the-scenes c++ object
@@ -1264,14 +1362,7 @@ public:
                     V8TOOLKIT_DEBUG("No match in prototype chain after looking through all potential function templates\n");
                     assert(false);
                 }
-                //
-                // if(!compare_contents(isolate, holder, self)) {
-                //     fprintf(stderr, "FOUND DIFFERENT OBJECT");
-                // }
-//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Done looking for instance match in prototype chain\n");
-//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Match: %s:\n", *v8::String::Utf8Value(self));
-//                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "%s\n", stringify_value(isolate, self).c_str());
-//                assert(!self.IsEmpty());
+
 
                 // void* pointer = instance->GetAlignedPointerFromInternalField(0);
                 auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
@@ -1287,24 +1378,12 @@ public:
                 auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
-//                using PB_TYPE = v8toolkit::ParameterBuilder<0, decltype(bound_method), decltype(get_typelist_for_function(bound_method))>;
-//
-//                PB_TYPE pb;
-//                auto arity = PB_TYPE::ARITY;
-//                if (!check_parameter_builder_parameter_count<PB_TYPE, 0>(info)) {
-//                    std::stringstream ss;
-//                    ss << "Function '" << method_name << "' called from javascript with insufficient parameters.  Requires " << arity << " provided " << info.Length();
-//                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, ss.str().c_str()));
-//                    return; // return now so the exception can be thrown inside the javascript
-//                }
 
                 // V8 does not support C++ exceptions, so all exceptions must be caught before control
                 //   is returned to V8 or the program will instantly terminate
                 try {
-                    // if (dynamic_cast< JSWrapper<T>* >(backing_object_pointer)) {
-                    //     dynamic_cast< JSWrapper<T>* >(backing_object_pointer)->called_from_javascript = true;
-                    // }
-                    CallCallable<decltype(bound_method)>()(bound_method, info);
+					// make a copy of default_args_tuple so it's non-const - probably better to do this on a per-parameter basis
+                    CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, std::tuple<DefaultArgTypes...>(default_args_tuple));
                 } catch (std::exception &e) {
                     isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
                     return;
@@ -1319,11 +1398,8 @@ public:
 		} else {
 		    method_adders.push_back(method_adder_data);
 		}
+	}
 
-        return *this;
-    }
-
-	v8::IndexedPropertyGetterCallback indexed_property_getter = nullptr;
 	/**
 	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#ae3303f3d55370684ac02b02e67712eac
 	 * This version hasn't been enhanced yet like the named property version has.
@@ -1336,7 +1412,6 @@ public:
 		indexed_property_getter = getter;
 	}
 
-	func::function<void(v8::Local<v8::ObjectTemplate>)> named_property_adder;
 
 	struct NamedPropertyCallbackData {
 		T * cpp_object = nullptr;
@@ -1489,8 +1564,7 @@ public:
 		this->add_named_property_handler(bound_getter, bound_setter);
 	}
 
-	using FunctionTemplateCallback = func::function<void(v8::Local<v8::FunctionTemplate> &)>;
-	std::vector<FunctionTemplateCallback> function_template_callbacks;
+
 
 	/**
 	 * ADVANCED: allows direct customization of the v8::FunctionTemplate used to create objects
@@ -1515,7 +1589,7 @@ namespace v8toolkit {
 * Stores the "singleton" per isolate
 */
 template <class T>
-    std::map<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::isolate_to_wrapper_map;
+    MapT<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::isolate_to_wrapper_map;
 
 template<class T>
 class JSWrapper;
@@ -1735,12 +1809,12 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 
 	auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
 	T * t = nullptr;
-	// std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
+//	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
-//			fprintf(stderr, "Failed to convert types: want:  %d %s, got: %s\n", std::is_const<T>::value, typeid(T).name(), TYPE_DETAILS(*any_base));
-		throw CastException(fmt::format("Cannot convert {} to {}",
-						TYPE_DETAILS(*any_base), demangle<T>()));
+		fprintf(stderr, "Failed to convert types: want:  %d %s\n", std::is_const<T>::value, typeid(T).name());
+		throw CastException(fmt::format("Cannot convert AnyBase to {}", demangle<T>()));
 	}
+//		std::cerr << fmt::format("Successfully converted") << std::endl;
 	return *t;
 }
 
@@ -1757,7 +1831,10 @@ struct CastToNative<T*, std::enable_if_t<std::is_reference<
 		>// end template
 {
 	   T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-			return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
+           if (value->IsUndefined()) {
+               return nullptr;
+           }
+           return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
 		}
 };
 
@@ -1815,10 +1892,12 @@ struct CastToNative<T&&, std::enable_if_t<!std::is_reference<
 
 
 
-    // If no more-derived option was found, wrap as this type
+// If no more-derived option was found, wrap as this type
 template<class T>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object) const {
 	auto context = this->isolate->GetCurrentContext();
+
+		// TODO: Expensive
 	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 	return wrapper.template wrap_existing_cpp_object(context, cpp_object, *wrapper.destructor_behavior_leave_alone, true /* don't infinitely recurse */);
 }
@@ -1826,6 +1905,8 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T 
 template<class T>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T && cpp_object) const {
 	auto context = this->isolate->GetCurrentContext();
+
+	// TODO: expensive
 	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 	return wrapper.
 			template wrap_existing_cpp_object(context,
@@ -1838,20 +1919,27 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T 
 
 template<class T, class Head, class... Tail> T *
 TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
-std::enable_if_t<!(!std::is_const<T>::value && std::is_const<Head>::value)>>::check(AnyBase * any_base, bool first_call) const {
-
-	if(AnyPtr<Head> * any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
-#ifdef ANYBASE_DEBUG
-		std::cerr << fmt::format("Got match on: {}", demangle<Head>()) << std::endl;
-#endif
+            std::enable_if_t<std::is_const<T>::value ||
+					         !std::is_const<Head>::value>
+           >::check(AnyBase * any_base, bool first_call) const {
+	assert(any_base != nullptr);
+	ANYBASE_PRINT("typechecker::check for {}  with anyptr {} (string: {})", demangle<Head>(), (void*)any_base, any_base->type_name);
+	if(auto any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
+		ANYBASE_PRINT("Got match on: {}, returning {}", demangle<Head>(), (void*)(any->get()));
 		return static_cast<T*>(any->get());
 	}
+	
+	ANYBASE_PRINT("didn't find match, testing const type now...");
 
+	// TODO: Expensive
+	// if goal type is const and the type to check isn't const, try checking for the const type now
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
-	    if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
-		return derived_result;
-	    }
+        if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
+            return derived_result;
+        }
 	}
+	
+	ANYBASE_PRINT("no match on const type either, continuing down chain");
 
 	return SUPER::check(any_base, false);
 }
@@ -1871,6 +1959,7 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
+				// TODO: Expensive
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived);
 			}
 		}
@@ -1888,6 +1977,7 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(&cpp_object))) {
+				// TODO: Expensive
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(std::move(*derived));
 			}
 		}

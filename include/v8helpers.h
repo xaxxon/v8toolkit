@@ -96,9 +96,15 @@ struct ProxyType<T,void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
 };
 
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
-    
+
+// use V8TOOLKIT_MACRO_TYPE instead
 #define V8TOOLKIT_COMMA ,
-  
+
+// protects and allows subsequent calls to additional macros for types with commas (templated types)
+#define V8TOOLKIT_MACRO_TYPE(...) __VA_ARGS__
+
+
+
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
@@ -226,9 +232,6 @@ struct static_all_of<false, tail...> : std::false_type {};
 // If there are no parameters left, no false was found so return true
 template <> struct static_all_of<> : std::true_type {};
 
-
-
-#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
@@ -453,6 +456,21 @@ auto reducer(const Container & container, Callable callable) ->
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
 //#define ANYBASE_DEBUG
 
+/**
+ * If ANYBASE_DEBUG is defined, then this flag controls whether type conversion information logs are printed to stderr
+ */
+extern bool AnybaseDebugPrintFlag;
+
+
+#ifdef ANYBASE_DEBUG
+#define ANYBASE_PRINT(format_string, ...) \
+if (AnybaseDebugPrintFlag) { \
+    std::cerr << fmt::format(format_string, ##__VA_ARGS__) << std::endl; \
+}
+#else
+#define ANYBASE_PRINT(format_string, ...)
+#endif
+
 
  struct AnyBase
 {
@@ -520,9 +538,10 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
-        print_v8_value_details(value);
-	    throw v8toolkit::CastException("Couldn't cast value to requested type");
+
+        //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
+        //print_v8_value_details(value);
+	    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
     }
 }
 
@@ -570,7 +589,10 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
+std::string stringify_value(v8::Isolate * isolate,
+                            const v8::Local<v8::Value> & value,
+                            bool show_all_properties=false,
+                            std::vector<v8::Local<v8::Value>> && processed_values = std::vector<v8::Local<v8::Value>>{});
 
 /**
  * Tests if the given name conflicts with a reserved javascript top-level name

@@ -8,7 +8,7 @@ using namespace v8toolkit;
 //   passed through V8 and rethrown on the other side
 int main(int argc, char ** argv) {
     
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
     auto i = Platform::create_isolate();
     auto c = i->create_context();
     try{

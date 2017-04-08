@@ -11,7 +11,9 @@
 namespace v8toolkit {
 
     template<class T>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) : isolate(isolate) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) :
+            isolate(isolate)
+    {
 		this->isolate_to_wrapper_map.emplace(isolate, this);
 	}
 
@@ -19,7 +21,7 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object,
 																						 const std::string & property_name,
 																						 v8::Local<v8::Value> & value) {
-		for (auto &callback : attribute_callbacks) {
+		for (auto &callback : property_changed_callbacks) {
 			callback(isolate, object, property_name, value);
 		}
 	}
@@ -27,6 +29,7 @@ namespace v8toolkit {
 
     template<class T> void
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_name_used(const std::string & name) {
+
 		if (std::find(used_attribute_name_list.begin(),
 			used_attribute_name_list.end(),
 			name) != used_attribute_name_list.end()) {
@@ -36,6 +39,7 @@ namespace v8toolkit {
 
 		// hasn't been used, so add it to used list
 		used_attribute_name_list.push_back(name);
+
     }
 
 	template<class T> void
@@ -55,7 +59,7 @@ namespace v8toolkit {
                       used_constructor_name_list.end(),
                       name) != used_constructor_name_list.end()) {
 
-            throw DuplicateNameException(fmt::format("Cannot add constructor named '{}' to class '{}', name already in use", name, class_name));
+            throw DuplicateNameException(fmt::format("Cannot add constructor named '{}' to class '{}', name already in use (or built-in JavaScript type", name, class_name));
         }
         used_constructor_name_list.push_back(name);
     }
@@ -73,8 +77,8 @@ namespace v8toolkit {
     
     
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::register_callback(AttributeChangeCallback callback) {
-	attribute_callbacks.push_back(callback);
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::register_callback(PropertyChangedCallback callback) {
+	    property_changed_callbacks.push_back(callback);
     }
   
 	
@@ -87,6 +91,7 @@ namespace v8toolkit {
 	v8::Local<v8::FunctionTemplate>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::make_wrapping_function_template(v8::FunctionCallback callback,
 												     const v8::Local<v8::Value> & data) {
+
 		assert(this->finalized == true);
 
         // fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
@@ -116,6 +121,7 @@ namespace v8toolkit {
         // fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
 		this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
 		return function_template;
+
 	}
 
     /**
@@ -144,7 +150,6 @@ namespace v8toolkit {
      */
     template<class T>  T *
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
-
         if (object->InternalFieldCount() == 0) {
             throw CastException(fmt::format("Tried to get internal field from object with no internal fields: {}", demangle<T>()));
         } else if (object->InternalFieldCount() > 1) {
@@ -155,6 +160,9 @@ namespace v8toolkit {
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
         V8TOOLKIT_DEBUG("uncasted internal field: %p\n", wrapped_data->native_object);
+        if (wrapped_data == nullptr) {
+            assert(false);
+        }
         return this->cast(static_cast<AnyBase *>(wrapped_data->native_object));
     }
 
@@ -182,7 +190,6 @@ namespace v8toolkit {
 	    else if (dynamic_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)) {
 		    return static_cast<AnyPtr<std::remove_const_t<T>>*>(any_base)->get();
 	    }
-
 	    throw CastException("Could not determine type of object in V8ClassWrapper::cast().  Define ANYBASE_DEBUG for more information");
 	}
 
@@ -227,30 +234,6 @@ namespace v8toolkit {
 	}
 
 
-
-
-    /**
-     * Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
-     * For each isolate you need to add constructors/methods/members separately.
-     */
-//
-//    template<class T>   	 V8ClassWrapper<T> &
-//	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_instance(v8::Isolate * isolate)
-//	{
-//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "isolate to wrapper map %p size: %d\n", &isolate_to_wrapper_map, (int)isolate_to_wrapper_map.size());
-//
-//        if (isolate_to_wrapper_map.find(isolate) == isolate_to_wrapper_map.end()) {
-//		    auto new_object = new V8ClassWrapper<T>(isolate);
-//		    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Creating instance %p for isolate: %p\n", new_object, isolate);
-//	    }
-//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "(after) isolate to wrapper map size: %d\n", (int)isolate_to_wrapper_map.size());
-//
-//	    auto object = isolate_to_wrapper_map[isolate];
-//	    if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "Returning v8 wrapper: %p\n", object);
-//	    return *object;
-//	}
-//
-
     /**
      * V8ClassWrapper objects shouldn't be deleted during the normal flow of your program unless the associated isolate
      *   is going away forever.   Things will break otherwise as no additional objects will be able to be created
@@ -284,7 +267,7 @@ namespace v8toolkit {
             throw V8Exception(this->isolate, fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
         }
         if (!std::is_const<T>::value) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize();
+            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize(wrap_as_most_derived_flag);
         }
 	    this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
         this->finalized = true;

@@ -469,7 +469,7 @@ void test_asserts()
     c->run("if({}){println('{} is true');} else{println('{} is false');}");
     c->run("assert('({})')"); // the program "{}" is an empty program, not an empty object
 
-    printf("Dont testing asserts\n");   
+    printf("Done testing asserts\n");
 }
 
 
@@ -549,7 +549,7 @@ void run_inheritance_test()
 
 int main(int argc, char ** argv) {
     
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
 
     run_type_conversion_test();
 

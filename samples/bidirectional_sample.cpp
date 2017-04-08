@@ -183,7 +183,7 @@ public:
 
 int main(int argc, char ** argv)
 {
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
 	
 	printf("Calling TCBFJ\n");
     test_calling_bidirectional_from_javascript();

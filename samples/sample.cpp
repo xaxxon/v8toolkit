@@ -31,13 +31,14 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 #define SAMPLE_DEBUG true
 
+
 struct FooParent {
     // must be polymorphic for most derived type to be returned
     virtual ~FooParent() {};
 };
 
 struct Foo : public FooParent {
-    Foo(){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
+    Foo(int, Foo *){if (SAMPLE_DEBUG) printf("Created Foo %p (default constructor)\n", this);}
     Foo(const Foo &){if (SAMPLE_DEBUG) printf("Foo copy constructor\n"); assert(allow_copy_constructor);}
     ~Foo(){if (SAMPLE_DEBUG) printf("deleted Foo %p\n", this);}
     int i = 42;
@@ -57,7 +58,9 @@ public:
     Point & operator=(Point&&){cerr << "Point move assignment called" << endl; return *this;}
     ~Point(){instance_count--;}
     int x_, y_;
-    int thing(int z, char * zz){if (SAMPLE_DEBUG) printf("In Point::Thing with this %p x: %d y: %d and input value %d %s\n", this, this->x_, this->y_, z, zz); return z*2;}
+    int thing(int z, char zz = 'a'){if (SAMPLE_DEBUG) fprintf(stderr, "In Point::Thing with this %p x: %d y: %d and input value z = %d zz = %c\n", this, this->x_, this->y_, z, zz); return z*2;}
+  char const * thing2(int z, char const * zz = "asdf"){ fprintf(stderr, "In Point::thing2 with z=%d, zz=%s\n", z, zz); return zz; }
+  void thing3(char *, char*, bool val = false){fprintf(stderr, "thing3 %d\n", val);}
     int overloaded_method(char * foo){return 0;}
     int overloaded_method(int foo){return 1;}
     const char * stringthing() {return "hello";}
@@ -75,7 +78,7 @@ public:
     // Foo & get_foo(Foo & f)  {return f;}
     
     // Leave this as an r-value return for testing purposes Foo f;
-    Foo get_foo() {return Foo();}
+    Foo get_foo() {return Foo(0, nullptr);}
     
     static int get_instance_count(){ return instance_count; }
     static int instance_count;
@@ -200,9 +203,7 @@ int main(int argc, char* argv[])
         
     // Initialize V8.
     v8::V8::InitializeICU();
-#ifdef USE_SNAPSHOTS
     v8::V8::InitializeExternalStartupData(argv[0]);
-#endif
     v8::Platform* platform = v8::platform::CreateDefaultPlatform();
     v8::V8::InitializePlatform(platform);
     v8::V8::Initialize();
@@ -235,7 +236,10 @@ int main(int argc, char* argv[])
             //wrapped_point.add_method("rvalue_const_qualified_method", &Point::rvalue_const_qualified_method); // not supported
             wrapped_point.add_method("lvalue_const_qualified_method", &Point::lvalue_const_qualified_method);
             wrapped_point.add_static_method("", &Point::static_method_same_name);
-            wrapped_point.add_method("thing", &Point::thing);
+
+            wrapped_point.add_method("thing", &Point::thing, std::tuple<char>('f'));
+	    wrapped_point.add_method("thing2", &Point::thing2, std::tuple<char const *>("asdf"));
+	    wrapped_point.add_method("thing3", &Point::thing3, std::tuple<bool>(true));
 	        wrapped_point.make_callable(&Point::operator());
             add_function(isolate, global_templ, "point_instance_count", &Point::get_instance_count);
 
@@ -248,7 +252,8 @@ int main(int argc, char* argv[])
             wrapped_point.add_method<int, Point, int>("overloaded_method2", &Point::overloaded_method);
             wrapped_point.add_method("make_point", &Point::make_point);
 
-            wrapped_point.add_method("stringthing", &Point::stringthing).add_method("void_func", &Point::void_func);
+            wrapped_point.add_method("stringthing", &Point::stringthing);
+            wrapped_point.add_method("void_func", &Point::void_func);
             wrapped_point.add_member<int, Point, &Point::x_>("x");
 
             wrapped_point.add_member<eastl::fixed_string<char, 32, true, eastl::allocator>, Point, &Point::fixed_string>("fixed_string");
@@ -309,7 +314,8 @@ int main(int argc, char* argv[])
             wrapped_line.add_method("get_point", &Line::get_point);
             wrapped_line.add_method("get_rvalue_point", &Line::get_rvalue_point);
             wrapped_line.add_member<Point, Line, &Line::p>("p");
-            wrapped_line.add_method("some_method", &Line::some_method).add_method("throw_exception", &Line::throw_exception);
+            wrapped_line.add_method("some_method", &Line::some_method);
+            wrapped_line.add_method("throw_exception", &Line::throw_exception);
             wrapped_line.add_static_method("static_method", &Line::static_method);
             wrapped_line.add_static_method("static_lambda", [](){return 43;});
             wrapped_line.add_method("fake_method", [](Line const * line){
@@ -375,6 +381,7 @@ int main(int argc, char* argv[])
             wrapped_foo.set_parent_type<FooParent>();
             wrapped_foo.add_member<int, Foo, &Foo::i>("i");
             wrapped_foo.finalize();
+            wrapped_foo.add_constructor<int, Foo*>("Foo", global_templ, std::tuple<Foo*>(nullptr));
 
             
                 v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global_templ);
@@ -396,7 +403,6 @@ int main(int argc, char* argv[])
                 auto result = script->Run(context);
                 print_maybe_value(result);
             }
-
             {
                 v8::Local<v8::Script> script_for_static_method = 
                         v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "println(Line.static_method(42));")).ToLocalChecked();
@@ -465,13 +471,49 @@ int main(int argc, char* argv[])
             }
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   // decimal ascii 100 = 'd'
+                                                                                   "p = new Point(); p.thing(3, 100);")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); p.thing(3);")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+//                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); println(`should print specified value qwer`);  println(p.thing2(5, \"qwer\")); println(`should print default value asdf`); println(p.thing2(5));")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+//                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
+                                                                                   "p = new Point(); p.thing3(\"a\", \"b\");")).ToLocalChecked();
+                v8::TryCatch tc4(isolate);
+                (void)script->Run(context);
+//                v8toolkit::ReportException(isolate, &tc4);
+                assert(!tc4.HasCaught());
+
+            }
+            {
+                auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "p = new Point(); println(p[4]);")).ToLocalChecked();
                 (void) script->Run(context);
             }
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "p = new Point(); println(p['four']);p['ThisStringDoesNotMatter']= 5; println(p.x);")).ToLocalChecked();
-                (void)script->Run(context);
+                (void)script->Run(context); 
             }
 
             {
@@ -488,6 +530,7 @@ int main(int argc, char* argv[])
                 (void) script->Run(context);
                 if (tc5.HasCaught()) {
                     v8toolkit::ReportException(isolate, &tc5);
+                    assert(false);
                 }
             }
 
@@ -534,8 +577,7 @@ int main(int argc, char* argv[])
             }
 
 
-
-            Foo most_derived_foo_test;
+            Foo most_derived_foo_test(0, nullptr);
             v8::Local<v8::Object> most_derived_fooparent_js_object =
                 wrapped_fooparent.wrap_existing_cpp_object(context, &most_derived_foo_test, *wrapped_fooparent.destructor_behavior_leave_alone);
 

@@ -14,6 +14,8 @@
 
 namespace v8toolkit {
 
+class DebugContext;
+
 extern boost::uuids::random_generator uuid_generator;
 
 class Isolate;
@@ -31,7 +33,10 @@ using ScriptPtr = std::shared_ptr<Script>;
 class Context : public std::enable_shared_from_this<Context>
 {
     friend class Isolate;
-public:
+protected:
+	/// constructor should only be called by an Isolate or derived class
+	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
+
 
 private:
 	std::atomic<int> script_id_counter;
@@ -46,14 +51,10 @@ private:
 	/// The Isolate that created this Context will be kept around as long as a Context it created is still around
 	std::shared_ptr<Isolate> isolate_helper;
 	
-	/// shortcut to the v8::isolate object instead of always going through the Isolate
-	v8::Isolate * isolate;
-	
+
 	/// The actual v8::Context object backing this Context
 	v8::Global<v8::Context> context;
     
-    /// constructor should only be called by an Isolate
-	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
 
     /// stores the list of scripts --
     /// TODO: These should be weak_ptr's or no script/context will ever be cleaned up
@@ -71,6 +72,9 @@ private:
 
 
 public:
+
+	/// shortcut to the v8::isolate object instead of always going through the Isolate
+	v8::Isolate * const isolate;
 
 	virtual ~Context();
 
@@ -532,6 +536,8 @@ public:
     */
 	std::shared_ptr<Context> create_context();
 
+    std::shared_ptr<DebugContext> create_debug_context(short port);
+
     /**
     * Returns the isolate associated with this Isolate
     */
@@ -666,20 +672,14 @@ public:
 
 	static void expose_debug_as(const std::string & debug_object_name);
 	static void set_max_memory(int memory_size_in_mb);
-    /**
-    * Initializes the v8 platform with default values and tells v8 to look
-    *   for its .bin files in the given directory (often argv[0])
-    * Only useful if build with snapshot support which I recommend against for 
-    *   simplicity's sake
-    */
-    static void init(char * path_to_bin_files);
 
     /**
     * Parses argv for v8-specific options, applies them, and removes them
-    *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
-    *    v8 .bin files
+    *   from argv and adjusts argc accordingly.
+ 	* @param snapshot_directory directory in which to look for v8 snapshot .bin files.  Leave as empty
+     * string if linking against v8 compiled with use_snapshots=false
     */
-    static void init(int argc, char ** argv);
+    static void init(int argc, char ** argv, std::string const & snapshot_directory = "");
 	
     /**
     * Shuts down V8.  Any subsequent V8 usage is probably undefined, so

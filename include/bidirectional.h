@@ -176,7 +176,9 @@ public:
      */
     virtual Base * operator()(ConstructorArgs&&... constructor_args) const = 0;
 
-    Base * create(ConstructorArgs&&... constructor_args) const {return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);}
+    Base * create(ConstructorArgs&&... constructor_args) const {
+        return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
+    }
 
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
@@ -184,7 +186,7 @@ public:
     template <class U = Base>
     std::unique_ptr<U> get_unique(ConstructorArgs&&... args) const {
 
-	// call operator() on the factory and put the results in a unique pointer
+	    // call operator() on the factory and put the results in a unique pointer
         return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(args)...));
     }
 
@@ -225,40 +227,41 @@ class CppFactory;
                     Child,
                     TypeList<FixedParams...>,
                     TypeList<ExternalConstructorParams...>,
-     FactoryBase,
-         Deleter> :
- public virtual FactoryBase {
+                    FactoryBase,
+                    Deleter> : public virtual FactoryBase {
 
-     using TupleType = std::tuple<FixedParams...>;
-     TupleType fixed_param_tuple;
-     
- public:
-     
-     
-     
- CppFactory(FixedParams&&... fixed_param_values) :
-     fixed_param_tuple(fixed_param_values...)
-	 {}
-     
-     CppFactory(const CppFactory &) = delete;
-     CppFactory(CppFactory &&) = default;
-     CppFactory & operator=(const CppFactory &) = delete;
-     CppFactory & operator=(CppFactory &&) = default;
+    private:
+        using TupleType = std::tuple<FixedParams...>;
+        TupleType fixed_param_tuple;
+
+    public:
 
 
-    template<std::size_t... Is>
-	Base * call_operator_helper(ExternalConstructorParams&&... constructor_args, std::index_sequence<Is...>) const {
+        CppFactory(FixedParams &&... fixed_param_values) :
+                fixed_param_tuple(fixed_param_values...) {}
 
-	// must const cast it since this method is const, so the tuple becomes const
-	return new Child(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType&>(fixed_param_tuple)))...,
-			 std::forward<ExternalConstructorParams>(constructor_args)...);
-    }
-     
-     virtual Base * operator()(ExternalConstructorParams&&... constructor_args) const override {
-	 return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
-				     std::index_sequence_for<FixedParams...>());
-    }
-};
+        CppFactory(const CppFactory &) = delete;
+
+        CppFactory(CppFactory &&) = default;
+
+        CppFactory &operator=(const CppFactory &) = delete;
+
+        CppFactory &operator=(CppFactory &&) = default;
+
+
+        template<std::size_t... Is>
+        Base *call_operator_helper(ExternalConstructorParams &&... constructor_args, std::index_sequence<Is...>) const {
+
+            // must const cast it since this method is const, so the tuple becomes const
+            return new Child(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType &>(fixed_param_tuple)))...,
+                             std::forward<ExternalConstructorParams>(constructor_args)...);
+        }
+
+        virtual Base *operator()(ExternalConstructorParams &&... constructor_args) const override {
+            return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
+                                        std::index_sequence_for<FixedParams...>());
+        }
+    };
 
 
 /**
@@ -410,7 +413,8 @@ public:
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
         // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
-        this->make_jswrapper_object = [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
+        this->make_jswrapper_object =
+                [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
 //            printf("Using JSFactory object at %p\n", (void*)this);
 
             auto context = this->global_context.Get(this->isolate);
@@ -455,7 +459,7 @@ public:
      *   extends the C++ functionality in javascript
      */
     virtual Base * operator()(ExternalConstructorParams&&... constructor_parameters) const override {
-       return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
+        return this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
     }
 
 
@@ -519,140 +523,141 @@ public:
     this->called_from_javascript = true; \
     auto result = v8toolkit::call_javascript_function_with_vars(context, js_function, js_object, typelist, ##__VA_ARGS__); \
     this->called_from_javascript = false; \
-    return cast_to_native(isolate, result); \
+    return cast_to_native(isolate, result);
+
 
 // defines a JS_ACCESS function for a method taking no parameters
 #define JS_ACCESS(return_type, name)\
 virtual return_type name() override {\
     v8toolkit::TypeList<> typelist; \
-    JS_ACCESS_CORE(return_type, name)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
 #define JS_ACCESS_0(return_type, name)\
 virtual return_type name() override {\
     v8toolkit::TypeList<> typelist; \
-    JS_ACCESS_CORE(return_type, name)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
 #define JS_ACCESS_1(return_type, name, t1)\
 virtual return_type name(t1 p1) override {\
     v8toolkit::TypeList<t1> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1)\
 }
 
 #define JS_ACCESS_2(return_type, name, t1, t2) \
 virtual return_type name(t1 p1, t2 p2) override { \
     v8toolkit::TypeList<t1, t2> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2) \
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2) \
 }
 
 #define JS_ACCESS_3(return_type, name, t1, t2, t3)\
 virtual return_type name(t1 p1, t2 p2, t3 p3) override { \
     v8toolkit::TypeList<t1, t2, t3> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3) \
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3) \
 }
 
 #define JS_ACCESS_4(return_type, name, t1, t2, t3, t4)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) override {\
     v8toolkit::TypeList<t1, t2, t3, t4> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4)\
 }
 
 #define JS_ACCESS_5(return_type, name, t1, t2, t3, t4, t5)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5)\
 }
 
 #define JS_ACCESS_6(return_type, name, t1, t2, t3, t4, t5, t6)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6)\
 }
 
 #define JS_ACCESS_7(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7)\
 }
 
 #define JS_ACCESS_8(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8)\
 }
 
 #define JS_ACCESS_9(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8, t9> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 
 #define JS_ACCESS_CONST(return_type, name)\
 virtual return_type name() const override {\
     v8toolkit::TypeList<> typelist; \
-    JS_ACCESS_CORE(return_type, name)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
 #define JS_ACCESS_0_CONST(return_type, name)\
 virtual return_type name() const override {\
     v8toolkit::TypeList<> typelist; \
-    JS_ACCESS_CORE(return_type, name)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
 
 #define JS_ACCESS_1_CONST(return_type, name, t1)\
 virtual return_type name(t1 p1) const override {\
     v8toolkit::TypeList<t1> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1)\
 }
 
 #define JS_ACCESS_2_CONST(return_type, name, t1, t2)\
 virtual return_type name(t1 p1, t2 p2) const override {\
     v8toolkit::TypeList<t1, t2> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2)\
 }
 
 #define JS_ACCESS_3_CONST(return_type, name, t1, t2, t3)\
 virtual return_type name(t1 p1, t2 p2, t3 p3) const override {\
     v8toolkit::TypeList<t1, t2, t3> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3)\
 }
 
 #define JS_ACCESS_4_CONST(return_type, name, t1, t2, t3, t4)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4)\
 }
 
 #define JS_ACCESS_5_CONST(return_type, name, t1, t2, t3, t4, t5)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5)\
 }
 
 #define JS_ACCESS_6_CONST(return_type, name, t1, t2, t3, t4, t5, t6)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6)\
 }
 
 #define JS_ACCESS_7_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7)\
 }
 
 #define JS_ACCESS_8_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8)\
 }
 
 #define JS_ACCESS_9_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8, t9> typelist; \
-    JS_ACCESS_CORE(return_type, name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
+    JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 
 // This can be extended to any number of parameters you need..

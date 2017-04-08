@@ -2,7 +2,7 @@
 #include <memory>
 #include <v8-debug.h>
 
-#include "javascript.h"
+#include "debugger.h"
 
 
 namespace v8toolkit {
@@ -14,8 +14,9 @@ std::atomic<int> script_id_counter(0);
 
 Context::Context(std::shared_ptr<Isolate> isolate_helper,
                  v8::Local<v8::Context> context) :
-    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()),
-    context(v8::Global<v8::Context>(isolate, context))
+    isolate_helper(isolate_helper),
+    isolate(isolate_helper->get_isolate()),
+    context(v8::Global<v8::Context>(*isolate_helper, context))
 {}
 
 void Context::shutdown() {
@@ -107,7 +108,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
     auto local_script = v8::Local<v8::Script>::New(isolate, script);
     auto maybe_result = local_script->Run(context.Get(isolate));
     if (try_catch.HasCaught()) {
-        printf("Context::run threw exception - about to print details:\n");
+//        printf("Context::run threw exception - about to print details:\n");
         ReportException(isolate, &try_catch);
     } else {
 //        printf("Context::run ran without throwing exception\n");
@@ -126,7 +127,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
             // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
             std::rethrow_exception(anyptr_exception_ptr->get());
         } else {
-            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
+//            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -327,8 +328,28 @@ std::shared_ptr<Context> Isolate::create_context()
     auto context_helper = new Context(shared_from_this(), context);
 
     return std::shared_ptr<Context>(context_helper);
-	
 }
+
+std::shared_ptr<DebugContext> Isolate::create_debug_context(short port) {
+    ISOLATE_SCOPED_RUN(this->isolate);
+    v8::TryCatch tc(this->isolate);
+
+    auto ot = this->get_object_template();
+    auto context = v8::Context::New(this->isolate, NULL, ot);
+
+
+    if (tc.HasCaught() || context.IsEmpty()) {
+	    throw V8ExecutionException(this->isolate, tc);
+    }
+
+
+    // can't use make_shared since the constructor is private
+    auto debug_context = new DebugContext(shared_from_this(), context, port);
+
+    return std::shared_ptr<DebugContext>(debug_context);
+
+}
+
 
 v8::Local<v8::ObjectTemplate> Isolate::get_object_template()
 {
@@ -412,9 +433,8 @@ void Platform::expose_debug_as(const std::string & debug_object_name) {
     expose_debug_name = debug_object_name;    
 }
 
-    
 
-void Platform::init(int argc, char ** argv) 
+void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
     assert(!initialized);
     process_v8_flags(argc, argv);
@@ -430,12 +450,11 @@ void Platform::init(int argc, char ** argv)
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
-    
-    // if being built for snapshot use, must call this, otherwise must not call this
-#ifdef USE_SNAPSHOTS
-    v8::V8::InitializeExternalStartupData(argv[0]);
-#endif
-    
+
+    if (snapshot_directory != "") {
+        v8::V8::InitializeExternalStartupData(snapshot_directory.c_str());
+    }
+
     Platform::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();
@@ -476,7 +495,7 @@ Script::Script(std::shared_ptr<Context> context_helper,
     script(v8::Global<v8::Script>(isolate, script)),
     script_source_code(source_code)
 {
-    std::cerr << "source code length: " << source_code.length() << std::endl;
+//    std::cerr << "source code length: " << source_code.length() << std::endl;
 }
 
 std::thread Script::run_thread()
