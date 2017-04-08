@@ -403,7 +403,6 @@ int main(int argc, char* argv[])
                 auto result = script->Run(context);
                 print_maybe_value(result);
             }
-#if 0
             {
                 v8::Local<v8::Script> script_for_static_method = 
                         v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "println(Line.static_method(42));")).ToLocalChecked();
@@ -470,7 +469,6 @@ int main(int argc, char* argv[])
                 (void)script->Run(context);
 
             }
-#endif
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                                    // decimal ascii 100 = 'd'
@@ -507,7 +505,6 @@ int main(int argc, char* argv[])
                 assert(!tc4.HasCaught());
 
             }
-#if 0
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate,
                                                                               "p = new Point(); println(p[4]);")).ToLocalChecked();
@@ -579,7 +576,6 @@ int main(int argc, char* argv[])
                 (void) script->Run(context);
             }
 
-#endif
 
             Foo most_derived_foo_test(0, nullptr);
             v8::Local<v8::Object> most_derived_fooparent_js_object =
