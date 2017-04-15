@@ -30,7 +30,7 @@ class OnlyUsedInTemplate{};
 template<class T, int i>
 class TemplatedClass{};
 
-class  V8TOOLKIT_WRAPPED_CLASS FooGrandParent {
+class FooGrandParent : public v8toolkit::WrappedClassBase {
 public:
     FooGrandParent(char, char, char);
     virtual void foo_grandparent_but_not_foo_virtual();

@@ -8,9 +8,11 @@
 class A : public v8toolkit::WrappedClassBase {
 public:
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
+    A(A * a = nullptr);
+    V8TOOLKIT_USE_NAME(OtherA) A();
 };
 
-class B : A
+class B : A {
 public:
     // this should be generated as a
     using A::custom_extension;

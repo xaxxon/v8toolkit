@@ -676,7 +676,7 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 
 string ConstructorFunction::generate_js_bindings() {
     stringstream result;
-    result << fmt::format("    class_wrapper.add_constructor<{}>(\"{}\", isolate, {});\n",
+    result << fmt::format("    class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
                           this->get_parameter_types_string(), this->js_name, this->get_default_argument_tuple_string()) << endl;
 
     return result.str();
