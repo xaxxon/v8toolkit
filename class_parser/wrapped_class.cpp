@@ -258,6 +258,21 @@ void WrappedClass::parse_all_methods() {
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
 
+        if (auto using_shadow_decl = dyn_cast<UsingShadowDecl>(current_decl)) {
+            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
+            auto target_decl = using_shadow_decl->getTargetDecl();
+            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
+            std::cerr << fmt::format("target decl is cxxmethoddecl? {}", dyn_cast<CXXMethodDecl>(target_decl) != nullptr) << std::endl;
+
+            if (dyn_cast<CXXMethodDecl>(target_decl) == nullptr) {
+                llvm::report_fatal_error(
+                    fmt::format("UsingShadowDecl target decl not a CXXMethodDecl (don't know how to handle this): {}",
+                                target_decl->getNameAsString()));
+            }
+            std::cerr << fmt::format("continuing to parse as if shadow decl target was a method in this class") << std::endl;
+            current_decl = target_decl;
+        }
+
         if (auto template_method = dyn_cast<FunctionTemplateDecl>(current_decl)) {
             std::string full_method_name(template_method->getQualifiedNameAsString());
             std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;

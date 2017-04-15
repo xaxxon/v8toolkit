@@ -1,6 +1,22 @@
-#include <functional>
+#include "class_parser.h"
 
+
+#include <functional>
 #include "sample2.h"
+
+
+class A : public v8toolkit::WrappedClassBase {
+public:
+    V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
+};
+
+class B : A
+public:
+    // this should be generated as a
+    using A::custom_extension;
+};
+
+
 
 template<class T>
 class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
