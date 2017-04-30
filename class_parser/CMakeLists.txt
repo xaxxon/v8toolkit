@@ -52,6 +52,8 @@ add_custom_target(class_parser_driver
         -Xclang ${CMAKE_BINARY_DIR}/class_parser/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
+        -Xclang -plugin-arg-v8toolkit-generate-bindings
+        -Xclang --declaration-count=25
     )
 
 add_custom_target(copy_driver_resources)

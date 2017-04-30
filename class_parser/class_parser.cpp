@@ -65,7 +65,7 @@ vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "cla
 // Top level types that will be immediately discarded
 vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mixin$"};
 
-vector<string> includes_for_every_class_wrapper_file = {"<stdbool.h>", "\"js_casts.h\"", "<v8toolkit/v8_class_wrapper_impl.h>"};
+vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8toolkit/v8_class_wrapper_impl.h>"};
 
 // error if bidirectional types don't make it in due to include file ordering
 // disable "fast_compile" so the V8ClassWrapper code can be generated 
@@ -568,7 +568,9 @@ std::string get_type_string(QualType qual_type,
 
     auto canonical_qual_type = qual_type.getCanonicalType();
 //        cerr << "canonical qual type typeclass: " << canonical_qual_type->getTypeClass() << endl;
-    auto canonical = canonical_qual_type.getAsString();
+    static PrintingPolicy pp = PrintingPolicy(LangOptions());
+    pp.adjustForCPlusPlus();
+    auto canonical = canonical_qual_type.getAsString(pp);
     return regex_replace(canonical, regex("std::__1::"), "std::");
 
 #if 0

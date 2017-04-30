@@ -420,10 +420,19 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
         std::cerr << fmt::format("cc2") << std::endl;
         bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by") << endl;
         std::cerr << fmt::format("cc3") << std::endl;
+        std::cerr << fmt::format("dealing with bidirectional constructor at {} for class {}", (void*)base_type->bidirectional_constructor,base_type->name_alias) << std::endl;
+        if (base_type->bidirectional_constructor == nullptr) {
+            llvm::report_fatal_error(fmt::format("bidirectional constructor: {} for class {}",
+                                                 (void*)base_type->bidirectional_constructor,
+                                                 base_type->name_alias));
+        }
         ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
+        std::cerr << fmt::format("cc3.1") << std::endl;
         int param_position = 1;
         for (auto & parameter : bidirectional_constructor.parameters) {
+        std::cerr << fmt::format("cc3.in_loop top") << std::endl;
             bidirectional_file << fmt::format(", {} var{}", parameter.type.name, param_position++);
+            std::cerr << fmt::format("cc3.in_loop bottom") << std::endl;
         }
 
 

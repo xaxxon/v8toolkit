@@ -9,7 +9,9 @@ class A : public v8toolkit::WrappedClassBase {
 public:
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();
     A(A * a = nullptr);
+    bool some_bool_func(bool, bool *, bool &);
     V8TOOLKIT_USE_NAME(OtherA) A();
+    bool test_bool_type_string;
 };
 
 class B : A {

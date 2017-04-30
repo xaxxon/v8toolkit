@@ -3,6 +3,10 @@
 #include "parsed_method.h"
 #include "class_handler.h"
 
+// Having this too high can lead to VERY memory-intensive compilation units
+// Single classes (+base classes) with more than this number of declarations will still be in one file.
+int MAX_DECLARATIONS_PER_FILE = 50;
+
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
     decl(decl),
     class_name(get_canonical_name_for_decl(decl)),
@@ -371,7 +375,14 @@ void WrappedClass::parse_all_methods() {
                     continue;
                 }
 
-                this->constructors.insert(std::make_unique<ConstructorFunction>(*this, constructor_decl));
+                // make sure there's no dupes
+                auto new_constructor = std::make_unique<ConstructorFunction>(*this, constructor_decl);
+                for (auto & existing_constructor : this->constructors) {
+                    if (new_constructor->js_name == existing_constructor->js_name) {
+                        llvm::report_fatal_error(fmt::format("Duplicate constructor javascript name: {}", new_constructor->js_name));
+                    }
+                }
+                this->constructors.insert(std::move(new_constructor));
                 continue;
             }
             if (dyn_cast<CXXDestructorDecl>(method)) {

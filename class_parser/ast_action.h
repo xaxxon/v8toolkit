@@ -1,5 +1,7 @@
 #pragma once
 
+#include <regex>
+
 #include "clang.h"
 #include "wrapped_class.h"
 
@@ -27,16 +29,14 @@ protected:
 
     bool ParseArgs(const CompilerInstance &CI,
                    const std::vector<std::string> &args) {
-        for (unsigned i = 0, e = args.size(); i != e; ++i) {
+        for (unsigned i = 0, e = args.size(); i < e; ++i) {
             llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
-            // Example error handling.
-            if (args[i] == "-an-error") {
-                DiagnosticsEngine &D = CI.getDiagnostics();
-                unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                                    "invalid argument '%0'");
-                D.Report(DiagID) << args[i];
-                return false;
+            std::regex declaration_count_regex("^--declaration-count=(\\d+)$");
+            std::smatch match_results;
+            if (std::regex_match(args[i], match_results, declaration_count_regex)) {
+                auto count = std::stoi(match_results[1].str());
+                MAX_DECLARATIONS_PER_FILE = count;
             }
         }
         if (args.size() && args[0] == "help")
