@@ -675,6 +675,23 @@ public:
      */
     void register_callback(PropertyChangedCallback callback);
     
+	/**
+	 * Object still has the memory, it just doesn't own it.  It may or may not have owned it before, but now
+	 * it definitely doesn't.
+	 * @param object JS object to make sure no longer owns its internal CPP object
+	 * @return the cpp object from inside the provided JS object
+	 */
+	static T * release_internal_field_memory(v8::Local<v8::Object> object) {
+		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+
+		wrapped_data->weak_callback_data->global.ClearWeak();
+
+		// since the weak callback won't run to delete the SetWeakCallbackData memory, do that now
+		delete wrapped_data->weak_callback_data;
+
+		return wrapped_data->native_object->get();
+	}
 
 	// Common tasks to do for any new js object regardless of how it is created
 	static void initialize_new_js_object(v8::Isolate * isolate,
@@ -685,23 +702,29 @@ public:
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p and any_ptr at %p\n", demangle<T>().c_str(), *js_object, cpp_object, (void*)any_ptr);
 #endif
-	    WrappedData<T> * wrapped_data = new WrappedData<T>(cpp_object);
-
-#ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
-#endif
         if (js_object->InternalFieldCount() == 0) {
             fprintf(stderr, "Maybe you are calling a constructor without 'new'?");
         }
 		assert(js_object->InternalFieldCount() >= 1);
-	    js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
+
+
+		auto weak_callback_data = v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior](v8::WeakCallbackInfo<SetWeakCallbackData> const & info) {
+			destructor_behavior(isolate, cpp_object);
+		});
+
+
+		WrappedData<T> * wrapped_data = new WrappedData<T>(cpp_object, weak_callback_data);
+
+#ifdef V8_CLASS_WRAPPER_DEBUG
+		fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
+#endif
+
+
+		js_object->SetInternalField(0, v8::External::New(isolate, wrapped_data));
 
 		// tell V8 about the memory we allocated so it knows when to do garbage collection
 		isolate->AdjustAmountOfExternalAllocatedMemory(sizeof(T));
 
-		v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior]() {
-			destructor_behavior(isolate, cpp_object);
-		});
     }
 	
 	
@@ -1912,8 +1935,8 @@ struct CastToNative<T&&, std::enable_if_t<std::is_reference<
     > // end result_ofs
 >::value>>
 {
-    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-        return get_object_from_embedded_cpp_object<T>(isolate, value);
+    T && operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+        return std::move(get_object_from_embedded_cpp_object<T>(isolate, value));
     }
 };
 
@@ -1925,6 +1948,24 @@ struct CastToNative<T&&, std::enable_if_t<!std::is_reference<
     > // end result_ofs
 >::value>>;
 
+
+template<class T, class... Rest>
+struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_reference<
+	std::result_of_t<
+		CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+	> // end result_of
+>::value // end is_reference
+>// end enable_if_t
+>// end template
+{
+	std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+		auto object = value->ToObject();
+		T & cpp_object = get_object_from_embedded_cpp_object<T>(isolate, value);
+		T * should_be_the_same_cpp_object = V8ClassWrapper<T>::release_internal_field_memory(object);
+		assert(&cpp_object == should_be_the_same_cpp_object);
+		return std::unique_ptr<T, Rest...>(&cpp_object);
+	}
+};
 
 
 

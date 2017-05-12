@@ -318,39 +318,34 @@ struct CastToNative<const std::vector<T, Rest...>> {
 
 
 
-template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
-    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-	HANDLE_FUNCTION_VALUES;
 
-	// if it's an object, use the memory in the object
-        if (value->IsObject()) {
-            auto object = value->ToObject();
-            if (object->InternalFieldCount() == 1) {
-                auto && result = CastToNative<T>()(isolate, value);
-                return std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
-            }
-        }
-	// otherwise, make a new instance of the type to store in the unique ptr
+// Cast a copyable, standard type to a unique_ptr
+template<class T, class... Rest>
+struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value && !std::is_reference<
+    std::result_of_t<
+        CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_of
+>::value // end is_reference
+>// end enable_if_t
+>// end template
+{
+    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        std::cerr << fmt::format("WRONG ONE") << std::endl;
         return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
     }
 };
 
+
+// cannot cast a non-copyable, standard type to a unique_ptr
 template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value>> {
-    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-	HANDLE_FUNCTION_VALUES;
-        // if T is a user-defined type
-        if (value->IsObject()) {
-            auto object = value->ToObject();
-            if (object->InternalFieldCount() == 1) {
-                auto && result = CastToNative<T>()(isolate, value);
-                return std::unique_ptr<T, Rest...>(CastToNative<T*>()(isolate, value));
-            }
-        }
-        throw CastException(fmt::format("Cannot make unique ptr for type {}  that is not wrapped and not copy constructible", demangle<T>()));
-    }
-};
+struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value && !std::is_reference<
+    std::result_of_t<
+        CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
+    > // end result_of
+>::value // end is_reference
+>// end enable_if_t
+>// end template
+;  // NO IMPLEMENTED
 
 template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
 ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {

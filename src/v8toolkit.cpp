@@ -830,6 +830,35 @@ std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> conte
 
 
 
+SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
+                                         v8::Isolate * isolate,
+                                         const v8::Local<v8::Object> & javascript_object) :
+    callback(callback)
+    {
+        this->global.Reset(isolate, javascript_object);
+    }
+
+
+SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
+                            const v8::Local<v8::Object> & javascript_object,
+                            func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback)
+{
+    // this memory deleted in the GC callback
+    auto callback_data = new SetWeakCallbackData(callback, isolate, javascript_object);
+
+    // set the callback on the javascript_object to be called when it's garbage collected
+    callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
+                                                                [](const v8::WeakCallbackInfo<SetWeakCallbackData> & info) {
+                                                                    SetWeakCallbackData * callback_data = info.GetParameter();
+                                                                    callback_data->callback(info);
+                                                                    callback_data->global.Reset();
+                                                                    delete callback_data; // delete the memory allocated when global_set_weak is called
+                                                                }, v8::WeakCallbackType::kParameter);
+
+    return callback_data;
+}
+
+
 
 
 

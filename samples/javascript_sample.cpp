@@ -546,6 +546,76 @@ void run_inheritance_test()
     });
 }
 
+
+int rvalue_test_class_destructor_ran = 0;
+class RvalueTestClass;
+std::set<RvalueTestClass *> undeallocated_objects;
+class RvalueTestClass {
+public:
+    RvalueTestClass(std::string const & str):str(str){
+        undeallocated_objects.insert(this);
+    }
+    ~RvalueTestClass(){
+//        std::cerr << fmt::format("Destroying {}", (void*)this) << std::endl;
+        assert(undeallocated_objects.find(this) != undeallocated_objects.end());
+        undeallocated_objects.erase(this);
+        assert(std::atoi(str.c_str()) < 20000);rvalue_test_class_destructor_ran++;}
+    RvalueTestClass(RvalueTestClass &&) = default;
+    std::string str;
+};
+
+void takes_rvalue_ref(RvalueTestClass && rvalue_test_class) {
+    RvalueTestClass moved_into(std::move(rvalue_test_class));
+    undeallocated_objects.insert(&moved_into); // normal constructor not run, so it wouldn't otherwise be inserted causing assertion to fire in destructor
+    std::cerr << fmt::format("moved_into: {}", moved_into.str) << std::endl;
+}
+
+void takes_unique_ptr(std::unique_ptr<RvalueTestClass> rvalue_test_class) {
+    int c1 = undeallocated_objects.size();
+//    std::cerr << fmt::format("in takes unique ptr with {}", (void*)rvalue_test_class.get()) << std::endl;
+    rvalue_test_class.reset();
+    assert(undeallocated_objects.size() == c1 - 1);
+}
+
+
+
+void test_rvalues() {
+    auto isolate = Platform::create_isolate();
+    ISOLATE_SCOPED_RUN(isolate->get_isolate());
+    isolate->add_function("takes_rvalue_ref", &takes_rvalue_ref);
+    isolate->add_function("takes_unique_ptr", &takes_unique_ptr);
+    auto & wrapper = isolate->wrap_class<RvalueTestClass>();
+    wrapper.finalize();
+    wrapper.add_constructor<char *>("RvalueTestClass", *isolate);
+    auto c = isolate->create_context();
+    auto moved_out_of_str = c->run("let str = new RvalueTestClass(\"asdf\");"
+        "takes_rvalue_ref(str);"
+        "str;");
+
+    std::cerr << fmt::format("remaining: {}", CastToNative<RvalueTestClass>()(*isolate, moved_out_of_str.Get(*isolate)).str) << std::endl;
+
+
+    // test a little GC..
+    rvalue_test_class_destructor_ran = 0;
+
+    c->run("for(let i = 0; i < 20000; i++) {new RvalueTestClass(`${i}`);}");
+//    c->run("for(let i = 0; i < 20000; i++){new RvalueTestClass(\"some random string\");}");
+    while(!isolate->get_isolate()->IdleNotification(1000)){}
+    std::cerr << fmt::format("destructor ran {} times", rvalue_test_class_destructor_ran) << std::endl;
+    assert(rvalue_test_class_destructor_ran > 100); // if this fires, increase the test count in the javascript above
+
+    // CastToNative<unique_ptr> should clear the GC callback to free the RvalueTestClass object for these calls
+    c->run("for(let i = 20000; i < 30000; i++) {takes_unique_ptr(new RvalueTestClass(\"{}\"));}");
+
+    // original object from test of moving it may still exist, but that should be the only one
+    while(!isolate->get_isolate()->IdleNotification(1000)){}
+    std::cerr << fmt::format("destructor ran {} times (should be 30000) with {} remaining objects", rvalue_test_class_destructor_ran, undeallocated_objects.size()) << std::endl;
+    assert(rvalue_test_class_destructor_ran == 30000);
+    assert(undeallocated_objects.size() < 2);
+
+
+}
+
 class TestClass{
 public:
     int i;
@@ -583,6 +653,9 @@ int main(int argc, char ** argv) {
 
     printf("Testing asserts\n");
     test_asserts();
+    
+    std::cerr << fmt::format("Testing rvalues") << std::endl;
+    test_rvalues();
 
 //    require_directory_test();
 

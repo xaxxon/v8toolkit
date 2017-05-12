@@ -131,6 +131,11 @@ unique_ptr is expensive
  class parser not generating explicit templates for jswrapper types -- making extern types instead, which leads to
  linker errors for undefined symbols
 
+I think JSWrapper<T> should have a static per isolate that is the prototype Base-type object for all bidirectional
+  objects created from the JSFactory
+  - Right now I *think* it makes a new prototype for each object, which is at least a little bad, and at worst a memory leak
+    - saw something like this on the v8-users mailing list around early May 2017
 
 
-
+Should add the ability to know if the wrapped object is owned by the JS object or not (is it DestructorBehavior_Delete or not)
+  - when releasing the memory, would throw exception if not owned - stop from sending bad data to unique_ptr

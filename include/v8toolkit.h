@@ -33,6 +33,18 @@
 
 namespace v8toolkit {
 
+
+
+    struct SetWeakCallbackData {
+        SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
+                            v8::Isolate * isolate,
+                            const v8::Local<v8::Object> & javascript_object);
+
+        func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback;
+        v8::Global<v8::Object> global;
+    };
+
+
     /**
      * Holds the c++ object to be embedded inside a javascript object along with additional debugging information
      *   when requested
@@ -41,8 +53,12 @@ namespace v8toolkit {
     struct WrappedData {
         AnyPtr<T> * native_object;
         std::string native_object_type = demangle<T>();
+        SetWeakCallbackData * weak_callback_data;
 
-        WrappedData(T * native_object) : native_object(new AnyPtr<T>(native_object)) {}
+        WrappedData(T * native_object, SetWeakCallbackData * weak_callback_data) :
+            native_object(new AnyPtr<T>(native_object)),
+            weak_callback_data(weak_callback_data)
+        {}
         ~WrappedData(){delete native_object;}
     };
 
@@ -1164,36 +1180,16 @@ void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8
 }
 
 
+
+
 /**
 * Takes a local and creates a weak global reference callback for it
 * Useful for clearing out C++-allocated memory on javascript garbage collection of an associated javascript object
  * Remember, this is not guaranteed to ever be called
 */
-template<class CALLBACK_FUNCTION>
-void global_set_weak(v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object, CALLBACK_FUNCTION function)
-{
-    struct SetWeakCallbackData{
-        SetWeakCallbackData(CALLBACK_FUNCTION function, v8::Isolate * isolate, const v8::Local<v8::Object> & javascript_object) :
-            function(function) {
-                this->global.Reset(isolate, javascript_object);
-        }
-        CALLBACK_FUNCTION function;
-        v8::Global<v8::Object> global;
-    };
-
-    auto callback_data = new SetWeakCallbackData(function, isolate, javascript_object);
-
-    // set the callback on the javascript_object to be called when it's garbage collected
-    callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
-        [](const v8::WeakCallbackInfo<SetWeakCallbackData> & data) {
-            SetWeakCallbackData * callback_data = data.GetParameter();
-            callback_data->function();
-            callback_data->global.Reset();
-            delete callback_data;
-        }, v8::WeakCallbackType::kParameter);
-}
-
-
+SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
+                     const v8::Local<v8::Object> & javascript_object,
+                     func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback);
 
 
 
