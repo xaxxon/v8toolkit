@@ -33,29 +33,19 @@
 
 namespace v8toolkit {
 
-
-    template<bool condition, class IfTrue, class IfFalse>
-    std::enable_if_t<condition> compile_time_if(IfTrue const & if_true, IfFalse const & = []{}) {
-        if_true();
-    }
-
-    template<bool condition, class IfTrue, class IfFalse>
-    std::enable_if_t<!condition> compile_time_if(IfTrue const &, IfFalse const & if_false = []{}) {
-        if_false();
-    }
-
-
     /**
      * Holds the c++ object to be embedded inside a javascript object along with additional debugging information
      *   when requested
      */
- template<class T>
- struct WrappedData {
-	// TODO: Don't leak this anyptr
-	AnyPtr<T> * native_object;
-	std::string native_object_type = demangle<T>();
-        WrappedData(AnyPtr<T> * native_object) : native_object(native_object) {}
+    template<class T>
+    struct WrappedData {
+        AnyPtr<T> * native_object;
+        std::string native_object_type = demangle<T>();
+
+        WrappedData(T * native_object) : native_object(new AnyPtr<T>(native_object)) {}
+        ~WrappedData(){delete native_object;}
     };
+
 
 
 

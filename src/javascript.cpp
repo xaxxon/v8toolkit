@@ -51,7 +51,9 @@ v8::Local<v8::Value> Context::json(const std::string & json) {
 
 
 
-    Context::~Context() { }
+Context::~Context() {
+    std::cerr << fmt::format("v8toolkit::Context being destroyed (isolate: {})", (void *)this->isolate) << std::endl;
+}
 
 
 std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
@@ -253,6 +255,7 @@ v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
 {
+    isolate->SetData(0, (void *)&this->uuid);
     v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void {
         this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
     });
@@ -370,6 +373,8 @@ Isolate::~Isolate()
     printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 #endif
 
+    wrapper_registery.cleanup_isolate(this->isolate);
+
     // must explicitly Reset this because the isolate will be
     //   explicitly disposed of before the Global is destroyed
     this->global_object_template.Reset();
@@ -483,6 +488,7 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 
     // can't use make_shared since the constructor is private
     auto isolate_helper = new Isolate(v8::Isolate::New(create_params));
+
     return std::shared_ptr<Isolate>(isolate_helper);
 }
 

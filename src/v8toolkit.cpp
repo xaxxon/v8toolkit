@@ -38,6 +38,9 @@ namespace v8toolkit {
 // used in v8_class_wrapper_impl.h to track which global names have been used
 std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
 
+// used in v8_class_wrapper.h to store callbacks for cleaning up wrapper objects when an isolate is destroyed
+V8ClassWrapperInstanceRegistry wrapper_registery;
+
 using namespace ::v8toolkit::literals;
 
 void process_v8_flags(int & argc, char ** argv)

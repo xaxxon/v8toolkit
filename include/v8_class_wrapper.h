@@ -262,6 +262,30 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 #endif
 
 
+/**
+ * Stores a list of callbacks to clean up V8ClassWrapper objects when the associated isolate is destroyed.
+ * An isolate created after a previous isolate is destroyed may have the same address but a new wrapper must be
+ * created.
+ */
+class V8ClassWrapperInstanceRegistry {
+private:
+    std::map<v8::Isolate *, std::vector<func::function<void()>>> isolate_to_callback_map;
+
+public:
+    void add_callback(v8::Isolate * isolate, func::function<void()> callback) {
+        this->isolate_to_callback_map[isolate].push_back(callback);
+    };
+    void cleanup_isolate(v8::Isolate * isolate) {
+//        std::cerr << fmt::format("cleaning up isolate: {}", (void*)isolate) << std::endl;
+        for (auto & callback : this->isolate_to_callback_map[isolate]) {
+            callback();
+        }
+        this->isolate_to_callback_map.erase(isolate);
+    }
+};
+
+extern V8ClassWrapperInstanceRegistry wrapper_registery;
+
 
 /**
  * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
@@ -658,11 +682,10 @@ public:
 										 T * cpp_object,
 										 DestructorBehavior const & destructor_behavior)
 	{
-		auto any_ptr = new AnyPtr<T>(cpp_object);
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p and any_ptr at %p\n", demangle<T>().c_str(), *js_object, cpp_object, (void*)any_ptr);
 #endif
-	    WrappedData<T> * wrapped_data = new WrappedData<T>(any_ptr);
+	    WrappedData<T> * wrapped_data = new WrappedData<T>(cpp_object);
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
         fprintf(stderr, "inserting anyptr<%s>at address %p pointing to cpp object at %p\n", typeid(T).name(), wrapped_data->native_object, cpp_object);
@@ -712,7 +735,12 @@ public:
 
     void init_static_methods(v8::Local<v8::FunctionTemplate> constructor_function_template);
 
-
+    // Any cleanup for when an isolate is destroyed goes in here
+	void isolate_about_to_be_destroyed(v8::Isolate * isolate) {
+//        std::cerr << fmt::format("wrapper<{}> for isolate {} being destroyed", this->class_name, (void*)isolate) << std::endl;
+        // forces object to be re-created next time an instance is requested
+        isolate_to_wrapper_map.erase(isolate);
+	}
 
 	
 	/**
@@ -723,7 +751,9 @@ public:
 
 		auto wrapper_find_result = isolate_to_wrapper_map.find(isolate);
         if ( wrapper_find_result != isolate_to_wrapper_map.end()) {
-			return *wrapper_find_result->second;
+
+			V8ClassWrapper<T> * wrapper = wrapper_find_result->second;
+			return *wrapper;
 		}
 		return *new V8ClassWrapper<T>(isolate);
     }
@@ -772,6 +802,7 @@ public:
 		this->wrap_as_most_derived_object = new WrapAsMostDerived<T, TypeList<CompatibleTypes...>>(this->isolate);
     }
 
+    // allows specifying a special deleter type for objects which need to be cleaned up in a specific way
 	template<template<class> class Deleter>
 	void set_deleter() {
 		assert(!this->finalized);
@@ -881,7 +912,6 @@ public:
 	{
 		// TODO: Expensive - when combined with add_method -- maybe try and move this out of V8ClassWrapper?
 		auto isolate = this->isolate;
-
         assert(existing_cpp_object != nullptr);
 
         // if it's not finalized, try to find an existing CastToJS conversion because it's not a wrapped class
@@ -1809,7 +1839,7 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 	auto wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
-	auto any_base = (v8toolkit::AnyBase *)wrapped_data->native_object;
+	auto any_base = static_cast<v8toolkit::AnyBase *>(wrapped_data->native_object);
 	T * t = nullptr;
 //	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
 	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
@@ -1933,7 +1963,6 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	
 	ANYBASE_PRINT("didn't find match, testing const type now...");
 
-	// TODO: Expensive
 	// if goal type is const and the type to check isn't const, try checking for the const type now
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
         if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
@@ -1961,7 +1990,6 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
-				// TODO: Expensive
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived);
 			}
 		}
@@ -1979,7 +2007,6 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(&cpp_object))) {
-				// TODO: Expensive
 				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(std::move(*derived));
 			}
 		}

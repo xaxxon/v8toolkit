@@ -546,6 +546,11 @@ void run_inheritance_test()
     });
 }
 
+class TestClass{
+public:
+    int i;
+    void func(){};
+};
 
 int main(int argc, char ** argv) {
     
@@ -583,5 +588,30 @@ int main(int argc, char ** argv) {
     run_inheritance_test();
 
     printf("Program ending, so last context and the isolate that made it will now be destroyed\n");
+
+
+    // try to make a duplicate isolate
+    std::cerr << fmt::format("Testing for proper handling of a subsequent isolate with the same address as a previous one") << std::endl;
+    std::set<v8::Isolate *> isolate_addresses;
+    bool got_duplicate = false;
+    for(int i = 0; i < 100; i++) {
+        auto isolate = Platform::create_isolate();
+        std::cerr << fmt::format("Created isolate at {}", (void*)*isolate) << std::endl;
+        V8ClassWrapper<TestClass> & wrapper = isolate->wrap_class<TestClass>();
+        wrapper.add_member<int, TestClass, &TestClass::i>("i");
+        wrapper.add_method("func", &TestClass::func);
+
+        if (isolate_addresses.find(isolate->get_isolate()) != isolate_addresses.end()) {
+            std::cerr << fmt::format("found duplicate, done looking") << std::endl;
+            got_duplicate = true;
+            break;
+        }
+        isolate_addresses.insert(isolate.get()->get_isolate());
+    }
+    if (!got_duplicate) {
+        std::cerr << fmt::format("duplicate isolate address not received, so couldn't test v8classwrapper cleanup") << std::endl;
+    } else {
+        std::cerr << fmt::format("Successfully recreated bindings on a subsequent isolate with the same address as a previous one") << std::endl;
+    }
 }
 

@@ -12,6 +12,8 @@
 
 #include "v8_class_wrapper.h"
 
+#define V8TOOLKIT_JAVASCRIPT_DEBUG
+
 namespace v8toolkit {
 
 class DebugContext;
@@ -68,7 +70,7 @@ private:
     bool shutting_down = false;
 
 	/// unique identifier for each context
-	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
+	boost::uuids::uuid const uuid = v8toolkit::uuid_generator();
 
 
 public:
@@ -492,9 +494,10 @@ private:
     *   subsequently created ones
     */
 	v8::Global<v8::ObjectTemplate> global_object_template;
-    
-    
-	
+
+    boost::uuids::uuid const uuid = v8toolkit::uuid_generator();
+
+
 public:
 
 	virtual ~Isolate();

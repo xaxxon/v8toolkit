@@ -318,7 +318,9 @@ protected:
     v8::Isolate * isolate;
     v8::Global<v8::Context> global_context;
     // Create base portion of new object using wrapped type
-    v8::Global<v8::FunctionTemplate> js_constructor_function;
+
+    // v8toolkit-wrapped Base-type constructor
+    v8::Global<v8::FunctionTemplate> js_base_constructor_function;
 
     // javascript callback for creating properties only on the new type
     v8::Global<v8::Function> js_new_object_constructor_function;
@@ -380,7 +382,7 @@ public:
 
         return std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
 						new_js_object,
-						this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
+						this->js_base_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
 
 						// must const cast it since this method is const, so the tuple becomes const
 						std::forward<InternalConstructorParams>(std::get<Is>(const_cast<TupleType &>(this->internal_param_tuple)))...,
@@ -388,16 +390,20 @@ public:
     }
 
 
-        /**
-    * Takes a context to use while calling a javascript_function that returns an object
-    *   inheriting from JSWrapper
-    */
-    JSFactory(v8::Local<v8::Context> context, v8::Local<v8::Object> prototype, v8::Local<v8::Function> js_new_object_constructor_function, InternalConstructorParams&&... internal_constructor_values) :
+    /**
+     * Takes a context to use while calling a javascript_function that returns an object
+     *   inheriting from JSWrapper
+     */
+    JSFactory(v8::Local<v8::Context> context,
+              v8::Local<v8::Object> prototype,
+              v8::Local<v8::Function> js_new_object_constructor_function,
+              InternalConstructorParams&&... internal_constructor_values) :
+
         isolate(context->GetIsolate()),
         global_context(v8::Global<v8::Context>(isolate, context)),
 
 	    // use the Base type's javascript wrapper type so that all its added data members are available
-	    js_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<Base>::get_instance(isolate).get_function_template())),
+	    js_base_constructor_function(v8::Global<v8::FunctionTemplate>(isolate, V8ClassWrapper<Base>::get_instance(isolate).get_function_template())),
         js_new_object_constructor_function(v8::Global<v8::Function>(isolate, js_new_object_constructor_function)),
         js_prototype(v8::Global<v8::Object>(isolate, prototype)),
         internal_param_tuple(internal_constructor_values...)
@@ -408,7 +414,10 @@ public:
 
 
         // Create a new object of the full wrapper type (i.e. JSMyType : MyType, JSWrapper<MyTYpe>)
-        auto new_js_object = js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+
+        // It's wrong to create a new instance for the prototype of each bidirectional object - they should all have the
+        //   same prototype (pretty sure)
+        auto new_js_object = js_base_constructor_function.Get(isolate)->GetFunction()->NewInstance();
         (void) this->js_prototype.Get(isolate)->SetPrototype(context, new_js_object->GetPrototype());
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
@@ -420,23 +429,24 @@ public:
             auto context = this->global_context.Get(this->isolate);
 
             // Create a new javascript object for Base but then set its prototype to the subclass's prototype
-            v8::Local<v8::Object> new_js_object = this->js_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+            v8::Local<v8::Object> new_js_object = this->js_base_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+
             (void)new_js_object->SetPrototype(context, this->js_prototype.Get(isolate));
 
+            // create a JSWrapper<Base> object that knws how to call all the virtual methods on Base
             auto js_wrapper_class_cpp_object =
                 call_operator_helper(new_js_object,
                                      std::forward<ExternalConstructorParams>(external_constructor_values)...,
                                      std::index_sequence_for<InternalConstructorParams...>());
-            /*
-            auto js_wrapper_class_cpp_object = std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
-                                                    new_js_object,
-                                                    this->js_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
-                                                    *this,
-                                                    std::forward<InternalConstructorParams>(internal_constructor_values)...,
-                                                    std::forward<ExternalConstructorParams>(external_constructor_values)...);
-            */
+
+
+
             auto & wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
-            wrapper.template initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_delete);
+
+            // I think thi sneeds to be leave_alone because the CPP object that this would otherwise delete is holding a v8::Global refernce
+            //   to the JavaScript object which prevents it from being GC'd before the CPP object has already been deleted.
+            // Also, I was running into double-free errors with this set as _delete.
+            wrapper.template initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_leave_alone);
 
             // call javascript "constructor" method (per-instance)
             v8toolkit::call_javascript_function_with_vars(context,

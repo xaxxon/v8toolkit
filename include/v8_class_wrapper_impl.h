@@ -14,6 +14,9 @@ namespace v8toolkit {
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) :
             isolate(isolate)
     {
+        wrapper_registery.add_callback(isolate, [this](){
+            this->isolate_about_to_be_destroyed(this->isolate);
+        });
 		this->isolate_to_wrapper_map.emplace(isolate, this);
 	}
 

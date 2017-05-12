@@ -287,18 +287,18 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
                                                 bool own_properties_only = true);
 
 
-    /**
-* When passed a value representing an array, runs callable with each element of that array (but not on arrays 
-*   contained within the outer array)
-* On any other object type, runs callable with that element
-*/
+/**d
+ * When passed a value representing an array, runs callable with each element of that array (but not on arrays
+ *   contained within the outer array)
+ * On any other object type, runs callable with that element
+ */
 template<class Callable>
 void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, Callable callable) {
-    
+
     if (value->IsArray()) {
         auto array = v8::Local<v8::Object>::Cast(value);
-	auto length = get_array_length(context->GetIsolate(), array);
-	for(int i = 0; i < length; i++) {
+        auto length = get_array_length(context->GetIsolate(), array);
+        for (int i = 0; i < length; i++) {
             callable(array->Get(context, i).ToLocalChecked());
         }
     } else {
