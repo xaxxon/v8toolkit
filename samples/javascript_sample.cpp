@@ -550,6 +550,7 @@ class TestClass{
 public:
     int i;
     void func(){};
+    TestClass(char*){}
 };
 
 int main(int argc, char ** argv) {
@@ -596,10 +597,13 @@ int main(int argc, char ** argv) {
     bool got_duplicate = false;
     for(int i = 0; i < 100; i++) {
         auto isolate = Platform::create_isolate();
+        ISOLATE_SCOPED_RUN(isolate->get_isolate());
         std::cerr << fmt::format("Created isolate at {}", (void*)*isolate) << std::endl;
         V8ClassWrapper<TestClass> & wrapper = isolate->wrap_class<TestClass>();
         wrapper.add_member<int, TestClass, &TestClass::i>("i");
         wrapper.add_method("func", &TestClass::func);
+        wrapper.finalize();
+        wrapper.add_constructor<char*>("TestClass", *isolate);
 
         if (isolate_addresses.find(isolate->get_isolate()) != isolate_addresses.end()) {
             std::cerr << fmt::format("found duplicate, done looking") << std::endl;

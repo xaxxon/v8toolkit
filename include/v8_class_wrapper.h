@@ -738,8 +738,12 @@ public:
     // Any cleanup for when an isolate is destroyed goes in here
 	void isolate_about_to_be_destroyed(v8::Isolate * isolate) {
 //        std::cerr << fmt::format("wrapper<{}> for isolate {} being destroyed", this->class_name, (void*)isolate) << std::endl;
+
         // forces object to be re-created next time an instance is requested
         isolate_to_wrapper_map.erase(isolate);
+
+        // "global" names in the isolate also become available again
+        used_constructor_name_list_map.erase(isolate);
 	}
 
 	

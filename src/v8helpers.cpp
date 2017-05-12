@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <sstream>
 #include <set>
+#include <v8toolkit.h>
 
 #include "v8helpers.h"
 
@@ -87,9 +88,8 @@ int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value)
         return get_array_length(isolate, v8::Local<v8::Array>::Cast(array_value));
     } else {
         // TODO: probably throw?
-        assert(array_value->IsArray());
+        throw V8AssertionException(isolate, "non-array passed to v8toolkit::get_array_length");
     }
-    assert(false); // shut up the compiler
 }
 
 

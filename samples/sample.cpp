@@ -53,7 +53,7 @@ public:
     Point() : x_(69), y_(69) {instance_count++;}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
     Point(const Point & p) {instance_count++; assert(false); /* This is to help make sure none of the helpers are creating copies */ }
-    Point & operator=(const Point &){assert(false);}
+    Point & operator=(const Point &){assert(false); return *this;}
     Point(Point&&){cerr<<"Point move constructor called" << endl;}
     Point & operator=(Point&&){cerr << "Point move assignment called" << endl; return *this;}
     ~Point(){instance_count--;}
