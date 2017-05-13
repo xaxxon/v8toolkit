@@ -145,10 +145,15 @@ add_custom_command(TARGET copy_toolbox_sample_resources POST_BUILD
         ${PROJECT_BINARY_DIR})
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
-add_dependencies(javascript_sample v8toolkit_shared copy_snapshots)
+add_dependencies(javascript_sample v8toolkit_shared copy_snapshots copy_javacsript_sample_modules_dir)
 #target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample ${V8_SHARED_LIBS})
 target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
+
+add_custom_target(copy_javacsript_sample_modules_dir)
+add_custom_command(TARGET copy_javacsript_sample_modules_dir POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/modules ${PROJECT_BINARY_DIR}/modules)
+
 
 
 add_executable(sample samples/sample.cpp)

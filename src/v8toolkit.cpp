@@ -48,20 +48,6 @@ void process_v8_flags(int & argc, char ** argv)
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
 }
 
-
-void expose_debug(const std::string & debug_name) {
-
-    // turn on debugging -- THIS IS WRONG?
-//    static const char * EXPOSE_DEBUG = "--debug";
-//    std::string expose_debug(EXPOSE_DEBUG);
-//    v8::V8::SetFlagsFromString(expose_debug.c_str(), expose_debug.length());
-
-    // expose debug object to javascript
-    static const char * EXPOSE_DEBUG_AS = "--expose-debug-as=";
-    std::string expose_debug_as(EXPOSE_DEBUG_AS);
-    expose_debug_as += debug_name;
-    v8::V8::SetFlagsFromString(expose_debug_as.c_str(), expose_debug_as.length());
-}
     
 void expose_gc()
 {
@@ -445,11 +431,14 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 
     auto isolate = context->GetIsolate();
 
-   /*
-    * printf("Executing module with script origin resource name , line offset: %d, column offset %d, source: %s\n",
-        *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
-           script_origin.ResourceColumnOffset()->Value(), module_source.c_str());
-    */
+
+    std::cerr << fmt::format("ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+                             *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
+                             script_origin.ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
+//     printf("Executing module with script origin resource name , line offset: %d, column offset %d, source: %s\n",
+//        *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
+//           script_origin.ResourceColumnOffset()->Value(), module_source.c_str());
+
 
 
     v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
@@ -464,9 +453,17 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
         assert(false);
     }
 
+
+
     // NEED PROPER ERROR HANDLING HERE
     assert(!maybe_module_function.IsEmpty());
     compiled_function = maybe_module_function.ToLocalChecked();
+
+    std::cerr << fmt::format("module script id: {}", compiled_function->GetScriptOrigin().ScriptID()->Value()) << std::endl;
+    std::cerr << fmt::format("After CompileFunctionInContext: ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+                             *v8::String::Utf8Value(compiled_function->GetScriptOrigin().ResourceName()), compiled_function->GetScriptOrigin().ResourceLineOffset()->Value(),
+                             compiled_function->GetScriptOrigin().ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
+
 
     v8::Local<v8::Object> receiver = v8::Object::New(isolate);
     v8::Local<v8::Value> module_params[2];
@@ -554,15 +551,20 @@ bool require(
                     }
                 }
 
+                // CACHE WAS SEARCHED AND NO RESULT FOUND - DO THE WORK AND CACHE THE RESULT AFTERWARDS
+
                 // Compile the source code.
-                v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
-                                                                       complete_filename.c_str()),
-                                               v8::Integer::New(isolate, 0), // line offset
-                                               v8::Integer::New(isolate, 0)  // column offset
-                        );
+
                 v8::Local<v8::Script> script;
 
                 if (std::regex_search(filename, std::regex(".json$"))) {
+
+                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
+                                                                           complete_filename.c_str()),
+                                                   v8::Integer::New(isolate, 0), // line offset
+                                                   v8::Integer::New(isolate, 0)  // column offset
+                    );
+
                     v8::Local<v8::Value> error;
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
@@ -577,11 +579,23 @@ bool require(
 
                     // cache the result for subsequent requires of the same module in the same isolate
                     if (use_cache) {
-                        // never re-implemented this after moving it into each branch of json/non-json
-                        assert(false);
+                        std::lock_guard<std::mutex> l(require_results_mutex);
+                        auto & isolate_require_results = require_results[isolate];
+                        auto i = isolate_require_results.find(complete_filename);
+                        if (i == isolate_require_results.end()) {
+                            isolate_require_results.emplace(complete_filename, RequireResult(isolate, context, v8::Local<v8::Function>(), result, time(nullptr)));
+                        }
                     }
 
                 } else {
+
+                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
+                                                                           complete_filename.c_str()),
+                                                   0_v8, // line offset
+
+                                                   100_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
+                                                v8::Local<v8::Boolean>());
+
                     v8::Local<v8::Value> error;
                     v8::Local<v8::Function> module_function;
                     
@@ -617,7 +631,7 @@ bool require(
 
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
-    using ReturnType = std::vector<std::pair<std::string, v8::Global<v8::Value>&>>;
+    using ReturnType = std::map<std::string, v8::Global<v8::Value>&>;
 
     add_function(isolate, object_template, "module_list",
 
@@ -625,7 +639,7 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
             ReturnType results;
             auto & isolate_results = require_results[isolate];
             for (auto & result_pair : isolate_results) {
-                results.emplace_back(result_pair.first, result_pair.second.result);
+                results.emplace(result_pair.first, result_pair.second.result);
             }
 			return results;
 		});

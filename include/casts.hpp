@@ -330,7 +330,6 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_c
 >// end template
 {
     std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        std::cerr << fmt::format("WRONG ONE") << std::endl;
         return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
     }
 };
@@ -345,7 +344,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_
 >::value // end is_reference
 >// end enable_if_t
 >// end template
-;  // NO IMPLEMENTED
+;  // INTENTIONALLY NOT IMPLEMENTED
 
 template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
 ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {

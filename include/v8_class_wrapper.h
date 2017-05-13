@@ -220,6 +220,32 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
 
 
+/**
+ * Stores a list of callbacks to clean up V8ClassWrapper objects when the associated isolate is destroyed.
+ * An isolate created after a previous isolate is destroyed may have the same address but a new wrapper must be
+ * created.
+ */
+class V8ClassWrapperInstanceRegistry {
+private:
+	std::map<v8::Isolate *, std::vector<func::function<void()>>> isolate_to_callback_map;
+
+public:
+	void add_callback(v8::Isolate * isolate, func::function<void()> callback) {
+		this->isolate_to_callback_map[isolate].push_back(callback);
+	};
+	void cleanup_isolate(v8::Isolate * isolate) {
+//        std::cerr << fmt::format("cleaning up isolate: {}", (void*)isolate) << std::endl;
+		for (auto & callback : this->isolate_to_callback_map[isolate]) {
+			callback();
+		}
+		this->isolate_to_callback_map.erase(isolate);
+	}
+};
+
+extern V8ClassWrapperInstanceRegistry wrapper_registery;
+
+
+
 
 
  // Cannot make class wrappers for pointer or reference types
@@ -237,8 +263,7 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 
 
 #ifndef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
- class UnusedType;
-#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<UnusedType, T>::value
+#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<T, void>::value
 #endif
 
 
@@ -246,10 +271,9 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 // #define TEST_NO_REAL_WRAPPERS
  
 
- #ifdef TEST_NO_REAL_WRAPPERS
- class UnusedType;
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<std::is_same<T, UnusedType>::value>
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<!std::is_same<T, UnusedType>::value>
+#ifdef TEST_NO_REAL_WRAPPERS
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<std::is_same<T, void>::value>
+#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<!std::is_same<T, void>::value>
 
  #else
 // Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
@@ -261,30 +285,6 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
     !((V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX) || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
 #endif
 
-
-/**
- * Stores a list of callbacks to clean up V8ClassWrapper objects when the associated isolate is destroyed.
- * An isolate created after a previous isolate is destroyed may have the same address but a new wrapper must be
- * created.
- */
-class V8ClassWrapperInstanceRegistry {
-private:
-    std::map<v8::Isolate *, std::vector<func::function<void()>>> isolate_to_callback_map;
-
-public:
-    void add_callback(v8::Isolate * isolate, func::function<void()> callback) {
-        this->isolate_to_callback_map[isolate].push_back(callback);
-    };
-    void cleanup_isolate(v8::Isolate * isolate) {
-//        std::cerr << fmt::format("cleaning up isolate: {}", (void*)isolate) << std::endl;
-        for (auto & callback : this->isolate_to_callback_map[isolate]) {
-            callback();
-        }
-        this->isolate_to_callback_map.erase(isolate);
-    }
-};
-
-extern V8ClassWrapperInstanceRegistry wrapper_registery;
 
 
 /**
@@ -344,9 +344,11 @@ extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_l
 
      template<class>
     V8ClassWrapper<T> & set_parent_type();
- 
-     
-     template<class... Args>
+
+	 static T * release_internal_field_memory(v8::Local<v8::Object> object);
+
+
+			 template<class... Args>
 	 V8ClassWrapper<T> & add_static_method(Args&&...);
 
      T * get_cpp_object(v8::Local<v8::Object> object);
@@ -808,6 +810,7 @@ public:
     std::enable_if_t<static_all_of<std::is_base_of<T,CompatibleTypes>::value...>::value>
     set_compatible_types()
     {
+
         assert(!is_finalized());
 
         if (!std::is_const<T>::value) {
@@ -1959,6 +1962,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_refere
 >// end template
 {
 	std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+		HANDLE_FUNCTION_VALUES;
 		auto object = value->ToObject();
 		T & cpp_object = get_object_from_embedded_cpp_object<T>(isolate, value);
 		T * should_be_the_same_cpp_object = V8ClassWrapper<T>::release_internal_field_memory(object);

@@ -335,7 +335,6 @@ void process_v8_flags(int & argc, char ** argv);
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 */  
 void expose_gc();
-void expose_debug(const std::string & debug_name);
 
 // calls a javascript function with no parameters and returns the value
 v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,

@@ -6,6 +6,26 @@
 Support for specifying default arguments for native calls is now supported and they are
 automatically generated from your C++ source when using the ClassParser plugin.
 
+
+## New Feature: Memory handoff to std::unique_ptr
+
+In JavaScript, if you create a JavaScript object wrapping a C++ object and pass it to a function taking
+a `std::unique_ptr`:
+
+    JavaScript: native_function_taking_std_unique_ptr_MyType(new MyType());
+
+the memory ownership of the C++ `MyType` will be handed off to the unique_ptr.  The JavaScript object
+will still have access to the embedded C++ object, but when the JavaScript object is garbage collected,
+it will not free the memory.  Also, the object may be cleaned up by the `unique_ptr` while the JavaScript object
+is still reachable, so care must be observed.
+
+This is not related to calling a function which takes an rvalue reference.  In that case, while the underlying
+C++ object may be moved out of, the fundamental C++ object (albeit potentially only a skeleton object after
+having been the source object of a move constructor call) still has its lifetime tied to the JavaScript object's.
+
+This memory handoff behavior is available to any other user-defined C++ types by calling
+`V8ClassWrapper::release_internal_field_memory` in the corresponding `CastToNative` specialization for the type.
+
    
 ## New Feature: Debugging embedded JavaScript from Chrome's javascript debugger.
 

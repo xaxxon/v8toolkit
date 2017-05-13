@@ -1,4 +1,5 @@
-function c(){
+function c(num){
+    println(num);
     let c=10;
 }
 

@@ -432,12 +432,6 @@ void Platform::set_max_memory(int new_memory_size_in_mb) {
 }
 
 
-void Platform::expose_debug_as(const std::string & debug_object_name) {
-    assert(!Platform::initialized);
-    expose_debug_value = true;
-    expose_debug_name = debug_object_name;    
-}
-
 
 void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
@@ -447,9 +441,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
     if (expose_gc_value) {
 	    v8toolkit::expose_gc();
     }
-    if (expose_debug_value) {
-	    v8toolkit::expose_debug(expose_debug_name);
-    }
+
     
     // Initialize V8.
     v8::V8::InitializeICU();
@@ -547,8 +539,6 @@ std::unique_ptr<v8::Platform> Platform::platform;
 v8toolkit::ArrayBufferAllocator Platform::allocator;
 
 bool Platform::expose_gc_value = false;
-bool Platform::expose_debug_value = false;
-std::string Platform::expose_debug_name = "";
 int Platform::memory_size_in_mb = -1;
     
 } // end v8toolkit namespace

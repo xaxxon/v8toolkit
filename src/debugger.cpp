@@ -16,66 +16,66 @@ using namespace ::v8toolkit::literals;
 using json = nlohmann::json;
 
 #if 0
-RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
-        RequestResponseMessage(context, json["id"].get<int>()),
-        method_name(json["method"].get<std::string>())
-{}
-
-json RequestMessage::to_json() const {
-    throw InvalidCallException("Request message types shouldn't every be re-serialized to json");
-}
-
-ResponseMessage::ResponseMessage(RequestMessage const & request_message) :
-        RequestResponseMessage(request_message)
-{}
-
-
-MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
-        debug_context(debug_context)
-{
-//    this->add_request_message_handler<Page_GetResourceTree>();
-
-    std::cerr << fmt::format("mapped method names:") << std::endl;
-    for(auto & pair : this->message_map) {
-        std::cerr << fmt::format("{}", pair.first) << std::endl;
-    }
-};
-
-
-
-
-
-
-void MessageManager::process_request_message(std::string const & message_payload) {
-
-    json json = json::parse(message_payload);
-    std::string method_name = json["method"];
-    std::cerr << fmt::format("processing request message with method name: {}", method_name) << std::endl;
-
-    // Try to find a custom handler for the message
-    auto matching_message_pair = this->message_map.find(method_name);
-
-    // if a custom matcher is found, use that
-    if (matching_message_pair != this->message_map.end()) {
-        std::cerr << fmt::format("found custom handler for message type") << std::endl;
-        auto request_message = matching_message_pair->second(message_payload);
-
-        // send the required response message
-        this->debug_context.get_channel().send_message(nlohmann::json(*request_message->generate_response_message()).dump());
-
-        // send any other messages which may be generated based on actions taken because of RequestMessage
-        for (auto & debug_message : request_message->generate_additional_messages()) {
-            nlohmann::json json = *debug_message;
-            this->debug_context.get_channel().send_message(json.dump());
-        }
-    }
-    // otherwise, if no custom behavior is specified for this message type, send it to v8-inspector to handle
-    else {
-        std::cerr << fmt::format("sending message type to v8 inspector") << std::endl;
-        v8_inspector::StringView message_view((uint8_t const *)message_payload.c_str(), message_payload.length());
-        this->debug_context.get_session().dispatchProtocolMessage(message_view);
-    }
-}
+//RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
+//        RequestResponseMessage(context, json["id"].get<int>()),
+//        method_name(json["method"].get<std::string>())
+//{}
+//
+//json RequestMessage::to_json() const {
+//    throw InvalidCallException("Request message types shouldn't every be re-serialized to json");
+//}
+//
+//ResponseMessage::ResponseMessage(RequestMessage const & request_message) :
+//        RequestResponseMessage(request_message)
+//{}
+//
+//
+//MessageManager::MessageManager(v8toolkit::DebugContext & debug_context) :
+//        debug_context(debug_context)
+//{
+////    this->add_request_message_handler<Page_GetResourceTree>();
+//
+//    std::cerr << fmt::format("mapped method names:") << std::endl;
+//    for(auto & pair : this->message_map) {
+//        std::cerr << fmt::format("{}", pair.first) << std::endl;
+//    }
+//};
+//
+//
+//
+//
+//
+//
+//void MessageManager::process_request_message(std::string const & message_payload) {
+//
+//    json json = json::parse(message_payload);
+//    std::string method_name = json["method"];
+//    std::cerr << fmt::format("processing request message with method name: {}", method_name) << std::endl;
+//
+//    // Try to find a custom handler for the message
+//    auto matching_message_pair = this->message_map.find(method_name);
+//
+//    // if a custom matcher is found, use that
+//    if (matching_message_pair != this->message_map.end()) {
+//        std::cerr << fmt::format("found custom handler for message type") << std::endl;
+//        auto request_message = matching_message_pair->second(message_payload);
+//
+//        // send the required response message
+//        this->debug_context.get_channel().send_message(nlohmann::json(*request_message->generate_response_message()).dump());
+//
+//        // send any other messages which may be generated based on actions taken because of RequestMessage
+//        for (auto & debug_message : request_message->generate_additional_messages()) {
+//            nlohmann::json json = *debug_message;
+//            this->debug_context.get_channel().send_message(json.dump());
+//        }
+//    }
+//    // otherwise, if no custom behavior is specified for this message type, send it to v8-inspector to handle
+//    else {
+//        std::cerr << fmt::format("sending message type to v8 inspector") << std::endl;
+//        v8_inspector::StringView message_view((uint8_t const *)message_payload.c_str(), message_payload.length());
+//        this->debug_context.get_session().dispatchProtocolMessage(message_view);
+//    }
+//}
 #endif
 
 WebsocketChannel::~WebsocketChannel() {}

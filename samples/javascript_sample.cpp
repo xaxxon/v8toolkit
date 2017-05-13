@@ -486,6 +486,7 @@ void require_directory_test()
         auto c = i->create_context();
         (*c)([&]{
             require_directory(*c, "modules");
+            c->run("printobj(module_list());");
             c->run("assert_contents(module_list()['modules/b.json'], {\"aa\": [1,2,3,{\"a\":4, \"b\": 5}, 6,7,8]})");
             c->run("printobj(module_list())");
             
@@ -545,7 +546,6 @@ void run_inheritance_test()
         });
     });
 }
-
 
 int rvalue_test_class_destructor_ran = 0;
 class RvalueTestClass;
@@ -626,6 +626,9 @@ public:
 int main(int argc, char ** argv) {
     
     Platform::init(argc, argv, argv[0]);
+    require_directory_test();
+
+    exit(0);
 
     run_type_conversion_test();
 
@@ -657,7 +660,6 @@ int main(int argc, char ** argv) {
     std::cerr << fmt::format("Testing rvalues") << std::endl;
     test_rvalues();
 
-//    require_directory_test();
 
     run_inheritance_test();
 
