@@ -349,6 +349,7 @@ public:
 
 	boost::uuids::uuid const & get_uuid() const;
 	std::string get_uuid_string() const;
+	std::string get_url(std::string const & name) const;
 
     /**
      * Returns the script corresponding to the given id or throws
@@ -365,6 +366,7 @@ public:
 	 * @return the result of the evaluation or empty on failure
 	 */
 	v8::Local<v8::Value> require(std::string const & filename, std::vector<std::string> const & paths);
+	void require_directory(std::string const & directory_name);
 
 };
 

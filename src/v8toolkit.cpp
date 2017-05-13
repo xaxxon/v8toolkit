@@ -500,7 +500,8 @@ bool require(
     const std::vector<std::string> & paths,
     bool track_file_modification_times,
     bool use_cache,
-    func::function<void(RequireResult const &)> callback)
+    func::function<void(RequireResult const &)> callback,
+    func::function<std::string(std::string const &)> resource_name_callback)
 {
 
     auto isolate = context->GetIsolate();
@@ -519,7 +520,12 @@ bool require(
 #else
                 auto complete_filename = path + "/" + filename + suffix;
 #endif
-        
+
+                std::string resource_name = complete_filename;
+                if (resource_name_callback) {
+                    resource_name = resource_name_callback(complete_filename);
+                }
+
                 std::string file_contents;
                 time_t file_modification_time = 0;
                 if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
@@ -560,7 +566,7 @@ bool require(
                 if (std::regex_search(filename, std::regex(".json$"))) {
 
                     v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
-                                                                           complete_filename.c_str()),
+                                                                           resource_name.c_str()),
                                                    v8::Integer::New(isolate, 0), // line offset
                                                    v8::Integer::New(isolate, 0)  // column offset
                     );
@@ -589,12 +595,10 @@ bool require(
 
                 } else {
 
-                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
-                                                                           complete_filename.c_str()),
+                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, resource_name.c_str()),
                                                    0_v8, // line offset
-
-                                                   100_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
-                                                v8::Local<v8::Boolean>());
+                                                   26_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
+                                                   v8::Local<v8::Boolean>());
 
                     v8::Local<v8::Value> error;
                     v8::Local<v8::Function> module_function;
@@ -873,6 +877,73 @@ SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
 }
 
 
+
+
+void foreach_filesystem_helper(const std::string & directory_name,
+                               const volatile bool files,
+                               const volatile bool directories,
+                               std::function<void(const std::string &)> const & callback)
+{
+    // This probably works on more than just APPLE
+#ifndef _MSC_VER
+
+    auto full_directory_name = directory_name;
+    DIR * dir = opendir(full_directory_name.c_str());
+    if (dir == NULL) {
+        printf("Could not open directory %s\n", full_directory_name.c_str());
+        return;
+    }
+    struct dirent * dp;
+    while ((dp = readdir(dir)) != NULL) {
+
+        if ((dp->d_type == DT_DIR && directories && strcmp(dp->d_name, ".") && strcmp(dp->d_name, "..")) ||
+            (dp->d_type == DT_REG && files)) {
+            callback(dp->d_name);
+        }
+    }
+    (void)closedir(dir);
+    return;
+
+#else
+
+    WIN32_FIND_DATA file_metadata;
+	HANDLE directory = FindFirstFile((directory_name + "\\*").c_str(), &file_metadata);
+
+	if (directory ==  INVALID_HANDLE_VALUE) {
+		printf("Could not open directory %s\n", directory_name.c_str());
+		return;
+	}
+	do {
+		if (!strcmp(file_metadata.cFileName, ".") || !strcmp(file_metadata.cFileName, "..")) {
+			continue;
+		}
+		if (
+			((file_metadata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && directories) ||
+			((!(file_metadata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) && files)) {
+			callback(file_metadata.cFileName);
+		} else {
+			printf("Skipping file %s because it's not of desired type file: %d directory: %d\n", file_metadata.cFileName, files, directories);
+			continue;
+		}
+
+
+	} while(FindNextFile(directory, &file_metadata));
+
+	FindClose(directory);
+	return;
+
+
+#endif
+
+}
+
+void foreach_file(const std::string & directory_name, std::function<void(const std::string &)> const & callback) {
+    return foreach_filesystem_helper(directory_name, true, false, callback);
+}
+
+void foreach_directory(const std::string & directory_name, std::function<void(const std::string &)> const & callback) {
+    return foreach_filesystem_helper(directory_name, false, true, callback);
+}
 
 
 

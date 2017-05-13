@@ -24,13 +24,13 @@ int main(int argc, char** argv) {
 
     (*context)([&] {
 
-        require_directory(*context, "modules");
+        context->require_directory("modules");
 
 
         using namespace v8toolkit::literals;
-        v8::ScriptOrigin script_origin("compile_function_in_context.js"_v8,
+        v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(*isolate, context->get_url("test/path/compile_function_in_context").c_str()),
                                        0_v8, // line offset
-                                       12_v8, // column offset
+                                       12_v8, // column offset - stupid having to shift it over for the string length that gets put on it
                                        v8::Local<v8::Boolean>(), // resource_is_shared_cross_origin
                                         100_v8);
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         auto function = maybe_function.ToLocalChecked();
         std::cerr << fmt::format("infinite loop waiting for debugger operations") << std::endl;
         while (true) {
-            function->Call(*context, context->get_context()->Global(), 0, nullptr);
+            (void)function->Call(*context, context->get_context()->Global(), 0, nullptr);
             script3->run();
             context->get_channel().poll();
             usleep(1000000);

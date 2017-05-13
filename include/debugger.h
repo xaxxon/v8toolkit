@@ -48,118 +48,118 @@ V8InspectorSession:
 
 */
 #if 0
-class ResponseMessage;
-
-class DebugMessage {
-
-public:
-    DebugMessage(v8toolkit::DebugContext & debug_context) :
-        debug_context(debug_context)
-    {}
-
-    DebugMessage(DebugMessage const &) = default;
-
-    // the message id associated with this message (either the incoming ID of a
-    //   RequestMessage or the ID of the request a ResponseMessage is for
-    v8toolkit::DebugContext & debug_context;
-
-    virtual nlohmann::json to_json() const = 0;
-};
-
-/**
- *sent from the application to the debugger as informational data, not in direct response to a
- * request
- */
-class InformationalMessage : public DebugMessage {
-
-public:
-    InformationalMessage(v8toolkit::DebugContext & debug_context) :
-        DebugMessage(debug_context)
-    {}
-
-};
-
-void to_json(nlohmann::json& j, const InformationalMessage & informational_message);
-
-
-
-class RequestResponseMessage : public DebugMessage {
-
-public:
-    RequestResponseMessage(v8toolkit::DebugContext & debug_context, int message_id) :
-        DebugMessage(debug_context),
-        message_id(message_id)
-    {}
-
-    int const message_id;
-};
-
-
-class RequestMessage : public RequestResponseMessage {
-private:
-    std::string method_name;
-public:
-    RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json);
-
-    /**
-     * Every RequestMessage must generate a ResponseMessage
-     * @return the corresponding ResponseMessage to this RequestMessage
-     */
-    virtual std::unique_ptr<ResponseMessage> generate_response_message() const = 0;
-
-    /**
-     * A RequestMessage generates 0 or more InformationalMessage objects
-     * @return Any InformationalMessage objects which need to be sent back to the debugger
-     */
-    virtual std::vector<std::unique_ptr<InformationalMessage> > generate_additional_messages() const {return {};}
-
-
-    nlohmann::json to_json() const override;
-};
-
-/**
- * Any message involved in a query/response from the debugger
- */
-class ResponseMessage : public RequestResponseMessage {
-    friend class RequestMessage;
-
-protected:
-    ResponseMessage(RequestMessage const & request_message);
-
-public:
-
-};
-void to_json(nlohmann::json& j, const ResponseMessage & response_message);
-
-
-/**
- * Stores mapping between
- */
-class MessageManager {
-public:
-    // map type between
-    using MessageMap = std::map<std::string, std::function<std::unique_ptr<RequestMessage>(std::string const &)>>;
-private:
-
-    MessageMap message_map;
-
-    v8toolkit::DebugContext & debug_context;
-
-public:
-    MessageManager(v8toolkit::DebugContext & context);
-
-    template<class RequestMessageT, std::enable_if_t<std::is_base_of<RequestMessage, RequestMessageT>::value, int> = 0>
-    void add_request_message_handler() {
-        this->message_map[RequestMessageT::message_name] = [this](std::string const & message_payload){
-            nlohmann::json const & json = nlohmann::json::parse(message_payload);
-            return std::make_unique<RequestMessageT>(this->debug_context, json);
-        };
-    };
-
-    std::vector<std::unique_ptr<ResponseMessage>> generate_response_message(RequestMessage const & request_message);
-
-    void process_request_message(std::string const &message_payload);
-};
+//class ResponseMessage;
+//
+//class DebugMessage {
+//
+//public:
+//    DebugMessage(v8toolkit::DebugContext & debug_context) :
+//        debug_context(debug_context)
+//    {}
+//
+//    DebugMessage(DebugMessage const &) = default;
+//
+//    // the message id associated with this message (either the incoming ID of a
+//    //   RequestMessage or the ID of the request a ResponseMessage is for
+//    v8toolkit::DebugContext & debug_context;
+//
+//    virtual nlohmann::json to_json() const = 0;
+//};
+//
+///**
+// *sent from the application to the debugger as informational data, not in direct response to a
+// * request
+// */
+//class InformationalMessage : public DebugMessage {
+//
+//public:
+//    InformationalMessage(v8toolkit::DebugContext & debug_context) :
+//        DebugMessage(debug_context)
+//    {}
+//
+//};
+//
+//void to_json(nlohmann::json& j, const InformationalMessage & informational_message);
+//
+//
+//
+//class RequestResponseMessage : public DebugMessage {
+//
+//public:
+//    RequestResponseMessage(v8toolkit::DebugContext & debug_context, int message_id) :
+//        DebugMessage(debug_context),
+//        message_id(message_id)
+//    {}
+//
+//    int const message_id;
+//};
+//
+//
+//class RequestMessage : public RequestResponseMessage {
+//private:
+//    std::string method_name;
+//public:
+//    RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json);
+//
+//    /**
+//     * Every RequestMessage must generate a ResponseMessage
+//     * @return the corresponding ResponseMessage to this RequestMessage
+//     */
+//    virtual std::unique_ptr<ResponseMessage> generate_response_message() const = 0;
+//
+//    /**
+//     * A RequestMessage generates 0 or more InformationalMessage objects
+//     * @return Any InformationalMessage objects which need to be sent back to the debugger
+//     */
+//    virtual std::vector<std::unique_ptr<InformationalMessage> > generate_additional_messages() const {return {};}
+//
+//
+//    nlohmann::json to_json() const override;
+//};
+//
+///**
+// * Any message involved in a query/response from the debugger
+// */
+//class ResponseMessage : public RequestResponseMessage {
+//    friend class RequestMessage;
+//
+//protected:
+//    ResponseMessage(RequestMessage const & request_message);
+//
+//public:
+//
+//};
+//void to_json(nlohmann::json& j, const ResponseMessage & response_message);
+//
+//
+///**
+// * Stores mapping between
+// */
+//class MessageManager {
+//public:
+//    // map type between
+//    using MessageMap = std::map<std::string, std::function<std::unique_ptr<RequestMessage>(std::string const &)>>;
+//private:
+//
+//    MessageMap message_map;
+//
+//    v8toolkit::DebugContext & debug_context;
+//
+//public:
+//    MessageManager(v8toolkit::DebugContext & context);
+//
+//    template<class RequestMessageT, std::enable_if_t<std::is_base_of<RequestMessage, RequestMessageT>::value, int> = 0>
+//    void add_request_message_handler() {
+//        this->message_map[RequestMessageT::message_name] = [this](std::string const & message_payload){
+//            nlohmann::json const & json = nlohmann::json::parse(message_payload);
+//            return std::make_unique<RequestMessageT>(this->debug_context, json);
+//        };
+//    };
+//
+//    std::vector<std::unique_ptr<ResponseMessage>> generate_response_message(RequestMessage const & request_message);
+//
+//    void process_request_message(std::string const &message_payload);
+//};
 #endif
 
 // implements sending data to debugger
@@ -235,7 +235,7 @@ public:
      */
     void run_one();
 
-    void send_message(std::string const &message);
+    void send_message(void * data, size_t length);
 
 
     /**

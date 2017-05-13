@@ -173,17 +173,24 @@ void WebsocketChannel::Send(const v8_inspector::StringView &string) {
     std::cerr << string.characters8() << std::endl;
 
     if (string.is8Bit()) {
-        this->send_message((char *) (string.characters8()));
+        this->send_message((void *)string.characters8(), string.length());
     } else {
-        std::string str;
-        str.reserve(string.length() + 1);
-        str.resize(string.length());
-        char const * view_ptr = (char const *)string.characters8();
-        for (int i = 0; view_ptr[i] != '\0'; i += 2) {
-            ((char *)str.data())[i/2] = view_ptr[i];
+        size_t length = string.length();
+        auto source= string.characters16();
+        auto buffer = new char[length];
+        for(int i = 0; i < length; i++) {
+            buffer[i] = source[i];
         }
-        std::wstring wide_string((wchar_t *) (string.characters16()), string.length());
-        this->send_message(str);
+//        std::string str;
+//        str.reserve(string.length() + 1);
+//        str.resize(string.length());
+//        char const * view_ptr = (char const *)string.characters8();
+//        for (int i = 0; view_ptr[i] != '\0'; i += 2) {
+//            ((char *)str.data())[i/2] = view_ptr[i];
+//        }
+//        std::wstring wide_string((wchar_t *) (string.characters16()), string.length());
+        this->send_message((void*)buffer, length);
+        delete [] buffer;
     }
 }
 
@@ -205,12 +212,12 @@ bool WebsocketChannel::websocket_validation_handler(websocketpp::connection_hdl 
 //    }
 //}
 
-void WebsocketChannel::send_message(std::string const & message) {
+void WebsocketChannel::send_message(void * data, size_t length) {
     if (!this->connections.empty()) {
-        std::cerr << fmt::format("Sending message: {}", message) << std::endl;
-        this->debug_server.send(*this->connections.begin(), message, websocketpp::frame::opcode::TEXT);
+//        std::cerr << fmt::format("Sending message: {}", message) << std::endl;
+        this->debug_server.send(*this->connections.begin(), data, length, websocketpp::frame::opcode::TEXT);
     } else {
-        std::cerr << fmt::format("Not sending message because no connections: {}", message) << std::endl;
+        std::cerr << fmt::format("Not sending message because no connections: {}") << std::endl;
     }
     this->message_sent_time = std::chrono::high_resolution_clock::now();
 }

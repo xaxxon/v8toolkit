@@ -1465,7 +1465,8 @@ bool require(v8::Local<v8::Context> context,
              const std::vector<std::string> & paths,
              bool track_modification_times = false,
              bool use_cache = true,
-             func::function<void(RequireResult const &)> callback = func::function<void(RequireResult const &)>()
+             func::function<void(RequireResult const &)> callback = func::function<void(RequireResult const &)>(),
+             func::function<std::string(std::string const &)> resource_name_callback = func::function<std::string(std::string const &)>()
     );
 
 
@@ -1512,6 +1513,12 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object);
 std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> context, v8::Local<v8::Object> object);
 
 v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Script> script);
+
+
+void foreach_file(const std::string & directory_name, std::function<void(const std::string &)> const & callback);
+
+void foreach_directory(const std::string & directory_name, std::function<void(const std::string &)> const & callback);
+
 } // end v8toolkit namespace
 
 

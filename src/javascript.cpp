@@ -81,8 +81,8 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
 	v8::String::NewFromUtf8(this->isolate, javascript_source.c_str());
     
     // this script origin data will be cached within the v8::UnboundScript associated with a Script object
-    // http://v8.paulfryzel.com/docs/master/classv8_1_1_script_compiler_1_1_source.html#ae71a5fe18124d71f9acfcc872310d586
-    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, filename.c_str()),
+    // http://v8.paulfryzel.com/docs/master/classv8_1_1_script_compiler_1_1_source.html#ae71a5      fe18124d71f9acfcc872310d586
+    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, this->get_url(filename).c_str()),
                                v8::Integer::New(isolate, 0), // line offset
                                v8::Integer::New(isolate, 0), // column offset
                                v8::Local<v8::Boolean>(), // resource_is_shared_cross_origin
@@ -228,7 +228,12 @@ boost::uuids::uuid const & Context::get_uuid() const {
     return this->uuid;
 }
 std::string Context::get_uuid_string() const {
+
     return boost::uuids::to_string(this->uuid);
+}
+
+std::string Context::get_url(std::string const & name) const {
+    return fmt::format("v8toolkit://{}/{}", this->get_uuid_string(), name);
 }
 
 
@@ -248,10 +253,19 @@ v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<
                        require_result, paths, false, true, [this](RequireResult const & require_result) {
         this->register_external_function(v8::Global<v8::Function>(require_result.isolate,
                                                                   require_result.function.Get(require_result.isolate)));
-    });
+    },
+    [this](std::string const & filename){return this->get_url(filename);}
+    );
     return require_result;
 }
 
+void Context::require_directory(std::string const & directory_name) {
+
+    foreach_file(directory_name, [&](std::string const & filename) {
+       this->require(filename, {directory_name});
+    });
+
+}
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
 {
