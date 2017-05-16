@@ -12,7 +12,7 @@
 
 #include "v8_class_wrapper.h"
 
-#define V8TOOLKIT_JAVASCRIPT_DEBUG
+//#define V8TOOLKIT_JAVASCRIPT_DEBUG
 
 namespace v8toolkit {
 

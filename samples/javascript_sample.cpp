@@ -360,11 +360,12 @@ void test_casts()
             add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
             c->run("assert_contents(composite, {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]});");
 
-            std::string tuple_string("Hello");
-            auto tuple = make_tuple(1, 2.2, tuple_string);
-            c->expose_variable("tuple", tuple);
-            c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
-
+            {
+                std::string tuple_string("Hello");
+                auto tuple = make_tuple(1, 2.2, tuple_string);
+                c->expose_variable("tuple", tuple);
+                c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
+            }
             // printf("Done testing STL container casts\n");
 
 
@@ -395,7 +396,79 @@ void test_casts()
                 assert (result == "hello");
             });
             c->run("call_function(function(s){return s;})");
-            
+
+            // non-const tuple
+            {
+                auto js_tuple = c->run("[1.1, \"a\", [1, 2, 3], true]");
+                auto tuple = CastToNative<std::tuple<double, std::string, std::vector<int>, bool>>()(*i, js_tuple.Get(*i));
+                assert(std::get<0>(tuple) > 1.0 && std::get<0>(tuple) < 1.2);
+                assert(std::get<1>(tuple) == "a");
+                assert(std::get<2>(tuple).size() == 3);
+                assert(std::get<2>(tuple)[0] == 1);
+                assert(std::get<2>(tuple)[1] == 2);
+                assert(std::get<2>(tuple)[2] == 3);
+                assert(std::get<3>(tuple) == true);
+            }
+
+            // const tuple
+            {
+                auto js_tuple = c->run("[1.1, \"a\", [1, 2, 3], true]");
+                auto tuple = CastToNative<std::tuple<double, std::string, std::vector<int>, bool> const>()(*i, js_tuple.Get(*i));
+                assert(std::get<0>(tuple) > 1.0 && std::get<0>(tuple) < 1.2);
+                assert(std::get<1>(tuple) == "a");
+                assert(std::get<2>(tuple).size() == 3);
+                assert(std::get<2>(tuple)[0] == 1);
+                assert(std::get<2>(tuple)[1] == 2);
+                assert(std::get<2>(tuple)[2] == 3);
+                assert(std::get<3>(tuple) == true);
+            }
+            // pair
+            {
+                auto js_pair = c->run("[1, \"a\"]");
+                auto pair = CastToNative<std::pair<int, std::string>>()(*i, js_pair.Get(*i));
+                assert(pair.first == 1);
+                assert(pair.second == "a");
+            }
+            // const pair
+            {
+                auto js_pair = c->run("[1, \"a\"]");
+                auto pair = CastToNative<std::pair<int, std::string> const>()(*i, js_pair.Get(*i));
+                assert(pair.first == 1);
+                assert(pair.second == "a");
+            }
+
+            // vector
+            {
+                auto js_vector = c->run("[1, 2, 3]");
+                auto vector = CastToNative<std::vector<int>>()(*i, js_vector.Get(*i));
+                assert(vector.size() == 3);
+                assert(vector[2] == 3);
+            }
+            // const vector
+            {
+                auto js_vector = c->run("[1, 2, 3]");
+                auto vector = CastToNative<std::vector<int> const>()(*i, js_vector.Get(*i));
+                assert(vector.size() == 3);
+                assert(vector[2] == 3);
+            }
+
+            // map
+            {
+                auto js_map = c->run("new Object({a: 1, b: 2, c: 3})");
+                auto map = CastToNative<std::map<std::string, int>>()(*i, js_map.Get(*i));
+                assert(map.size() == 3);
+                assert(map["c"] == 3);
+            }
+            // const map
+            {
+                auto js_map = c->run("new Object({a: 1, b: 2, c: 3})");
+                auto map = CastToNative<std::map<std::string, int> const>()(*i, js_map.Get(*i));
+                assert(map.size() == 3);
+                assert(map["c"] == 3);
+            }
+
+
+
         } catch (std::exception & e) {
             printf("Cast tests unexpectedily failed: %s\n", e.what());
             assert(false);  
@@ -628,7 +701,6 @@ int main(int argc, char ** argv) {
     Platform::init(argc, argv, argv[0]);
     require_directory_test();
 
-    exit(0);
 
     run_type_conversion_test();
 
@@ -673,7 +745,7 @@ int main(int argc, char ** argv) {
     for(int i = 0; i < 100; i++) {
         auto isolate = Platform::create_isolate();
         ISOLATE_SCOPED_RUN(isolate->get_isolate());
-        std::cerr << fmt::format("Created isolate at {}", (void*)*isolate) << std::endl;
+//        std::cerr << fmt::format("Created isolate at {}", (void*)*isolate) << std::endl;
         V8ClassWrapper<TestClass> & wrapper = isolate->wrap_class<TestClass>();
         wrapper.add_member<int, TestClass, &TestClass::i>("i");
         wrapper.add_method("func", &TestClass::func);

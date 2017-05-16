@@ -39,13 +39,6 @@ namespace v8toolkit {
 template<TEMPLATE> \
  struct v8toolkit::CastToNative<TYPE>{				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return v8toolkit::CastToNative<const TYPE>()(isolate, value);	\
-    } \
-}; \
-\
-template<TEMPLATE> \
- struct v8toolkit::CastToNative<TYPE const> {				\
-    TYPE const operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
 	HANDLE_FUNCTION_VALUES;
 
 
@@ -54,14 +47,7 @@ template<> \
  struct v8toolkit::CastToNative<TYPE> {				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
 }; \
-\
-template<> \
- struct v8toolkit::CastToNative<const TYPE>{				\
-    const TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-        return v8toolkit::CastToNative<TYPE>()(isolate, value);	\
-    } \
-}; \
- inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
+inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
     HANDLE_FUNCTION_VALUES;
 
 
@@ -152,53 +138,44 @@ struct CastToNative<std::function<Return(Params...)>> {
     std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
 };
 
-template<class Return, class... Params>
-struct CastToNative<std::function<Return(Params...)> const> {
-    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return CastToNative<std::function<Return(Params...)>>()(isolate, value);
-    }
-};
 
+template<class... Ts, std::size_t... Is>
+std::tuple<Ts...> cast_to_native_tuple_helper(v8::Isolate *isolate, v8::Local<v8::Array> array, std::tuple<Ts...>, std::index_sequence<Is...>) {
+    return std::tuple<Ts...>(CastToNative<Ts>()(isolate, array->Get(Is))...);
+}
 
-
-
-
-
-    template<template<class,class> class ContainerTemplate, class SecondT, class FirstT>
-    ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-        HANDLE_FUNCTION_VALUES;
-        if (value->IsArray()) {
-            auto length = get_array_length(isolate, value);
-            if (length != 2) {
-                auto error = fmt::format("Array to std::pair must be length 2, but was {}", length);
-                isolate->ThrowException(v8::String::NewFromUtf8(isolate, error.c_str()));
-                throw v8toolkit::CastException(error);
-            }
-            auto context = isolate->GetCurrentContext();
-            auto array = get_value_as<v8::Array>(value);
-            auto first = array->Get(context, 0).ToLocalChecked();
-            auto second = array->Get(context, 1).ToLocalChecked();
-            return std::pair<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
-                                              v8toolkit::CastToNative<SecondT>()(isolate, second));
-
-        } else {
-            auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
-            std::cout << error << std::endl;
-            throw v8toolkit::CastException(error);
+template<class... Ts>
+struct CastToNative<std::tuple<Ts...>>
+{
+    std::tuple<Ts...> operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
+        if (!value->IsArray()) {
+            throw v8toolkit::CastException(fmt::format("CastToNative tried to create a {} object but was not given a JavaScript array", demangle<std::tuple<Ts...>>()));
         }
-    }
+        v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(value);
 
-template<class FirstT, class SecondT>
-struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
-    std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
+        return cast_to_native_tuple_helper(isolate, array, std::tuple<Ts...>(), std::index_sequence_for<Ts...>());
     }
 };
 
-template<class FirstT, class SecondT>
- struct v8toolkit::CastToNative<std::pair<FirstT, SecondT> const> {
-     std::pair<FirstT, SecondT> const operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-	HANDLE_FUNCTION_VALUES;
+// If the type returns an rvalue, then the the const version is the same as the non-const version
+template<class T>
+struct CastToNative<T const,
+    std::enable_if_t<
+        std::is_same<T,
+            std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>
+                >::value
+    > // enable_if
+> {
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return CastToNative<T>()(isolate, value);
+    }
+
+};
+
+
+template<template<class,class> class ContainerTemplate, class FirstT, class SecondT>
+ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+    HANDLE_FUNCTION_VALUES;
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
@@ -214,13 +191,19 @@ template<class FirstT, class SecondT>
                                           v8toolkit::CastToNative<SecondT>()(isolate, second));
 
     } else {
-	auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
-	std::cout << error << std::endl;
+        auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
+        std::cout << error << std::endl;
         throw v8toolkit::CastException(error);
     }
-}};
+}
 
 
+template<class FirstT, class SecondT>
+struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
+    std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
+    }
+};
 
 
 CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float) return static_cast<float>(value->ToNumber()->Value());}
@@ -304,16 +287,6 @@ struct CastToNative<std::vector<T, Rest...>> {
     }
 };
 
-//Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
-template<class T, class... Rest>
-struct CastToNative<const std::vector<T, Rest...>> {
-
-    using NonConstResultType = std::vector<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>, Rest...>;
-
-    const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return vector_type_helper<std::vector, T, Rest...>(isolate, value);
-    }
-};
 
 
 
@@ -405,20 +378,6 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
 
     ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return multimap_type_helper<std::multimap, Key, Value, Args...>(isolate, value);
-    }
-};
-
-
-//Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
-template<class Key, class Value, class... Args>
-struct CastToNative<std::map<Key, Value, Args...> const> {
-
-    using NonConstResultType = std::map<std::result_of_t<CastToNative<Key>(v8::Isolate *, v8::Local<v8::Value>)>,
-        std::result_of_t<CastToNative<Value>(v8::Isolate *, v8::Local<v8::Value>)>>;
-
-    const NonConstResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        // HANDLE_FUNCTION_VALUES; -- no need for this here, since we call another CastToNative from here
-        return CastToNative<NonConstResultType>()(isolate, value);
     }
 };
 
