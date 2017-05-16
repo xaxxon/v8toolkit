@@ -406,7 +406,7 @@ CAST_TO_JS(double){return v8::Number::New(isolate, value);}
 CAST_TO_JS(long double){return v8::Number::New(isolate, value);}
 
 
-CAST_TO_JS(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
+CAST_TO_JS(std::string){return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());}
 
 CAST_TO_JS(char *){return v8::String::NewFromUtf8(isolate, value);}
 CAST_TO_JS(char const *){return v8::String::NewFromUtf8(isolate, value);}

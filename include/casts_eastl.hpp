@@ -1,5 +1,7 @@
 #pragma once
 
+#include "casts.hpp"
+
 // Tell EASTL not to redefine initializer_list
 #define EA_HAVE_CPP11_INITIALIZER_LIST 1
 
@@ -107,14 +109,13 @@ CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(eastl::string)
 CAST_TO_JS(eastl::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
 
 
-CAST_TO_NATIVE_WITH_CONST(eastl::fixed_string<CharType V8TOOLKIT_COMMA Length V8TOOLKIT_COMMA Overflow V8TOOLKIT_COMMA Allocator>, class CharType V8TOOLKIT_COMMA int Length V8TOOLKIT_COMMA bool Overflow V8TOOLKIT_COMMA class Allocator)
-    return eastl::fixed_string<CharType, Length, Overflow, Allocator>(*v8::String::Utf8Value(value));
+
+template<class CharType, int Length, bool Overflow, class Allocator>
+struct CastToJS<eastl::fixed_string<CharType, Length, Overflow, Allocator>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, eastl::fixed_string<CharType, Length, Overflow, Allocator> const & value) const {
+        return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());
     }
 };
-
-CAST_TO_JS_TEMPLATED(eastl::fixed_string<CharType V8TOOLKIT_COMMA Length V8TOOLKIT_COMMA Overflow V8TOOLKIT_COMMA Allocator>, class CharType V8TOOLKIT_COMMA int Length V8TOOLKIT_COMMA bool Overflow V8TOOLKIT_COMMA class Allocator){
-    return v8::String::NewFromUtf8(isolate, value.c_str());
-}
 
 
 // CastToJS<eastl::vector<>>
