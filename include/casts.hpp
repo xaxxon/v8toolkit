@@ -52,46 +52,13 @@ inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8:
 
 
 
-#define CAST_TO_JS_TEMPLATED(TYPE, TEMPLATE) \
-template<TEMPLATE> struct v8toolkit::CastToJS<const TYPE> {		\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const; \
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const && value) const { return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
-template<TEMPLATE> \
-struct v8toolkit::CastToJS<TYPE> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE && value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
-template<TEMPLATE> \
-struct v8toolkit::CastToJS<TYPE &> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
-template<TEMPLATE> \
-struct v8toolkit::CastToJS<const TYPE &> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
-template<TEMPLATE> \
-inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, TYPE const & value) const
-
-
 
 #define CAST_TO_JS(TYPE)					\
-template<> struct v8toolkit::CastToJS<const TYPE> {		\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, const TYPE value) const; \
-}; \
 template<> \
  struct v8toolkit::CastToJS<TYPE> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const; \
 }; \
-template<> \
- struct v8toolkit::CastToJS<TYPE &> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
- template<> \
- struct v8toolkit::CastToJS<const TYPE &> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE value) const {return v8toolkit::CastToJS<const TYPE>()(isolate, value);} \
-}; \
-inline v8::Local<v8::Value>  v8toolkit::CastToJS<const TYPE>::operator()(v8::Isolate * isolate, const TYPE value) const
+inline v8::Local<v8::Value>  v8toolkit::CastToJS<TYPE>::operator()(v8::Isolate * isolate, TYPE const & value) const
 
 
 /**
@@ -392,6 +359,21 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
 template<typename T, class = void>
 struct CastToJS;
 
+
+template<class T>
+struct CastToJS<T const,
+    std::enable_if_t<
+        std::is_same<T,
+            std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>
+        >::value
+    > // enable_if
+> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
+        return v8toolkit::CastToJS<T>()(isolate, value);
+    }
+};
+
+
 CAST_TO_JS(bool){return v8::Boolean::New(isolate, value);}
 
 //TODO: Should all these operator()'s be const?
@@ -427,6 +409,7 @@ CAST_TO_JS(long double){return v8::Number::New(isolate, value);}
 CAST_TO_JS(std::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
 
 CAST_TO_JS(char *){return v8::String::NewFromUtf8(isolate, value);}
+CAST_TO_JS(char const *){return v8::String::NewFromUtf8(isolate, value);}
 
 template<class T>
 struct CastToJS<T**> {
