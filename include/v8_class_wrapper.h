@@ -337,8 +337,14 @@ extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_l
              MemberType (MemberClass::*member)>
          V8ClassWrapper<T> & add_member_readonly(std::string const &);
 
+	template<auto member>
+	V8ClassWrapper<T> & add_member_readonly(std::string const &);
 
-     template<class...>
+	template<auto member>
+	V8ClassWrapper<T> & add_member(std::string const &);
+
+
+	template<class...>
     V8ClassWrapper<T>& set_compatible_types();
 
      template<class>
@@ -567,17 +573,16 @@ private:
 
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
-	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer)> // type being returned
+	template<auto member> // type being returned
 	static void _getter_helper(v8::Local<v8::Name> property,
 							   v8::PropertyCallbackInfo<v8::Value> const & info) {
 
 		auto isolate = info.GetIsolate();
 
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
-        MemberType & value = cpp_object->*member_pointer;
 
         // add lvalue ref as to know not to delete the object if the JS object is garbage collected
-        info.GetReturnValue().Set(CastToJS<MemberType>()(isolate, value));
+        info.GetReturnValue().Set(CastToJS<decltype(cpp_object->*member)>()(isolate, cpp_object->*member));
     }
 
 
@@ -587,15 +592,14 @@ private:
 	 * @param value new value for property
 	 * @param info general JavaScript state info
 	 */
-	template<class MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
-		std::enable_if_t<std::is_copy_assignable<MemberType>::value, int> = 0>
+	template<auto member>
 	static void _setter_helper(v8::Local<v8::Name> property,
 							   v8::Local<v8::Value> value,
 							   v8::PropertyCallbackInfo<void> const & info) {
 	    auto isolate = info.GetIsolate();
 
 	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
-		cpp_object->*member_pointer = CastToNative<MemberType>()(isolate, value);
+		cpp_object->*member = CastToNative<std::remove_reference_t<decltype(cpp_object->*member)>>()(isolate, value);
 
 	    // call any registered change callbacks
 	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(property), value);
@@ -1096,21 +1100,27 @@ public:
         return this->finalized;
     }
 
+
+
     /**
     * Adds a getter and setter method for the specified class member
     * add_member(&ClassName::member_name, "javascript_attribute_name");
     */
     template<class MemberType,
 		class MemberClass,
-		MemberType (MemberClass::*member),
-		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	void add_member(std::string const & member_name)
-	{
+		MemberType (MemberClass::*member)>
+	void add_member(std::string const & member_name) {
+		this->add_member<member>(member_name);
+	}
+
+
+	template<auto member>
+	void add_member(std::string const & member_name) {
 	    assert(this->finalized == false);
 
 	    if (!std::is_const<T>::value) {
 			V8ClassWrapper<ConstT>::get_instance(isolate).
-				template add_member_readonly<std::add_const_t<MemberType>, MemberClass, member>(member_name);
+				template add_member_readonly<member>(member_name);
 	    }
 
 	    this->check_if_name_used(member_name);
@@ -1120,8 +1130,8 @@ public:
 
 
 		    constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
-						      _getter_helper<MemberType, MemberClass, member>,
-						      _setter_helper<MemberType, MemberClass, member>);
+						      _getter_helper<member>,
+						      _setter_helper<member>);
 		});
 	}
 
@@ -1130,14 +1140,17 @@ public:
 		class MemberClass, 	// allow members from parent types of T
 		MemberType (MemberClass::*member),
 		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
-	void add_member_readonly(std::string const & member_name)
-	{
-	    // make sure to be using the const version even if it's not passed in
-	    using ConstMemberType = std::add_const_t<MemberType>;
+	void add_member_readonly(std::string const & member_name) {
+		this->add_member_readonly<member>(member_name);
+	}
+
+	template<auto member>
+	void add_member_readonly(std::string const & member_name) {
+
 
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
 	    if (!std::is_const<T>::value) {
-		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<ConstMemberType, MemberClass, member>(member_name);
+		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<member>(member_name);
 	    }
 
 	    assert(this->finalized == false);
@@ -1147,7 +1160,7 @@ public:
 	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
-						      _getter_helper<MemberType, MemberClass, member>,
+						      _getter_helper<member>,
 						      0);
 		});
 	}
@@ -1783,7 +1796,7 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 	T&& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		if (!value->IsObject()) {
 			print_v8_value_details(value);
-			throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}"), demangle<T>(), *v8::String::Utf8Value(value));
+			throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}", demangle<T>(), *v8::String::Utf8Value(value)));
 		}
 		auto object = value->ToObject();
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object);

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 project(v8toolkit)
-set (CMAKE_CXX_STANDARD 14)
+#set (CMAKE_CXX_STANDARD 14)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
@@ -38,11 +38,11 @@ set(V8_SHARED_LIBS
 		v8_libplatform)
 
 # https://github.com/fmtlib/fmt
-find_package(fmt REQUIRED)
+#find_package(fmt REQUIRED)
 include_directories(${fmt_INCLUDE_DIRS})
 
 # https://github.com/zaphoyd/websocketpp
-find_package(websocketpp REQUIRED)
+#find_package(websocketpp REQUIRED)
 include_directories(${websocketpp_INCLUDE_DIRS})
 
 # http://www.boost.org/
@@ -186,6 +186,6 @@ add_dependencies(run_samples samples copy_snapshots)
 add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
 
+add_subdirectory(test)
 
 add_subdirectory(class_parser)
-add_subdirectory(test)

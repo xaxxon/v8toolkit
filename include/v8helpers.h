@@ -81,7 +81,8 @@ private:
     std::string reason;
 
 public:
-    CastException(const std::string & reason) : reason(reason + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
+    template<class... Ts>
+    CastException(const std::string & reason, Ts&&... ts) : reason(fmt::format(reason, std::forward<Ts>(ts)...) + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
     virtual const char * what() const noexcept override {return reason.c_str();}
 };
 

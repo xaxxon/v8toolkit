@@ -410,7 +410,9 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
 */
 
 template<typename T, class = void>
-struct CastToJS;
+struct CastToJS {
+    static_assert(always_false_v<T>, "Fallback CastToJS template isn't allowed");
+};
 
 
 template<class T>
@@ -542,13 +544,29 @@ struct CastToJS<std::pair<T1, T2>> {
     }
 };
 
+
+
+
+template<template<class...> class VectorTemplate, class ValueType, class... Rest>
+v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, VectorTemplate<std::remove_reference_t<ValueType>, Rest...> const & vector) {
+
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto array = v8::Array::New(isolate);
+    auto size = vector.size();
+    for (unsigned int i = 0; i < size; i++) {
+        (void) array->Set(context, i, CastToJS<std::remove_reference_t<ValueType>>()(isolate, std::forward<ValueType>(const_cast<ValueType>(vector[i]))));
+    }
+    return array;
+
+}
+
+
 // CastToJS<std::vector<>>
 template<class T, class... Rest>
 struct CastToJS<std::vector<T, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> const & vector);
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> && vector) {
-        return this->operator()(isolate, vector);
-    }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::vector<T, Rest...> && vector);
 };
 
 
@@ -628,12 +646,18 @@ struct CastToJS<std::unique_ptr<T, Rest...>> {
  * its memory.  This is treated just as if the call were returning a T* instead of a unique_ptr<T>
  */
 template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...> &> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
+struct CastToJS<std::unique_ptr<T, Rest...> &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...>>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
+//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+        return CastToJS<T>()(isolate, *unique_ptr.get());
+    }
 };
 template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...> const &> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr);
+struct CastToJS<std::unique_ptr<T, Rest...> const &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...> const>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr)  {
+//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
+        return CastToJS<T*>()(isolate, unique_ptr.get());
+    }
 };
 
 
@@ -646,14 +670,18 @@ struct CastToJS<std::shared_ptr<T>> {
 };
 
 
-template<template<class...> class VectorTemplate, class ValueType, class... Rest>
-v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, VectorTemplate<ValueType, Rest...> const & vector);
 
 
 template<class T, class... Rest>
-v8::Local<v8::Value>CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *isolate, std::vector<T, Rest...> const & vector) {
-    return cast_to_js_vector_helper<std::vector, T, Rest...>(isolate, vector);
+v8::Local<v8::Value> CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *isolate, std::vector<T, Rest...> const & vector) {
+    return cast_to_js_vector_helper<std::vector, T&, Rest...>(isolate, vector);
 }
+
+template<class T, class... Rest>
+v8::Local<v8::Value> CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate *isolate, std::vector<T, Rest...> && vector) {
+    return cast_to_js_vector_helper<std::vector, T&&, Rest...>(isolate, vector);
+}
+
 
 
 
@@ -879,44 +907,15 @@ CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::un
  * */
 template<class T, class... Rest> v8::Local<v8::Value>
 CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-    return CastToJS<T>()(isolate, std::move(*unique_ptr.release()));
-}
-
-
-template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::unique_ptr<T, Rest...> &>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-    return CastToJS<T>()(isolate, *unique_ptr.get());
-}
-
-
-template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::unique_ptr<T, Rest...> const &>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-    return CastToJS<T*>()(isolate, unique_ptr.get());
+    auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
+    unique_ptr.reset();
+    return result;
 }
 
 
 
 
 
-
-
-
-template<template<class...> class VectorTemplate, class ValueType, class... Rest>
-v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, VectorTemplate<ValueType, Rest...> const & vector) {
-    using VectorT = VectorTemplate<ValueType, Rest...>;
-
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto array = v8::Array::New(isolate);
-    auto size = vector.size();
-    for (unsigned int i = 0; i < size; i++) {
-        (void) array->Set(context, i, CastToJS<ValueType>()(isolate, const_cast<ValueType &>(vector[i])));
-    }
-    return array;
-
-}
 
 
 } // end namespace v8toolkit

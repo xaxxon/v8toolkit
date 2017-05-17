@@ -1,34 +1,8 @@
-#include <v8_class_wrapper.h>
-#include <javascript.h>
 #include "testing.h"
 
-using namespace v8toolkit;
-
-class TypeCheckerTest_ParentClass : public v8toolkit::WrappedClassBase {};
-class TypeCheckerTest_ChildClass : public TypeCheckerTest_ParentClass {};
 
 
-class TypeCheckerFixture : public PlatformFixture {
-
-public:
-    IsolatePtr i;
-    ContextPtr c;
-    TypeCheckerFixture() {
-        i = v8toolkit::Platform::create_isolate();
-        i->add_assert();
-    }
-
-    void create_context() {
-        c = i->create_context();
-
-        c->add_function("EXPECT_TRUE", [](bool expected_true_value) {
-            EXPECT_TRUE(expected_true_value);
-        });
-    }
-
-};
-
-TEST_F(TypeCheckerFixture, NumberTypes) {
+TEST_F(JavaScriptFixture, NumberTypes) {
     this->create_context();
 
     (*c)([&]{
@@ -55,7 +29,7 @@ TEST_F(TypeCheckerFixture, NumberTypes) {
     });
 }
 
-TEST_F(TypeCheckerFixture, StringTypes) {
+TEST_F(JavaScriptFixture, StringTypes) {
     this->create_context();
 
     (*c)([&] {
@@ -69,47 +43,127 @@ TEST_F(TypeCheckerFixture, StringTypes) {
 }
 
 
-TEST_F(TypeCheckerFixture, Vectors) {
+template<class T>
+struct FlaggedDeleter {
+    static bool deleted;
+    void operator()(T * t) {
+        this->deleted = true;
+        delete t;
+    }
+};
+
+template<class T>
+bool FlaggedDeleter<T>::deleted = false;
+
+TEST_F(JavaScriptFixture, UniquePointer_UnwrappedTypes) {
+    this->create_context();
+    (*c)([&] {
+        {
+            FlaggedDeleter<std::string>::deleted = false;
+            auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
+            auto object = CastToJS<decltype(upi)>()(*i, std::move(upi));
+
+
+            // CastToJS should have taken ownership of the unique_ptr and deleted its memory because it's
+            //   an unwrapped type
+            EXPECT_TRUE(FlaggedDeleter<std::string>::deleted);
+
+            // string should have been moved out of
+            EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
+
+        }
+        {
+            FlaggedDeleter<std::string>::deleted = false;
+            auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
+            auto && rrupi = upi;
+            auto object = CastToJS<decltype(upi)>()(*i, std::move(rrupi));
+
+
+
+            // CastToJS should have taken ownership of the unique_ptr and deleted its memory because it's
+            //   an unwrapped type
+            EXPECT_TRUE(FlaggedDeleter<std::string>::deleted);
+
+            // string should have been moved out of
+            EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
+
+        }
+        {
+            {
+                FlaggedDeleter<std::string>::deleted = false;
+                auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
+                auto object = CastToJS<decltype(upi) & >()(*i, std::move(upi));
+
+                // string should NOT have been moved out of
+                EXPECT_STREQ(upi->c_str(), "test string");
+                EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
+
+
+                // sending in unique_ptr by lvalue ref shouldn't do anything to the unique_ptr
+                EXPECT_FALSE(FlaggedDeleter<std::string>::deleted);
+            }
+            // the unique_ptr goes out of scope and deletes as normal
+            EXPECT_TRUE(FlaggedDeleter<std::string>::deleted);
+
+        }
+    });
+}
+
+
+
+TEST_F(JavaScriptFixture, Vectors) {
 
     this->create_context();
 
     (*c)([&] {
+        {
+            std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
+            c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
+            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
+        }
+        {
+            std::vector<std::string> const cv{"hello", "there", "this", "is", "a", "vector"};
+            c->add_variable("cv", CastToJS<decltype(cv)>()(*i, cv));
+            c->run("assert_contents(cv, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
+        }
+        {
+            // non-wrapped element type, so the original vector remains - no new object of the Element type to move
+            //   them into.
+            std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
+            c->add_variable("v", CastToJS<decltype(v)>()(*i, std::move(v)));
+            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
+        }
 
-        std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
-        c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
-        c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
 
-        std::vector<std::string> const cv{"hello", "there", "this", "is", "a", "vector"};
-        c->add_variable("cv", CastToJS<decltype(cv)>()(*i, cv));
-        c->run("assert_contents(cv, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
 
 
         // vector
         {
-            auto js_vector = c->run("[1, 2, 3]");
-            auto vector = CastToNative<std::vector<int>>()(*i, js_vector.Get(*i));
-            assert(vector.size() == 3);
-            assert(vector[2] == 3);
+            auto js_vector = c->run("[`a`, `b`, `c`]");
+            auto vector = CastToNative<std::vector<std::string>>()(*i, js_vector.Get(*i));
+            EXPECT_EQ(vector.size(), 3);
+            EXPECT_EQ(vector[2], "c");
         }
         // const vector
         {
-            auto js_vector = c->run("[1, 2, 3]");
-            auto vector = CastToNative<std::vector<int> const>()(*i, js_vector.Get(*i));
-            assert(vector.size() == 3);
-            assert(vector[2] == 3);
+            auto js_vector = c->run("[`a`, `b`, `c`]");
+            auto vector = CastToNative<std::vector<std::string> const>()(*i, js_vector.Get(*i));
+            EXPECT_EQ(vector.size(), 3);
+            EXPECT_EQ(vector[2], "c");
         }
 
     });
 }
 
 
-TEST_F(TypeCheckerFixture, ContainerTypes) {
+/**
+ * Move each of these into its own test for its container type
+ */
+TEST_F(JavaScriptFixture, ContainerTypes) {
 
     this->create_context();
 
     (*c)([&] {
-
-
 
         std::list<float> l{1.5, 2.5, 3.5, 4.5};
         c->add_variable("l", CastToJS<decltype(l)>()(*i, l));
