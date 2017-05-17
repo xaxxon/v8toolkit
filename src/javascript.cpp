@@ -52,7 +52,7 @@ v8::Local<v8::Value> Context::json(const std::string & json) {
 
 
 Context::~Context() {
-    std::cerr << fmt::format("v8toolkit::Context being destroyed (isolate: {})", (void *)this->isolate) << std::endl;
+//    std::cerr << fmt::format("v8toolkit::Context being destroyed (isolate: {})", (void *)this->isolate) << std::endl;
 }
 
 
@@ -397,6 +397,8 @@ Isolate::~Isolate()
 
 void Isolate::add_assert()
 {
+
+    // evals an expression and tests for truthiness
     add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
@@ -424,7 +426,8 @@ void Isolate::add_assert()
         }
         
     });
-    
+
+    // Does deep element inspection to determine equality
     add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
         auto isolate = args.GetIsolate();
         if(args.Length() != 2 || !compare_contents(*this, args[0], args[1])) {

@@ -72,6 +72,9 @@ namespace v8toolkit {
 struct DestructorBehavior
 {
 	virtual void operator()(v8::Isolate * isolate, const void * object) const = 0;
+
+	// wehther this destructor is actually destructive to memory it is given.  Does it "own" the memory or not.
+	virtual bool destructive() const = 0;
 };
 
 
@@ -86,6 +89,7 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
+	bool destructive() const { return true; }
 };
 
 /**
@@ -96,6 +100,8 @@ struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 	void operator()(v8::Isolate * isolate, const void * void_object) const {
         V8TOOLKIT_DEBUG("Not deleting object %p during V8 garbage collection\n", void_object);
 	}
+	bool destructive() const { return false; }
+
 };
 
 
@@ -257,14 +263,6 @@ extern V8ClassWrapperInstanceRegistry wrapper_registery;
  *   try to instantiate it for a very large number of types which can drastically slow down compilation.
  * Setting an explicit value for this is NOT required - it is just a compile-time, compile-RAM (and maybe binary size) optimizatioan
  */
-#ifdef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
-#error this is no longer supported
-#endif
-
-
-#ifndef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE
-#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE !std::is_same<T, void>::value
-#endif
 
 
  // uncomment this to see the effects of generating the wrapper class on compile time (but won't actually run correctly)
@@ -272,17 +270,18 @@ extern V8ClassWrapperInstanceRegistry wrapper_registery;
  
 
 #ifdef TEST_NO_REAL_WRAPPERS
+
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<std::is_same<T, void>::value>
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<!std::is_same<T, void>::value>
 
  #else
 // Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    ((V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX) || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+    (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX)>
 
 // otherwise use the 'cheap' specialization
 #define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    !((V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX) || (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE))>
+    !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX)>
 #endif
 
 
@@ -304,7 +303,7 @@ extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_l
      class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
  public:
 
-     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
+//     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
 
 	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context,
                                                     T * existing_cpp_object,
@@ -578,7 +577,7 @@ private:
         MemberType & value = cpp_object->*member_pointer;
 
         // add lvalue ref as to know not to delete the object if the JS object is garbage collected
-        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberType &>>()(isolate, value));
+        info.GetReturnValue().Set(CastToJS<MemberType>()(isolate, value));
     }
 
 
@@ -683,17 +682,28 @@ public:
 	 * @param object JS object to make sure no longer owns its internal CPP object
 	 * @return the cpp object from inside the provided JS object
 	 */
-	static T * release_internal_field_memory(v8::Local<v8::Object> object) {
+	T * release_internal_field_memory(v8::Local<v8::Object> object) {
 		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+
+
+		if (!std::has_virtual_destructor<T>::value && dynamic_cast<Any<T> *>(wrapped_data->native_object) == nullptr) {
+			throw CastException("Tried to release internal field memory on the wrong type for a non-virtual-destructor type");
+		}
 
 		wrapped_data->weak_callback_data->global.ClearWeak();
 
 		// since the weak callback won't run to delete the SetWeakCallbackData memory, do that now
 		delete wrapped_data->weak_callback_data;
 
-		return wrapped_data->native_object->get();
+		return V8ClassWrapper<T>::get_cpp_object(object);
 	}
+
+    static bool does_object_own_memory(v8::Local<v8::Object> object) {
+        auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+        WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+        return wrapped_data->weak_callback_data != nullptr && wrapped_data->weak_callback_data->destructive;
+    }
 
 	// Common tasks to do for any new js object regardless of how it is created
 	static void initialize_new_js_object(v8::Isolate * isolate,
@@ -710,9 +720,14 @@ public:
 		assert(js_object->InternalFieldCount() >= 1);
 
 
-		auto weak_callback_data = v8toolkit::global_set_weak(isolate, js_object, [isolate, cpp_object, &destructor_behavior](v8::WeakCallbackInfo<SetWeakCallbackData> const & info) {
-			destructor_behavior(isolate, cpp_object);
-		});
+		auto weak_callback_data = v8toolkit::global_set_weak(
+			isolate,
+			js_object,
+			[isolate, cpp_object, &destructor_behavior](v8::WeakCallbackInfo<SetWeakCallbackData> const & info) {
+				destructor_behavior(isolate, cpp_object);
+			},
+			destructor_behavior.destructive()
+		);
 
 
 		WrappedData<T> * wrapped_data = new WrappedData<T>(cpp_object, weak_callback_data);
@@ -948,7 +963,8 @@ public:
 	    //*** IF YOU ARE HERE LOOKING AT AN INFINITE RECURSION CHECK THE TYPE IS ACTUALLY WRAPPED ***
 	    if (!this->is_finalized()) {
             // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
-            return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
+//            return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
+			throw CastException(fmt::format("Tried to wrap existing cpp object for a type that isn't finalized: {}", demangle<T>()));
         }
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
@@ -1432,7 +1448,7 @@ public:
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
                 WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
                 auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(
-                    static_cast<AnyBase *>(wrapped_data->native_object));
+                    wrapped_data->native_object);
 
 //			    assert(backing_object_pointer != nullptr);
                 // bind the object and method into a func::function then build the parameters for it and call it
@@ -1519,7 +1535,7 @@ public:
 
 	}
 
-
+#if 0
 	/**
 	 * http://v8.paulfryzel.com/docs/master/classv8_1_1_object_template.html#a66fa7b04c87676e20e35497ea09a0ad0
 	 * Returning either a nullptr or throwing NoResultAvailable exception means the value was not found
@@ -1547,7 +1563,7 @@ public:
 					try {
 						auto str = *v8::String::Utf8Value(property_name);
 						assert(str);
-							handle_getter_result(getter_callback(cpp_object, str), info);
+						handle_getter_result(getter_callback(cpp_object, str), info);
 						return;
 					} catch(NoResultAvailable) {
 						return;
@@ -1626,7 +1642,7 @@ public:
 		this->add_named_property_handler(bound_getter, bound_setter);
 	}
 
-
+#endif
 
 	/**
 	 * ADVANCED: allows direct customization of the v8::FunctionTemplate used to create objects
@@ -1657,36 +1673,149 @@ template<class T>
 class JSWrapper;
 
 
-template<typename T, class>
-struct CastToJS {
 
-    
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object){
-	    V8TOOLKIT_DEBUG("CastToJS from lvalue ref %s\n", demangle<T>().c_str());
-		return CastToJS<typename std::add_pointer<T>::type>()(isolate, &cpp_object);
+template<class T>
+struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
+
+	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object) {
+		return v8::Local<v8::Value>();
 	}
 
-	/**
-	* If an rvalue is passed in, a copy must be made.
-	*/
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object){
-        using NoRefT = std::remove_reference_t<T>;
-		V8TOOLKIT_DEBUG("In base cast to js struct with rvalue ref");
-		V8TOOLKIT_DEBUG("Asked to convert rvalue type, so copying it first\n");
-
-		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
-		auto copy = new NoRefT(std::move(cpp_object));
-		auto context = isolate->GetCurrentContext();
-		V8ClassWrapper<NoRefT> & class_wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
-		auto result = class_wrapper.template wrap_existing_cpp_object(context, copy, *class_wrapper.destructor_behavior_delete);
-        V8TOOLKIT_DEBUG("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
-        
-        return result;
+	// An rvalue is presented, so the memory is handed off to Javascript
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object) {
+		return v8::Local<v8::Value>();
 	}
 };
 
 
 
+
+template<class T>
+struct CastToJS<T*, std::enable_if_t<is_wrapped_type_v<T>>> {
+
+    // An lvalue is presented, so the memory will not be cleaned up by JavaScript
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object) {
+        if (cpp_object == nullptr) {
+            return v8::Undefined(isolate);
+        }
+
+        assert(cpp_object != (void *) 0xbebebebebebebebe);
+
+        V8TOOLKIT_DEBUG("CastToJS from T* %s\n", demangle_typeid_name(typeid(T).name()).c_str());
+        auto context = isolate->GetCurrentContext();
+        V8ClassWrapper <T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+
+#ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
+        using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
+//		fprintf(stderr, "Checking to see if object * is a JSWrapper *\n");
+
+        if (std::is_const<T>::value) {
+            auto js_wrapper = safe_dynamic_cast<JSWrapperType const *>(cpp_object);
+            if (js_wrapper) {
+                return CastToJS<const JSWrapperType>()(isolate, *js_wrapper);
+            }
+        } else {
+            // this only runs if it's non-const, so casting is not scary - only to trick compiler
+            using NonConstT = std::remove_const_t<T>;
+            auto js_wrapper = safe_dynamic_cast<JSWrapperType *>(const_cast<NonConstT *>(cpp_object));
+            if (js_wrapper) {
+                return CastToJS<JSWrapperType>()(isolate, *js_wrapper);
+            }
+        }
+
+#endif
+        V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+
+        /** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
+        return class_wrapper.template wrap_existing_cpp_object(context, cpp_object,
+                                                               *class_wrapper.destructor_behavior_leave_alone);
+    }
+};
+
+
+template<class T>
+struct CastToJS<T&, std::enable_if_t<is_wrapped_type_v<T>>> {
+
+	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object) {
+		return CastToJS<T*>()(isolate, &cpp_object);
+	}
+};
+
+
+template<class T>
+struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
+
+	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object) {
+		assert(false);
+		// need to move the memory in
+	}
+};
+
+
+
+
+template<typename T>
+struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
+{
+	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		return T(*CastToNative<T*>()(isolate, value));
+	}
+};
+
+
+template<typename T>
+struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
+{
+	T& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		return *CastToNative<T*>()(isolate, value);
+	}
+};
+
+
+template<typename T>
+struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
+{
+	// to "give permission" to have the object moved out of, this object must own the memory.  It doesn't
+	//   release ownership of the memory for the object, just the data in the object
+	T&& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		if (!value->IsObject()) {
+			print_v8_value_details(value);
+			throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}"), demangle<T>(), *v8::String::Utf8Value(value));
+		}
+		auto object = value->ToObject();
+		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object);
+		if (V8ClassWrapper<T>::does_object_own_memory(object)) {
+			return std::move(*cpp_object); // but do not release the memory
+		} else if constexpr(std::is_copy_constructible<T>::value) {
+			// return a copy
+			return T(*cpp_object);
+		}
+		throw CastException("Could not cast object to {} && because it doesn't own it's memory and it's not copy constructible", demangle<T>());
+	}
+};
+
+template<typename T>
+struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
+{
+	T* operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		if (!value->IsObject()) {
+			throw CastException("CastToNative wasn't given a javascript object to try to convert to a wrapped class");
+		}
+		return wrapper.get_cpp_object(value->ToObject());
+	}
+};
+
+
+
+
+
+
+
+#if 0
  
 /**
 * Attempt to use V8ClassWrapper to wrap any remaining types not handled by the specializations in casts.hpp
@@ -1707,7 +1836,7 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
 		// if the type is polymorphic and potentially bidirectional, check to see if it actually is
-		using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
+		using JSWrapperType = JSWrapp     er<std::remove_const_t<T>>;
 //		fprintf(stderr, "Checking to see if object * is a JSWrapper *\n");
 
 		if (std::is_const<T>::value) {
@@ -1731,107 +1860,133 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
 	}
 };
+//
+//template<typename T>
+//struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
+//	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
+//
+//	    if (cpp_object == nullptr) {
+//		return v8::Local<v8::Object>();
+//	    }
+//	    assert(cpp_object != (void *)0xbebebebebebebebe);
+//
+//
+//	    V8TOOLKIT_DEBUG("CastToJS from T* %s\n", demangle<T>().c_str());
+//		auto context = isolate->GetCurrentContext();
+//		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+//
+//		V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+//
+//		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
+//	}
+//
+// };
+//
 
-template<typename T>
-struct CastToJS<T*, std::enable_if_t<!std::is_polymorphic<T>::value>> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
-
-	    if (cpp_object == nullptr) {
-		return v8::Local<v8::Object>();
-	    }
-	    assert(cpp_object != (void *)0xbebebebebebebebe);
-
-
-	    V8TOOLKIT_DEBUG("CastToJS from T* %s\n", demangle<T>().c_str());
-		auto context = isolate->GetCurrentContext();
-		V8ClassWrapper<T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
-
-		V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
-
-		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
-	}
-
- };
-
+// Pointers to wrapped types
  template<typename T>
-     struct CastToJS<T * const> {
-     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object){
+     struct CastToJS<T, std::enable_if_t<std::is_pointer<T>::value && is_wrapped_type_v<T>>> {
+     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const cpp_object){
 
-         if (cpp_object == nullptr) {
-             return v8::Local<v8::Object>();
-         }
+		 if (cpp_object == nullptr) {
+			 return v8::Local<v8::Object>();
+		 }
          assert(cpp_object != (void *)0xbebebebebebebebe);
 
          V8TOOLKIT_DEBUG("CastToJS from T* {}\n", demangle<T>().c_str());
          auto context = isolate->GetCurrentContext();
-         auto & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+         auto & class_wrapper = V8ClassWrapper<std::remove_pointer_t<T>>::get_instance(isolate);
 
          V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
          return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
      }
  };
+//
+//
+//    template<typename T>
+//    struct CastToJS<T const * const> {
+//        v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object){
+//
+//            if (cpp_object == nullptr) {
+//                return v8::Local<v8::Object>();
+//            }
+//            assert(cpp_object != (void *)0xbebebebebebebebe);
+//
+//            V8TOOLKIT_DEBUG("CastToJS from T* {}\n", demangle<T>().c_str());
+//            auto context = isolate->GetCurrentContext();
+//            auto & class_wrapper = V8ClassWrapper<T const>::get_instance(isolate);
+//
+//            V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
+//
+//            return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
+//        }
+//    };
 
-
-    template<typename T>
-    struct CastToJS<T const * const> {
-        v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object){
-
-            if (cpp_object == nullptr) {
-                return v8::Local<v8::Object>();
-            }
-            assert(cpp_object != (void *)0xbebebebebebebebe);
-
-            V8TOOLKIT_DEBUG("CastToJS from T* {}\n", demangle<T>().c_str());
-            auto context = isolate->GetCurrentContext();
-            auto & class_wrapper = V8ClassWrapper<T const>::get_instance(isolate);
-
-            V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
-
-            return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
-        }
-    };
-
-
-
+//static_assert(std::is_same<T, T*>::value, "Cannot CastToJS a pointer type not wrapped with V8ClassWrapper");
 
 template<typename T>
-struct CastToJS<T&> {
-	using Pointer = typename std::add_pointer_t<T>;
+struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
 
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_const_t<T> & cpp_object){
-		return CastToJS<Pointer>()(isolate, &cpp_object);
+
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<T> & cpp_object){
+		V8TOOLKIT_DEBUG("CastToJS from lvalue ref %s\n", demangle<T>().c_str());
+		return CastToJS<typename std::add_pointer<T>::type>()(isolate, &cpp_object);
 	}
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::add_const_t<T> & cpp_object){
-        return CastToJS<Pointer>()(isolate, &cpp_object);
-    }
 
+	/**
+	* If an rvalue is passed in, a copy must be made.
+	*/
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<T> && cpp_object){
+		using NoRefT = std::remove_reference_t<T>;
+		V8TOOLKIT_DEBUG("In base cast to js struct with rvalue ref");
+		V8TOOLKIT_DEBUG("Asked to convert rvalue type, so copying it first\n");
+
+		// this memory will be owned by the javascript object and cleaned up if/when the GC removes the object
+		auto copy = new NoRefT(std::move(cpp_object));
+		auto context = isolate->GetCurrentContext();
+		V8ClassWrapper<NoRefT> & class_wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
+		auto result = class_wrapper.template wrap_existing_cpp_object(context, copy, *class_wrapper.destructor_behavior_delete);
+		V8TOOLKIT_DEBUG("CastToJS<T> returning wrapped existing object: %s\n", *v8::String::Utf8Value(result));
+
+		return result;
+	}
 };
+
+
 template<typename T>
 struct CastToJS<T*&> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * cpp_object) {
 		return CastToJS<T*>()(isolate, cpp_object);
 	}
 };
 
+
 template<typename T>
 struct CastToJS<T const *&> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * cpp_object) {
 		return CastToJS<T const *>()(isolate, cpp_object);
 	}
 };
+
+
 template<typename T>
 struct CastToJS<T* const &> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object) {
 		return CastToJS<T * const>()(isolate, cpp_object);
 	}
 };
+
+
 template<typename T>
 struct CastToJS<T const * const &> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * const cpp_object){
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const * const cpp_object) {
 		return CastToJS<T const * const>()(isolate, cpp_object);
 	}
 };
+
+#endif
+
 
 
 template<class T>
@@ -1880,46 +2035,25 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	return *t;
 }
 
-// excluding types where CastToNative doesn't return a reference type
-// this stops trying &int when int is an rvalue
-//   when trying to deal with unique_ptr in casts.hpp (in an unused but still compiled code path)
+#if 0
 template<typename T>
-struct CastToNative<T*, std::enable_if_t<std::is_reference<
-		std::result_of_t<
-				CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
-						> // end result_of
-		>::value // end is_reference
-		>// end enable_if_t
-		>// end template
-{
-	   T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-           if (value->IsUndefined()) {
-               return nullptr;
-           }
-           return & CastToNative<typename std::remove_reference<T>::type>()(isolate, value);
-		}
-};
-
-template<typename T, class>
-struct CastToNative
+struct CastToNative<T, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		return get_object_from_embedded_cpp_object<T>(isolate, value);
 	}
 };
 
-
 template<typename T>
-struct CastToNative<T&, std::enable_if_t<std::is_reference<
-    std::result_of_t<
-        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
-    > // end result_ofs
->::value>>
+struct CastToNative<T*, std::enable_if_t<std::is_pointer<T>::value && is_wrapped_type_v<T>>>
 {
-    T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-        return get_object_from_embedded_cpp_object<T>(isolate, value);
-    }
+	T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+		return &get_object_from_embedded_cpp_object<T>(isolate, value);
+	}
 };
+
+
+
 
 // cannot get a reference unless the object is stored inside a javascript object
 template<typename T>
@@ -1970,7 +2104,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_refere
 		return std::unique_ptr<T, Rest...>(&cpp_object);
 	}
 };
-
+#endif
 
 
 // If no more-derived option was found, wrap as this type

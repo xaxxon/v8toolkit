@@ -38,10 +38,12 @@ namespace v8toolkit {
     struct SetWeakCallbackData {
         SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
                             v8::Isolate * isolate,
-                            const v8::Local<v8::Object> & javascript_object);
+                            const v8::Local<v8::Object> & javascript_object,
+                            bool destructive);
 
         func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback;
         v8::Global<v8::Object> global;
+        bool destructive;
     };
 
 
@@ -51,9 +53,9 @@ namespace v8toolkit {
      */
     template<class T>
     struct WrappedData {
-        AnyPtr<T> * native_object;
+        AnyBase * native_object;
         std::string native_object_type = demangle<T>();
-        SetWeakCallbackData * weak_callback_data;
+        SetWeakCallbackData * weak_callback_data = nullptr;
 
         WrappedData(T * native_object, SetWeakCallbackData * weak_callback_data) :
             native_object(new AnyPtr<T>(native_object)),
@@ -310,7 +312,13 @@ struct StuffBase{
 
 template<class T>
 struct Stuff : public StuffBase {
-    Stuff(T && t){stuffed = std::make_unique<T>(std::move(t));}
+    Stuff(T && t) : stuffed(std::make_unique<T>(std::move(t))) {}
+    Stuff(std::unique_ptr<T> t) : stuffed(std::move(t)) {}
+
+
+    static std::unique_ptr<T> stuffer(T && t) {return std::make_unique<T>(std::move(t));}
+    static std::unique_ptr<T> stuffer(T const & t) {return std::make_unique<T>(std::move(const_cast<T &>(t)));}
+
     T * get(){return stuffed.get();}
     std::unique_ptr<T> stuffed;
 };
@@ -329,7 +337,7 @@ struct cast_to_native_no_value {
 template <class T>
 struct cast_to_native_no_value<T, std::enable_if_t<std::result_of_t<CastToNative<T>()>::value>> {
 
-    std::result_of_t<CastToNative<T>()> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
+    T && operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
         return CastToNative<T>()();
     }
 };
@@ -347,7 +355,7 @@ set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info
 
         // for string types, the result returned may be a unique_ptr in order to save memory for it, this is that type
         using ResultT = std::remove_reference_t<decltype(cast_to_native_no_value<NoRefT>()(info, i++))>;
-        stuff.emplace_back(std::make_unique<Stuff<ResultT>>(cast_to_native_no_value<NoRefT>()(info, i++)));
+        stuff.emplace_back(std::make_unique<Stuff<ResultT>>(std::move(cast_to_native_no_value<NoRefT>()(info, i++))));
 
         // stuff.back() returns a unique_ptr<StuffBase>
         return *((static_cast<Stuff<ResultT> *>(stuff.back().get()))->get());
@@ -420,13 +428,7 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
  */
 template<class T>
 struct ParameterBuilder<T,
-    std::enable_if_t<!std::is_fundamental<std::remove_pointer_t<T>>::value &&
-        std::is_reference<std::result_of_t<
-            CastToNative<
-                std::remove_reference_t<T>
-            >(v8::Isolate*, v8::Local<v8::Value>)> // end result_of
-        >::value // end of is_reference
-        >> {
+    std::enable_if_t<is_wrapped_type_v<T>>> {
     using NoRefT = std::remove_reference_t<T>;
 
 
@@ -445,17 +447,31 @@ struct ParameterBuilder<T,
 };
 
 
+template<class T>
+struct remove_const_from_reference {
+    using type = T;
+};
+
+
+template<class T>
+struct remove_const_from_reference<T const &>{
+    using type = T &&;
+};
+
+template<class T>
+struct remove_const_from_reference<T const>{
+    using type = T;
+};
+
+
+template<class T>
+using remove_const_from_reference_t = typename remove_const_from_reference<T>::type;
+
+
 
 template<class T>
 struct ParameterBuilder<T,
-    std::enable_if_t<!std::is_reference<
-        std::result_of_t<
-            CastToNative<
-                std::remove_reference_t<T>
-            >(v8::Isolate*, v8::Local<v8::Value>)
-        > // end result_of
-       >::value
-        >> {
+    std::enable_if_t<!is_wrapped_type_v<T>>> {
     using NoRefT = std::remove_reference_t<T>;
     using NoConstRefT = std::remove_const_t<NoRefT>;
 
@@ -465,16 +481,15 @@ struct ParameterBuilder<T,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
       //std::cerr << fmt::format("ParameterBuilder type: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
-            set_unspecified_parameter_value<default_arg_position, NoRefT>(info, i, stuff, default_args_tuple);
+            set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
         } else {
 
-            // if CastToNative is called with remove_const_t, then you can have a const-wrapped object that won't cast properly
-            // IF YOU HAVE AN UNCOPYABLE TYPE SHOWING UP HERE make sure you haven't overridden the CastToNative type for it
-            //   to not return a reference - can be a problem with "shortcut" CastToNative implementations instead of
-            //   new MyType() constructors in javascript.
-            stuff.emplace_back(std::make_unique<Stuff < NoRefT>>(CastToNative<NoRefT>()(info.GetIsolate(), info[i++])));
+
+            // since this is an unwrapped class, we know that CastToNative is returning an rvalue
+            auto up = Stuff<NoConstRefT>::stuffer(CastToNative<T>()(info.GetIsolate(), info[i++]));
+            stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(std::move(up)));
         }
-        return *static_cast<Stuff<NoRefT> &>(*stuff.back()).get();
+        return *static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get();
     }
 };
 
@@ -760,7 +775,7 @@ struct CallCallable<func::function<ReturnType(Args...)>> {
 
         std::vector<std::unique_ptr<StuffBase>> stuff;
 
-        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+        info.GetReturnValue().Set(v8toolkit::CastToJS<std::remove_reference_t<ReturnType>>()(info.GetIsolate(),
                                                                     run_function(function, info, std::forward<Args>(
                                                                         ParameterBuilder<Args>().template operator()
                                                                         <(((int)ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple> (info, i,
@@ -1189,7 +1204,8 @@ void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8
 */
 SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
                      const v8::Local<v8::Object> & javascript_object,
-                     func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback);
+                     func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
+                      bool destructive);
 
 
 

@@ -16,7 +16,7 @@ int y = 2;
 int y2 = 3;
 
 
-struct Thing {
+struct Thing : public v8toolkit::WrappedClassBase {
     static void name(){}
 
 
@@ -149,11 +149,11 @@ auto test_lifetimes()
 }
 
 // A/B/C should have interesting base offsets, with neither A nor B starting at the same place as C
-struct A { int i=1; }; 
-struct B { int i=2; }; 
+struct A : public v8toolkit::WrappedClassBase { int i=1; };
+struct B : public v8toolkit::WrappedClassBase { int i=2; };
 struct C : A, B { int i=3; virtual ~C(){}};
 
-class NotFamily {};
+class NotFamily : public v8toolkit::WrappedClassBase  {};
 
 class NotWrapped {};
 
@@ -187,9 +187,7 @@ void run_type_conversion_test()
         i->add_function("c", [](C * c) {
             printf("In 'C' function, C::i = %d (3) &c=%p\n", c->i, c);
         });
-        i->add_function("not_wrapped", [](NotWrapped * nw) {
-            printf("In 'not_wrapped' function\n");
-        });
+
         auto c = i->create_context();
         c->run("a(new A())");
         c->run("a(new C())");
@@ -207,12 +205,7 @@ void run_type_conversion_test()
         } catch(...) {
             printf("(GOOD) Caught exception calling parent() function with incompatible wrapped object\n");
         }
-        try {
-            c->run("not_wrapped(new C())");
-            printf("(BAD) Didn't catch exception calling not_wrapped()\n");
-        } catch(...) {
-            printf("(GOOD) Caught exception calling not_wrapped when its parameter type is unknown to v8classwrapper\n");
-        }
+
     });
 }
 
@@ -309,6 +302,8 @@ void run_comparison_tests()
 }
 
 
+bool multipurpose_flag = false;
+
 void test_casts()
 {
     auto i = Platform::create_isolate();
@@ -322,58 +317,13 @@ void test_casts()
             auto context = c->get_context();
             // printf("***** Testing STL container casts\n");
 
-            std::vector<std::string> v{"hello", "there", "this", "is", "a", "vector"};
-            c->add_variable("v", CastToJS<decltype(v)>()(isolate, v));
-            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'vector'])");
-
-            std::list<float> l{1.5, 2.5, 3.5, 4.5};
-            c->add_variable("l", CastToJS<decltype(l)>()(isolate, l));
-            c->run("assert_contents(l, [1.5, 2.5, 3.5, 4.5]);");
-
-            std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
-            c->add_variable("m", CastToJS<decltype(m)>()(isolate, m));
-            c->run("assert_contents(m, {'one': 1, 'two': 2, 'three': 3});");
-
-            std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
-            c->add_variable("m2", CastToJS<decltype(m2)>()(isolate, m2));
-            c->run("assert_contents(m2, {'four': 4, 'five': 5, 'six': 6});");
-
-            std::deque<long> d{7000000000, 8000000000, 9000000000};
-            add_variable(context, context->Global(), "d", CastToJS<decltype(d)>()(isolate, d));
-            c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
-
-            std::multimap<string, int> mm{{"a",1},{"a",2},{"a",3},{"b",4},{"c",5},{"c",6}};
-            add_variable(context, context->Global(), "mm", CastToJS<decltype(mm)>()(isolate, mm));
-            c->run("assert_contents(mm, {a: [1, 2, 3], b: [4], c: [5, 6]});");
-            auto js_mm = c->run("mm");
-            auto reconstituted_mm = CastToNative<decltype(mm)>()(isolate, js_mm.Get(isolate));
-            assert(reconstituted_mm.size() == 6);
-            assert(reconstituted_mm.count("a") == 3);
-            assert(reconstituted_mm.count("b") == 1);
-            assert(reconstituted_mm.count("c") == 2);
-
-            std::array<int, 3> a{{1,2,3}};
-            add_variable(context, context->Global(), "a", CastToJS<decltype(a)>()(isolate, a));
-            c->run("assert_contents(a, [1, 2, 3]);");
-
-            std::map<std::string, std::vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
-            add_variable(context, context->Global(), "composite", CastToJS<decltype(composite)>()(isolate, composite));
-            c->run("assert_contents(composite, {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]});");
-
-            {
-                std::string tuple_string("Hello");
-                auto tuple = make_tuple(1, 2.2, tuple_string);
-                c->expose_variable("tuple", tuple);
-                c->run("assert_contents(tuple, [1, 2.2, 'Hello'])");
-            }
-            // printf("Done testing STL container casts\n");
 
 
             auto unique = std::make_unique<std::vector<int>>(4, 1);
             // no support for read/write on unique_ptr
             c->expose_variable_readonly("unique", unique);
             c->run("assert_contents(unique, [1,1,1,1])");
-            
+
             auto ulist = std::make_unique<std::list<int>>(4, 4);
             // no support for read/write on unique_ptr
             c->expose_variable_readonly("ulist", ulist);
@@ -437,20 +387,7 @@ void test_casts()
                 assert(pair.second == "a");
             }
 
-            // vector
-            {
-                auto js_vector = c->run("[1, 2, 3]");
-                auto vector = CastToNative<std::vector<int>>()(*i, js_vector.Get(*i));
-                assert(vector.size() == 3);
-                assert(vector[2] == 3);
-            }
-            // const vector
-            {
-                auto js_vector = c->run("[1, 2, 3]");
-                auto vector = CastToNative<std::vector<int> const>()(*i, js_vector.Get(*i));
-                assert(vector.size() == 3);
-                assert(vector[2] == 3);
-            }
+
 
             // map
             {
@@ -465,6 +402,20 @@ void test_casts()
                 auto map = CastToNative<std::map<std::string, int> const>()(*i, js_map.Get(*i));
                 assert(map.size() == 3);
                 assert(map["c"] == 3);
+            }
+
+            // unique_ptr<PrimitiveType>
+            {
+                multipurpose_flag = false;
+                struct Deleter{
+                    void operator()(int *) noexcept {multipurpose_flag = true;}
+                };
+                auto upi = std::unique_ptr<int, Deleter>(new int);
+                auto number = CastToJS<decltype(upi)>()(*i, std::move(upi));
+
+                // memory should be cleaned up immediately, even though there is still a reference to
+                //   the generated JavaScript object
+                assert(multipurpose_flag == true);
             }
 
 
@@ -572,7 +523,7 @@ void require_directory_test()
 }
 
 
-struct IT_A {
+struct IT_A : public v8toolkit::WrappedClassBase  {
     int get_int(){return 5;}
 };
 
@@ -623,7 +574,7 @@ void run_inheritance_test()
 int rvalue_test_class_destructor_ran = 0;
 class RvalueTestClass;
 std::set<RvalueTestClass *> undeallocated_objects;
-class RvalueTestClass {
+class RvalueTestClass : public v8toolkit::WrappedClassBase  {
 public:
     RvalueTestClass(std::string const & str):str(str){
         undeallocated_objects.insert(this);
@@ -632,7 +583,9 @@ public:
 //        std::cerr << fmt::format("Destroying {}", (void*)this) << std::endl;
         assert(undeallocated_objects.find(this) != undeallocated_objects.end());
         undeallocated_objects.erase(this);
-        assert(std::atoi(str.c_str()) < 20000);rvalue_test_class_destructor_ran++;}
+        assert(std::atoi(str.c_str()) < 20000);rvalue_test_class_destructor_ran++;
+    }
+
     RvalueTestClass(RvalueTestClass &&) = default;
     std::string str;
 };
@@ -656,7 +609,7 @@ void test_rvalues() {
     auto isolate = Platform::create_isolate();
     ISOLATE_SCOPED_RUN(isolate->get_isolate());
     isolate->add_function("takes_rvalue_ref", &takes_rvalue_ref);
-    isolate->add_function("takes_unique_ptr", &takes_unique_ptr);
+//    isolate->add_function("takes_unique_ptr", &takes_unique_ptr);
     auto & wrapper = isolate->wrap_class<RvalueTestClass>();
     wrapper.finalize();
     wrapper.add_constructor<char *>("RvalueTestClass", *isolate);
@@ -665,7 +618,7 @@ void test_rvalues() {
         "takes_rvalue_ref(str);"
         "str;");
 
-    std::cerr << fmt::format("remaining: {}", CastToNative<RvalueTestClass>()(*isolate, moved_out_of_str.Get(*isolate)).str) << std::endl;
+    std::cerr << fmt::format("remaining: {}", CastToNative<RvalueTestClass&>()(*isolate, moved_out_of_str.Get(*isolate)).str) << std::endl;
 
 
     // test a little GC..
@@ -689,7 +642,7 @@ void test_rvalues() {
 
 }
 
-class TestClass{
+class TestClass : public v8toolkit::WrappedClassBase {
 public:
     int i;
     void func(){};

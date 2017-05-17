@@ -17,10 +17,10 @@ using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const s
 
 static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
-struct NonPolymorphicType {};
+struct NonPolymorphicType : public v8toolkit::WrappedClassBase {};
 
 
-struct Thing {
+struct Thing : public v8toolkit::WrappedClassBase {
 	Thing(int i, const std::string & j): i(i), j(j) {}
 	Thing(const Thing &) = delete;
 	Thing& operator=(const Thing &) = delete;

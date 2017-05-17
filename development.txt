@@ -139,3 +139,37 @@ I think JSWrapper<T> should have a static per isolate that is the prototype Base
 
 Should add the ability to know if the wrapped object is owned by the JS object or not (is it DestructorBehavior_Delete or not)
   - when releasing the memory, would throw exception if not owned - stop from sending bad data to unique_ptr
+
+
+  unique_ptr:
+   - cast to js
+     - wrapped type
+      - rvalue memory should be taken from the unique_ptr and put into the JS object with a deleting deleter
+      - rvalue ref - same as above
+      - lvalue ref - treated just like a pointer
+
+     - primitive type
+      - rvalue - cast it like it's a T, let the unique_ptr go out of scope and clean it's own memory up
+      - rvalue ref - move it into a local unique_ptr, cast it like it's a T, let the local unique_ptr go out of scope
+      - lvalue ref - treated just like a pointer
+
+
+
+   - cast to native
+    - wrapped type
+     - rvalue - if object has a deleting deleter, then it can have it's memory taken from it, otherwise throw an exception
+     - rvalue ref - same as above.  The idea is that if it can possibly take the data, you have to assume it did take the data
+     - lvalue - doesn't work because there's no unique_ptr to create an lvalue reference of.  Can't create one because
+                it would own the memory.   ParameterBuilder could put one somewhere and then make sure to release the memory
+                before it gets cleaned up, but it seems unnecessary.
+    -unwrapped type
+      - rvalue - if copyable, use make_unique<T>(CastToNative<T>()()) and send it in
+      - rvalue ref - same as above
+      - lvalue ref - no unique_ptr to give it so throw an exception.   ParameterBuilder could store one somewhere, but
+                     again, that doesn't seem quite necessary
+
+
+
+
+
+

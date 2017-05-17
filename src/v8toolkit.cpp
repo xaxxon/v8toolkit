@@ -219,14 +219,14 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
         v8::TryCatch tc(isolate);
         auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
         assert(!tc.HasCaught());
-        
+
         auto script = script_maybe.ToLocalChecked();
         auto result_maybe = script->Run(context);
         assert (!tc.HasCaught());
-        
+
         auto result = result_maybe.ToLocalChecked();
         // print_v8_value_details(result);
-        
+
         bool default_value = false;
         bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
 //        print_v8_value_details(result);
@@ -850,8 +850,9 @@ std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> conte
 
 SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
                                          v8::Isolate * isolate,
-                                         const v8::Local<v8::Object> & javascript_object) :
-    callback(callback)
+                                         const v8::Local<v8::Object> & javascript_object, bool destructive) :
+    callback(callback),
+    destructive(destructive)
     {
         this->global.Reset(isolate, javascript_object);
     }
@@ -859,10 +860,10 @@ SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInf
 
 SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
                             const v8::Local<v8::Object> & javascript_object,
-                            func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback)
+                            func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback, bool destructive)
 {
     // this memory deleted in the GC callback
-    auto callback_data = new SetWeakCallbackData(callback, isolate, javascript_object);
+    auto callback_data = new SetWeakCallbackData(callback, isolate, javascript_object, destructive);
 
     // set the callback on the javascript_object to be called when it's garbage collected
     callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,

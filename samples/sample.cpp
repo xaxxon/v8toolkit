@@ -32,7 +32,7 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 #define SAMPLE_DEBUG true
 
 
-struct FooParent {
+struct FooParent : public v8toolkit::WrappedClassBase {
     // must be polymorphic for most derived type to be returned
     virtual ~FooParent() {};
 };
@@ -48,7 +48,7 @@ struct Foo : public FooParent {
 bool Foo::allow_copy_constructor = true;
 
 // random sample class for wrapping - not actually a part of the library
-class Point {
+class Point : public v8toolkit::WrappedClassBase {
 public:
     Point() : x_(69), y_(69) {instance_count++;}
     Point(int x, int y) : x_(x), y_(y) { instance_count++; if (SAMPLE_DEBUG) printf("created Point with 2 ints\n");}
@@ -126,7 +126,7 @@ struct PointSubclass2 : public Point {
 };
 
 
-struct Line {
+struct Line : public v8toolkit::WrappedClassBase {
     Line(){if (SAMPLE_DEBUG) printf("Created line %p (default constructor)\n", this);}
     Line(const Line &) = delete; // wrapper cannot require copy constructor
     Line(Line &&) = delete; // wrapper cannot require move constructor
@@ -140,7 +140,6 @@ struct Line {
     static int static_method(float){return 42;}
     void takes_function(std::function<Foo&()>){}
     void takes_const_ref_fundamental(const int & i) {}
-    void takes_ref_fundamental(int & i) {}
     Line const & get_const_version(){return *this;}
 
     void take_point(Point && point){p = std::move(point);}
@@ -272,7 +271,9 @@ int main(int argc, char* argv[])
                 printf("index getter: %d\n", index);
                 info.GetReturnValue().Set(index);
             });
-            wrapped_point.add_named_property_handler(&Point::operator[], &Point::operator[]);
+
+            // currently not supported
+            //wrapped_point.add_named_property_handler(&Point::operator[], &Point::operator[]);
 
             got_duplicate_name_exception = false;
             try {
@@ -325,13 +326,12 @@ int main(int argc, char* argv[])
 
             wrapped_line.add_method("takes_function", &Line::takes_function);
             wrapped_line.add_method("takes_const_ref_fundamental", &Line::takes_const_ref_fundamental);
-            wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
             wrapped_line.add_method("take_point", &Line::take_point);
             wrapped_line.add_method("take_map", &Line::take_map);
-            wrapped_line.add_method("take_unique", &Line::take_unique);
-            wrapped_line.add_method("take_unique_ref", &Line::take_unique_ref);
-            wrapped_line.add_method("take_unique_int", &Line::take_unique_int);
-            wrapped_line.add_method("take_unique_int_ref", &Line::take_unique_int_ref);
+//            wrapped_line.add_method("take_unique", &Line::take_unique);
+//            wrapped_line.add_method("take_unique_ref", &Line::take_unique_ref);
+//            wrapped_line.add_method("take_unique_int", &Line::take_unique_int);
+//            wrapped_line.add_method("take_unique_int_ref", &Line::take_unique_int_ref);
             wrapped_line.add_method("map_of_point_refs", &Line::map_of_point_refs);
             wrapped_line.add_method("map_of_point_pointers", &Line::map_of_point_pointers);
 
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
 
             got_duplicate_name_exception = false;
             try {
-                wrapped_line.add_method("takes_ref_fundamental", &Line::takes_ref_fundamental);
+                wrapped_line.add_method("get_const_version", &Line::get_const_version);
             } catch (DuplicateNameException &) {
                 got_duplicate_name_exception = true;
             }
@@ -575,7 +575,6 @@ int main(int argc, char* argv[])
                                                                                    "l = new Line(); println(l.line_fake_method()); l.fake_method(); const_l = l.get_const_version(); println(const_l.const_line_fake_method());const_l.fake_method();")).ToLocalChecked();
                 (void) script->Run(context);
             }
-
 
             Foo most_derived_foo_test(0, nullptr);
             v8::Local<v8::Object> most_derived_fooparent_js_object =

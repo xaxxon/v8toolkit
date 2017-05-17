@@ -311,9 +311,13 @@ public:
 		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 		v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
 	}
-    
-    template<class T>
-    void add_variable(std::string name, v8::Local<T> variable)
+
+	/**
+	 * Creates a global javascript variable to the specified context and sets it to the given javascript value.
+	 * @param name name of the JavaScript variable
+	 * @param variable JavaScript value for the variable to refer to
+	 */
+    inline void add_variable(std::string name, v8::Local<v8::Value> variable)
     {
 		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 		v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);

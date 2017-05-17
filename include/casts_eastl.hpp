@@ -25,6 +25,8 @@ struct v8toolkit::CastToNative<eastl::pair<FirstT, SecondT>>{
 };
 
 
+
+
 // EASTL VECTOR_MAP
 template<class Key, class Value, class... Args>
 struct CastToNative<eastl::vector_map<Key, Value, Args...>> {
@@ -114,6 +116,13 @@ template<class CharType, int Length, bool Overflow, class Allocator>
 struct CastToJS<eastl::fixed_string<CharType, Length, Overflow, Allocator>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, eastl::fixed_string<CharType, Length, Overflow, Allocator> const & value) const {
         return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());
+    }
+};
+
+template<class CharType, int Length, bool Overflow, class Allocator>
+struct CastToNative<eastl::fixed_string<CharType, Length, Overflow, Allocator>> {
+    eastl::fixed_string<CharType, Length, Overflow, Allocator> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return eastl::fixed_string<CharType, Length, Overflow, Allocator>(*v8::String::Utf8Value(value));
     }
 };
 

@@ -308,7 +308,7 @@ class JSFactory<
     FactoryBase,
         Deleter>
 
-	: public virtual FactoryBase
+	: public virtual FactoryBase, public v8toolkit::WrappedClassBase
 { // Begin JSFactory class
 
 	using ThisFactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, FactoryBase>;

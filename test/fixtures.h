@@ -16,13 +16,10 @@ public:
 
 };
 
-
-class TypeCheckerFixture : public ::testing::Test {
-
+class PlatformFixture : public ::testing::Test {
 public:
-    TypeCheckerFixture() {
+    PlatformFixture() {
 
     }
-
-
 };
+

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 project(v8toolkit)
 set (CMAKE_CXX_STANDARD 14)
@@ -54,7 +54,7 @@ if (WIN32)
     set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -std=gnu++1z")
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
     set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
 

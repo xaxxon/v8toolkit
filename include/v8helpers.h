@@ -120,6 +120,7 @@ std::string demangle(){
     return constness + volatility + demangled_name;
  }
 
+// polymorphic types work just like normal
 template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
@@ -127,6 +128,15 @@ Destination safe_dynamic_cast(Source * source) {
 //    fprintf(stderr, "safe dynamic cast doing real cast\n");
     return dynamic_cast<Destination>(source);
 };
+
+
+// trivial casts always succeed even if the type isn't polymoprhic
+template<class Destination>
+Destination * safe_dynamic_cast(Destination * source) {
+    return source;
+}
+
+// non-trivial casts for non-polymorphic types always fail
 template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
