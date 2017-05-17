@@ -211,3 +211,34 @@ TEST_F(JavaScriptFixture, ContainerTypes) {
 
 
 }
+
+// Make sure the hierarchy of shared_ptr's to dependencies is maintained apprioriately and everything
+//   is cleaned up once there isn't anything else using them
+TEST_F(JavaScriptFixture, ObjectLifetimes) {
+
+    std::weak_ptr<v8toolkit::Isolate> weak_isolate_pointer;
+    {
+        decltype(std::declval<ScriptPtr>()->run_async()) future;
+        {
+            ScriptPtr s;
+            {
+                ContextPtr c;
+                {
+                    auto i = Platform::create_isolate();
+                    weak_isolate_pointer = i->weak_from_this();
+                    c = i->create_context();
+                } // isolate goes out of scope
+                EXPECT_FALSE(weak_isolate_pointer.expired());
+                (*c)([&]() {
+                    s = c->compile("5");
+                });
+            } // Context goes out of scope
+            EXPECT_FALSE(weak_isolate_pointer.expired());
+            future = s->run_async();
+        } // script goes out of scope
+        EXPECT_FALSE(weak_isolate_pointer.expired());
+        future.get();
+    } // future goes out of scope and everything is cleaned up
+    EXPECT_TRUE(weak_isolate_pointer.expired());
+
+}

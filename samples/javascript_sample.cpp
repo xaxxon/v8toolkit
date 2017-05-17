@@ -16,28 +16,6 @@ int y = 2;
 int y2 = 3;
 
 
-struct Thing : public v8toolkit::WrappedClassBase {
-    static void name(){}
-
-
-    // must be careful because CastToNative
-    Thing(vector<Thing>&&){}
-};
-
-
-auto run_static_function_tests() {
-    Platform::set_max_memory(2000);
-    auto i = Platform::create_isolate();
-    ISOLATE_SCOPED_RUN(*i);
-    V8ClassWrapper<Thing> & thing = i->wrap_class<Thing>();
-    thing.add_static_method("get_name", &Thing::name);
-    thing.finalize();
-    thing.add_constructor<vector<Thing>&&>("Thing", *i);
-
-    ContextPtr context = i->create_context();
-    auto result = context->run("Thing.get_name();");
-
-}
 
 auto run_tests()
 {
@@ -127,9 +105,9 @@ auto run_tests()
 
 auto test_lifetimes()
 {
-    std::shared_ptr<Script> s;
+    ScriptPtr s;
     {
-        std::shared_ptr<Context> c;
+        ContextPtr c;
         {
             auto i = Platform::create_isolate();
             c = i->create_context();

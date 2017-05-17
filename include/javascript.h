@@ -56,18 +56,8 @@ private:
 
 	/// The actual v8::Context object backing this Context
 	v8::Global<v8::Context> context;
-    
 
-    /// stores the list of scripts --
-    /// TODO: These should be weak_ptr's or no script/context will ever be cleaned up
-	/// WARNING: CHANGING THIS TO WEAK PTR MAY BREAK HOW REQUIRE STORES v8toolkit::Scripts for use by the Debugger object
-    std::vector<v8toolkit::ScriptPtr> scripts;
-	std::vector<v8::Global<v8::Function>> functions; // directly compiled functions
 
-	ScriptPtr get_script(std::string const & string);
-
-    /// whether shutdown has been called on the context
-    bool shutting_down = false;
 
 	/// unique identifier for each context
 	boost::uuids::uuid const uuid = v8toolkit::uuid_generator();
@@ -194,7 +184,7 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>> 
+	std::future<std::pair<ScriptPtr, v8::Global<v8::Value>>>
         run_async(const std::string & source,
                   std::launch launch_policy = 
                      std::launch::async | std::launch::deferred);
@@ -440,13 +430,14 @@ public:
     *   shared_ptr to the Script so the Script (and it's associated dependencies) 
     *   cannot be destroyed until after the async has finished and the caller has had a chance 
     *   to use the results contained in the future
+	* The order of the pair elements matters to make sure the Global is cleaned up before the ScriptPtr
     */ 
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
 
-        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
+        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<std::shared_ptr<Script>, v8::Global<v8::Value>> {
 
 			return (*this->context_helper)([this, script](){
-				return std::make_pair(this->run(), script);
+				return std::make_pair(script, this->run());
             });
 
 		}, shared_from_this());

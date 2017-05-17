@@ -22,10 +22,12 @@ public:
         EXPECT_EQ(x, 5);
         return x;
     }
-    int takes_const_int_6(int const x) {
+    int takes_const_int_6(int const x) const {
         EXPECT_EQ(x, 6);
         return x;
     }
+
+    static std::string static_method(){return "static_method";}
 
 
 };
@@ -41,6 +43,7 @@ TEST_F(JavaScriptFixture, WrappedType) {
     w.add_member<&WrappedClass::cupf>("cupf");
     w.add_method("takes_int_5", &WrappedClass::takes_int_5);
     w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+    w.add_static_method("static_method", &WrappedClass::static_method);
     w.finalize();
     w.add_constructor("WrappedClass", *i);
 
@@ -56,6 +59,8 @@ TEST_F(JavaScriptFixture, WrappedType) {
 
             c->run("EXPECT_TRUE(new WrappedClass().takes_int_5(5) == 5)");
             c->run("EXPECT_TRUE(new WrappedClass().takes_const_int_6(6) == 6)");
+
+            c->run("EXPECT_TRUE(WrappedClass.static_method() == `static_method`)");
 
 
         }

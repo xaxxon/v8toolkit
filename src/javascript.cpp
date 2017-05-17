@@ -19,11 +19,6 @@ Context::Context(std::shared_ptr<Isolate> isolate_helper,
     context(v8::Global<v8::Context>(*isolate_helper, context))
 {}
 
-void Context::shutdown() {
-    this->scripts.clear();
-    this->shutting_down = true;
-}
-
 
 
 v8::Local<v8::Context> Context::get_context() const {
@@ -94,9 +89,9 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     if (compiled_script.IsEmpty()) {
         throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
-    this->scripts.emplace_back(new Script(shared_from_this(),
+    return std::shared_ptr<Script>(new Script(shared_from_this(),
                                        compiled_script.ToLocalChecked(), javascript_source));
-    return this->scripts.back();
+
 }
 
 
@@ -161,43 +156,13 @@ v8::Global<v8::Value> Context::run_from_file(const std::string & filename)
 	return compile_from_file(filename)->run();
 }
 
-std::vector<ScriptPtr> const & Context::get_scripts() const {
-    return this->scripts;
-}
-
-std::vector<v8::Global<v8::Function>> const & Context::get_functions() const {
-    return this->functions;
-}
-
-
-Script const & Context::get_script_by_id(int64_t script_id) {
-    for (::v8toolkit::ScriptPtr const & script : this->scripts) {
-        if (script->get_script_id() == script_id) {
-            return *script;
-        }
-    }
-    throw InvalidCallException(fmt::format("no script found with id {}", script_id));
-}
-
-
-v8::Local<v8::Function> Context::get_function_by_id(int64_t script_id) {
-
-    for (v8::Global<v8::Function> & global_function : this->functions) {
-        v8::Local<v8::Function> function = global_function.Get(this->get_isolate());
-        if (function->GetScriptOrigin().ScriptID()->Value() == script_id) {
-            return function;
-        }
-    }
-    throw InvalidCallException(fmt::format("no function found with id {}", script_id));
-}
-
 
 v8::Global<v8::Context> const & Context::get_global_context() const {
     return this->context;
 }
 
 
-std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>
+std::future<std::pair<ScriptPtr, v8::Global<v8::Value>>>
 Context::run_async(const std::string & source, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
@@ -237,23 +202,13 @@ std::string Context::get_url(std::string const & name) const {
 }
 
 
-void Context::register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code) {
-    this->scripts.emplace_back(new v8toolkit::Script(this->shared_from_this(), external_script, source_code));
-}
 
-
-void Context::register_external_function(v8::Global<v8::Function> external_function) {
-    this->functions.emplace_back(std::move(external_function));
-}
 
 
 v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<std::string> const & paths) {
     v8::Local<v8::Value> require_result;
     v8toolkit::require(this->get_context(), filename,
-                       require_result, paths, false, true, [this](RequireResult const & require_result) {
-        this->register_external_function(v8::Global<v8::Function>(require_result.isolate,
-                                                                  require_result.function.Get(require_result.isolate)));
-    },
+                       require_result, paths, false, true, [this](RequireResult const & require_result) {},
     [this](std::string const & filename){return this->get_url(filename);}
     );
     return require_result;
@@ -398,7 +353,7 @@ Isolate::~Isolate()
 void Isolate::add_assert()
 {
 
-    // evals an expression and tests for truthiness
+    // evals an expression and tests for t
     add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
