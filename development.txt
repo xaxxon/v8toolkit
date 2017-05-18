@@ -184,6 +184,7 @@ Unit Tests:
 
 Rest of the STL containers (including move'ing elements when appropriate)
 EASTL containers (including move'ing elements when appropriate)
+- maps can take reference values, so need to test for that
 
 Need to fix wrapped functions that take a reference to a pure virtual type≤
 

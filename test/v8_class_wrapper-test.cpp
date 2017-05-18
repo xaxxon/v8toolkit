@@ -190,39 +190,56 @@ TEST_F(JavaScriptFixture, Sets) {
     this->create_context();
 
     (*c)([&] {
+
+        // CastToJS std::set
         {
-            std::set<std::string> v{"hello", "there", "this", "is", "a", "set"};
+            std::set<std::string> v{"a", "b", "c"};
             c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
-            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+            c->run("let o = {}; for (let e of v) {o[e]=1;} EXPECT_EQJS(o, {a: 1, b: 1, c: 1});");
+            EXPECT_NE(v.find("a"), v.end());
+            EXPECT_NE(v.find("b"), v.end());
+            EXPECT_NE(v.find("c"), v.end());
+
         }
+        // CastToJS const std::set
         {
-            std::set<std::string> const cv{"hello", "there", "this", "is", "a", "set"};
-            c->add_variable("cv", CastToJS<decltype(cv)>()(*i, cv));
-            c->run("assert_contents(cv, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+            std::set<std::string> const v{"d", "e", "f"};
+            c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
+            c->run("let o1 = {}; for (let e of v) {o1[e]=1;} EXPECT_EQJS(o1, {d: 1, e: 1, f: 1});");
+            EXPECT_NE(v.find("d"), v.end());
+            EXPECT_NE(v.find("e"), v.end());
+            EXPECT_NE(v.find("f"), v.end());
+
         }
+        // CastToJS std::set &&
         {
-            // non-wrapped element type, so the original set remains - no new object of the Element type to move
-            //   them into.
-            std::set<std::string> v{"hello", "there", "this", "is", "a", "set"};
+            std::set<std::string> v{"g", "h", "i"};
             c->add_variable("v", CastToJS<decltype(v)>()(*i, std::move(v)));
-            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+            c->run("let o2 = {}; for (let e of v) {o2[e]=1;} EXPECT_EQJS(o2, {g: 1, h: 1, i: 1});");
+            EXPECT_NE(v.find("g"), v.end());
+            EXPECT_NE(v.find("h"), v.end());
+            EXPECT_NE(v.find("i"), v.end());
         }
 
 
-//        // set
-//        {
-//            auto js_set = c->run("[`a`, `b`, `c`]");
-//            auto set = CastToNative<std::set<std::string>>()(*i, js_set.Get(*i));
-//            EXPECT_EQ(set.size(), 3);
-////            EXPECT_EQ(set[2], "c");
-//        }
-//        // const set
-//        {
-//            auto js_set = c->run("[`a`, `b`, `c`]");
-//            auto set = CastToNative<std::set<std::string> const>()(*i, js_set.Get(*i));
-//            EXPECT_EQ(set.size(), 3);
-////            EXPECT_EQ(set[2], "c");
-//        }
+        // CastToNative set
+        {
+            auto js_set = c->run("[`a`, `b`, `c`]");
+            auto set = CastToNative<std::set<std::string>>()(*i, js_set.Get(*i));
+            EXPECT_EQ(set.size(), 3);
+            EXPECT_NE(set.find("a"), set.end());
+            EXPECT_NE(set.find("b"), set.end());
+            EXPECT_NE(set.find("c"), set.end());
+        }
+        // CastToNative const set
+        {
+            auto js_set = c->run("[`a`, `b`, `c`]");
+            auto set = CastToNative<std::set<std::string> const>()(*i, js_set.Get(*i));
+            EXPECT_EQ(set.size(), 3);
+            EXPECT_NE(set.find("a"), set.end());
+            EXPECT_NE(set.find("b"), set.end());
+            EXPECT_NE(set.find("c"), set.end());
+        }
 
     });
 }

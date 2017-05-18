@@ -478,6 +478,23 @@ auto reducer(const Container & container, Callable callable) ->
 }
 
 
+template<class ReturnType, class... Args, class... Ts>
+auto run_function(func::function<ReturnType(Args...)> & function,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+
+    return function(std::forward<Args>(ts)...);
+}
+
+
+template<class ReturnType, class... Args, class Callable, class... Ts>
+auto run_function(Callable callable,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return callable(std::forward<Args>(ts)...);
+};
+
+
 
 
 /**
@@ -522,6 +539,30 @@ AnyBase(const std::string
 #endif
     {}
 };
+
+
+
+
+
+struct StuffBase{
+    // virtual destructor makes sure derived class destructor is called to actually
+    //   delete the data
+    virtual ~StuffBase(){}
+};
+
+template<class T>
+struct Stuff : public StuffBase {
+    Stuff(T && t) : stuffed(std::make_unique<T>(std::move(t))) {}
+    Stuff(std::unique_ptr<T> t) : stuffed(std::move(t)) {}
+
+
+    static std::unique_ptr<T> stuffer(T && t) {return std::make_unique<T>(std::move(t));}
+    static std::unique_ptr<T> stuffer(T const & t) {return std::make_unique<T>(std::move(const_cast<T &>(t)));}
+
+    T * get(){return stuffed.get();}
+    std::unique_ptr<T> stuffed;
+};
+
 
  template<class T, class = void>
  struct AnyPtr;

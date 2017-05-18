@@ -2,7 +2,7 @@
 
 #include "javascript.h"
 #include "v8toolkit.h"
-
+#include "v8helpers.h"
 #include "testing.h"
 
 class ExampleFixture : public ::testing::Test {
@@ -45,6 +45,8 @@ public:
         c->add_function("EXPECT_EQJS", [this](v8::Local<v8::Value> lhs, v8::Local<v8::Value> rhs) {
             if (!v8toolkit::compare_contents(*i, lhs, rhs)) {
                 std::cerr << fmt::format("EXPECT_EQJS failed: {} != {}", *v8::String::Utf8Value(lhs), *v8::String::Utf8Value(rhs)) << std::endl;
+                std::cerr << fmt::format("{}", v8toolkit::stringify_value(*i, lhs)) << std::endl;
+                std::cerr << fmt::format("{}", v8toolkit::stringify_value(*i, rhs)) << std::endl;
                 EXPECT_TRUE(v8toolkit::compare_contents(*i, lhs, rhs));
             }
         });

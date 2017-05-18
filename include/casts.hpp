@@ -62,33 +62,21 @@ constexpr bool is_wrapped_typeish_v =
     }
 
 
-// Use this macro when you need to customize the template options to something more than <class T>
-//   For instance if you need to make it <vector<T>>
-#define CAST_TO_NATIVE_WITH_CONST(TYPE, TEMPLATE) \
-template<TEMPLATE> \
- struct v8toolkit::CastToNative<TYPE>{				\
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-	HANDLE_FUNCTION_VALUES;
 
-
-#define CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(TYPE) \
+#define CAST_TO_NATIVE(TYPE, FUNCTION_BODY) \
 template<> \
  struct v8toolkit::CastToNative<TYPE> {				\
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
-}; \
-inline TYPE v8toolkit::CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const { \
-    HANDLE_FUNCTION_VALUES;
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const FUNCTION_BODY \
+};
 
 
 
 
-#define CAST_TO_JS(TYPE)					\
+#define CAST_TO_JS(TYPE, FUNCTION_BODY) 					\
 template<> \
  struct v8toolkit::CastToJS<TYPE> {					\
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const; \
-}; \
-inline v8::Local<v8::Value>  v8toolkit::CastToJS<TYPE>::operator()(v8::Isolate * isolate, TYPE const & value) const
-
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const FUNCTION_BODY \
+};
 
 /**
 * Casts from a boxed Javascript type to a native type
@@ -122,30 +110,30 @@ struct CastToNative<void> {
 };
 
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(bool)return static_cast<bool>(value->ToBoolean()->Value());}
+CAST_TO_NATIVE(bool, {return static_cast<bool>(value->ToBoolean()->Value());});
 
 
 
 // integers
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long long)return static_cast<long long>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long long)return static_cast<unsigned long long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(long long, {return static_cast<long long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long long, {return static_cast<unsigned long long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long)return static_cast<long>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned long)return static_cast<unsigned long>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(long, {return static_cast<long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long, {return static_cast<unsigned long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(int) return static_cast<int>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned int)return static_cast<unsigned int>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(int, { return static_cast<int>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned int, {return static_cast<unsigned int>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(short)return static_cast<short>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned short)return static_cast<unsigned short>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(short, {return static_cast<short>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned short, {return static_cast<unsigned short>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char)return static_cast<char>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(unsigned char)return static_cast<unsigned char>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(char, {return static_cast<char>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned char, {return static_cast<unsigned char>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(wchar_t)return static_cast<wchar_t>(value->ToInteger()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char16_t)return static_cast<char16_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(wchar_t, {return static_cast<wchar_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char16_t, {return static_cast<char16_t>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(char32_t)return static_cast<char32_t>(value->ToInteger()->Value());}
+CAST_TO_NATIVE(char32_t, {return static_cast<char32_t>(value->ToInteger()->Value());});
 
 
 template<class Return, class... Params>
@@ -233,9 +221,9 @@ struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
 };
 
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(float) return static_cast<float>(value->ToNumber()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(double) return static_cast<double>(value->ToNumber()->Value());}
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(long double) return static_cast<long double>(value->ToNumber()->Value());}
+CAST_TO_NATIVE(float, { return static_cast<float>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(double, { return static_cast<double>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(long double, { return static_cast<long double>(value->ToNumber()->Value());});
 
 
 
@@ -271,9 +259,9 @@ struct CastToNative<const char *> {
   }
 };
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(std::string)
+CAST_TO_NATIVE(std::string, {
     return std::string(*v8::String::Utf8Value(value));
-}
+});
 
 
 template<template<class,class...> class VectorTemplate, class T, class... Rest>
@@ -299,8 +287,34 @@ auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
                                         stringify_value(isolate, value)));
     }
     return v;
-
 }
+
+
+template<template<class,class...> class SetTemplate, class T, class... Rest>
+auto set_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
+SetTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>
+{
+    using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
+    static_assert(!std::is_reference<ValueType>::value, "Set-like value type cannot be reference");
+    using ResultType = SetTemplate<ValueType, Rest...>;
+    HANDLE_FUNCTION_VALUES;
+    auto context = isolate->GetCurrentContext();
+    ResultType set;
+    if (value->IsArray()) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+        auto array_length = get_array_length(isolate, array);
+        for (int i = 0; i < array_length; i++) {
+            auto value = array->Get(context, i).ToLocalChecked();
+            set.emplace(std::forward<T>(CastToNative<T>()(isolate, value)));
+        }
+    } else {
+        throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
+                                        demangle<T>(),
+                                        stringify_value(isolate, value)));
+    }
+    return set;
+}
+
 
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
@@ -327,11 +341,11 @@ struct CastToNative<std::vector<T, Rest...> &&, std::enable_if_t<!is_wrapped_typ
 
 
 template<class T, class... Rest>
-struct CastToNative<std::set<T, Rest...> &&, std::enable_if_t<!is_wrapped_type_v<std::set<T, Rest...>>>> {
+struct CastToNative<std::set<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<std::set<T, Rest...>>>> {
     using ResultType = std::set<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
 
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
-        return vector_type_helper<std::set, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
+        return set_type_helper<std::set, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
     }
 };
 
@@ -476,42 +490,42 @@ struct CastToJS<T const,
 
 
 
-CAST_TO_JS(bool){return v8::Boolean::New(isolate, value);}
+CAST_TO_JS(bool, {return v8::Boolean::New(isolate, value);});
 
 //TODO: Should all these operator()'s be const?
 // integers
-CAST_TO_JS(char){return v8::Integer::New(isolate, value);}
-CAST_TO_JS(unsigned char){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(char, {return v8::Integer::New(isolate, value);});
+CAST_TO_JS(unsigned char, {return v8::Integer::New(isolate, value);});
 
-CAST_TO_JS(wchar_t){return v8::Number::New(isolate, value);}
-CAST_TO_JS(char16_t){return v8::Integer::New(isolate, value);}
-CAST_TO_JS(char32_t){return v8::Integer::New(isolate, value);}
-CAST_TO_JS(short){return v8::Integer::New(isolate, value);}
-CAST_TO_JS(unsigned short){return v8::Integer::New(isolate, value);}
+CAST_TO_JS(wchar_t, {return v8::Number::New(isolate, value);});
+CAST_TO_JS(char16_t, {return v8::Integer::New(isolate, value);});
+CAST_TO_JS(char32_t, {return v8::Integer::New(isolate, value);});
+CAST_TO_JS(short, {return v8::Integer::New(isolate, value);});
+CAST_TO_JS(unsigned short, {return v8::Integer::New(isolate, value);});
 
 
 
-CAST_TO_JS(int){return v8::Number::New(isolate, value);}
+CAST_TO_JS(int, {return v8::Number::New(isolate, value);});
 
-CAST_TO_JS(unsigned int){return v8::Number::New(isolate, value);}
-CAST_TO_JS(long){return v8::Number::New(isolate, value);}
+CAST_TO_JS(unsigned int, {return v8::Number::New(isolate, value);});
+CAST_TO_JS(long, {return v8::Number::New(isolate, value);});
 
-CAST_TO_JS(unsigned long){return v8::Number::New(isolate, value);}
-CAST_TO_JS(long long){return v8::Number::New(isolate, static_cast<double>(value));}
-CAST_TO_JS(unsigned long long){return v8::Number::New(isolate, static_cast<double>(value));}
+CAST_TO_JS(unsigned long, {return v8::Number::New(isolate, value);});
+CAST_TO_JS(long long, {return v8::Number::New(isolate, static_cast<double>(value));});
+CAST_TO_JS(unsigned long long, {return v8::Number::New(isolate, static_cast<double>(value));});
 
 
 
 // floats
-CAST_TO_JS(float){return v8::Number::New(isolate, value);}
-CAST_TO_JS(double){return v8::Number::New(isolate, value);}
-CAST_TO_JS(long double){return v8::Number::New(isolate, value);}
+CAST_TO_JS(float, {return v8::Number::New(isolate, value);});
+CAST_TO_JS(double, {return v8::Number::New(isolate, value);});
+CAST_TO_JS(long double, {return v8::Number::New(isolate, value);});
 
 
-CAST_TO_JS(std::string){return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());}
+CAST_TO_JS(std::string, {return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());});
 
-CAST_TO_JS(char *){return v8::String::NewFromUtf8(isolate, value);}
-CAST_TO_JS(char const *){return v8::String::NewFromUtf8(isolate, value);}
+CAST_TO_JS(char *, {return v8::String::NewFromUtf8(isolate, value);});
+CAST_TO_JS(char const *, {return v8::String::NewFromUtf8(isolate, value);});
 
 template<class T>
 struct CastToJS<T**> {
