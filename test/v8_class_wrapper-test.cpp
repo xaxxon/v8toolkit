@@ -1,6 +1,7 @@
 #include "testing.h"
 
 
+
 TEST_F(JavaScriptFixture, Helpers) {
     EXPECT_EQ(demangle<int>(), "int");
     EXPECT_EQ(demangle<const int>(), "const int");
@@ -35,6 +36,26 @@ TEST_F(JavaScriptFixture, NumberTypes) {
         EXPECT_EQ(CastToNative<double>()(*i, CastToJS<double>()(*i, 5.5)), 5.5);
         EXPECT_EQ(CastToNative<long double>()(*i, CastToJS<long double>()(*i, 5.5)), 5.5);
     });
+}
+
+TEST_F(JavaScriptFixture, CallingFunctionsWithUnwrappedTypes) {
+    bool takes_float_called = false;
+    bool takes_float_pointer_called = false;
+    i->add_function("takes_float", [&](float f){takes_float_called = true; EXPECT_EQ(f, 5.5);});
+    i->add_function("takes_float_pointer", [&](float * pf){takes_float_pointer_called = true; EXPECT_EQ(*pf, 6.5);});
+    i->add_function("takes_const_float", [&](float const f){takes_float_called = true; EXPECT_EQ(f, 7.5);});
+    i->add_function("takes_const_float_pointer", [&](float const * pf){takes_float_pointer_called = true; EXPECT_EQ(*pf, 8.5);});
+    this->create_context();
+
+    (*c)([&] {
+        c->run("takes_float(5.5);");
+        c->run("takes_float_pointer(6.5);");
+        c->run("takes_const_float(7.5);");
+        c->run("takes_const_float_pointer(8.5);");
+
+    });
+    EXPECT_TRUE(takes_float_called);
+    EXPECT_TRUE(takes_float_pointer_called);
 }
 
 TEST_F(JavaScriptFixture, StringTypes) {
@@ -160,6 +181,52 @@ TEST_F(JavaScriptFixture, Vectors) {
             EXPECT_EQ(vector[2], "c");
         }
 
+    });
+}
+
+
+
+TEST_F(JavaScriptFixture, Maps) {
+
+    this->create_context();
+
+    (*c)([&] {
+        // cast map to js
+        {
+            std::map<std::string, int> m{{"a", 1}, {"b", 2},{"c", 3}};
+            c->add_variable("m", CastToJS<decltype(m)>()(*i, m));
+            c->run("assert_contents(m, {a: 1, b: 2, c: 3})");
+        }
+        // cast const map to js
+        {
+            std::map<std::string, int> const cm{{"a", 1}, {"b", 2}, {"c", 3}};
+            c->add_variable("cm", CastToJS<decltype(cm)>()(*i, cm));
+            c->run("assert_contents(cm, {a: 1, b: 2, c: 3})");
+        }
+        // cast const map to js
+        {
+            std::map<std::string, int> m{{"a", 1}, {"b", 2},{"c", 3}};
+            c->add_variable("m", CastToJS<decltype(m)>()(*i, std::move(m)));
+            c->run("assert_contents(m, {a: 1, b: 2, c: 3})");
+        }
+
+        {
+            auto js_object = c->run("new Object({a: 1, b: 2, c: 3});");
+            auto map = CastToNative<std::map<std::string, int>>()(*i, js_object.Get(*i));
+            EXPECT_EQ(map.size(), 3);
+            EXPECT_EQ(map["a"], 1);
+            EXPECT_EQ(map["b"], 2);
+            EXPECT_EQ(map["c"], 3);
+        }
+        {
+            auto js_object = c->run("new Object({a: 1, b: 2, c: 3});");
+            auto map = CastToNative<std::map<std::string, int> const>()(*i, js_object.Get(*i));
+            EXPECT_EQ(map.size(), 3);
+            EXPECT_EQ(map["a"], 1);
+            EXPECT_EQ(map["b"], 2);
+            EXPECT_EQ(map["c"], 3);
+        }
+        
     });
 }
 

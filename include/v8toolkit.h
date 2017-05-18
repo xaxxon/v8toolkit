@@ -474,7 +474,7 @@ struct ParameterBuilder<T, std::enable_if_t<is_wrapped_typeish_v<T>>> {
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff, DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
         if (i >= info.Length()) {
-            throw CastException("Default parameters not handled for wrapped types yet");
+            throw CastException("Default parameters not handled for wrapped types");
         } else {
             return CastToNative<T>()(info.GetIsolate(), info[i++]);
         }
@@ -483,7 +483,7 @@ struct ParameterBuilder<T, std::enable_if_t<is_wrapped_typeish_v<T>>> {
 
 template<class T>
 struct ParameterBuilder<T,
-    std::enable_if_t<!is_wrapped_typeish_v<T>>> {
+    std::enable_if_t<!is_wrapped_typeish_v<T> && !std::is_pointer_v<T>>> {
     using NoRefT = std::remove_reference_t<T>;
     using NoConstRefT = std::remove_const_t<NoRefT>;
 

@@ -163,6 +163,16 @@ struct CastToJS<eastl::vector_multimap<A, B, Rest...> const> {
     }
 };
 
+template<class A, class B, class... Rest>
+struct CastToJS<eastl::vector_map<A, B, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_map<A, B, Rest...> const & map) {
+        return cast_to_js_map_helper<eastl::vector_map, A&, B&, Rest...>(isolate, map);
+    }
+};
+
+
+
+
 
 template<class T, class... Rest>
 struct CastToJS<eastl::vector_set<T, Rest...>> {

@@ -97,7 +97,7 @@ struct CastToNative {
     static_assert(!std::is_pointer<T>::value, "Cannot CastToNative to a pointer type of an unwrapped type");
     static_assert(!(std::is_lvalue_reference<T>::value && !std::is_const<std::remove_reference_t<T>>::value), "Cannot CastToNative to a non-const "
         "lvalue reference of an unwrapped type because there is no lvalue variable to send");
-    static_assert(!is_wrapped_type_v<T>, "Wrapped types shouldn't fall through to this specializaation");
+    static_assert(!is_wrapped_type_v<T>, "CastToNative<SomeWrappedType> shouldn't fall through to this specialization");
     static_assert(always_false_v<T>, "Invalid CastToNative configuration");
 };
 
@@ -560,6 +560,24 @@ struct CastToJS<std::pair<T1, T2>> {
 };
 
 
+template<template<class, class, class...> class MapTemplate, class KeyType, class ValueType, class ReferenceTypeIndicator, class... Rest>
+v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, MapTemplate<KeyType, ValueType, Rest...> const & map) {
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto object = v8::Object::New(isolate);
+
+    using KeyForwardT = std::conditional_t<std::is_rvalue_reference_v<ReferenceTypeIndicator>, std::add_rvalue_reference_t<KeyType>, std::add_lvalue_reference_t<KeyType>>;
+    using ValueForwardT = std::conditional_t<std::is_rvalue_reference_v<ReferenceTypeIndicator>, std::add_rvalue_reference_t<ValueType>, std::add_lvalue_reference_t<ValueType>>;
+
+
+    for(auto & pair : map) {
+        (void) object->Set(context,
+                           CastToJS<std::remove_reference_t<KeyType>>  ()(isolate, std::forward<KeyForwardT>  (const_cast<KeyForwardT>  (pair.first ))),
+                           CastToJS<std::remove_reference_t<ValueType>>()(isolate, std::forward<ValueForwardT>(const_cast<ValueForwardT>(pair.second)))
+        );
+    }
+    return object;
+}
 
 
 template<template<class...> class VectorTemplate, class ValueType, class... Rest>
@@ -597,10 +615,8 @@ struct CastToJS<std::list<U, Rest...>> {
 // CastToJS<std::map>
 template<class A, class B, class... Rest>
 struct CastToJS<std::map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> & map);
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> && map) {
-        return this->operator()(isolate, map);
-    }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> const & map);
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> && map);
 };
 
 // CastToJS<std::multimap>
@@ -725,18 +741,16 @@ CastToJS<std::list<T, Rest...>>::operator()(v8::Isolate * isolate, std::list<T, 
 /**
 * supports maps containing any type also supported by CastToJS to javascript arrays
 */
-template<class A, class B, class... Rest> v8::Local<v8::Value>
-CastToJS<std::map<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::map<A, B, Rest...> & map) {
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto object = v8::Object::New(isolate);
-    for(auto & pair : map){
-    // Don't std::forward key/value values because they should never be std::move'd
-    // CastToJS as reference type because the storage is allocated - it shouldn't be treated like a temporary
-        (void)object->Set(context, CastToJS<A>()(isolate, const_cast<A &>(pair.first)), CastToJS<B>()(isolate, const_cast<B &>(pair.second)));
-    }
-    return object;
+template<class KeyType, class ValueType, class... Rest> v8::Local<v8::Value>
+CastToJS<std::map<KeyType, ValueType, Rest...>>::operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> const & map) {
+    return cast_to_js_map_helper<std::map, KeyType, ValueType, int&, Rest...>(isolate, map);
 }
+
+template<class KeyType, class ValueType, class... Rest> v8::Local<v8::Value>
+CastToJS<std::map<KeyType, ValueType, Rest...>>::operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> && map) {
+    return cast_to_js_map_helper<std::map, KeyType, ValueType, int&&, Rest...>(isolate, map);
+}
+
 
 
 

@@ -27,6 +27,15 @@
 
 namespace v8toolkit {
 
+    template<class MemberT, class ClassT>
+    constexpr bool get_member_is_readonly(MemberT(ClassT::*member)) {
+        return std::is_const_v<MemberT>;
+    };
+
+    template<auto member>
+    constexpr bool is_pointer_to_const_data_member_v = get_member_is_readonly(member);
+
+
     using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
     struct MethodAdderData {
         std::string method_name;

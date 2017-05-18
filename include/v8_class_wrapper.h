@@ -690,7 +690,6 @@ public:
 		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
-
 		if (!std::has_virtual_destructor<T>::value && dynamic_cast<AnyPtr<T> *>(wrapped_data->native_object) == nullptr) {
 #ifdef ANYBASE_DEBUG
 			std::cerr << fmt::format("cached anybase type: {} vs T: {}", wrapped_data->native_object->type_name, demangle<T>()) << std::endl;
@@ -1121,7 +1120,11 @@ public:
 	void add_member(std::string const & member_name) {
 	    assert(this->finalized == false);
 
-	    if (!std::is_const<T>::value) {
+        // This function could forward the request to add_member_readonly instead, but having it error instead makes the
+        //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
+        static_assert(!is_pointer_to_const_data_member_v<member>, "Cannot V8ClassWrapper::add_member a const data member.  Use add_member_readonly instead");
+
+	    if constexpr(!std::is_const_v<T>) {
 			V8ClassWrapper<ConstT>::get_instance(isolate).
 				template add_member_readonly<member>(member_name);
 	    }
@@ -1149,7 +1152,6 @@ public:
 
 	template<auto member>
 	void add_member_readonly(std::string const & member_name) {
-
 
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
 	    if (!std::is_const<T>::value) {
@@ -1716,7 +1718,7 @@ struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
 										 *wrapper.destructor_behavior_leave_alone);
 	}
 
-	// An rvalue is presented, so move construct a new objet from the presented data
+	// An rvalue is presented, so move construct a new object from the presented data
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object) {
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		return wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), new T(std::move(cpp_object)),
@@ -1774,8 +1776,8 @@ template<class T>
 struct CastToJS<T&, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object) {
-		return CastToJS<T*>()(isolate, &cpp_object);
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object) {
+		return 	CastToJS<T*>()(isolate, &cpp_object);
 	}
 };
 
@@ -1802,6 +1804,15 @@ struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && 
 };
 
 
+
+template<typename T>
+struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
+{
+	static_assert(always_false_v<T>, "Cannot return by copy a type that is not copy constructible");
+};
+
+
+
 template<typename T>
 struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
 {
@@ -1822,11 +1833,8 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object);
 		if (V8ClassWrapper<T>::does_object_own_memory(object)) {
 			return std::move(*cpp_object); // but do not release the memory
-		} else if constexpr(std::is_copy_constructible<T>::value) {
-			// return a copy
-			return T(*cpp_object);
 		}
-		throw CastException("Could not cast object to {} && because it doesn't own it's memory and it's not copy constructible", demangle<T>());
+		throw CastException("Could not cast object to {} && because it doesn't own it's memory", demangle<T>());
 	}
 };
 

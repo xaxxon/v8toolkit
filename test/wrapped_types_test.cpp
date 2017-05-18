@@ -80,7 +80,6 @@ public:
 
 
 
-
 TEST_F(WrappedClassFixture, Accessors) {
 
 
