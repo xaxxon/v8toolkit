@@ -113,12 +113,25 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
 std::string demangle_typeid_name(const std::string & mangled_name);
 
 template<class T>
-std::string demangle(){
-    auto demangled_name =  demangle_typeid_name(typeid(T).name());
-    std::string constness = std::is_const<T>::value ? "const " : "";
-    std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+std::string & demangle(){
+    static std::string cached_name;
+    std::atomic<bool> cache_set = false;
 
-    return constness + volatility + demangled_name;
+    if (cache_set) {
+        return cached_name;
+    } else {
+        static std::mutex mutex;
+
+        std::lock_guard<std::mutex> lock_guard(mutex);
+        if (!cache_set) {
+            auto demangled_name = demangle_typeid_name(typeid(T).name());
+            std::string constness = std::is_const<T>::value ? "const " : "";
+            std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+            cached_name = constness + volatility + demangled_name;
+        }
+    }
+
+    return cached_name;
  }
 
 // polymorphic types work just like normal
@@ -464,7 +477,7 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
 
 /**
  * If ANYBASE_DEBUG is defined, then this flag controls whether type conversion information logs are printed to stderr
@@ -488,7 +501,7 @@ if (AnybaseDebugPrintFlag) { \
 #ifdef ANYBASE_DEBUG
     std::string type_name;
 #endif
-AnyBase(const std::string &&
+AnyBase(const std::string
 #ifdef ANYBASE_DEBUG
 	     type_name
 #endif

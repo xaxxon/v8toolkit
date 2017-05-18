@@ -1,7 +1,7 @@
 
 project ("v8toolkit Test")
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0")
 
 
 set(CMAKE_VERBOSE_MAKEFILE on)
@@ -24,9 +24,6 @@ add_executable(test-v8toolkit ${TEST_SRC})
 message("${MY_SRC}")
 
 #SdlStaticLibs(test-apb)
-
-set(CMAKE_CXX_STANDARD "gnu++17")
-
 
 target_link_libraries(test-v8toolkit v8toolkit_shared fmt gmock gmock_main ${V8_SHARED_LIBS} boost_system EASTL )
 

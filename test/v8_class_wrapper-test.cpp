@@ -1,6 +1,14 @@
 #include "testing.h"
 
 
+TEST_F(JavaScriptFixture, Helpers) {
+    EXPECT_EQ(demangle<int>(), "int");
+    EXPECT_EQ(demangle<const int>(), "const int");
+    EXPECT_EQ(demangle<volatile int>(), "volatile int");
+    EXPECT_EQ(demangle<const volatile int >(), "const volatile int");
+
+}
+
 
 TEST_F(JavaScriptFixture, NumberTypes) {
     this->create_context();
@@ -217,6 +225,7 @@ TEST_F(JavaScriptFixture, ContainerTypes) {
 TEST_F(JavaScriptFixture, ObjectLifetimes) {
 
     std::weak_ptr<v8toolkit::Isolate> weak_isolate_pointer;
+    std::weak_ptr<v8toolkit::Script> weak_script_pointer;
     {
         decltype(std::declval<ScriptPtr>()->run_async()) future;
         {
@@ -232,13 +241,17 @@ TEST_F(JavaScriptFixture, ObjectLifetimes) {
                 (*c)([&]() {
                     s = c->compile("5");
                 });
+                weak_script_pointer = s->weak_from_this();
             } // Context goes out of scope
             EXPECT_FALSE(weak_isolate_pointer.expired());
+            EXPECT_FALSE(weak_script_pointer.expired());
             future = s->run_async();
         } // script goes out of scope
         EXPECT_FALSE(weak_isolate_pointer.expired());
+        EXPECT_FALSE(weak_script_pointer.expired());
         future.get();
     } // future goes out of scope and everything is cleaned up
-    EXPECT_TRUE(weak_isolate_pointer.expired());
+    EXPECT_TRUE(weak_isolate_pointer.expired()); // Everything should be gone now
+    EXPECT_TRUE(weak_script_pointer.expired());
 
 }

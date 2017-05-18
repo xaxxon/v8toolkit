@@ -26,6 +26,26 @@ struct always_false : public std::false_type {};
 template <class T>  constexpr bool always_false_v = always_false<T>::value;
 
 
+template<class T, class = void>
+struct is_wrapped_type : public std::false_type {};
+
+template<class T>
+struct is_wrapped_type<T, std::enable_if_t<std::is_base_of<v8toolkit::WrappedClassBase, T>::value>> : public std::true_type {};
+
+
+template<class T>
+constexpr bool is_wrapped_type_v = is_wrapped_type<T>::value;
+
+// if it's any compination of a reference to a pointer to a wrapped type
+template<class T>
+constexpr bool is_wrapped_typeish_v =
+    is_wrapped_type<
+        std::remove_pointer_t<
+            std::remove_reference_t<T>
+        >
+    >::value;
+
+
     // if a value to send to a macro has a comma in it, use this instead so it is parsed as a comma character in the value
     //   and not separating another parameter to the template
 #define V8TOOLKIT_COMMA ,
@@ -75,9 +95,10 @@ inline v8::Local<v8::Value>  v8toolkit::CastToJS<TYPE>::operator()(v8::Isolate *
 template<typename T, class = void>
 struct CastToNative {
     static_assert(!std::is_pointer<T>::value, "Cannot CastToNative to a pointer type of an unwrapped type");
-    static_assert(!std::is_lvalue_reference<T>::value && std::is_const<std::remove_reference_t<T>>::value, "Cannot CastToNative to a non-const "
+    static_assert(!(std::is_lvalue_reference<T>::value && !std::is_const<std::remove_reference_t<T>>::value), "Cannot CastToNative to a non-const "
         "lvalue reference of an unwrapped type because there is no lvalue variable to send");
-    static_assert(always_false_v<T>, "Invalid configuration");
+    static_assert(!is_wrapped_type_v<T>, "Wrapped types shouldn't fall through to this specializaation");
+    static_assert(always_false_v<T>, "Invalid CastToNative configuration");
 };
 
 
@@ -91,16 +112,6 @@ struct CastToNative {
 //        >(v8::Isolate*, v8::Local<v8::Value>) /* CastToNative */
 //    >                                         /* result_of */
 //>::value>>  : public std::true_type {};
-
-template<class T, class = void>
-struct is_wrapped_type : public std::false_type {};
-
-template<class T>
-struct is_wrapped_type<T, std::enable_if_t<std::is_base_of<v8toolkit::WrappedClassBase, T>::value>> : public std::true_type {};
-
-
-template<class T>
-constexpr bool is_wrapped_type_v = is_wrapped_type<T>::value;
 
 
 
@@ -321,12 +332,11 @@ struct CastToNative<std::vector<T, Rest...> &&, std::enable_if_t<!is_wrapped_typ
 
 // Cast a copyable, standard type to a unique_ptr
 template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value && !std::is_reference<
-    std::result_of_t<
-        CastToNative<std::remove_pointer_t<T>>(v8::Isolate*, v8::Local<v8::Value>)
-    > // end result_of
->::value // end is_reference
->// end enable_if_t
+struct CastToNative<std::unique_ptr<T, Rest...>,
+    std::enable_if_t<
+        std::is_copy_constructible<T>::value &&
+        !is_wrapped_type_v<T>
+    >// end enable_if_t
 >// end template
 {
     std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
@@ -334,6 +344,13 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<std::is_copy_c
     }
 };
 
+
+template<class T>
+struct CastToNative<v8::Local<T>> {
+    v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> value) const {
+        return value;
+    }
+};
 
 // cannot cast a non-copyable, standard type to a unique_ptr
 template<class T, class... Rest>
@@ -505,29 +522,27 @@ struct CastToJS<std::function<R(Params...)>> {
 /**
 * Special passthrough type for objects that want to take javascript object objects directly
 */
-template<>
-struct CastToJS<v8::Local<v8::Object>> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Object> object){
+template<class T>
+struct CastToJS<v8::Local<T>> {
+	v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> value){
 		//return v8::Local<v8::Value>::New(isolate, object);
-        return object;
+        return value;
 	}
+    v8::Local<T> operator()(v8::Isolate * isolate, v8::Global<T> && value){
+        //return v8::Local<v8::Value>::New(isolate, object);
+        return value.Get(isolate);
+    }
 };
 
 
 
-/**
-* Special passthrough type for objects that want to take javascript value objects directly
-*/
-template<>
-struct CastToJS<v8::Local<v8::Value>> {
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value){
-		return value;
-	}
-};
 
-template<>
-struct CastToJS<v8::Global<v8::Value> &> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
+template<class T>
+struct CastToJS<v8::Global<T>> {
+    v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> & value) {
+        value;
+    }
+    v8::Local<T> operator()(v8::Isolate * isolate, v8::Global<T> const & value) {
         return value.Get(isolate);
     }
 };

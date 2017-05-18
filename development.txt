@@ -170,6 +170,13 @@ Should add the ability to know if the wrapped object is owned by the JS object o
 
 
 
+Need to write/fix casttonative for unique_ptr of wrapped type
+ - make is_wrapped_type work differently based on whether v8_class_wrapper has been included previously?
+   - have it look for a #define'd value or make it's own that makes everything not wrapped if it doesn't find a value from elsewhere?
+
+- let users make their own SFINAE for wrapping classes to allow not using WrappedClassBase
+ - in v8_class_wrapper, look for a user-#define'd value for the sfinae, otherwise fall back to WrappedClassBase as default SFINAE
+
 
 
 

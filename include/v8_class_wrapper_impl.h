@@ -171,7 +171,9 @@ namespace v8toolkit {
         if (wrapped_data == nullptr) {
             assert(false);
         }
-        return this->cast(wrapped_data->native_object);
+        T * result = this->cast(wrapped_data->native_object);
+
+		return result;
     }
 
 
