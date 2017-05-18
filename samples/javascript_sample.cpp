@@ -103,29 +103,6 @@ auto run_tests()
 }
 
 
-auto test_lifetimes()
-{
-    ScriptPtr s;
-    {
-        ContextPtr c;
-        {
-            auto i = Platform::create_isolate();
-            c = i->create_context();
-        }
-        // c is keeping i alive
-        printf("Nothing should have been destroyed yet\n");
-        
-        (*c)([&](){
-            s = c->compile("5");
-        });
-    }    
-    // s is keeping c alive which is keeping i alive
-    printf("Nothing should have been destroyed yet right before leaving test_lifetimes\n");
-    
-    return s->run_async();
-    // The std::future returned from the async contains a shared_ptr to the context
-}
-
 // A/B/C should have interesting base offsets, with neither A nor B starting at the same place as C
 struct A : public v8toolkit::WrappedClassBase { int i=1; };
 struct B : public v8toolkit::WrappedClassBase { int i=2; };
@@ -635,16 +612,7 @@ int main(int argc, char ** argv) {
 
     run_type_conversion_test();
 
-    auto future = test_lifetimes();
-    printf("Nothing should have been destroyed yet\n");
-    {
-        auto results = future.get();
-        results.first.Reset();
-        printf("Nothing should have been destroyed yet after getting future results\n");
-    }
-    printf("The script, context, and isolate helpers should have all been destroyed\n");
 
-    run_static_function_tests();
 
     auto context = run_tests();
     printf("The script, context, and isolate helpers should have all been destroyed\n");
