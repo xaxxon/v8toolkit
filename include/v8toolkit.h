@@ -363,30 +363,50 @@ set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info
 }
 
 
-// Helper function for when a required parameter isn't specified in ajvascript but has a function-specific default value specified for it
+// Helper function for when a required parameter isn't specified in javascript but has a function-specific default value specified for it
 template <int default_arg_position = -1, class NoRefT, class DefaultArgsTuple = std::tuple<>>
-std::enable_if_t<(default_arg_position >= 0),
-        std::result_of_t<cast_to_native_no_value<NoRefT>(const v8::FunctionCallbackInfo<v8::Value> &, int)> &>
+
+std::enable_if_t<
+    (default_arg_position >= 0),
+    std::result_of_t<cast_to_native_no_value<NoRefT>(const v8::FunctionCallbackInfo<v8::Value> &, int)> &>
 
 set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info,
                                                                               int & i,
                                                                               std::vector<std::unique_ptr<StuffBase>> & stuff,
                                                                               DefaultArgsTuple && default_args_tuple) {
 
+    // Gets the type returned by CastToNative - it's not always the same type as requested
     using ResultT = std::remove_reference_t<decltype(cast_to_native_no_value<NoRefT>()(info, i++))>;
-//
-//    stuff.emplace_back(
-//            std::make_unique<Stuff<ResultT>>(std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)))
-//    );
-//
-//    return *static_cast<Stuff<ResultT> *>(stuff.back().get())->get();
 
-    // converting the value to a javascript value and then back is an ugly hack to deal with some parameter types changing
-    // types when being returned in order to store the memory somewhere it will be cleaned up (like char*)
-    auto temporary_js_value = v8toolkit::CastToJS<NoRefT>()(info.GetIsolate(), std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)));
-    stuff.emplace_back(std::make_unique<Stuff<ResultT>>(CastToNative<NoRefT>()(info.GetIsolate(), temporary_js_value)));
+    // This should be genealized to not be hardcoded as to what types have a different CastToNative return type
+    if constexpr(std::is_same_v<NoRefT, char*> || std::is_same_v<NoRefT, char const *>) {
+        // get the value out of the default value tuple
 
-    return *((static_cast<Stuff<ResultT> *>(stuff.back().get()))->get());
+
+        char const * string = std::get<(std::size_t) default_arg_position>(std::move(default_args_tuple));
+        int length = strlen(string);
+        std::unique_ptr<char[]> unique_ptr(new char[length + 1]);
+        strcpy(unique_ptr.get(), string);
+
+        stuff.emplace_back(
+            std::make_unique<Stuff < ResultT>>(std::unique_ptr<char[]>(std::move(unique_ptr))));
+    } else {
+        static_assert(std::is_same_v<ResultT, std::remove_reference_t<NoRefT>>, "Unexpected (i.e. not char*) situation where CastToNative doesn't return same type as requested ");
+        // get the value out of the default value tuple
+        stuff.emplace_back(
+            std::make_unique<Stuff < ResultT>>
+        (std::get<(std::size_t) default_arg_position>(std::move(default_args_tuple)))
+        );
+    }
+
+    return *static_cast<Stuff<ResultT> *>(stuff.back().get())->get();
+
+//    // converting the value to a javascript value and then back is an ugly hack to deal with some parameter types changing
+//    // types when being returned in order to store the memory somewhere it will be cleaned up (like char*)
+//    auto temporary_js_value = v8toolkit::CastToJS<NoRefT>()(info.GetIsolate(), std::get<(std::size_t)default_arg_position>(std::move(default_args_tuple)));
+//    stuff.emplace_back(std::make_unique<Stuff<ResultT>>(CastToNative<NoRefT>()(info.GetIsolate(), temporary_js_value)));
+//
+//    return *((static_cast<Stuff<ResultT> *>(stuff.back().get()))->get());
 }
 
 
@@ -426,25 +446,25 @@ struct ParameterBuilder<T*, std::enable_if_t< std::is_fundamental<T>::value >> {
 /**
  * If CastToNative returns a reference
  */
-template<class T>
-struct ParameterBuilder<T,
-    std::enable_if_t<is_wrapped_type_v<T>>> {
-    using NoRefT = std::remove_reference_t<T>;
-
-
-    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
-                   DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-
-//        std::cerr << fmt::format("ParameterBuilder type that returns a reference: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
-	    
-        if (i >= info.Length()) {
-            return cast_to_native_no_value<NoRefT>()(info, i++);
-        } else {
-            return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
-        }
-    }
-};
+//template<class T>
+//struct ParameterBuilder<T,
+//    std::enable_if_t<is_wrapped_type_v<T>>> {
+//    using NoRefT = std::remove_reference_t<T>;
+//
+//
+//    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+//    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
+//                   DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+//
+////        std::cerr << fmt::format("ParameterBuilder type that returns a reference: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
+//
+//        if (i >= info.Length()) {
+//            return cast_to_native_no_value<NoRefT>()(info, i++);
+//        } else {
+//            return CastToNative<NoRefT>()(info.GetIsolate(), info[i++]);
+//        }
+//    }
+//};
 
 
 template<class T>

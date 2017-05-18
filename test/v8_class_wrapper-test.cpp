@@ -185,6 +185,49 @@ TEST_F(JavaScriptFixture, Vectors) {
 }
 
 
+TEST_F(JavaScriptFixture, Sets) {
+
+    this->create_context();
+
+    (*c)([&] {
+        {
+            std::set<std::string> v{"hello", "there", "this", "is", "a", "set"};
+            c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
+            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+        }
+        {
+            std::set<std::string> const cv{"hello", "there", "this", "is", "a", "set"};
+            c->add_variable("cv", CastToJS<decltype(cv)>()(*i, cv));
+            c->run("assert_contents(cv, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+        }
+        {
+            // non-wrapped element type, so the original set remains - no new object of the Element type to move
+            //   them into.
+            std::set<std::string> v{"hello", "there", "this", "is", "a", "set"};
+            c->add_variable("v", CastToJS<decltype(v)>()(*i, std::move(v)));
+            c->run("assert_contents(v, ['hello', 'there', 'this', 'is', 'a', 'set'])");
+        }
+
+
+//        // set
+//        {
+//            auto js_set = c->run("[`a`, `b`, `c`]");
+//            auto set = CastToNative<std::set<std::string>>()(*i, js_set.Get(*i));
+//            EXPECT_EQ(set.size(), 3);
+////            EXPECT_EQ(set[2], "c");
+//        }
+//        // const set
+//        {
+//            auto js_set = c->run("[`a`, `b`, `c`]");
+//            auto set = CastToNative<std::set<std::string> const>()(*i, js_set.Get(*i));
+//            EXPECT_EQ(set.size(), 3);
+////            EXPECT_EQ(set[2], "c");
+//        }
+
+    });
+}
+
+
 
 TEST_F(JavaScriptFixture, Maps) {
 
@@ -322,3 +365,19 @@ TEST_F(JavaScriptFixture, ObjectLifetimes) {
     EXPECT_TRUE(weak_script_pointer.expired());
 
 }
+
+
+
+
+
+TEST_F(JavaScriptFixture, TEST_NAME) {
+
+    this->create_context();
+
+
+
+    (*c)([&] {
+
+    });
+}
+

@@ -34,12 +34,6 @@ struct CastToNative<eastl::vector_map<Key, Value, Args...>> {
         return map_type_helper<eastl::vector_map, Key, Value, Args...>(isolate, value);
     }
 };
-template<class Key, class Value, class... Args>
-struct CastToNative<eastl::vector_map<Key, Value, Args...> const> {
-    eastl::vector_map<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return map_type_helper<eastl::vector_map, Key, Value, Args...>(isolate, value);
-    }
-};
 
 
 // EASTL VECTOR
@@ -49,14 +43,7 @@ struct CastToNative<eastl::vector<T, Args...>> {
         return vector_type_helper<eastl::vector, T, Args...>(isolate, value);
     }
 };
-template<class T, class... Args>
-struct CastToNative<eastl::vector<T, Args...> const> {
-    using ResultType = eastl::vector<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Args...>;
 
-    ResultType operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return vector_type_helper<eastl::vector, T, Args...>(isolate, value);
-    }
-};
 
 
 // EASTL VECTOR_SET
@@ -72,20 +59,6 @@ struct CastToNative<eastl::vector_set<T, Args...>> {
         return set;
     }
 };
-// EASTL VECTOR_SET
-template<class T, class... Args>
-struct CastToNative<eastl::vector_set<T, Args...> const > {
-    eastl::vector_set<T, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        // sue me.
-        auto vector = vector_type_helper<eastl::vector, T>(isolate, value);
-        eastl::vector_set<T, Args...> set;
-        for(auto & i : vector) {
-            set.emplace(std::move(i));
-        }
-        return set;
-    }
-};
-
 
 
 
@@ -93,12 +66,6 @@ struct CastToNative<eastl::vector_set<T, Args...> const > {
 
 template<class Key, class Value, class... Args>
 struct CastToNative<eastl::vector_multimap<Key, Value, Args...>> {
-    eastl::vector_multimap<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);
-    }
-};
-template<class Key, class Value, class... Args>
-struct CastToNative<eastl::vector_multimap<Key, Value, Args...> const> {
     eastl::vector_multimap<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
         return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);
     }
@@ -135,12 +102,6 @@ struct CastToJS<eastl::vector<T, Rest...>> {
         return this->operator()(isolate, vector);
     }
 };
-template<class T, class... Rest>
-struct CastToJS<eastl::vector<T, Rest...> const> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector) {
-        return CastToJS<eastl::vector<T, Rest...>>()(isolate, vector);
-    }
-};
 
 
 template<class T, class... Rest>
@@ -156,37 +117,31 @@ struct CastToJS<eastl::vector_multimap<A, B, Rest...>> {
     }
 };
 
-template<class A, class B, class... Rest>
-struct CastToJS<eastl::vector_multimap<A, B, Rest...> const> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_multimap<A, B, Rest...> const & multimap) {
-        return casttojs_multimaplike(isolate, multimap);
-    }
-};
 
 template<class A, class B, class... Rest>
 struct CastToJS<eastl::vector_map<A, B, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_map<A, B, Rest...> const & map) {
-        return cast_to_js_map_helper<eastl::vector_map, A&, B&, Rest...>(isolate, map);
+        return cast_to_js_map_helper<eastl::vector_map, A, B, int&, Rest...>(isolate, map);
     }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_map<A, B, Rest...> && map) {
+        return cast_to_js_map_helper<eastl::vector_map, A, B, int&&, Rest...>(isolate, map);
+    }
+
 };
-
-
 
 
 
 template<class T, class... Rest>
 struct CastToJS<eastl::vector_set<T, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_set<T, Rest...> const & set) {
-        return cast_to_js_vector_helper(isolate, set);
+        return cast_to_js_vector_helper<eastl::vector_set, T&, Rest...>(isolate, set);
     }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_set<T, Rest...> && set) {
+        return cast_to_js_vector_helper<eastl::vector_set, T&&, Rest...>(isolate, set);
+    }
+
 };
 
-template<class T, class... Rest>
-struct CastToJS<eastl::vector_set<T, Rest...> const> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector_set<T, Rest...> const & set) {
-        return cast_to_js_vector_helper(isolate, set);
-    }
-};
 
 
 

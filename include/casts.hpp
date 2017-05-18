@@ -13,6 +13,7 @@
 #include <array>
 #include <memory>
 #include <utility>
+#include <set>
 #include "v8.h"
 #include "wrapped_class_base.h"
 #include "v8helpers.h"
@@ -280,7 +281,7 @@ auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
     VectorTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>
 {
     using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
-    static_assert(!std::is_reference<ValueType>::value, "vector value type cannot be reference");
+    static_assert(!std::is_reference<ValueType>::value, "vector-like value type cannot be reference");
     using ResultType = VectorTemplate<ValueType, Rest...>;
     HANDLE_FUNCTION_VALUES;
     auto context = isolate->GetCurrentContext();
@@ -293,7 +294,7 @@ auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
             v.emplace_back(std::forward<T>(CastToNative<T>()(isolate, value)));
         }
     } else {
-        throw CastException(fmt::format("CastToNative<std::vector<{}>> requires an array but instead got JS: '{}'",
+        throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
                                         demangle<T>(),
                                         stringify_value(isolate, value)));
     }
@@ -316,11 +317,21 @@ struct CastToNative<std::vector<T, Rest...>, std::enable_if_t<std::is_copy_const
 // can move the elements if the underlying JS objects own their memory or can do copies if copyable, othewrise throws
 // SFINAE on this is required for disambiguation, even though it can't ever catch anything
 template<class T, class... Rest>
-struct CastToNative<std::vector<T, Rest...> &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
+struct CastToNative<std::vector<T, Rest...> &&, std::enable_if_t<!is_wrapped_type_v<std::vector<T, Rest...>>>> {
     using ResultType = std::vector<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
 
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return vector_type_helper<std::vector, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
+    }
+};
+
+
+template<class T, class... Rest>
+struct CastToNative<std::set<T, Rest...> &&, std::enable_if_t<!is_wrapped_type_v<std::set<T, Rest...>>>> {
+    using ResultType = std::set<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
+
+    ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
+        return vector_type_helper<std::set, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
     }
 };
 
@@ -586,12 +597,13 @@ v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, VectorTempl
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
-    auto size = vector.size();
-    for (unsigned int i = 0; i < size; i++) {
-        (void) array->Set(context, i, CastToJS<std::remove_reference_t<ValueType>>()(isolate, std::forward<ValueType>(const_cast<ValueType>(vector[i]))));
+
+    int i = 0;
+    for (auto & element : vector) {
+        (void) array->Set(context, i, CastToJS<std::remove_reference_t<ValueType>>()(isolate, std::forward<ValueType>(const_cast<ValueType>(element))));
+        i++;
     }
     return array;
-
 }
 
 
@@ -613,10 +625,16 @@ struct CastToJS<std::list<U, Rest...>> {
 };
 
 // CastToJS<std::map>
-template<class A, class B, class... Rest>
-struct CastToJS<std::map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> const & map);
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<A, B, Rest...> && map);
+template<class KeyType, class ValueType, class... Rest>
+struct CastToJS<std::map<KeyType, ValueType, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<KeyType, ValueType, Rest...> const & map)  {
+        return cast_to_js_map_helper<std::map, KeyType, ValueType, int&, Rest...>(isolate, map);
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::map<KeyType, ValueType, Rest...> && map)  {
+        return cast_to_js_map_helper<std::map, KeyType, ValueType, int&&, Rest...>(isolate, map);
+    }
+
 };
 
 // CastToJS<std::multimap>
@@ -666,9 +684,18 @@ struct CastToJS<std::array<T, N>> {
  * These functions are not const because they call unique_ptr::release
  */
 template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> & unique_ptr);
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr);
+struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<T>>> {
+
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
+        return CastToJS<T>()(isolate, *unique_ptr.get());
+    }
+
+
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+        auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
+        unique_ptr.reset();
+        return result;
+    }
 };
 
 
@@ -731,24 +758,6 @@ CastToJS<std::list<T, Rest...>>::operator()(v8::Isolate * isolate, std::list<T, 
         i++;
     }
     return array;
-}
-
-
-
-
-
-
-/**
-* supports maps containing any type also supported by CastToJS to javascript arrays
-*/
-template<class KeyType, class ValueType, class... Rest> v8::Local<v8::Value>
-CastToJS<std::map<KeyType, ValueType, Rest...>>::operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> const & map) {
-    return cast_to_js_map_helper<std::map, KeyType, ValueType, int&, Rest...>(isolate, map);
-}
-
-template<class KeyType, class ValueType, class... Rest> v8::Local<v8::Value>
-CastToJS<std::map<KeyType, ValueType, Rest...>>::operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> && map) {
-    return cast_to_js_map_helper<std::map, KeyType, ValueType, int&&, Rest...>(isolate, map);
 }
 
 
@@ -914,36 +923,23 @@ CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> &
 
 //TODO: stack
 
-//TODO: set
-
-//TODO: unoxrdered_set
 
 
+template<class T, class... Rest>
+struct CastToJS<std::set<T, Rest...>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::set<T, Rest...> const & set) {
+        return cast_to_js_vector_helper<std::set, T&, Rest...>(isolate, set);
+    }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::set<T, Rest...> && set) {
+        return cast_to_js_vector_helper<std::set, T&&, Rest...>(isolate, set);
+    }
+};
 
-/* Does NOT transfer ownership.  Original ownership is maintained. */
-template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-//    fprintf(stderr, "RELEASING UNIQUE_PTR MEMORY for unique_ptr type %s\n", demangle<T>().c_str());
-    return CastToJS<T>()(isolate, *unique_ptr.release());
-}
-
-
-
-/* Does transfer ownership.
- * If the type is a V8ClassWrapper-wrapped type, the C++ object will be transferred in to the resulting JavaScript object
- * or, in the case of simple types like numbers and strings, the memory will be freed immediately and the JavaScript
- * object will be a full representation of the previous object
- * */
-template<class T, class... Rest> v8::Local<v8::Value>
-CastToJS<std::unique_ptr<T, Rest...>>::operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-    auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
-    unique_ptr.reset();
-    return result;
-}
 
 
 
 
+//TODO: unoxrdered_set
 
 
 

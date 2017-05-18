@@ -291,89 +291,6 @@ extern V8ClassWrapperInstanceRegistry wrapper_registery;
  */
 extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
 
- 
- template<class T, class = void> class V8ClassWrapper;
-
-
-/**
- * The real template is quite expensive to make for types that don't need it,
- *   so here's an alternative for when it isn't actually going to be used
- */
- template<class T>
-     class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE> {
- public:
-
-//     static V8ClassWrapper<T> & get_instance(v8::Isolate * isolate);
-
-	 v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context,
-                                                    T * existing_cpp_object,
-                                                    DestructorBehavior const & destructor_behavior,
-                                                    bool force_wrap_this_type = false);
-
-     T * cast(AnyBase * any_base);
-
-
-     template<class... Args1, class Callable, class Tuple = std::tuple<>>
-	 void add_method(std::string const &, Callable&&, Tuple&&=Tuple());
-
-
-	template<typename ... CONSTRUCTOR_PARAMETER_TYPES, class DefaultArgsTuple = std::tuple<>>
-	void add_constructor(const std::string & js_constructor_name,
-						 v8::Local<v8::ObjectTemplate> parent_template,
-						 DefaultArgsTuple const & default_args = DefaultArgsTuple());
-
-    template<class Callable>
-    void add_new_constructor_function_template_callback(Callable&&);
-
-	void finalize(bool wrap_as_most_derived = false);
-
-         template<class MemberType,
-             class MemberClass,
-             MemberType (MemberClass::*member)>
-	V8ClassWrapper<T> & add_member(std::string const &);
-
-         template<class MemberType,
-             class MemberClass,
-             MemberType (MemberClass::*member)>
-         V8ClassWrapper<T> & add_member_readonly(std::string const &);
-
-	template<auto member>
-	V8ClassWrapper<T> & add_member_readonly(std::string const &);
-
-	template<auto member>
-	V8ClassWrapper<T> & add_member(std::string const &);
-
-
-	template<class...>
-    V8ClassWrapper<T>& set_compatible_types();
-
-     template<class>
-    V8ClassWrapper<T> & set_parent_type();
-
-	 static T * release_internal_field_memory(v8::Local<v8::Object> object);
-
-
-			 template<class... Args>
-	 V8ClassWrapper<T> & add_static_method(Args&&...);
-
-     T * get_cpp_object(v8::Local<v8::Object> object);
-
-     
- 	void set_class_name(const std::string & name);
-
-
- 	v8::Local<v8::FunctionTemplate> get_function_template();
-
-	 template<class... Args>
-	 v8::Local<v8::Object> wrap_as_most_derived(Args&&...);
-
-     std::unique_ptr<DestructorBehavior> destructor_behavior_delete;
-     std::unique_ptr<DestructorBehavior> destructor_behavior_leave_alone;
-
-     static void initialize_new_js_object(v8::Isolate * isolate, v8::Local<v8::Object> js_object, T * cpp_object, DestructorBehavior const & destructor_behavior);
-};
-
-
 
 /**
 * Provides a mechanism for creating javascript-ready objects from an arbitrary C++ class
@@ -386,13 +303,15 @@ extern std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_l
 * All members/methods must be added, then finalize() called, then any desired constructors may be created.
 *
 *
-*/ 
-template<class T>
-    
-class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
+*/
+template<class T, class = void>
+class V8ClassWrapper;
 
+template<class T>
+class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
 {
 	using ConstT = std::add_const_t<T>;
+
 private:
 
 	/*** TYPEDEFS ***/
@@ -592,31 +511,51 @@ private:
 	 * @param value new value for property
 	 * @param info general JavaScript state info
 	 */
-	template<auto member>
+	template<auto member/*, std::enable_if_t<std::is_copy_assignable_v<pointer_to_member_t<member>>> = 0*/>
 	static void _setter_helper(v8::Local<v8::Name> property,
 							   v8::Local<v8::Value> value,
 							   v8::PropertyCallbackInfo<void> const & info) {
+
+
 	    auto isolate = info.GetIsolate();
 
-	    T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
-		cpp_object->*member = CastToNative<std::remove_reference_t<decltype(cpp_object->*member)>>()(isolate, value);
+        auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+
+
+	    T * cpp_object = wrapper.get_cpp_object(info.Holder());
+		using MemberT = std::remove_reference_t<decltype(cpp_object->*member)>;
+        static_assert(
+            std::is_copy_assignable_v<MemberT> ||
+            std::is_move_assignable_v<MemberT>, "Cannot add_member with a type that is not either copy or move assignable.  Use add_member_readonly instead");
+
+		// if it's copyable, then the assignment is pretty easy
+		if constexpr(is_wrapped_type_v<MemberT>)
+		{
+			if constexpr(std::is_copy_assignable_v<MemberT>)
+			{
+				cpp_object->*member = CastToNative<MemberT &>()(isolate, value);
+			}
+			// otherwise if it's a wrapped type and it's move assignable, if the object owns its memory, then try a
+			//   move assignment
+			else if constexpr(std::is_move_assignable_v<MemberT>)
+			{
+
+				auto object = check_value_is_object(value, demangle<MemberT>());
+				if (wrapper.does_object_own_memory(object)) {
+					cpp_object->*member = CastToNative<MemberT &&>()(isolate, value);
+				}
+			}
+		}
+		// for an unwrapped type, always try to make a copy and do a move assignment from it
+		else {
+			cpp_object->*member = CastToNative<MemberT>()(isolate, value);
+		}
+
 
 	    // call any registered change callbacks
 	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(property), value);
 	}
 
-
-	/**
-	 * Setter cannot do anything for types that aren't copy assignable
-	 * @param property ignored
-	 * @param value ignored
-	 * @param info ignored
-	 */
-	template<typename MemberType, class MemberClass, MemberType (MemberClass::*member_pointer),
-		std::enable_if_t<!std::is_copy_assignable<MemberType>::value, int> = 0>
-	static void _setter_helper(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
-							   const v8::PropertyCallbackInfo<void>& info)
-    {}
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript
@@ -1124,6 +1063,8 @@ public:
 	template<auto member>
 	void add_member(std::string const & member_name) {
 	    assert(this->finalized == false);
+
+
 
         // This function could forward the request to add_member_readonly instead, but having it error instead makes the
         //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
@@ -1696,21 +1637,6 @@ template<class T>
 class JSWrapper;
 
 
-inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, std::string const & class_name) {
-	if (!value->IsObject()) {
-		print_v8_value_details(value);
-		throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}", class_name, *v8::String::Utf8Value(value)));
-	}
-
-	auto object = value->ToObject();
-
-	if (object->InternalFieldCount() == 0) {
-		throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: {}", class_name, *v8::String::Utf8Value(value)));
-	}
-
-	return object;
-
-}
 
 
 template<class T>
@@ -1730,6 +1656,26 @@ struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
 												*wrapper.destructor_behavior_delete);
 	}
 };
+
+
+/**
+ * CastToNative a std::unique_ptr to a wrapped type
+ */
+template<class T, class... Rest>
+struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<T>>> {
+
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
+        return CastToJS<T>()(isolate, *unique_ptr.get());
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+        auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+
+        // create new owning JavaScript object with the contents of the unique_ptr
+        return wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.release(), *wrapper.destructor_behavior_delete);
+    }
+};
+
 
 
 
@@ -1908,11 +1854,11 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_typ
 		HANDLE_FUNCTION_VALUES;
 
 		auto object = check_value_is_object(value, demangle<T>());
+
+		// if the javascript object owns the memory, it gives up that ownership to the unique_ptr
 		if (V8ClassWrapper<T>::does_object_own_memory(object)) {
-			T & cpp_object = get_object_from_embedded_cpp_object<T>(isolate, value);
-			T * should_be_the_same_cpp_object = V8ClassWrapper<T>::get_instance(isolate).release_internal_field_memory(object);
-			assert(&cpp_object == should_be_the_same_cpp_object);
-			return std::unique_ptr<T, Rest...>(new T(std::move(cpp_object)));
+			auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+			return std::unique_ptr<T, Rest...>(wrapper.release_internal_field_memory(object));
 		} else if constexpr(std::is_copy_constructible_v<T>) {
 			T & cpp_object = get_object_from_embedded_cpp_object<T>(isolate, value);
 			return std::unique_ptr<T, Rest...>(new T(cpp_object));

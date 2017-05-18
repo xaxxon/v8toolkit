@@ -32,8 +32,10 @@ namespace v8toolkit {
         return std::is_const_v<MemberT>;
     };
 
+
     template<auto member>
     constexpr bool is_pointer_to_const_data_member_v = get_member_is_readonly(member);
+
 
 
     using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
@@ -633,5 +635,23 @@ std::string stringify_value(v8::Isolate * isolate,
  */
 bool global_name_conflicts(const std::string & name);
 extern std::vector<std::string> reserved_global_names;
+
+
+
+inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, std::string const & class_name) {
+    if (!value->IsObject()) {
+        print_v8_value_details(value);
+        throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}", class_name, *v8::String::Utf8Value(value)));
+    }
+
+    auto object = value->ToObject();
+
+    if (object->InternalFieldCount() == 0) {
+        throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: {}", class_name, *v8::String::Utf8Value(value)));
+    }
+
+    return object;
+
+}
 
 } // End v8toolkit namespace

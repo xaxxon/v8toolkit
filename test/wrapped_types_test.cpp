@@ -10,6 +10,15 @@ using std::unique_ptr;
 using std::make_unique;
 
 
+class CopyableWrappedClass : public WrappedClassBase {
+public:
+    CopyableWrappedClass(){}
+    CopyableWrappedClass(CopyableWrappedClass const &) = default;
+
+};
+
+
+
 class WrappedClass : public WrappedClassBase {
 public:
     int i = 5;
@@ -28,7 +37,15 @@ public:
         return x;
     }
 
+    void default_parameters(int i = 1, char const * s = "asdf"){
+        EXPECT_EQ(i, 1);
+        EXPECT_STREQ(s, "asdf");
+    };
+
     static std::string static_method(){return "static_method";}
+
+    CopyableWrappedClass copyable_wrapped_class;
+    std::unique_ptr<WrappedClass> up_wrapped_class;
 };
 
 
@@ -37,18 +54,28 @@ class WrappedClassFixture : public JavaScriptFixture {
 public:
     WrappedClassFixture() {
         ISOLATE_SCOPED_RUN(*i);
-        auto & w = V8ClassWrapper<WrappedClass>::get_instance(*i);
-        w.add_member<&WrappedClass::i>("i");
-        w.add_member<&WrappedClass::ci>("ci");
-        w.add_member<&WrappedClass::upf>("upf");
-        w.add_member<&WrappedClass::cupf>("cupf");
-        w.add_member<&WrappedClass::string>("string");
+        {
+            auto & w = V8ClassWrapper<WrappedClass>::get_instance(*i);
+            w.add_member<&WrappedClass::i>("i");
+            w.add_member<&WrappedClass::ci>("ci");
+            w.add_member<&WrappedClass::upf>("upf");
+            w.add_member<&WrappedClass::cupf>("cupf");
+            w.add_member<&WrappedClass::string>("string");
+            w.add_member<&WrappedClass::copyable_wrapped_class>("copyable_wrapped_class");
+            w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
+            w.add_method("takes_int_5", &WrappedClass::takes_int_5);
+            w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+            w.add_method("default_parameters", &WrappedClass::default_parameters, std::tuple<int, char const *>(1, "asdf"));
+            w.add_static_method("static_method", &WrappedClass::static_method);
+            w.finalize();
+            w.add_constructor("WrappedClass", *i);
+        }
+        {
+            auto & w = V8ClassWrapper<CopyableWrappedClass>::get_instance(*i);
+            w.finalize();
+            w.add_constructor<>("CopyableWrappedClass", *i);
+        }
 
-        w.add_method("takes_int_5", &WrappedClass::takes_int_5);
-        w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
-        w.add_static_method("static_method", &WrappedClass::static_method);
-        w.finalize();
-        w.add_constructor("WrappedClass", *i);
 
         i->add_function("takes_wrapped_class_lvalue", [](WrappedClass & wrapped_class){
             EXPECT_EQ(wrapped_class.string, "string value");
@@ -162,7 +189,8 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
             // calling with owning object
             auto result = c->run(
                 "wc = new WrappedClass(); takes_wrapped_class_unique_ptr(wc);"
-                    "EXPECT_EQJS(wc.string, ``); wc;"
+                    // "EXPECT_EQJS(wc.string, ``);" <== can't do this, the memory is *GONE* not just moved out of
+                "wc;"
             );
             EXPECT_FALSE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject()));
 
@@ -185,3 +213,49 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
         }
     });
 }
+
+
+TEST_F(WrappedClassFixture, ReturningUniquePtr) {
+
+    c->add_function("returns_unique_ptr", [&](){
+        return std::make_unique<WrappedClass>();
+    });
+
+
+    (*c)([&](){
+
+        c->run("returns_unique_ptr();");
+
+    });
+}
+
+
+TEST_F(WrappedClassFixture, FunctionTakesCopyOfWrappedType) {
+    c->add_function("wants_copy_of_wrapped_type", [&](CopyableWrappedClass){});
+
+    (*c)([&](){
+
+        c->run("wants_copy_of_wrapped_type(new CopyableWrappedClass());");
+
+    });
+
+
+}
+
+
+
+
+TEST_F(WrappedClassFixture, DefaultParameters) {
+
+    (*c)([&](){
+
+        c->run("new WrappedClass().default_parameters();");
+
+    });
+
+
+}
+
+
+
+
