@@ -226,7 +226,7 @@ TEST_F(JavaScriptFixture, Maps) {
             EXPECT_EQ(map["b"], 2);
             EXPECT_EQ(map["c"], 3);
         }
-        
+
     });
 }
 

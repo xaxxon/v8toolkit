@@ -690,6 +690,10 @@ public:
 		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
+        if (!this->does_object_own_memory(object)) {
+            throw CastException("Cannot V8ClassWrapper::release_internal_field_memory because the object does not own its own memory");
+        }
+
 		if (!std::has_virtual_destructor<T>::value && dynamic_cast<AnyPtr<T> *>(wrapped_data->native_object) == nullptr) {
 #ifdef ANYBASE_DEBUG
 			std::cerr << fmt::format("cached anybase type: {} vs T: {}", wrapped_data->native_object->type_name, demangle<T>()) << std::endl;
@@ -701,6 +705,7 @@ public:
 
 		// since the weak callback won't run to delete the SetWeakCallbackData memory, do that now
 		delete wrapped_data->weak_callback_data;
+        wrapped_data->weak_callback_data = nullptr;
 
 		return V8ClassWrapper<T>::get_cpp_object(object);
 	}
