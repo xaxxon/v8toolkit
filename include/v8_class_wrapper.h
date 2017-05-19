@@ -1760,7 +1760,7 @@ struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && 
 template<typename T>
 struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
-	static_assert(always_false_v<T>, "Cannot return by copy a type that is not copy constructible");
+	static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
 };
 
 
@@ -1969,18 +1969,30 @@ struct ParameterBuilder<T &&, std::enable_if_t<is_wrapped_type_v<T>>> {
 	T && operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 					std::vector<std::unique_ptr<StuffBase>> & stuff,
 					DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+        PB_PRINT("ParameterBuilder handling wrapped type: {} &&", demangle<T>());
 		auto isolate = info.GetIsolate();
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		auto value = info[i++];
-		auto object = check_value_is_object(value, demangle<T>());
-		if (wrapper.does_object_own_memory(object)) {
-			return std::move(*wrapper.get_cpp_object(object));
-		} else if constexpr(std::is_copy_constructible_v<T>) {
-			// make a copy, put it in stuff, and return an rvalue ref to the copy
-			stuff.emplace_back(std::make_unique<Stuff<T>>(std::make_unique<T>(*wrapper.get_cpp_object(object))));
-			return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
-		}
-		throw CastException("Could not send non-owning, non-copyable, wrapped type to function requesting an rvalue pointer");
+
+        if (value->IsObject()) {
+            auto object = value->ToObject();
+            if (auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object)) {
+                if (wrapper.does_object_own_memory(object)) {
+                    return std::move(*cpp_object);
+                } else if constexpr(std::is_copy_constructible_v<T>)
+                {
+                    // make a copy, put it in stuff, and return an rvalue ref to the copy
+                    stuff.emplace_back(
+                        std::make_unique<Stuff<T>>(std::make_unique<T>(*cpp_object)));
+                    return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
+                }
+            }
+        }
+        if constexpr(std::is_move_constructible_v<T>) {
+            stuff.emplace_back(std::make_unique<Stuff<T>>(CastToNative<T&&>()(isolate, value)));
+            return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
+        }
+        throw CastException("Oops");
 	}
 };
 

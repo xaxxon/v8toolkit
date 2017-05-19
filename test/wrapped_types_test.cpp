@@ -49,6 +49,19 @@ public:
 };
 
 
+class WrappedString : public WrappedClassBase {
+public:
+    std::string string;
+    WrappedString(std::string string) : string(string) {}
+};
+
+namespace v8toolkit {
+CAST_TO_NATIVE(WrappedString, {
+    return WrappedString(CastToNative<std::string const &>()(isolate, value));
+});
+
+}
+
 
 class WrappedClassFixture : public JavaScriptFixture {
 public:
@@ -75,6 +88,14 @@ public:
             w.finalize();
             w.add_constructor<>("CopyableWrappedClass", *i);
         }
+
+        {
+            auto & w = V8ClassWrapper<WrappedString>::get_instance(*i);
+            w.add_member<&WrappedString::string>("string");
+            w.finalize();
+            w.add_constructor<std::string const &>("WrappedString", *i);
+        }
+
 
 
         i->add_function("takes_wrapped_class_lvalue", [](WrappedClass & wrapped_class){
@@ -234,28 +255,38 @@ TEST_F(WrappedClassFixture, FunctionTakesCopyOfWrappedType) {
     c->add_function("wants_copy_of_wrapped_type", [&](CopyableWrappedClass){});
 
     (*c)([&](){
-
         c->run("wants_copy_of_wrapped_type(new CopyableWrappedClass());");
-
     });
-
-
 }
 
 
 
+// If the wrapped type has a custom CastToNative, use that instead of blindly trying to get the
+//   C++ object pointer out of a JavaScript value at that position
+TEST_F(WrappedClassFixture, PreferSpecializedCastToNativeDuringParameterBuilder) {
+    (*c)([&]() {
 
-TEST_F(WrappedClassFixture, DefaultParameters) {
+        c->add_function("wants_wrapped_string", [&](WrappedString && wrapped_string) {
 
-    (*c)([&](){
+        });
 
-        c->run("new WrappedClass().default_parameters();");
-
+        c->run("wants_wrapped_string(`string that is not a wrapped object`);");
+        c->run("wants_wrapped_string(new WrappedString(`asdf`));");
     });
-
-
 }
-
+//
+//
+//TEST_F(WrappedClassFixture, DefaultParameters) {
+//
+//    (*c)([&](){
+//
+//        c->run("new WrappedClass().default_parameters();");
+//
+//    });
+//
+//
+//}
+//
 
 
 
