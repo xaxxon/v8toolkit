@@ -626,6 +626,7 @@ public:
 	 * @return the cpp object from inside the provided JS object
 	 */
 	T * release_internal_field_memory(v8::Local<v8::Object> object) {
+		std::cerr << fmt::format("Trying to releasing internal field memory") << std::endl;
 		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
@@ -1681,7 +1682,7 @@ struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<
 
 
 template<class T>
-struct CastToJS<T*, std::enable_if_t<is_wrapped_type_v<T>>> {
+struct CastToJS<T *, std::enable_if_t<is_wrapped_type_v<T>>> {
 
     // An lvalue is presented, so the memory will not be cleaned up by JavaScript
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object) {
@@ -1962,8 +1963,33 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 
 
+template <class T>
+struct ParameterBuilder<T &&, std::enable_if_t<is_wrapped_type_v<T>>> {
+	template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+	T && operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+					std::vector<std::unique_ptr<StuffBase>> & stuff,
+					DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+		auto isolate = info.GetIsolate();
+		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		auto value = info[i++];
+		auto object = check_value_is_object(value, demangle<T>());
+		if (wrapper.does_object_own_memory(object)) {
+			return std::move(*wrapper.get_cpp_object(object));
+		} else if constexpr(std::is_copy_constructible_v<T>) {
+			// make a copy, put it in stuff, and return an rvalue ref to the copy
+			stuff.emplace_back(std::make_unique<Stuff<T>>(std::make_unique<T>(*wrapper.get_cpp_object(object))));
+			return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
+		}
+		throw CastException("Could not send non-owning, non-copyable, wrapped type to function requesting an rvalue pointer");
+	}
+};
 
-} // end namespace v8toolkit
+
+
+
+
+
+} // namespace v8toolkit
 
 
 

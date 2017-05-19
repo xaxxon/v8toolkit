@@ -136,10 +136,6 @@ CAST_TO_NATIVE(char16_t, {return static_cast<char16_t>(value->ToInteger()->Value
 CAST_TO_NATIVE(char32_t, {return static_cast<char32_t>(value->ToInteger()->Value());});
 
 
-template<class Return, class... Params>
-struct CastToNative<std::function<Return(Params...)>> {
-    std::function<Return(Params...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
-};
 
 
 template<class... Ts, std::size_t... Is>
@@ -468,7 +464,11 @@ struct CastToJS<T &, std::enable_if_t<!is_wrapped_type_v<T>>> {
 template<class T>
 struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v<T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const value) const {
-        return CastToJS<T>()(isolate, *value);
+        if (value == nullptr) {
+            return v8::Undefined(isolate);
+        } else {
+            return CastToJS<T>()(isolate, *value);
+        }
     }
 };
 
@@ -721,14 +721,23 @@ template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...> &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...>>>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
 //    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-        return CastToJS<T>()(isolate, *unique_ptr.get());
+        if (unique_ptr.get() == nullptr) {
+            return v8::Undefined(isolate);
+        } else {
+            return CastToJS<T*>()(isolate, unique_ptr.get());
+        }
     }
 };
 template<class T, class... Rest>
 struct CastToJS<std::unique_ptr<T, Rest...> const &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...> const>>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> const & unique_ptr)  {
 //    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-        return CastToJS<T*>()(isolate, unique_ptr.get());
+
+        if (unique_ptr.get() == nullptr) {
+            return v8::Undefined(isolate);
+        } else {
+            return CastToJS<T*>()(isolate, unique_ptr.get());
+        }
     }
 };
 
@@ -953,9 +962,33 @@ struct CastToJS<std::set<T, Rest...>> {
 
 
 
-//TODO: unoxrdered_set
+//TODO: unordered_set
 
 
+
+
+template<class ReturnT, class... Args>
+struct CastToNative<std::function<ReturnT(Args...)>> {
+    std::function<ReturnT(Args...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
+//    {
+//        if (!value->IsFunction()) {
+//            throw CastException("CastToNative<{}> requires a JavaScript function parameter, not {}", demangle<std::function<ReturnT(Args...)>>(), stringify_value(isolate, value));
+//        }
+//
+//        auto function = get_value_as<v8::Function>(value);
+//        auto context = isolate->GetCurrentContext();
+//        return [&](Args&&... args)->ReturnT{
+//
+//            auto javascript_function_result = call_javascript_function_with_vars(context,
+//                                                                                 function,
+//                                                                                 context->Global(),
+//                                                                                 TypeList<Args...>(),
+//                                                                                 std::forward<Args>(args)...);
+//
+//            return CastToNative<ReturnT>()(isolate, javascript_function_result);
+//        };
+//    }
+};
 
 } // end namespace v8toolkit
 

@@ -304,9 +304,9 @@ v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
 
     auto maybe_result = function->Call(context, context->Global(), 0, nullptr);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
-	ReportException(isolate, &tc);
-	printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
-	throw InvalidCallException(*v8::String::Utf8Value(tc.Exception()));
+        ReportException(isolate, &tc);
+        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        throw InvalidCallException(*v8::String::Utf8Value(tc.Exception()));
     }
     return maybe_result.ToLocalChecked();
 }

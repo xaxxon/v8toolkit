@@ -6,15 +6,16 @@
 #include <iostream>
 #include <set>
 #include <typeinfo>
+
+
 #include <fmt/ostream.h>
+
+#include <libplatform/libplatform.h>
+#include <v8.h>
+
 
 #include "stdfunctionreplacement.h"
 
-
-
-// Everything in here is standalone and does not require any other v8toolkit files
-#include <libplatform/libplatform.h>
-#include <v8.h>
 
 // if it can be determined safely that cxxabi.h is available, include it for name demangling
 #if defined __has_include
@@ -82,6 +83,23 @@ namespace v8toolkit {
         }
 
     }
+
+
+
+template<class ReturnType, class... Args, class... Ts>
+auto run_function(func::function<ReturnType(Args...)> & function,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return function(std::forward<Args>(ts)...);
+}
+
+
+template<class ReturnType, class... Args, class Callable, class... Ts>
+auto run_function(Callable callable,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return callable(std::forward<Args>(ts)...);
+};
 
 
 
@@ -476,23 +494,6 @@ auto reducer(const Container & container, Callable callable) ->
     }
     return results;
 }
-
-
-template<class ReturnType, class... Args, class... Ts>
-auto run_function(func::function<ReturnType(Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) -> ReturnType {
-
-    return function(std::forward<Args>(ts)...);
-}
-
-
-template<class ReturnType, class... Args, class Callable, class... Ts>
-auto run_function(Callable callable,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) -> ReturnType {
-    return callable(std::forward<Args>(ts)...);
-};
 
 
 

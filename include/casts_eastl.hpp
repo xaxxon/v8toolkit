@@ -71,11 +71,9 @@ struct CastToNative<eastl::vector_multimap<Key, Value, Args...>> {
     }
 };
 
-CAST_TO_NATIVE_PRIMITIVE_WITH_CONST(eastl::string)
-    return eastl::string(*v8::String::Utf8Value(value));
-}
+CAST_TO_NATIVE(eastl::string, { return eastl::string(*v8::String::Utf8Value(value)); });
 
-CAST_TO_JS(eastl::string){return v8::String::NewFromUtf8(isolate, value.c_str());}
+CAST_TO_JS(eastl::string, {return v8::String::NewFromUtf8(isolate, value.c_str());});
 
 
 

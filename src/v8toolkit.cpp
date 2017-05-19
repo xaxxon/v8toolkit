@@ -737,6 +737,11 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
 {
     // printf("Comparing two things\n");
     auto context = isolate->GetCurrentContext();
+
+    // if they're both undefined, then they are equal.  If only one, then they're not.
+    if (left->IsUndefined() || right->IsUndefined()) {
+        return left->IsUndefined() && right->IsUndefined();
+    }
     
     v8::Local<v8::Boolean> bool_left;
     v8::Local<v8::Boolean> bool_right;

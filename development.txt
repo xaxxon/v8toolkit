@@ -186,5 +186,14 @@ Rest of the STL containers (including move'ing elements when appropriate)
 EASTL containers (including move'ing elements when appropriate)
 - maps can take reference values, so need to test for that
 
-Need to fix wrapped functions that take a reference to a pure virtual type≤
+Need to fix wrapped functions that take a reference to a pure virtual type
+Test casting null unique_ptr
+test casting null returns undefined and undefined returns nullptr
+
+
+
+if you don't wrap a type SFINAE'd to be wrapped, should it still work, just hold the pointer and do nothing else?
+
+casttonative and casttojs of std::function isn't done - and I think what was done broke
+
 

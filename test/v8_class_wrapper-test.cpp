@@ -193,12 +193,10 @@ TEST_F(JavaScriptFixture, Sets) {
 
         // CastToJS std::set
         {
-            std::set<std::string> v{"a", "b", "c"};
+            std::set<int> v{1, 2, 3};
             c->add_variable("v", CastToJS<decltype(v)>()(*i, v));
-            c->run("let o = {}; for (let e of v) {o[e]=1;} EXPECT_EQJS(o, {a: 1, b: 1, c: 1});");
-            EXPECT_NE(v.find("a"), v.end());
-            EXPECT_NE(v.find("b"), v.end());
-            EXPECT_NE(v.find("c"), v.end());
+            auto sum = c->run("let sum = 0; for (let e of v) {sum += e} sum;");
+            EXPECT_EQ(CastToNative<int>()(*i, sum.Get(*i)), 6);
 
         }
         // CastToJS const std::set
@@ -381,6 +379,40 @@ TEST_F(JavaScriptFixture, ObjectLifetimes) {
     EXPECT_TRUE(weak_isolate_pointer.expired()); // Everything should be gone now
     EXPECT_TRUE(weak_script_pointer.expired());
 
+}
+
+
+
+
+
+TEST_F(JavaScriptFixture, StdFunctionCasts) {
+
+    this->create_context();
+
+
+
+    (*c)([&] {
+        bool wants_function_was_called = false;
+        c->add_function("wants_function", [&](std::function<bool(int * pi, float & rf)> function) {
+            int i;
+            float f;
+
+            wants_function_was_called = true;
+
+            i = 1;
+            f = 1;
+            EXPECT_TRUE(function(&i, f));
+            i = 2;
+            f = 3;
+            EXPECT_FALSE(function(&i, f));
+        });
+        int javascript_function_call_count = 0;
+        c->expose_variable("javascript_function_call_count", javascript_function_call_count);
+        c->run("wants_function(function(i, j){javascript_function_call_count++; return i == j;});");
+
+        EXPECT_TRUE(wants_function_was_called);
+        EXPECT_EQ(javascript_function_call_count, 2);
+    });
 }
 
 
