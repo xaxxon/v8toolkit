@@ -257,6 +257,11 @@ TEST_F(WrappedClassFixture, FunctionTakesCopyOfWrappedType) {
     (*c)([&](){
         c->run("wants_copy_of_wrapped_type(new CopyableWrappedClass());");
     });
+
+    // cannot make copy of uncopyable type
+    if constexpr(CastToNative<WrappedClass>::callable()) {
+        EXPECT_TRUE(false);
+    }
 }
 
 
@@ -266,12 +271,25 @@ TEST_F(WrappedClassFixture, FunctionTakesCopyOfWrappedType) {
 TEST_F(WrappedClassFixture, PreferSpecializedCastToNativeDuringParameterBuilder) {
     (*c)([&]() {
 
+        c->add_function("wants_wrapped_string_rvalue_ref", [&](WrappedString && wrapped_string) {
+            EXPECT_EQ(wrapped_string.string, "rvalue");
+        });
         c->add_function("wants_wrapped_string", [&](WrappedString && wrapped_string) {
+            EXPECT_EQ(wrapped_string.string, "copy");
+        });
+        c->add_function("wants_wrapped_string_lvalue_ref", [&](WrappedString && wrapped_string) {
+            EXPECT_EQ(wrapped_string.string, "lvalue");
 
         });
 
-        c->run("wants_wrapped_string(`string that is not a wrapped object`);");
-        c->run("wants_wrapped_string(new WrappedString(`asdf`));");
+        c->run("wants_wrapped_string_rvalue_ref(`rvalue`);");
+        c->run("wants_wrapped_string_rvalue_ref(new WrappedString(`rvalue`));");
+
+        c->run("wants_wrapped_string(`copy`);");
+        c->run("wants_wrapped_string(new WrappedString(`copy`));");
+
+        c->run("wants_wrapped_string_lvalue_ref(`lvalue`);");
+        c->run("wants_wrapped_string_lvalue_ref(new WrappedString(`lvalue`));");
     });
 }
 //

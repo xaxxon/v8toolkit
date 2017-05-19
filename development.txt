@@ -197,3 +197,11 @@ if you don't wrap a type SFINAE'd to be wrapped, should it still work, just hold
 casttonative and casttojs of std::function isn't done - and I think what was done broke
 
 
+
+
+
+
+It seems there are two contexts where the use for CastToNative is different:
+
+1.
+

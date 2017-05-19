@@ -1753,6 +1753,7 @@ struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && 
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		return T(*CastToNative<T*>()(isolate, value));
 	}
+	static constexpr bool callable(){return true;}
 };
 
 
@@ -1760,7 +1761,12 @@ struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && 
 template<typename T>
 struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
-	static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
+	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
+	void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+		static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
+	}
+	static constexpr bool callable(){return false;}
+
 };
 
 
@@ -1771,6 +1777,7 @@ struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
 	T& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		return *CastToNative<T*>()(isolate, value);
 	}
+	static constexpr bool callable(){return true;}
 };
 
 
@@ -1788,6 +1795,7 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 		}
 		throw CastException("Could not cast object to {} && because it doesn't own it's memory", demangle<T>());
 	}
+	static constexpr bool callable(){return true;}
 };
 
 template<typename T>
@@ -1799,6 +1807,7 @@ struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 
 		return wrapper.get_cpp_object(object);
 	}
+	static constexpr bool callable(){return true;}
 };
 
 
@@ -1868,6 +1877,8 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_typ
 				demangle<T>(), *v8::String::Utf8Value(value));
 		}
 	}
+	static constexpr bool callable(){return true;}
+
 };
 
 // If no more-derived option was found, wrap as this type
@@ -1988,8 +1999,8 @@ struct ParameterBuilder<T &&, std::enable_if_t<is_wrapped_type_v<T>>> {
                 }
             }
         }
-        if constexpr(std::is_move_constructible_v<T>) {
-            stuff.emplace_back(std::make_unique<Stuff<T>>(CastToNative<T&&>()(isolate, value)));
+        if constexpr(std::is_move_constructible_v<T> && CastToNative<T>::callable()) {
+            stuff.emplace_back(std::make_unique<Stuff<T>>(CastToNative<T>()(isolate, value)));
             return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
         }
         throw CastException("Oops");
@@ -2436,60 +2447,6 @@ struct CastToJS<T const * const &> {
 
 #endif
 
-
-
-#if 0
-template<typename T>
-struct CastToNative<T, std::enable_if_t<is_wrapped_type_v<T>>>
-{
-	T & operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		return get_object_from_embedded_cpp_object<T>(isolate, value);
-	}
-};
-
-template<typename T>
-struct CastToNative<T*, std::enable_if_t<std::is_pointer<T>::value && is_wrapped_type_v<T>>>
-{
-	T * operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		return &get_object_from_embedded_cpp_object<T>(isolate, value);
-	}
-};
-
-
-
-
-// cannot get a reference unless the object is stored inside a javascript object
-template<typename T>
-struct CastToNative<T&, std::enable_if_t<!std::is_reference<
-    std::result_of_t<
-        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
-    > // end result_ofs
->::value>>;
-
-
-
-template<typename T>
-struct CastToNative<T&&, std::enable_if_t<std::is_reference<
-    std::result_of_t<
-        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
-    > // end result_ofs
->::value>>
-{
-    T && operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-        return std::move(get_object_from_embedded_cpp_object<T>(isolate, value));
-    }
-};
-
-// cannot get a reference unless the object is stored inside a javascript object
-template<typename T>
-struct CastToNative<T&&, std::enable_if_t<!std::is_reference<
-    std::result_of_t<
-        CastToNative<T>(v8::Isolate*, v8::Local<v8::Value>)
-    > // end result_ofs
->::value>>;
-
-
-#endif
 
 
 

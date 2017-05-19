@@ -21,6 +21,7 @@
 namespace v8toolkit {
 
 
+// always returns false, but can be used to make something dependent
 template<class T>
 struct always_false : public std::false_type {};
 
@@ -67,6 +68,7 @@ constexpr bool is_wrapped_typeish_v =
 template<> \
  struct v8toolkit::CastToNative<TYPE> {				\
     TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const FUNCTION_BODY \
+        static constexpr bool callable(){return true;} /* It wouldn't be selected if it weren't callable */ \
 };
 
 
@@ -83,11 +85,17 @@ template<> \
 */
 template<typename T, class = void>
 struct CastToNative {
-    static_assert(!std::is_pointer<T>::value, "Cannot CastToNative to a pointer type of an unwrapped type");
-    static_assert(!(std::is_lvalue_reference<T>::value && !std::is_const<std::remove_reference_t<T>>::value), "Cannot CastToNative to a non-const "
-        "lvalue reference of an unwrapped type because there is no lvalue variable to send");
-    static_assert(!is_wrapped_type_v<T>, "CastToNative<SomeWrappedType> shouldn't fall through to this specialization");
-    static_assert(always_false_v<T>, "Invalid CastToNative configuration");
+    template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
+    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        static_assert(!std::is_pointer<T>::value, "Cannot CastToNative to a pointer type of an unwrapped type");
+        static_assert(!(std::is_lvalue_reference<T>::value && !std::is_const<std::remove_reference_t<T>>::value),
+                      "Cannot CastToNative to a non-const "
+                          "lvalue reference of an unwrapped type because there is no lvalue variable to send");
+        static_assert(!is_wrapped_type_v<T>,
+                      "CastToNative<SomeWrappedType> shouldn't fall through to this specialization");
+        static_assert(always_false_v<T>, "Invalid CastToNative configuration");
+    }
+    static constexpr bool callable(){return false;}
 };
 
 
