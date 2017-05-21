@@ -1765,10 +1765,8 @@ struct CastToJS<T&, std::enable_if_t<is_wrapped_type_v<T>>> {
 template<class T>
 struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
 
-	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
-	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & cpp_object) {
-		assert(false);
-		// need to move the memory in
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object) {
+		return CastToJS<std::unique_ptr<T>>()(isolate, std::make_unique<T>(std::move(cpp_object)));
 	}
 };
 

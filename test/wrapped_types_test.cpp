@@ -411,4 +411,14 @@ TEST_F(WrappedClassFixture, DerivedTypesUniquePointerReverseCast) {
 }
 
 
+TEST_F(WrappedClassFixture, CastToJSRValueRef) {
+    WrappedClass wc;
+    (*c)([&]() {
+
+        auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+    });
+}
+
+
 
