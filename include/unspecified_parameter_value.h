@@ -16,6 +16,7 @@ namespace v8toolkit {
 template <class T, class = void>
 struct cast_to_native_no_value {
     std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int i) const {
+        std::cerr << fmt::format("") << std::endl;
         throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - requires {} but only {} were specified, missing {}", i+1, info.Length(), demangle<T>()));
     }
 };
@@ -77,11 +78,12 @@ set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info
         stuff.emplace_back(
             std::make_unique<Stuff < ResultT>>(std::unique_ptr<char[]>(std::move(unique_ptr))));
     } else {
-        static_assert(std::is_same_v<ResultT, std::remove_reference_t<NoRefT>>, "Unexpected (i.e. not char*) situation where CastToNative doesn't return same type as requested ");
+        static_assert(std::is_same_v<ResultT, std::remove_reference_t<NoRefT>>,
+                      "Unexpected (i.e. not char*) situation where CastToNative doesn't return same type as requested ");
         // get the value out of the default value tuple
         stuff.emplace_back(
-            std::make_unique<Stuff < ResultT>>
-                                            (std::get<(std::size_t) default_arg_position>(std::move(default_args_tuple)))
+            std::make_unique<Stuff<ResultT>>
+                (std::get<(std::size_t) default_arg_position>(std::move(default_args_tuple)))
         );
     }
 

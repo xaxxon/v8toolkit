@@ -194,14 +194,8 @@ test casting null returns undefined and undefined returns nullptr
 
 if you don't wrap a type SFINAE'd to be wrapped, should it still work, just hold the pointer and do nothing else?
 
-casttonative and casttojs of std::function isn't done - and I think what was done broke
+casttojs of std::function isn't done
 
+Test WrapAsMostDerived
 
-
-
-
-
-It seems there are two contexts where the use for CastToNative is different:
-
-1.
 

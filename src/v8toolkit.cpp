@@ -432,13 +432,9 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     auto isolate = context->GetIsolate();
 
 
-    std::cerr << fmt::format("ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
-                             *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
-                             script_origin.ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
-//     printf("Executing module with script origin resource name , line offset: %d, column offset %d, source: %s\n",
-//        *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
-//           script_origin.ResourceColumnOffset()->Value(), module_source.c_str());
-
+//    std::cerr << fmt::format("ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+//                             *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
+//                             script_origin.ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
 
 
     v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
@@ -459,10 +455,10 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     assert(!maybe_module_function.IsEmpty());
     compiled_function = maybe_module_function.ToLocalChecked();
 
-    std::cerr << fmt::format("module script id: {}", compiled_function->GetScriptOrigin().ScriptID()->Value()) << std::endl;
-    std::cerr << fmt::format("After CompileFunctionInContext: ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
-                             *v8::String::Utf8Value(compiled_function->GetScriptOrigin().ResourceName()), compiled_function->GetScriptOrigin().ResourceLineOffset()->Value(),
-                             compiled_function->GetScriptOrigin().ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
+//    std::cerr << fmt::format("module script id: {}", compiled_function->GetScriptOrigin().ScriptID()->Value()) << std::endl;
+//    std::cerr << fmt::format("After CompileFunctionInContext: ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+//                             *v8::String::Utf8Value(compiled_function->GetScriptOrigin().ResourceName()), compiled_function->GetScriptOrigin().ResourceLineOffset()->Value(),
+//                             compiled_function->GetScriptOrigin().ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
 
 
     v8::Local<v8::Object> receiver = v8::Object::New(isolate);
@@ -859,6 +855,7 @@ SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInf
     callback(callback),
     destructive(destructive)
     {
+        std::cerr << fmt::format("Creating weak callback data with destructive: {}", this->destructive) << std::endl;
         this->global.Reset(isolate, javascript_object);
     }
 

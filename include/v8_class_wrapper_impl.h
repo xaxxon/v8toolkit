@@ -153,13 +153,13 @@ namespace v8toolkit {
 
 
     /**
-     * Returns the embedded native object inside a javascript object or throws if none is present or its type cannot
-     *   be determined
+     * Returns the embedded native object inside a javascript object or nullptr if none is present or it isn't of the
+     * correct type
      */
     template<class T>
 	T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
         if (object->InternalFieldCount() == 0) {
-            throw CastException(fmt::format("Tried to get internal field from object with no internal fields: {}", demangle<T>()));
+            return nullptr;
         } else if (object->InternalFieldCount() > 1) {
             throw CastException(
                     fmt::format("Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit: {}", demangle<T>()));

@@ -59,10 +59,13 @@ namespace v8toolkit {
         AnyBase * native_object;
         std::string native_object_type = demangle<T>();
         SetWeakCallbackData * weak_callback_data = nullptr;
+        T * original_pointer;
 
-        WrappedData(T * native_object, SetWeakCallbackData * weak_callback_data) :
+        WrappedData(T * native_object,
+                    SetWeakCallbackData * weak_callback_data) :
             native_object(new AnyPtr<T>(native_object)),
-            weak_callback_data(weak_callback_data)
+            weak_callback_data(weak_callback_data),
+            original_pointer(native_object)
         {}
         ~WrappedData(){delete native_object;}
     };

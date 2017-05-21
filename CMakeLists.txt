@@ -35,7 +35,7 @@ set(V8_SHARED_LIBS
 	icuuc 
 	v8
 	v8_libbase
-		v8_libplatform)
+	v8_libplatform)
 
 # https://github.com/fmtlib/fmt
 #find_package(fmt REQUIRED)

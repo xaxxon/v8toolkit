@@ -63,13 +63,21 @@ constexpr bool is_wrapped_typeish_v =
     }
 
 
-
-#define CAST_TO_NATIVE(TYPE, FUNCTION_BODY) \
+#define CAST_TO_NATIVE_CLASS_ONLY(TYPE) \
 template<> \
  struct v8toolkit::CastToNative<TYPE> {				\
-    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const FUNCTION_BODY \
-        static constexpr bool callable(){return true;} /* It wouldn't be selected if it weren't callable */ \
+    TYPE operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const; \
+    static constexpr bool callable(){return true;} /* It wouldn't be selected if it weren't callable */ \
 };
+
+
+#define CAST_TO_NATIVE_CODE(TYPE, CODE) \
+    TYPE CastToNative<TYPE>::operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const CODE
+
+
+#define CAST_TO_NATIVE(TYPE, CODE) \
+    CAST_TO_NATIVE_CLASS_ONLY(TYPE) \
+    inline CAST_TO_NATIVE_CODE(TYPE, CODE)
 
 
 
@@ -115,6 +123,7 @@ struct CastToNative {
 template<>
 struct CastToNative<void> {
     void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {}
+    static constexpr bool callable(){return true;}
 };
 
 
@@ -162,6 +171,9 @@ struct CastToNative<std::tuple<Ts...>>
 
         return cast_to_native_tuple_helper(isolate, array, std::tuple<Ts...>(), std::index_sequence_for<Ts...>());
     }
+    static constexpr bool callable(){return true;}
+
+
 };
 
 // If the type returns an rvalue, then the the const version is the same as the non-const version
@@ -180,6 +192,8 @@ struct CastToNative<T const &, std::enable_if_t<!is_wrapped_type_v<T>>> {
     T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return CastToNative<T const>()(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 // A T && can take an rvalue, so send it one, since a previously existing object isn't available for non-wrapped types
@@ -188,6 +202,8 @@ struct CastToNative<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
     T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return CastToNative<T const>()(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 
@@ -242,6 +258,8 @@ struct CastToNative<v8::Local<v8::Function>> {
                     stringify_value(isolate, value)));
         }
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 /**
@@ -254,6 +272,8 @@ struct CastToNative<char *> {
       HANDLE_FUNCTION_VALUES;
     return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
   }
+    static constexpr bool callable(){return true;}
+
 };
 template<>
 struct CastToNative<const char *> {
@@ -261,6 +281,8 @@ struct CastToNative<const char *> {
       HANDLE_FUNCTION_VALUES;
       return CastToNative<char *>()(isolate, value);
   }
+    static constexpr bool callable(){return true;}
+
 };
 
 CAST_TO_NATIVE(std::string, {
@@ -330,6 +352,8 @@ struct CastToNative<std::vector<T, Rest...>, std::enable_if_t<std::is_copy_const
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return vector_type_helper<std::vector, T, Rest...>(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 // can move the elements if the underlying JS objects own their memory or can do copies if copyable, othewrise throws
@@ -341,6 +365,8 @@ struct CastToNative<std::vector<T, Rest...> &&, std::enable_if_t<!is_wrapped_typ
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return vector_type_helper<std::vector, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 
@@ -351,6 +377,8 @@ struct CastToNative<std::set<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<st
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return set_type_helper<std::set, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 
@@ -371,6 +399,8 @@ struct CastToNative<std::unique_ptr<T, Rest...>,
     std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 
@@ -379,6 +409,8 @@ struct CastToNative<v8::Local<T>> {
     v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> value) const {
         return value;
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 // cannot cast a non-copyable, standard type to a unique_ptr
@@ -411,6 +443,8 @@ struct CastToNative<std::map<Key, Value, Args...>> {
     std::map<Key, Value, Args...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return map_type_helper<std::map, Key, Value, Args...>(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
@@ -445,6 +479,8 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
     ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         return multimap_type_helper<std::multimap, Key, Value, Args...>(isolate, value);
     }
+    static constexpr bool callable(){return true;}
+
 };
 
 
@@ -978,24 +1014,6 @@ struct CastToJS<std::set<T, Rest...>> {
 template<class ReturnT, class... Args>
 struct CastToNative<std::function<ReturnT(Args...)>> {
     std::function<ReturnT(Args...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const;
-//    {
-//        if (!value->IsFunction()) {
-//            throw CastException("CastToNative<{}> requires a JavaScript function parameter, not {}", demangle<std::function<ReturnT(Args...)>>(), stringify_value(isolate, value));
-//        }
-//
-//        auto function = get_value_as<v8::Function>(value);
-//        auto context = isolate->GetCurrentContext();
-//        return [&](Args&&... args)->ReturnT{
-//
-//            auto javascript_function_result = call_javascript_function_with_vars(context,
-//                                                                                 function,
-//                                                                                 context->Global(),
-//                                                                                 TypeList<Args...>(),
-//                                                                                 std::forward<Args>(args)...);
-//
-//            return CastToNative<ReturnT>()(isolate, javascript_function_result);
-//        };
-//    }
 };
 
 } // end namespace v8toolkit

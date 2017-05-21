@@ -75,6 +75,8 @@ struct DestructorBehavior
 
 	// wehther this destructor is actually destructive to memory it is given.  Does it "own" the memory or not.
 	virtual bool destructive() const = 0;
+
+	virtual std::string name() const = 0;
 };
 
 
@@ -83,13 +85,23 @@ struct DestructorBehavior
 */
 template<class T>
 struct DestructorBehavior_Delete : DestructorBehavior {
-	void operator()(v8::Isolate * isolate, const void * void_object) const {
+	DestructorBehavior_Delete(){
+		std::cerr << fmt::format("creating destructor behavior delete at {}", (void*)this) << std::endl;
+	}
+	void operator()(v8::Isolate * isolate, const void * void_object) const override {
 		T* object = (T*)void_object;
-        V8TOOLKIT_DEBUG("Deleting object at %p during V8 garbage collection\n", void_object);
+        V8TOOLKIT_DEBUG("Deleting underlying C++ object at %p during V8 garbage collection\n", void_object);
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
-	bool destructive() const { return true; }
+	bool destructive() const override {
+		std::cerr << fmt::format("_Delete::destructive") << std::endl;
+		return true;
+	}
+	virtual std::string name() const override {
+		return fmt::format("_delete");
+	}
+
 };
 
 /**
@@ -97,11 +109,21 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 *   is garbage collected
 */
 struct DestructorBehavior_LeaveAlone : DestructorBehavior {
-	void operator()(v8::Isolate * isolate, const void * void_object) const {
-        V8TOOLKIT_DEBUG("Not deleting object %p during V8 garbage collection\n", void_object);
+	DestructorBehavior_LeaveAlone(){
+		std::cerr << fmt::format("creating DestructorBehavior_LeageAlone at {}", (void*)this) << std::endl;
 	}
-	bool destructive() const { return false; }
 
+	void operator()(v8::Isolate * isolate, const void * void_object) const override {
+        V8TOOLKIT_DEBUG("Not deleting underlying C++ object %p during V8 garbage collection\n", void_object);
+	}
+	bool destructive() const override {
+		std::cerr << fmt::format("_Delete::destructive") << std::endl;
+		return false;
+	}
+	virtual std::string name() const override {
+
+		return fmt::format("_leavealone");
+	}
 };
 
 
@@ -130,8 +152,7 @@ public:
 	WrapAsMostDerivedBase(v8::Isolate * isolate) : isolate(isolate) {}
 	virtual ~WrapAsMostDerivedBase() = default;
 
-	virtual v8::Local<v8::Object> operator()(T * cpp_object) const = 0;
-	virtual v8::Local<v8::Object> operator()(T && cpp_object) const = 0;
+	virtual v8::Local<v8::Object> operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const = 0;
 };
 
 // type to find the most derived type of an object and return a wrapped JavaScript object of that type
@@ -141,8 +162,7 @@ struct WrapAsMostDerived;
 template<class T>
 struct WrapAsMostDerived<T, TypeList<>> : public WrapAsMostDerivedBase<T> {
 	WrapAsMostDerived(v8::Isolate * isolate) : WrapAsMostDerivedBase<T>(isolate) {}
-	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
-	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const override;
 };
 
 
@@ -151,8 +171,7 @@ template<class T, class Head, class... Tail>
 struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>> : public WrapAsMostDerived<T, TypeList<Tail...>> {
 	using SUPER = WrapAsMostDerived<T, TypeList<Tail...>>;
 	WrapAsMostDerived(v8::Isolate * isolate) : SUPER(isolate) {}
-	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
-	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const override;
 };
 
 // specializaiton for when we have something const (T) and want something non-const (Head)
@@ -160,8 +179,7 @@ template<class T, class Head, class... Tail>
 struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<std::is_const<T>::value && !std::is_const<Head>::value>> : public WrapAsMostDerived<T, TypeList<Tail...>> {
 	using SUPER = WrapAsMostDerived<T, TypeList<Tail...>>;
 	WrapAsMostDerived(v8::Isolate * isolate) : SUPER(isolate) {}
-	virtual v8::Local<v8::Object> operator()(T * cpp_object) const override;
-	virtual v8::Local<v8::Object> operator()(T && cpp_object) const override;
+	virtual v8::Local<v8::Object> operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const override;
 };
 
 
@@ -653,6 +671,10 @@ public:
     static bool does_object_own_memory(v8::Local<v8::Object> object) {
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data, demangle<T>(), (void*)wrapped_data) << std::endl;
+		if (wrapped_data->weak_callback_data) {
+			std::cerr << fmt::format("callback data destructive? {}", wrapped_data->weak_callback_data->destructive) << std::endl;
+		}
         return wrapped_data->weak_callback_data != nullptr && wrapped_data->weak_callback_data->destructive;
     }
 
@@ -904,7 +926,7 @@ public:
     * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
     * \endcode
 	*/
-	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior const & destructor_behavior, bool force_wrap_this_type = false)
+	v8::Local<v8::Object> wrap_existing_cpp_object(v8::Local<v8::Context> context, T * existing_cpp_object, DestructorBehavior & destructor_behavior, bool force_wrap_this_type = false)
 	{
 		// TODO: Expensive - when combined with add_method -- maybe try and move this out of V8ClassWrapper?
 		auto isolate = this->isolate;
@@ -948,7 +970,7 @@ public:
 
 
 			if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
-                javascript_object = this->wrap_as_most_derived(existing_cpp_object);
+                javascript_object = this->wrap_as_most_derived(existing_cpp_object, destructor_behavior);
             } else {
                 javascript_object = get_function_template()->GetFunction()->NewInstance();
 
@@ -1283,14 +1305,10 @@ public:
 	}
 
 
-	v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object) {
-		return this->wrap_as_most_derived_object->operator()(cpp_object);
+	v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object, DestructorBehavior & destructor_behavior) {
+		return this->wrap_as_most_derived_object->operator()(cpp_object, destructor_behavior);
 	}
 
-
-	v8::Local<v8::Object> wrap_as_most_derived(T && cpp_object) {
-		return this->wrap_as_most_derived_object->operator()(std::move(cpp_object));
-	}
 
 
 	template<class R, class Head, class... Tail, class DefaultArgsTuple,
@@ -1670,10 +1688,20 @@ struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<
     }
 
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+
+
+		std::cerr << fmt::format("cast to js {} type {}", (void*)unique_ptr.get(), demangle<T>()) << std::endl;
         auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
         // create new owning JavaScript object with the contents of the unique_ptr
-        return wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.release(), *wrapper.destructor_behavior_delete);
+		std::cerr << fmt::format("creating object from unique ptr with destructor behavior {}: {} {}", wrapper.destructor_behavior_delete->name(), (void*)wrapper.destructor_behavior_delete.get(), wrapper.destructor_behavior_delete->destructive()) << std::endl;
+        auto result = wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.release(), *wrapper.destructor_behavior_delete);
+		std::cerr << fmt::format("Immediately after creation from unique_ptr, does own memory?  {} ", V8ClassWrapper<T>::does_object_own_memory(result)) << std::endl;
+		auto wrap = v8::Local<v8::External>::Cast(result->ToObject()->GetInternalField(0));
+		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+		std::cerr << fmt::format("WrappedData: {}", (void*)wrapped_data) << std::endl;
+		return result;
+
     }
 };
 
@@ -1748,7 +1776,7 @@ struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 
 template<typename T>
-struct CastToNative<T, std::enable_if_t<std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
+struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		return T(*CastToNative<T*>()(isolate, value));
@@ -1812,11 +1840,6 @@ struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 
 
 
-
-
-
-
-
 template<class T>
 std::string type_details(){
     return fmt::format("const: {} pointer: {} reference: {} typeid: {}",
@@ -1846,10 +1869,9 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 	auto wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
-	auto any_base = static_cast<v8toolkit::AnyBase *>(wrapped_data->native_object);
-	T * t = nullptr;
 //	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
-	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(any_base)) == nullptr) {
+	T * t;
+	if ((t = V8ClassWrapper<T>::get_instance(isolate).cast(wrapped_data->native_object)) == nullptr) {
 		fprintf(stderr, "Failed to convert types: want:  %d %s\n", std::is_const<T>::value, typeid(T).name());
 		throw CastException(fmt::format("Cannot convert AnyBase to {}", demangle<T>()));
 	}
@@ -1883,26 +1905,13 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_typ
 
 // If no more-derived option was found, wrap as this type
 template<class T>
-v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object) const {
+v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const {
 	auto context = this->isolate->GetCurrentContext();
 
 		// TODO: Expensive
 	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
-	return wrapper.template wrap_existing_cpp_object(context, cpp_object, *wrapper.destructor_behavior_leave_alone, true /* don't infinitely recurse */);
+	return wrapper.template wrap_existing_cpp_object(context, cpp_object, destructor_behavior, true /* don't infinitely recurse */);
 }
-
-template<class T>
-v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T && cpp_object) const {
-	auto context = this->isolate->GetCurrentContext();
-
-	// TODO: expensive
-	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
-	return wrapper.
-			template wrap_existing_cpp_object(context,
-                                              safe_move_constructor(std::move(cpp_object)).
-                                                  release(),
-                                              *wrapper.destructor_behavior_delete, true /* don't infinitely recurse */);
-    }
 
 
 
@@ -1939,7 +1948,7 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 template<class T, class Head, class... Tail>
 v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 	std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>>
-::operator()(T * cpp_object) const {
+::operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const {
 
 	// if they're the same, let it fall through to the empty typechecker TypeList base case
 	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
@@ -1947,66 +1956,87 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 
 		if (std::is_const<T>::value == std::is_const<Head>::value) {
 			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(cpp_object))) {
-				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived);
+				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(derived, destructor_behavior);
 			}
 		}
 	}
-	return SUPER::operator()(cpp_object);
+	return SUPER::operator()(cpp_object, destructor_behavior);
 }
-
-template<class T, class Head, class... Tail>
-v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
-		std::enable_if_t<!std::is_const<T>::value || std::is_const<Head>::value>>
-::operator()(T && cpp_object) const {
-	// if they're the same, let it fall through to the empty typechecker TypeList base case
-	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
-		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
-
-		if (std::is_const<T>::value == std::is_const<Head>::value) {
-			if (auto derived = safe_dynamic_cast<Head *>(const_cast<MatchingConstT *>(&cpp_object))) {
-				return v8toolkit::V8ClassWrapper<Head>::get_instance(this->isolate).wrap_as_most_derived(std::move(*derived));
-			}
-		}
-	}
-	return SUPER::operator()(std::move(cpp_object));
-
-};
 
 
 
 template <class T>
-struct ParameterBuilder<T &&, std::enable_if_t<is_wrapped_type_v<T>>> {
-	template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-	T && operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped_type_v<std::remove_reference_t<T>>> > {
+
+    using NoRefT = std::remove_reference_t<T>;
+	using NoConstRefT = std::remove_const_t<NoRefT>;
+
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+	T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 					std::vector<std::unique_ptr<StuffBase>> & stuff,
 					DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder handling wrapped type: {} &&", demangle<T>());
+        PB_PRINT("ParameterBuilder handling wrapped type: {} {}", demangle<T>(), std::is_rvalue_reference_v<T> ? "&&" : "&");
 		auto isolate = info.GetIsolate();
-		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		auto & wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
 		auto value = info[i++];
 
         if (value->IsObject()) {
             auto object = value->ToObject();
-            if (auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object)) {
-                if (wrapper.does_object_own_memory(object)) {
-                    return std::move(*cpp_object);
-                } else if constexpr(std::is_copy_constructible_v<T>)
-                {
-                    // make a copy, put it in stuff, and return an rvalue ref to the copy
-                    stuff.emplace_back(
-                        std::make_unique<Stuff<T>>(std::make_unique<T>(*cpp_object)));
-                    return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
-                }
-            }
+            if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
+				if constexpr(std::is_rvalue_reference_v<T>)
+				{
+					if (wrapper.does_object_own_memory(object)) {
+						return std::move(*cpp_object);
+					} else if constexpr(std::is_copy_constructible_v<NoConstRefT>)
+					{
+						// make a copy, put it in stuff, and return an rvalue ref to the copy
+						stuff.emplace_back(
+							std::make_unique<Stuff<NoConstRefT>>(std::make_unique<NoRefT>(*cpp_object)));
+						return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
+					}
+				}
+				// as a policy, only do this if it's an lvalue reference requested
+				else {
+					return *cpp_object;
+				}
+			}
         }
-        if constexpr(std::is_move_constructible_v<T> && CastToNative<T>::callable()) {
-            stuff.emplace_back(std::make_unique<Stuff<T>>(CastToNative<T>()(isolate, value)));
-            return std::move(*(static_cast<Stuff<T> &>(*stuff.back()).get()));
+        if constexpr(std::is_move_constructible_v<NoConstRefT> && CastToNative<NoConstRefT>::callable()) {
+            stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(isolate, value)));
+            return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
         }
-        throw CastException("Oops");
+        throw CastException("Could not create requested object of type: {} {}.  Maybe you don't 'own' your memory?",
+							demangle<T>(),
+							std::is_rvalue_reference_v<T> ? "&&" : "&");
 	}
 };
 
+
+
+
+
+template <class T>
+struct ParameterBuilder<T, std::enable_if_t<std::is_copy_constructible_v<T> && is_wrapped_type_v<T> > > {
+
+	template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+	T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+				 std::vector<std::unique_ptr<StuffBase>> & stuff,
+				 DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+		PB_PRINT("ParameterBuilder handling wrapped type: {}", demangle<T>());
+		auto isolate = info.GetIsolate();
+		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+		auto value = info[i++];
+
+		if (value->IsObject()) {
+			auto object = value->ToObject();
+			if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
+				// make a copy, put it in stuff, and return an rvalue ref to the copy
+				return *cpp_object;
+			}
+		}
+		return CastToNative<T>()(isolate, value);
+	}
+};
 
 
 
@@ -2316,7 +2346,7 @@ struct CastToJS<T*, std::enable_if_t<std::is_polymorphic<T>::value>> {
 #endif
 		V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
-		/** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
+		/** If you are here looking for an INFINITE RECURSION make sure the type is wrapped *
 		return class_wrapper.template wrap_existing_cpp_object(context, cpp_object, *class_wrapper.destructor_behavior_leave_alone);
 	}
 };

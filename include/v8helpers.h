@@ -538,9 +538,21 @@ AnyBase(const std::string
 #ifdef ANYBASE_DEBUG
 : type_name(std::move(type_name))
 #endif
-    {}
+       {}
 };
 
+
+template<class T, class = void>
+struct AnyPtr;
+
+
+template<class T>
+struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
+    AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
+    virtual ~AnyPtr(){}
+    T* data;
+    T * get() {return data;}
+};
 
 
 
@@ -564,18 +576,6 @@ struct Stuff : public StuffBase {
     std::unique_ptr<T> stuffed;
 };
 
-
- template<class T, class = void>
- struct AnyPtr;
-
-
- template<class T>
-     struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
- AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
-    virtual ~AnyPtr(){}
-    T* data;
-    T * get() {return data;}
-};
 
 /**
 * Best used for types that are intrinsically pointers like std::shared_ptr or
@@ -683,13 +683,13 @@ extern std::vector<std::string> reserved_global_names;
 inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, std::string const & class_name) {
     if (!value->IsObject()) {
         print_v8_value_details(value);
-        throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: {}", class_name, *v8::String::Utf8Value(value)));
+        throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: '{}'", class_name, *v8::String::Utf8Value(value)));
     }
 
     auto object = value->ToObject();
 
     if (object->InternalFieldCount() == 0) {
-        throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: {}", class_name, *v8::String::Utf8Value(value)));
+        throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: '{}'", class_name, *v8::String::Utf8Value(value)));
     }
 
     return object;

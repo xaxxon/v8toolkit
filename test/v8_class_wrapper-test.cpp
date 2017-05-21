@@ -38,6 +38,33 @@ TEST_F(JavaScriptFixture, NumberTypes) {
     });
 }
 
+TEST_F(JavaScriptFixture, ParameterBuilder) {
+    this->create_context();
+
+    bool function_called = false;
+    c->add_function("wants_by_value", [&](bool b, char c, int i, float f){
+        function_called = true;
+        EXPECT_TRUE(b);
+        EXPECT_EQ(c, 2);
+        EXPECT_EQ(i, 3);
+        EXPECT_EQ(f, 4.5);
+    });
+    c->run("wants_by_value(true, 2, 3, 4.5)");
+    EXPECT_TRUE(function_called);
+
+    function_called = false;
+    c->add_function("wants_by_value", [&](bool const & b, char const & c, int const & i, float const & f){
+        function_called = true;
+        EXPECT_FALSE(b);
+        EXPECT_EQ(c, 5);
+        EXPECT_EQ(i, 6);
+        EXPECT_EQ(f, 7.5);
+    });
+    c->run("wants_by_value(false, 5, 6, 7.5)");
+    EXPECT_TRUE(function_called);
+
+}
+
 TEST_F(JavaScriptFixture, CallingFunctionsWithUnwrappedTypes) {
     bool takes_float_called = false;
     bool takes_float_pointer_called = false;

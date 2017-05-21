@@ -21,6 +21,11 @@ public:
 
 class WrappedClass : public WrappedClassBase {
 public:
+    WrappedClass() = default;
+    WrappedClass(WrappedClass const &) = default;
+    WrappedClass(WrappedClass &&) = default;
+    virtual ~WrappedClass(){}
+
     int i = 5;
     int ci = 5;
     std::unique_ptr<float> upf = std::make_unique<float>(3.5);
@@ -37,7 +42,7 @@ public:
         return x;
     }
 
-    void default_parameters(int i = 1, char const * s = "asdf"){
+    void default_parameters(int i = 1, char const * s = "asdf", vector<std::string> && = {}){
         EXPECT_EQ(i, 1);
         EXPECT_STREQ(s, "asdf");
     };
@@ -46,6 +51,10 @@ public:
 
     CopyableWrappedClass copyable_wrapped_class;
     std::unique_ptr<WrappedClass> up_wrapped_class;
+};
+
+class WrappedClassChild : public WrappedClass {
+
 };
 
 
@@ -57,7 +66,7 @@ public:
 
 namespace v8toolkit {
 CAST_TO_NATIVE(WrappedString, {
-    return WrappedString(CastToNative<std::string const &>()(isolate, value));
+    return WrappedString(CastToNative<std::string>()(isolate, value));
 });
 
 }
@@ -78,10 +87,17 @@ public:
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
             w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
-            w.add_method("default_parameters", &WrappedClass::default_parameters, std::tuple<int, char const *>(1, "asdf"));
+            w.add_method("default_parameters", &WrappedClass::default_parameters, std::tuple<int, char const *, vector<std::string>>(1, "asdf", {}));
             w.add_static_method("static_method", &WrappedClass::static_method);
+            w.set_compatible_types<WrappedClassChild>();
             w.finalize();
             w.add_constructor("WrappedClass", *i);
+        }
+        {
+            auto & w = V8ClassWrapper<WrappedClassChild>::get_instance(*i);
+            w.set_parent_type<WrappedClass>();
+            w.finalize(true);
+            w.add_constructor("WrappedClassChild", *i);
         }
         {
             auto & w = V8ClassWrapper<CopyableWrappedClass>::get_instance(*i);
@@ -262,6 +278,12 @@ TEST_F(WrappedClassFixture, FunctionTakesCopyOfWrappedType) {
     if constexpr(CastToNative<WrappedClass>::callable()) {
         EXPECT_TRUE(false);
     }
+    // cannot make copy of uncopyable type
+    bool copy_of_copyable_type = false;
+    if constexpr(CastToNative<CopyableWrappedClass>::callable()) {
+        copy_of_copyable_type = true;
+    }
+    EXPECT_TRUE(copy_of_copyable_type);
 }
 
 
@@ -274,13 +296,16 @@ TEST_F(WrappedClassFixture, PreferSpecializedCastToNativeDuringParameterBuilder)
         c->add_function("wants_wrapped_string_rvalue_ref", [&](WrappedString && wrapped_string) {
             EXPECT_EQ(wrapped_string.string, "rvalue");
         });
-        c->add_function("wants_wrapped_string", [&](WrappedString && wrapped_string) {
+        c->add_function("wants_wrapped_string", [&](WrappedString wrapped_string) {
             EXPECT_EQ(wrapped_string.string, "copy");
         });
-        c->add_function("wants_wrapped_string_lvalue_ref", [&](WrappedString && wrapped_string) {
+        c->add_function("wants_wrapped_string_lvalue_ref", [&](WrappedString & wrapped_string) {
             EXPECT_EQ(wrapped_string.string, "lvalue");
-
         });
+        c->add_function("wants_wrapped_string_const_lvalue_ref", [&](WrappedString const & wrapped_string) {
+            EXPECT_EQ(wrapped_string.string, "lvalue");
+        });
+
 
         c->run("wants_wrapped_string_rvalue_ref(`rvalue`);");
         c->run("wants_wrapped_string_rvalue_ref(new WrappedString(`rvalue`));");
@@ -290,21 +315,100 @@ TEST_F(WrappedClassFixture, PreferSpecializedCastToNativeDuringParameterBuilder)
 
         c->run("wants_wrapped_string_lvalue_ref(`lvalue`);");
         c->run("wants_wrapped_string_lvalue_ref(new WrappedString(`lvalue`));");
+
+        c->run("wants_wrapped_string_const_lvalue_ref(`lvalue`);");
+        c->run("wants_wrapped_string_const_lvalue_ref(new WrappedString(`lvalue`));");
     });
 }
-//
-//
-//TEST_F(WrappedClassFixture, DefaultParameters) {
-//
-//    (*c)([&](){
-//
-//        c->run("new WrappedClass().default_parameters();");
-//
-//    });
-//
-//
-//}
-//
+
+
+TEST_F(WrappedClassFixture, DefaultParameters) {
+
+    (*c)([&](){
+
+        c->run("new WrappedClass().default_parameters();");
+
+    });
+
+}
+
+
+
+TEST_F(WrappedClassFixture, DerivedTypesLValue) {
+    c->add_function("wants_wrapped_class", [&](WrappedClass &) {
+    });
+    c->add_function("returns_wrapped_class_child", [&]()->WrappedClassChild &{
+        static WrappedClassChild wcc;
+        return wcc;
+    });
+
+    c->run("wants_wrapped_class(returns_wrapped_class_child());");
+
+}
+
+
+
+TEST_F(WrappedClassFixture, DerivedTypesPointer) {
+    c->add_function("wants_wrapped_class", [&](WrappedClass *) {
+    });
+    c->add_function("returns_wrapped_class_child", [&]()->WrappedClassChild *{
+        static WrappedClassChild wcc;
+        return &wcc;
+    });
+
+    c->run("wants_wrapped_class(returns_wrapped_class_child());");
+
+}
+
+TEST_F(WrappedClassFixture, DerivedTypesRValue) {
+    c->add_function("wants_wrapped_class", [&](WrappedClass &&) {
+    });
+    c->add_function("returns_wrapped_class_child", [&]()->WrappedClassChild &&{
+        static WrappedClassChild wcc;
+        return std::move(wcc);
+    });
+
+    c->run("wants_wrapped_class(returns_wrapped_class_child());");
+
+}
+
+
+TEST_F(WrappedClassFixture, DerivedTypesLValueRValueMismatch) {
+    c->add_function("wants_wrapped_class", [&](WrappedClass &&) {
+    });
+    c->add_function("returns_wrapped_class_child", [&]()->WrappedClassChild &{
+        static WrappedClassChild wcc;
+        return wcc;
+    });
+
+    EXPECT_THROW(
+        c->run("wants_wrapped_class(returns_wrapped_class_child());"),
+        V8Exception
+    );
+}
+
+TEST_F(WrappedClassFixture, DerivedTypesUniquePointer) {
+    c->add_function("wants_wrapped_class", [&](std::unique_ptr<WrappedClass>) {
+    });
+    c->add_function("returns_wrapped_class_child", [&]()->std::unique_ptr<WrappedClassChild> {
+        return std::make_unique<WrappedClassChild>();
+    });
+
+    c->run("wants_wrapped_class(returns_wrapped_class_child());");
+}
+
+
+TEST_F(WrappedClassFixture, DerivedTypesUniquePointerReverseCast) {
+    c->add_function("wants_wrapped_class", [&](std::unique_ptr<WrappedClassChild>) {
+    });
+
+    // really return a wrapped class child, but call it a wrapped class instead
+    c->add_function("returns_wrapped_class_child", [&]()->std::unique_ptr<WrappedClass> {
+        return std::make_unique<WrappedClass>();
+    });
+
+    c->run("wants_wrapped_class(returns_wrapped_class_child());");
+}
 
 
 

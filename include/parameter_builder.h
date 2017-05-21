@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuple>
 
 
 #include <v8.h>
@@ -33,12 +34,13 @@ namespace v8toolkit {
 template<class T, class = void>
 struct ParameterBuilder;
 
+
 /**
  * Handles lvalue reference types by delegating the call to the pointer version and dereferencing the
- * returned pointer.
+ * returned pointer - except for char type, because char [const] * is special
  */
 template <class T>
-struct ParameterBuilder<T &> {
+struct ParameterBuilder<T &, std::enable_if_t<!std::is_same_v<std::remove_const_t<T>, char> && !is_wrapped_type_v<T>>> {
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                  std::vector<std::unique_ptr<StuffBase>> & stuff,
@@ -50,13 +52,32 @@ struct ParameterBuilder<T &> {
 
 
 template <class T>
+struct ParameterBuilder<T &, std::enable_if_t<std::is_same_v<std::remove_const_t<T>, char> && !is_wrapped_type_v<T>>> {
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+    T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+                   std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+        PB_PRINT("ParameterBuilder handling lvalue reference for char: {}", demangle<T>());
+        auto value = info[i++];
+        auto isolate = info.GetIsolate();
+        stuff.push_back(std::make_unique<Stuff<char>>(std::make_unique<char>(CastToNative<char>()(isolate, value))));
+        return *static_cast<Stuff<char> &>(*stuff.back()).get();
+
+    }
+};
+
+
+template <class T>
 struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
+
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
     T && operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+
         PB_PRINT("ParameterBuilder handling rvalue reference to unwrapped type: {}", demangle<T>());
-        return std::move(*ParameterBuilder<T*>()(info, i, stuff, std::move(default_args_tuple)));
+        std::cerr << fmt::format("default_arg_position: {}", default_arg_position) << std::endl;
+        return std::move(*(ParameterBuilder<T*>().template operator()<default_arg_position>(info, i, stuff, std::move(default_args_tuple))));
     }
 };
 
@@ -75,8 +96,6 @@ struct ParameterBuilder<T*, std::enable_if_t<!is_wrapped_type_v<T> >
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
         PB_PRINT("ParameterBuilder handling pointers to unwrapped types: {}", demangle<T>());
-
-        //std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
             set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
 
@@ -120,28 +139,30 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
 
 
 template<class T>
-struct ParameterBuilder<T, std::enable_if_t<!std::is_pointer_v<T> && !std::is_reference_v<T>>> {
+struct ParameterBuilder<T, std::enable_if_t<!std::is_pointer_v<T> && !std::is_reference_v<T> && !is_wrapped_type_v<T>>> {
     using NoRefT = std::remove_reference_t<T>;
 
 
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-    T
-    operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+    T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                std::vector<std::unique_ptr<StuffBase>> & stuff,
                DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
         PB_PRINT("ParameterBuilder handling type: {}", demangle<T>());
-
-        //        std::cerr << fmt::format("ParameterBuilder type that returns a reference: {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
-
-        if (i >= info.Length()) {
-            throw CastException("Default values for wrapped types not currently supported");
-            //            return cast_to_native_no_value<NoRefT>()(info, i++);
-        } else {
+        if (i < info.Length()) {
             return CastToNative<T>()(info.GetIsolate(), info[i++]);
+
+        } else if constexpr(default_arg_position >= 0 && default_arg_position < std::tuple_size_v<DefaultArgsTuple>) {
+
+            std::cerr << fmt::format("getting default value from default args tuple: {} => {}",
+                                     demangle<T>(),
+                                     std::get<(std::size_t) default_arg_position>(default_args_tuple)) << std::endl;
+
+            return std::get<(std::size_t) default_arg_position>(default_args_tuple);
+        } else {
+            throw CastException("Not enough parameters and no default value for {}", demangle<T>());
         }
     }
-
 };
 
 
@@ -332,7 +353,14 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
  * @tparam T
  */
 template <class T>
-struct ParameterBuilder<v8::Local<T>, std::enable_if_t<!std::is_pointer_v<v8::Local<T>> && !std::is_reference_v<v8::Local<T>>>> {
+struct ParameterBuilder<
+    v8::Local<T>,
+    std::enable_if_t<
+        !std::is_pointer_v<v8::Local<T>> &&
+            !std::is_reference_v<v8::Local<T>> &&
+            !is_wrapped_type_v<v8::Local<T>>
+    > // enable_if
+> {
 
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
     v8::Local<T> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
