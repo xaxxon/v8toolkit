@@ -25,204 +25,84 @@ using the clang plugin.
 * C++17.  C++17 adds features drastically simplifying v8toolkit's heavily templated code.  Fortunately, clang 4.0
 supports all major platforms.  
 
-## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
+#### Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/doxygen/html/index.html
 
    
-## New Feature: ClassParser - Automatic class binding generator
 
-`class_parser/` directory now contains a clang plugin that can automatically generate bindings for your existing
-C++ classes using the actual clang compiler AST data.  From this, it generates `V8ClassWrapper` bindings, 
-creates `bidirectional` classes, and creates a javascript 'stub' file for hinting editor
-autocompletion.
+## Your First v8toolkit program
 
-C++ classes can be annotated to customize exactly how and which elements will be included.
-
-    class V8TOOLKIT_WRAPPED_CLASS MyClassToWrap {
-    
-        // Constructor automatically wrapped with its own name
-        MyClassToWrap();
-
-        void this_function_will_be_wrapped();
-        V8TOOLKIT_SKIP void do_not_wrap_this_function();
+```language-c++
+    #include "javascript.h"
+    using v8toolkit;
+   
+   int main(int argc, char ** argv) {
+      // one-time initialization
+      Platform::init(argc, argv, argv[0]); 
+      
+      // An isolate is the top-level JavaScript container.
+      auto isolate = Platform::create_isolate();
+      isolate->add_print(); // JavaScript can't print to standard out on its own, so this adds some custom functions
         
-        static void static_methods_work_too();
+      // a context is the environment in which JavaScript code is executed and belongs to an Isolate
+      auto context = isolate->create_context();
+      
+      // prints "Hello JavaScript World!" to standard out.
+      context->run("println('Hello JavaScript World!');");
+    }
+```
 
-        std::string data_members_work;
-        int const const_data_members_are_wrapped_read_only;
+
+Here is an example class and the code required to make the class useable from JavaScript:
+
+```language-c++
+
+
+    class MyClassToWrap : public v8toolkit::WrappedClassBase {
+    public:
+        void member_function();
+        void member_function_not_exposed();
+        
+        static void static_method();
+
+        std::string data_member;
+        int const const_data_member;
+        
+        MyClassToWrap(int i);
+
+    };
+
+   void create_class_bindings(v8toolkit::Isolate & isolate) {
+        auto & class_wrapper = isolate.wrap_class<MyClassToWrap>();
+        class_wrapper.add_function("a_member_function", &MyClassToWrap::a_member_function);
+        class_wrapper.add_static_function("static_method", &MyClassToWrap::static_method);
+        class_wrapper.add_member<&MyClassToWrap::data_member>("data_member");
+        class_wrapper.finalize();
+        class_wrapper.add_contructor<int>("MyClassWrapper", *i);
+   }
+
+```
+
+Or, you can automatically generate the source code above by annotating the C++ class definition to tell it anything
+that shouldn't be exposed, and run the clang plugin over it and then compile the generated code into your project:
+
+
+
+    class MyClassToWrap : public v8toolkit::WrappedClassBase {
+    public:
+        void member_function();
+        V8TOOLKIT_SKIP void member_function_not_exposed(); 
+        
+        static void static_method();
+
+        std::string data_member;
+        int const const_data_member;
+        
+        MyClassToWrap(int i);
+
     };
 
 
 The plugin requires clang, but the generated code will compile on any compiler.
-
-
-## Tutorial
-
-#### Install git
-
-https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-
-
-#### Building V8
-
-Building V8 is not a simple process and changes often, so these instructions may not
-be up-to-date.
-
- * First, you need to install a set of tools for getting and building V8 called "depot tools".
-
-https://www.chromium.org/developers/how-tos/install-depot-tools
-
- * Then, download V8 via the instructions here: 
-
-https://github.com/v8/v8/wiki/Using%20Git
-
-The official build process documentation is here:
-
-https://github.com/v8/v8/wiki/Building%20with%20GN
-
-and the previous build process (simpler but will stop working eventually) here:
-
-https://github.com/v8/v8/wiki/Building%20with%20Gyp
-
-* The steps I use on each platform are documented here:
-
-[Build V8 for OS X](osx_v8_build.md)
-
-[Build V8 for Windows (Visual Studio)](windows_v8_build.md)
-
-[Build V8 for Linux](linux_v8_build.md)
-
-
-#### Install the following v8toolkit dependencies
-
-Boost: http://www.boost.org
-
-Websocket library used for communicationg with chrome javascript debugger:
-https://github.com/zaphoyd/websocketpp
-
-Text formatting library (faster but less featureful than boost::format):
-https://github.com/fmtlib/fmt
-
-
-#### Build v8toolkit
-
-
-`git clone https://github.com/xaxxon/v8toolkit.git` 
-
-Create a build directory (anywhere, but I prefer inside the directory v8toolkit was cloned into) and type:
-    cmake -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/ /path/to/v8toolkit
-
-and then type: `make` then `make install` (may need sudo)
-
-
-#### Your First V8 program
-
-Here is the simplest program you can write to execute some javascript using the v8toolkit library:
-
-    #include "javascript.h"
-    using v8toolkit;
-    
-    int main(int argc, char ** argv) {
-        // any v8-specific command-line arguments will be stripped out
-        Platform::init(argc, argv, argv[0]); 
-        
-        // creates a v8toolkit::Isolate which can manage some number of contexts
-        auto isolate = Platform::create_isolate();
-        
-        // javascript doesn't have any way to print to stdout,
-        //   so this exposes some handy functions to javascript
-        isolate->add_print(); 
-        
-        // a context represents an actual javascript environment in which code is executed
-        auto context = isolate->create_context(); 
-
-        // This actually runs the javascript inside the quotes and
-        //   prints to the screen using the print helper function we added above
-        context->run("println('Hello JavaScript World!');"); 
-    }
-
-Working backwards through the code, a context is the container in which JavaScript code actually runs.   Any changes 
-made to globally accessible objects in a context persist and will be seen any other JavaScript run within that same context.
-
-An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized 
-so that all contexts created after the customization share that customization.   In the example above, if we made 
-another context by calling `isolate->create_context()` a second time, this second context would also have access to 
-println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless 
-add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an 
-isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have 
-multiple isolates.
-
-Platform manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with 
-your JavaScript execution.  Simply call the static `::init()` method on it once and V8 is ready to go.
-
-##### v8toolkit provides classes wrapping native V8 classes with the same names.  This means you cannot `use namespace` both the v8 and v8toolkit namespaces at the same time or you will get ambiguity errors.
-
-#### Compiler options to build your program
-
-Here are some example command lines for building an application using V8.  In it are some things that will need to be replaced with the actual location on the 
-computer being used:
-
-\<PATH_TO_V8_BASE_DIRECTORY> - the directory containing the v8 include directory.   This cannot include the "include/" directory.
-
-\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR> - location where boost/format.hpp is located.  This is likely /usr/local/include and cannot include the "boost/" directory
-
-\<YOUR_PROGRAM_CPP> - your source code
-
-\<PATH_TO_V8TOOLKIT> - path where this library is installed and built and the file libv8toolkit.a exists
-
-Successfully running the commands below will build your program as `./a.out`
-
-On Mac:
-
-    clang++ -std=c++14 -g -I./ -I\<PATH_TO_V8_BASE_DIRECTORY> -g -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  YOUR_PROGRAM_CPP  
-    -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/  -I\<PATH_TO_V8TOOLKIT> \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  
-    
-On Linux (tested on Ubuntu Desktop 15.10):
-
-    g++ -std=c++14 -g -I\<PATH_TO_V8TOOLKIT> -I\<PATH_TO_V8_BASE_DIRECTORY>  -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  \<YOUR_PROGRAM_CPP>
-    -L\<PATH_TO_V8_BASE_DIRECTORY>/native/obj.target/tools/gyp/ -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/obj.target/third_party/icu/  -I\<PATH_TO_V8TOOLKIT>
-    \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  -lpthread -licuuc -licudata -ldl
-    
-On Windows:
-    v8toolkit is currently untested on windows, but has worked in the past in Visual Studio.
-
-#### Exposing C++ functions to JavaScript
-
-Simply running pure javascript as in the previous example just isn't interesting, though.  
-We want to cross the boundary between JavaScript and C++ seemlessly.  Skipping some of the 
-boilerplate in the previous example, here's how to call a custom C++ function from JavaScript.
-
-    // just a normal function, nothing special about it
-    int add_numbers(int x, int y) 
-    { 
-        return x + y; 
-    }
-    
-    auto i = Platform::create_isolate();
-    i->add_print();
-    
-    // adds a function named "js_add_numbers" to each context created from this isolate that calls 
-    //   the C++ function add_numbers
-    i->add_function("add_numbers", add_numbers);
-    auto c = i->create_context();
-    
-    // prints 9
-    c->run("println(add_numbers(4,5));");
-
-`add_function` can take anything a std::function can hold and exposes it to javascript with 
-the given name.
-
-#### Exposing global C++ variables to JavaScript
-
-Global variables (as well as class public static variables) can be exposed to javascript, as well.   
-
-    int x = 0;
-    i->expose_variable("x", x);
-    ...
-    c->run("x = 4; println(x);"); // prints 4
-    printf("%d\n", x); // also prints 4
-
-Virtually identical to adding a function.  Respects `const`ness of variable.
-
 
 #### Using STL containers 
 
