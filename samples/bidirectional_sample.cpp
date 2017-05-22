@@ -17,10 +17,10 @@ using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const s
 
 static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
-struct NonPolymorphicType {};
+struct NonPolymorphicType : public v8toolkit::WrappedClassBase {};
 
 
-struct Thing {
+struct Thing : public v8toolkit::WrappedClassBase {
 	Thing(int i, const std::string & j): i(i), j(j) {}
 	Thing(const Thing &) = delete;
 	Thing& operator=(const Thing &) = delete;
@@ -28,6 +28,7 @@ struct Thing {
 	Thing & operator=(const Thing&&) = delete;
 	virtual ~Thing(){}
 	virtual std::string get_string(){return "C++ string";}
+	virtual std::string get_string_value(){return "C++ string";}
 	virtual std::string get_string_const()const{return "const C++ string";}
 
 	// test case for non-polymorphic types
@@ -46,6 +47,7 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
 	JSWrapper(context, js_object, created_by) {}
     
 	JS_ACCESS(std::string, get_string);
+	JS_ACCESS(std::string, get_string_value);
 	JS_ACCESS_CONST(std::string, get_string_const);
 };
 
@@ -77,11 +79,12 @@ void test_calling_bidirectional_from_javascript()
 		isolate->add_print();
 		auto & thing = isolate->wrap_class<Thing>();
 		thing.add_method("get_string", &Thing::get_string);
+		thing.add_method("get_string_value", &Thing::get_string_value);
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
 		thing.set_compatible_types<JSThing>();
-		thing.add_member("i", &Thing::i);
-		thing.add_member("j", &Thing::j);
+		thing.add_member_readonly<const int, Thing, &Thing::i>("i");
+		thing.add_member<std::string, Thing, &Thing::j>("j");
 
 		thing.finalize();
 		thing.add_constructor<int, const std::string &>("Thing", *isolate);
@@ -180,7 +183,7 @@ public:
 
 int main(int argc, char ** argv)
 {
-    Platform::init(argc, argv);
+    Platform::init(argc, argv, argv[0]);
 	
 	printf("Calling TCBFJ\n");
     test_calling_bidirectional_from_javascript();

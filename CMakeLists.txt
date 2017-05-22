@@ -1,22 +1,25 @@
 cmake_minimum_required(VERSION 3.5)
+set(CMAKE_VERBOSE_MAKEFILE on)
+
 project(v8toolkit)
-set (CMAKE_CXX_STANDARD 14)
+#set (CMAKE_CXX_STANDARD 14)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
 ucm_set_runtime(STATIC)
 
-set(BOOST_INCLUDE_DIR c:\\boost\\include\\boost-1_60 CACHE PATH "root location of boost header files if not in /usr/local/include")
-
 
 file(GLOB HEADER_FILES
         include/*.h
-	include/*.hpp
-	tools/class_parser.h
+		include/*.hpp
+		include/debugger_message_types/*.h
+
+		class_parser/class_parser.h
 	)
 
 file(GLOB SOURCE_FILES
         src/*.cpp
+		src/debugger_message_types/*.cpp
         )
 
 set(V8_STATIC_LIBS
@@ -28,58 +31,58 @@ set(V8_STATIC_LIBS
         v8_libplatform)
 
 set(V8_SHARED_LIBS
-	icui18n 
+	icui18n
 	icuuc 
-	v8 v8_libplatform v8_libbase)
+	v8
+	v8_libbase
+	v8_libplatform)
+
+# https://github.com/fmtlib/fmt
+#find_package(fmt REQUIRED)
+include_directories(${fmt_INCLUDE_DIRS})
+
+# https://github.com/zaphoyd/websocketpp
+#find_package(websocketpp REQUIRED)
+include_directories(${websocketpp_INCLUDE_DIRS})
+
+# http://www.boost.org/
+find_package(Boost REQUIRED COMPONENTS system)
+include_directories(${Boost_INCLUDE_DIR})
 
 
 if (WIN32)
-    set(CPPFORMAT_BASE_DIR_DEFAULT c:\\program\ files\\FORMAT)
-    set(V8_BASE_STATIC_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
-    set(V8_BASE_SHARED_LIB_DIR_DEFAULT c:\\program\ files\\v8\\build\\Release\\lib)
-    set(V8_INCLUDE_DIR_DEFAULT c:\\program\ files\\v8\\include)
     set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
-
 else()
-
-    set(CXX_COMPILER_FLAGS ${CXX_COMPILER_FLAGS} -Wshadow)
-
-    set(V8_BASE_STATIC_LIB_DIR_DEFAULT ../v8/out/native)
-    set(V8_BASE_SHARED_LIB_DIR_DEFAULT ../v8/out/native)
-    set(CPPFORMAT_BASE_DIR_DEFAULT /usr/local/)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -std=gnu++1z")
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
     set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
+
 endif()
 
-set(CPPFORMAT_BASE_DIR ${CPPFORMAT_BASE_DIR_DEFAULT} CACHE PATH "path to root of cppformat that contains include and lib dirs")
-set(V8_BASE_STATIC_LIB_DIR ${V8_BASE_STATIC_LIB_DIR_DEFAULT} CACHE PATH "full path including v8/out/<build_type>")
-set(V8_BASE_SHARED_LIB_DIR ${V8_BASE_SHARED_LIB_DIR_DEFAULT} CACHE PATH "full path including v8/out/<build_type>")
-set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8.h including 'include' at the end")
-
-
+# -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files
+set(V8_BASE_SHARED_LIB_DIR CACHE PATH "full path containing V8 library files")
 link_directories(${V8_BASE_SHARED_LIB_DIR})
 
-link_directories(${CPPFORMAT_BASE_DIR}\\lib)
 
-include_directories(./include ${V8_INCLUDE_DIR_DEFAULT} ${BOOST_INCLUDE_DIR} ${CPPFORMAT_BASE_DIR}/include)
+# -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
+set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8 public headers directory containing v8.h")
+include_directories(./include ${V8_INCLUDE_DIR})
 
 
 # only use this against a shared-object-built V8
 #   library=shared snapshot=off
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
+
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS} v8_libplatform v8_libbase boost_system boost_chrono)
+target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS})
 
-# GCC doesn't need to link to this to make a shared object
-if (APPLE)
-  target_link_libraries(v8toolkit_shared fmt)
-endif()
+# Linux doesn't need to link to this to make a shared object
+target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
 
-#set_target_properties(v8toolkit_shared PROPERTIES OUTPUT_NAME "v8toolkit")
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
-target_link_libraries(v8toolkit_static fmt)
+target_link_libraries(v8toolkit_static fmt ${Boost_LIBRARIES})
 
 if (WIN32)
 	target_link_libraries(v8toolkit_static WinMM)
@@ -93,9 +96,15 @@ install(TARGETS v8toolkit_static v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR}
 
 link_directories(${PROJECT_BINARY_DIR})
 
+
+add_custom_target(copy_snapshots)
+add_custom_command(TARGET copy_snapshots PRE_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${V8_BASE_SHARED_LIB_DIR}/*_blob.bin ${PROJECT_BINARY_DIR})
+
+
 add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
 #add_dependencies(bidirectional_sample v8toolkit_static copy_bidirectional_sample_resources)
-add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample_resources)
+add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample_resources copy_snapshots)
 #target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
 target_link_libraries(bidirectional_sample ${V8_SHARED_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit_shared)
@@ -106,7 +115,7 @@ add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js ${PROJECT_BINARY_DIR})
 
 add_executable(exception_sample samples/exception_sample.cpp)
-add_dependencies(exception_sample v8toolkit_shared)
+add_dependencies(exception_sample v8toolkit_shared copy_snapshots)
 #target_link_libraries(exception_sample ${V8_STATIC_LIBS})
 target_link_libraries(exception_sample ${V8_SHARED_LIBS})
 target_link_libraries(exception_sample v8toolkit_shared fmt)
@@ -116,13 +125,13 @@ target_link_libraries(exception_sample v8toolkit_shared fmt)
 
 
 add_executable(thread_sample samples/thread_sample.cpp)
-add_dependencies(thread_sample v8toolkit_shared)
+add_dependencies(thread_sample v8toolkit_shared copy_snapshots)
 target_link_libraries(thread_sample ${V8_SHARED_LIBS})
 #target_link_libraries(thread_sample ${V8_STATIC_LIBS})
 target_link_libraries(thread_sample v8toolkit_shared fmt)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
-add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources)
+add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources copy_snapshots)
 target_link_libraries(toolbox_sample ${V8_SHARED_LIBS})
 #target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
 target_link_libraries(toolbox_sample v8toolkit_shared fmt)
@@ -136,17 +145,22 @@ add_custom_command(TARGET copy_toolbox_sample_resources POST_BUILD
         ${PROJECT_BINARY_DIR})
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
-add_dependencies(javascript_sample v8toolkit_shared)
+add_dependencies(javascript_sample v8toolkit_shared copy_snapshots copy_javacsript_sample_modules_dir)
 #target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
 target_link_libraries(javascript_sample ${V8_SHARED_LIBS})
 target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
 
+add_custom_target(copy_javacsript_sample_modules_dir)
+add_custom_command(TARGET copy_javacsript_sample_modules_dir POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/modules ${PROJECT_BINARY_DIR}/modules)
+
+
 
 add_executable(sample samples/sample.cpp)
-add_dependencies(sample v8toolkit_shared copy_sample_resources)
+add_dependencies(sample v8toolkit_shared copy_sample_resources copy_snapshots)
 target_link_libraries(sample ${V8_SHARED_LIBS})
 #target_link_libraries(sample ${V8_STATIC_LIBS})
-target_link_libraries(sample v8toolkit_shared fmt eastl)
+target_link_libraries(sample v8toolkit_shared fmt EASTL)
 
 add_custom_target(copy_sample_resources)
 add_custom_command(TARGET copy_sample_resources POST_BUILD
@@ -156,7 +170,7 @@ add_custom_command(TARGET copy_sample_resources POST_BUILD
 
 # DEBUGGER SAMPLE
 add_executable(debugger_sample samples/debugger_sample.cpp)
-add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources)
+add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources copy_snapshots)
 target_link_libraries(debugger_sample ${V8_SHARED_LIBS} v8toolkit_shared fmt)
 add_custom_target(copy_debugger_resources)
 add_custom_command(TARGET copy_debugger_resources POST_BUILD
@@ -165,11 +179,13 @@ add_custom_command(TARGET copy_debugger_resources POST_BUILD
 
 
 add_custom_target(samples)
-add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample)
+add_dependencies(samples bidirectional_sample thread_sample exception_sample toolbox_sample copy_snapshots)
 
 add_custom_target(run_samples)
-add_dependencies(run_samples samples)
+add_dependencies(run_samples samples copy_snapshots)
 add_custom_command(TARGET run_samples POST_BUILD
         COMMAND ${PROJECT_BINARY_DIR}/bidirectional_sample && ${PROJECT_BINARY_DIR}/thread_sample && ${PROJECT_BINARY_DIR}/exception_sample && ${PROJECT_BINARY_DIR}/toolbox_sample)
 
+add_subdirectory(test)
 
+add_subdirectory(class_parser)

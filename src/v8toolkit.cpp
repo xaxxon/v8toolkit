@@ -20,32 +20,45 @@
 #include "./v8toolkit.h"
 
 
+
+
+
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+	return malloc(size);
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+	return malloc(size);
+}
+
 namespace v8toolkit {
+
+// used in v8_class_wrapper_impl.h to track which global names have been used
+std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
+
+// used in v8_class_wrapper.h to store callbacks for cleaning up wrapper objects when an isolate is destroyed
+V8ClassWrapperInstanceRegistry wrapper_registery;
+
+using namespace ::v8toolkit::literals;
 
 void process_v8_flags(int & argc, char ** argv)
 {
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
 }
 
-
-void expose_debug(const std::string & debug_name) {
-
-    // turn on debugging -- THIS IS WRONG?
-//    static const char * EXPOSE_DEBUG = "--debug";
-//    std::string expose_debug(EXPOSE_DEBUG);
-//    v8::V8::SetFlagsFromString(expose_debug.c_str(), expose_debug.length());
-
-    // expose debug object to javascript
-    static const char * EXPOSE_DEBUG_AS = "--expose-debug-as=";
-    std::string expose_debug_as(EXPOSE_DEBUG_AS);
-    expose_debug_as += debug_name;
-    v8::V8::SetFlagsFromString(expose_debug_as.c_str(), expose_debug_as.length());
-}
     
 void expose_gc()
 {
     static const char * EXPOSE_GC = "--expose-gc";
     v8::V8::SetFlagsFromString(EXPOSE_GC, strlen(EXPOSE_GC));   
+}
+
+
+InvalidCallException::InvalidCallException(const std::string & message) :
+    message(message + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100)))
+{
 }
 
 
@@ -63,7 +76,7 @@ void add_variable(const v8::Local<v8::Context> context, const v8::Local<v8::Obje
 
 
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, void(*function)(const v8::FunctionCallbackInfo<v8::Value>&)) {
-    object_template->Set(isolate, name, make_function_template(isolate, function));
+    object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
 
@@ -150,7 +163,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 
 
 
-void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, std::function<void(const std::string &)> callback) {
+void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object_template, func::function<void(const std::string &)> callback) {
     add_function(isolate, object_template, "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(isolate, object_template, "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(isolate, object_template, "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
@@ -160,16 +173,20 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
 
     add_function(isolate, object_template, "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i]) + "\n");
+        }
     });
     add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0], true, true) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i], true) + "\n");
+        }
     });
 	
 }
 
-void add_print(const v8::Local<v8::Context> context, std::function<void(const std::string &)> callback) {
+void add_print(const v8::Local<v8::Context> context, func::function<void(const std::string &)> callback) {
     add_function(context, context->Global(), "printf",    [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, false));});
     add_function(context, context->Global(), "printfln",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_printf_helper(info, true));});
     add_function(context, context->Global(), "sprintf",  [](const v8::FunctionCallbackInfo<v8::Value>& info){return _format_helper(info, false);});
@@ -179,14 +196,18 @@ void add_print(const v8::Local<v8::Context> context, std::function<void(const st
 
     add_function(context, context->Global(), "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0]) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i]) + "\n");
+        }
     });
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
-        callback(stringify_value(isolate, info[0], true, true) + "\n");
+        for (int i = 0; i < info.Length(); i++) {
+            callback(stringify_value(isolate, info[i], true) + "\n");
+        }
     });
-
 }
+
 
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template)
 {
@@ -198,14 +219,14 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
         v8::TryCatch tc(isolate);
         auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
         assert(!tc.HasCaught());
-        
+
         auto script = script_maybe.ToLocalChecked();
         auto result_maybe = script->Run(context);
         assert (!tc.HasCaught());
-        
+
         auto result = result_maybe.ToLocalChecked();
         // print_v8_value_details(result);
-        
+
         bool default_value = false;
         bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
 //        print_v8_value_details(result);
@@ -313,16 +334,6 @@ bool _get_modification_time_of_filename(std::string filename, time_t & modificat
 //   cached value
 std::mutex require_results_mutex;
 
-struct RequireResult {
-    time_t time;
-    v8::Global<v8::Value> result;
-    std::unique_ptr<v8::ScriptOrigin> script_origin;
-    RequireResult(v8::Isolate * isolate, const time_t & time, v8::Local<v8::Value> result, std::unique_ptr<v8::ScriptOrigin> script_origin) :
-            time(time), result(v8::Global<v8::Value>(isolate, result)), script_origin(std::move(script_origin))
-    {}
-    // IF CRASHING IN RequireResult DESTRUCTOR, MAKE SURE TO CALL delete_require_cache_for_isolate BEFORE DESTROYING ISOLATE
-};
-
 typedef std::map<std::string, RequireResult> cached_isolate_modules_t; // a named module result
 static std::map<v8::Isolate *, cached_isolate_modules_t> require_results;
 
@@ -354,7 +365,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
 
         ReportException(isolate, &try_catch);
 
-            // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
+        // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
         error = try_catch.Exception();
         printf("%s\n", stringify_value(isolate, try_catch.Exception()).c_str());
         if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
@@ -375,10 +386,10 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
 
     auto maybe_result = script->Run(context);
     if (try_catch.HasCaught()) {
-	printf("Context::run threw exception - about to print details:\n");
-	ReportException(isolate, &try_catch);
+//        printf("Context::run threw exception - about to print details:\n");
+        ReportException(isolate, &try_catch);
     } else {
-	printf("Context::run ran without throwing exception\n");
+//	printf("Context::run ran without throwing exception\n");
     }
 
     if(maybe_result.IsEmpty()) {
@@ -406,23 +417,29 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
     
 
 
+/**
+ * Compiles the given code within a containing function and returns the exports object
+ * @param context
+ * @param module_source
+ * @param script_origin
+ * @return
+ */
 v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
                                     const std::string module_source,
-                                    const v8::ScriptOrigin & script_origin) {
+                                    const v8::ScriptOrigin & script_origin,
+                                    v8::Local<v8::Function> & compiled_function) {
 
     auto isolate = context->GetIsolate();
 
-   /*
-    * printf("Executing module with script origin resource name , line offset: %d, column offset %d, source: %s\n",
-        *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
-           script_origin.ResourceColumnOffset()->Value(), module_source.c_str());
-    */
+
+//    std::cerr << fmt::format("ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+//                             *v8::String::Utf8Value(script_origin.ResourceName()), script_origin.ResourceLineOffset()->Value(),
+//                             script_origin.ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
 
 
     v8::ScriptCompiler::Source source(v8::String::NewFromUtf8(isolate, module_source.c_str()), script_origin);
     v8::Local<v8::String> parameter_names[] = {
-        v8::String::NewFromUtf8(isolate, "module"),
-        v8::String::NewFromUtf8(isolate, "exports")
+        "module"_v8, "exports"_v8
     };
     v8::TryCatch try_catch(isolate);
     auto maybe_module_function =
@@ -432,9 +449,17 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
         assert(false);
     }
 
+
+
     // NEED PROPER ERROR HANDLING HERE
     assert(!maybe_module_function.IsEmpty());
-    auto module_function = maybe_module_function.ToLocalChecked();
+    compiled_function = maybe_module_function.ToLocalChecked();
+
+//    std::cerr << fmt::format("module script id: {}", compiled_function->GetScriptOrigin().ScriptID()->Value()) << std::endl;
+//    std::cerr << fmt::format("After CompileFunctionInContext: ScriptOrigin.ResourceName: {}, line offset: {}, column offset: {}, source: {}",
+//                             *v8::String::Utf8Value(compiled_function->GetScriptOrigin().ResourceName()), compiled_function->GetScriptOrigin().ResourceLineOffset()->Value(),
+//                             compiled_function->GetScriptOrigin().ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
+
 
     v8::Local<v8::Object> receiver = v8::Object::New(isolate);
     v8::Local<v8::Value> module_params[2];
@@ -443,7 +468,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     module_params[1] = exports_object;
     add_variable(context, module_params[0]->ToObject(), "exports", exports_object);
 
-    (void)module_function->Call(context, context->Global(), 2, &module_params[0]);
+    (void)compiled_function->Call(context, context->Global(), 2, &module_params[0]);
 
     return exports_object;
 }
@@ -463,20 +488,23 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
 //#define REQUIRE_DEBUG_PRINTS false
-#define REQUIRE_DEBUG_PRINTS true
+//#define REQUIRE_DEBUG_PRINTS true
 bool require(
     v8::Local<v8::Context> context,
     std::string filename,
     v8::Local<v8::Value> & result,
     const std::vector<std::string> & paths,
-    bool track_file_modification_times, bool use_cache)
+    bool track_file_modification_times,
+    bool use_cache,
+    func::function<void(RequireResult const &)> callback,
+    func::function<std::string(std::string const &)> resource_name_callback)
 {
 
     auto isolate = context->GetIsolate();
     v8::Locker l(isolate);
     if (filename.find("..") != std::string::npos) {
         if (REQUIRE_DEBUG_PRINTS) printf("require() attempted to use a path with more than one . in a row '%s' (disallowed as simple algorithm to stop tricky paths)", filename.c_str());
-        isolate->ThrowException(v8::String::NewFromUtf8(isolate, "Cannot specify a file containing .."));
+        isolate->ThrowException("Cannot specify a file containing .."_v8);
         return false;
     }
 
@@ -488,7 +516,12 @@ bool require(
 #else
                 auto complete_filename = path + "/" + filename + suffix;
 #endif
-        
+
+                std::string resource_name = complete_filename;
+                if (resource_name_callback) {
+                    resource_name = resource_name_callback(complete_filename);
+                }
+
                 std::string file_contents;
                 time_t file_modification_time = 0;
                 if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
@@ -520,16 +553,20 @@ bool require(
                     }
                 }
 
+                // CACHE WAS SEARCHED AND NO RESULT FOUND - DO THE WORK AND CACHE THE RESULT AFTERWARDS
+
                 // Compile the source code.
-                auto script_origin =
-                        std::make_unique<v8::ScriptOrigin>(v8::String::NewFromUtf8(isolate,
-                                                                                   complete_filename.c_str()),
-                                                           v8::Integer::New(isolate, 0),
-                                                           v8::Integer::New(isolate, 0)
-                        );
-                                            
+
+                v8::Local<v8::Script> script;
+
                 if (std::regex_search(filename, std::regex(".json$"))) {
-                    v8::Local<v8::Script> script;
+
+                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
+                                                                           resource_name.c_str()),
+                                                   v8::Integer::New(isolate, 0), // line offset
+                                                   v8::Integer::New(isolate, 0)  // column offset
+                    );
+
                     v8::Local<v8::Value> error;
                     v8::TryCatch try_catch(isolate);
                     // TODO: make sure requiring a json file is being tested
@@ -540,37 +577,45 @@ bool require(
                         if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
                         return false;
                     }
+                    result = maybe_result.ToLocalChecked();
+
+                    // cache the result for subsequent requires of the same module in the same isolate
+                    if (use_cache) {
+                        std::lock_guard<std::mutex> l(require_results_mutex);
+                        auto & isolate_require_results = require_results[isolate];
+                        auto i = isolate_require_results.find(complete_filename);
+                        if (i == isolate_require_results.end()) {
+                            isolate_require_results.emplace(complete_filename, RequireResult(isolate, context, v8::Local<v8::Function>(), result, time(nullptr)));
+                        }
+                    }
+
                 } else {
-                    v8::Local<v8::Script> script;
+
+                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, resource_name.c_str()),
+                                                   0_v8, // line offset
+                                                   26_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
+                                                   v8::Local<v8::Boolean>());
+
                     v8::Local<v8::Value> error;
-                    result = execute_module(context, file_contents, *script_origin);
-//                    if (!compile_source(context, file_contents, script, error, script_origin.get())) {
-//                        isolate->ThrowException(error);
-//                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't compile .js for %s\n", complete_filename.c_str());
-//                        return false;
-//                    }
+                    v8::Local<v8::Function> module_function;
+                    
+                    result = execute_module(context, file_contents, script_origin, module_function);
 
-                    // set up the module and exports stuff
-                    // TODO: module object should also have "children" array, "filename" string, "id" string, "loaded" boolean, "parent" module object that first loaded this one
-//                    (void)context->Global()->Set(context, v8::String::NewFromUtf8(isolate, "global"), context->Global());
+                    std::lock_guard<std::mutex> l(require_results_mutex);
+                    auto & isolate_require_results = require_results[isolate];
+                    isolate_require_results.emplace(complete_filename,
+                                                    RequireResult(isolate, context, module_function, result,
+                                                                  file_modification_time));
+                    if (callback) {
+                        callback(isolate_require_results.find(complete_filename)->second);
+                    }
 
-                    // return value of run doesn't matter, only what is hooked up to export variable
-//		    (void)run_script(context, script);
-                    //(void)script->Run(context);
-//                    maybe_result = context->Global()->Get(context, v8::String::NewFromUtf8(isolate, "exports"));
-//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "module"));
-//                    context->Global()->Delete(context, v8::String::NewFromUtf8(isolate, "exports"));
-		}
+
+
+		        }
 
 
                 
-                // cache the result for subsequent requires of the same module in the same isolate
-                if (use_cache) {
-                    std::lock_guard<std::mutex> l(require_results_mutex);
-                    auto & isolate_require_results = require_results[isolate];
-                    isolate_require_results.emplace(complete_filename, RequireResult(isolate, file_modification_time,
-                                                                                     result, std::move(script_origin)));
-                }
                 // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
                 // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
                 return true;
@@ -579,14 +624,14 @@ bool require(
         }
     }
     if (REQUIRE_DEBUG_PRINTS) printf("Couldn't find any matches for %s\n", filename.c_str());
-    isolate->ThrowException(v8::String::NewFromUtf8(isolate, "No such module found in any search path"));
+    isolate->ThrowException("No such module found in any search path"_v8);
     return false;
 }
 
 
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template)
 {
-    using ReturnType = std::vector<std::pair<std::string, v8::Global<v8::Value>&>>;
+    using ReturnType = std::map<std::string, v8::Global<v8::Value>&>;
 
     add_function(isolate, object_template, "module_list",
 
@@ -594,7 +639,7 @@ void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> 
             ReturnType results;
             auto & isolate_results = require_results[isolate];
             for (auto & result_pair : isolate_results) {
-                results.emplace_back(result_pair.first, result_pair.second.result);
+                results.emplace(result_pair.first, result_pair.second.result);
             }
 			return results;
 		});
@@ -688,6 +733,11 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
 {
     // printf("Comparing two things\n");
     auto context = isolate->GetCurrentContext();
+
+    // if they're both undefined, then they are equal.  If only one, then they're not.
+    if (left->IsUndefined() || right->IsUndefined()) {
+        return left->IsUndefined() && right->IsUndefined();
+    }
     
     v8::Local<v8::Boolean> bool_left;
     v8::Local<v8::Boolean> bool_right;
@@ -799,6 +849,104 @@ std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> conte
 
 
 
+SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
+                                         v8::Isolate * isolate,
+                                         const v8::Local<v8::Object> & javascript_object, bool destructive) :
+    callback(callback),
+    destructive(destructive)
+    {
+//        std::cerr << fmt::format("Creating weak callback data with destructive: {}", this->destructive) << std::endl;
+        this->global.Reset(isolate, javascript_object);
+    }
+
+
+SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
+                            const v8::Local<v8::Object> & javascript_object,
+                            func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback, bool destructive)
+{
+    // this memory deleted in the GC callback
+    auto callback_data = new SetWeakCallbackData(callback, isolate, javascript_object, destructive);
+
+    // set the callback on the javascript_object to be called when it's garbage collected
+    callback_data->global.template SetWeak<SetWeakCallbackData>(callback_data,
+                                                                [](const v8::WeakCallbackInfo<SetWeakCallbackData> & info) {
+                                                                    SetWeakCallbackData * callback_data = info.GetParameter();
+                                                                    callback_data->callback(info);
+                                                                    callback_data->global.Reset();
+                                                                    delete callback_data; // delete the memory allocated when global_set_weak is called
+                                                                }, v8::WeakCallbackType::kParameter);
+
+    return callback_data;
+}
+
+
+
+
+void foreach_filesystem_helper(const std::string & directory_name,
+                               const volatile bool files,
+                               const volatile bool directories,
+                               std::function<void(const std::string &)> const & callback)
+{
+    // This probably works on more than just APPLE
+#ifndef _MSC_VER
+
+    auto full_directory_name = directory_name;
+    DIR * dir = opendir(full_directory_name.c_str());
+    if (dir == NULL) {
+        printf("Could not open directory %s\n", full_directory_name.c_str());
+        return;
+    }
+    struct dirent * dp;
+    while ((dp = readdir(dir)) != NULL) {
+
+        if ((dp->d_type == DT_DIR && directories && strcmp(dp->d_name, ".") && strcmp(dp->d_name, "..")) ||
+            (dp->d_type == DT_REG && files)) {
+            callback(dp->d_name);
+        }
+    }
+    (void)closedir(dir);
+    return;
+
+#else
+
+    WIN32_FIND_DATA file_metadata;
+	HANDLE directory = FindFirstFile((directory_name + "\\*").c_str(), &file_metadata);
+
+	if (directory ==  INVALID_HANDLE_VALUE) {
+		printf("Could not open directory %s\n", directory_name.c_str());
+		return;
+	}
+	do {
+		if (!strcmp(file_metadata.cFileName, ".") || !strcmp(file_metadata.cFileName, "..")) {
+			continue;
+		}
+		if (
+			((file_metadata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && directories) ||
+			((!(file_metadata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) && files)) {
+			callback(file_metadata.cFileName);
+		} else {
+			printf("Skipping file %s because it's not of desired type file: %d directory: %d\n", file_metadata.cFileName, files, directories);
+			continue;
+		}
+
+
+	} while(FindNextFile(directory, &file_metadata));
+
+	FindClose(directory);
+	return;
+
+
+#endif
+
+}
+
+void foreach_file(const std::string & directory_name, std::function<void(const std::string &)> const & callback) {
+    return foreach_filesystem_helper(directory_name, true, false, callback);
+}
+
+void foreach_directory(const std::string & directory_name, std::function<void(const std::string &)> const & callback) {
+    return foreach_filesystem_helper(directory_name, false, true, callback);
+}
 
 
 

@@ -1,78 +1,107 @@
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
+
+## New Feature: Default Arguments
+
+Support for specifying default arguments for native calls is now supported and they are
+automatically generated from your C++ source when using the ClassParser plugin.
+
+
+## New Feature: Memory handoff to std::unique_ptr
+
+In JavaScript, if you create a JavaScript object wrapping a C++ object and pass it to a function taking
+a `std::unique_ptr`:
+
+    JavaScript: native_function_taking_std_unique_ptr_MyType(new MyType());
+
+the memory ownership of the C++ `MyType` will be handed off to the unique_ptr.  The JavaScript object
+will still have access to the embedded C++ object, but when the JavaScript object is garbage collected,
+it will not free the memory.  Also, the object may be cleaned up by the `unique_ptr` while the JavaScript object
+is still reachable, so care must be observed.
+
+This is not related to calling a function which takes an rvalue reference.  In that case, while the underlying
+C++ object may be moved out of, the fundamental C++ object (albeit potentially only a skeleton object after
+having been the source object of a move constructor call) still has its lifetime tied to the JavaScript object's.
+
+This memory handoff behavior is available to any other user-defined C++ types by calling
+`V8ClassWrapper::release_internal_field_memory` in the corresponding `CastToNative` specialization for the type.
+
    
-## Next Major Feature: Instructions/code for debugging your JavaScript from Chrome's javascript debugger
+## New Feature: Debugging embedded JavaScript from Chrome's javascript debugger.
 
-I am currently implementing the necessary functionality to connect to your application with Chrome's 
-javascript debugger.  The beginnings of the code can be
-found in include/debugger.h src/debugger.cpp and samples/debugger_sample.cpp (the last is the most 
-interesting from a user perspective).
-
-Minimal functionality will include: 
-
-* Viewing code (done)
-* Add/remove breakpoints (done)
+* Viewing code 
+* Add/remove breakpoints
 * Step over/into/out
-* Notification on breakpoint being hit (in progress)
+* Notification on breakpoint being hit
 * Resuming execution
-* Evaluating arbitrary code (in progress)
 
 
+To debug, you must start chrome with the `--remote-debugging-port=9222`.
+Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002`.
 
-## Recent Feature: Automatic class binding generator
+Note the two different ports above.  The first is a local port to serve the debugger from, the second is the port
+in the program you wish to debug.
 
-There is an experimental clang compiler plugin that will look at all your code and generate bindings for your
-classes automatically - you just put in a few annotations to say which things you want.  Anything not annotated
-will be wrapped.
+This code will be rewritten using the newly implemented debugging interface in V8, but
+until then, the existing code has some of the functionality.
+
+
+## New Feature: ClassParser - Automatic class binding generator
+
+`class_parser/` directory now contains a clang plugin that can automatically generate bindings for your existing
+C++ classes using the actual clang compiler AST data.  From this, it generates `V8ClassWrapper` bindings, 
+creates `bidirectional` classes, and creates a javascript 'stub' file for hinting editor
+autocompletion.
+
+C++ classes can be annotated to customize exactly how and which elements will be included.
 
     class V8TOOLKIT_WRAPPED_CLASS MyClassToWrap {
-        MyClassToWrap(){}
+    
+        // Constructor automatically wrapped with its own name
+        MyClassToWrap();
 
-        // avoid name conflict between constructors
-        V8TOOLKIT_CONSTRUCTOR(MyClassToWrapIntInt) MyClassToWrap(int, int){}
+        void this_function_will_be_wrapped();
+        V8TOOLKIT_SKIP void do_not_wrap_this_function();
+        
+        static void static_methods_work_too();
 
-        void this_function_will_be_wrapped(){}
-        V8TOOLKIT_SKIP void do_not_wrap_this_function(){}
-
-        int this_member_will_be_wrapped;
-        V8TOOLKIT_SKIP int do_not_wrap_this_member;
-
-        void some_method_1(); // will be automatically wrapped
-        void some_method_2(); // will be automatically wrapped
-        void some_method_3(); // will be automatically wrapped
-
-        int i;         // will be automatically wrapped
-        std::string j; // will be automatically wrapped
+        std::string data_members_work;
+        int const const_data_members_are_wrapped_read_only;
     };
 
-The generated code has all the includes needed based on the actual types in the classes/methods/members being
-wrapped - including template parameter types.  It will also build header files for your bidirectional types -
-just add V8TOOLKIT_BIDIRECTIONAL_CLASS to the class as well.
 
-The plugin only works with clang, but the goal is for the generated code to work with any compiler.
+The plugin requires clang, but the generated code will compile on any compiler.
 
-Check out the "tools" directory.   It will require some customization to get working, but it's really neat!
 
-Edit: now the clang plugin also uses doxygen docs in your c++ code to generate a stubbed out javascript 'library' with jsdoc, suitable
-for use with editors that can use that information for autocompletion, such as JetBrains IDEs such as CLion and WebStorm.
-
-## Tutorial for using this library
+## Tutorial
 
 #### Install git
 
-Type `git` on the command line.   If you don't have it, go here: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
 
 #### Building V8
 
-Building V8 is not a simple process.
-in
-"depot tools" is a collection of google build tools and is required for building V8: http://dev.chromium.org/developers/how-tos/install-depot-tools
-`git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git` this then include it in the PATH environment variable (or just type in the whole path)
+Building V8 is not a simple process and changes often, so these instructions may not
+be up-to-date.
 
-(following the instructions here: https://github.com/v8/v8/wiki/Using%20Git)
+ * First, you need to install a set of tools for getting and building V8 called "depot tools".
 
-From here, the process diverges a bit based on what platform you're on:
+https://www.chromium.org/developers/how-tos/install-depot-tools
+
+ * Then, download V8 via the instructions here: 
+
+https://github.com/v8/v8/wiki/Using%20Git
+
+The official build process documentation is here:
+
+https://github.com/v8/v8/wiki/Building%20with%20GN
+
+and the previous build process (simpler but will stop working eventually) here:
+
+https://github.com/v8/v8/wiki/Building%20with%20Gyp
+
+* The steps I use on each platform are documented here:
 
 [Build V8 for OS X](osx_v8_build.md)
 
@@ -80,72 +109,27 @@ From here, the process diverges a bit based on what platform you're on:
 
 [Build V8 for Linux](linux_v8_build.md)
 
-(the following hasn't been moved into the above links yet)
 
-##### Building in Windows (incomplete)
+#### Install the following v8toolkit dependencies
 
-git clone depot tools as above. - $ git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+Boost: http://www.boost.org
 
-Put the new directory in your path - http://www.computerhope.com/issues/ch000549.htm
+Websocket library used for communicationg with chrome javascript debugger:
+https://github.com/zaphoyd/websocketpp
 
-install python (2) from python.org - I used 2.7.11 -  https://www.python.org/downloads/
-
-put python in your permanent path - it must be in your path environment variable for visual studio to use later or you will get errors in the output window in visual studio
-
-start the bash included with depot_tools:  depot_tools\git-2.7.4-64_bin\bin/bash.exe
-
-This next line shouldn't be needed and I don't know what it does, but if you don't use it and get errors in landmines.py, use it
-> export DEPOT_TOOLS_WIN_TOOLCHAIN=0 
-
-type >fetch v8
-
-in v8/build there is all.sln file and that can be loaded into visual studio 2015 (I was using Update 2 when I wrote this).   It will tell you it's an older version and you need to convert it.  Just hit "ok" with all the options selected.   After it converts, build the d8 javascript shell by opening clicking "build", "build" (in the drop down), "d8".  
-
-`NOTE: This will build with the 2013 toolchain by default.  This means you CANNOT link it with code compiled with the 2015 toolchain.  To change this, go to the Project menu, then `Properties`, `Configuration Properties`, `General`, and go to the `Platform Toolset` option and select `Visual Studio 2015 (v140)` or whatever version you want to use.  However, it probably isn't guaranteed to work in any other version of the toolset.
-
-Also note this will build with the statically linked runtime.  As far as I understand, the runtimes of what you link to it must match.  I don't know if building with the dynamically linked runtime works or not.
-
-In `v8/build/Debug` you should now have d8.exe.  If it isn't there, make sure you have python in your permanent PATH environment variable (following the directions in the URL above) and didn't just set it on the command line.   Visual Studio has to know where to find it.  
-
-
-#### Building/installing Boost
-
-v8toolkit uses `boost::format` to provide printf-style functions for console output and string generation.
-
-##### Simple but long Boost install
-
-With apt-get:  `sudo apt-get install libboost-all-dev`
-
-OS X with brew: `brew install boost --c++11`
-
-From source:
-
-Get boost: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html#get-boost
-
-Install boost: 
-
-Short version: untar, go into boost directory, `./bootstrap.sh`, `./b2` (this can take a while), `./b2 install` (this will install with the prefix /usr/local/include)
-
-More detailed install information: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html
-
-NOTE: If you plan on using the boost libraries that have to be compiled (as opposed to header-only ones), you'll need to build boost with libc++.  Here is an example
-on how to do that: https://gist.github.com/jimporter/10442880
-
-##### Quick Boost "install"
-`boost::format` is a header-only library, so you can just use the -I flag to point the compiler at the headers in the untar'd source.
-
+Text formatting library (faster but less featureful than boost::format):
+https://github.com/fmtlib/fmt
 
 
 #### Build v8toolkit
 
-git clone v8toolkit:  git clone https://github.com/xaxxon/v8toolkit.git 
+
+`git clone https://github.com/xaxxon/v8toolkit.git` 
 
 Create a build directory (anywhere, but I prefer inside the directory v8toolkit was cloned into) and type:
-`cmake /path/to/v8toolkit`
+    cmake -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/ /path/to/v8toolkit
 
-and then type: `make`
-
-You may need to customize the v8 header and v8 library directory locations
+and then type: `make` then `make install` (may need sudo)
 
 
 #### Your First V8 program
@@ -157,7 +141,7 @@ Here is the simplest program you can write to execute some javascript using the 
     
     int main(int argc, char ** argv) {
         // any v8-specific command-line arguments will be stripped out
-        Platform::init(argc, argv); 
+        Platform::init(argc, argv, argv[0]); 
         
         // creates a v8toolkit::Isolate which can manage some number of contexts
         auto isolate = Platform::create_isolate();
@@ -174,12 +158,19 @@ Here is the simplest program you can write to execute some javascript using the 
         context->run("println('Hello JavaScript World!');"); 
     }
 
-Working backwards through the code, a context is the container in which JavaScript code actually runs.   Any changes made to globally accessible objects in a context persist
-and will be seen any other JavaScript run within that same context.
+Working backwards through the code, a context is the container in which JavaScript code actually runs.   Any changes 
+made to globally accessible objects in a context persist and will be seen any other JavaScript run within that same context.
 
-An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized so that all contexts created after the customization share that customization.   In the example above, if we made another context by calling `isolate->create_context()` a second time, this second context would also have access to println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have multiple isolates.
+An isolate contains the necessary state for any number of related context objects.  An isolate can also be customized 
+so that all contexts created after the customization share that customization.   In the example above, if we made 
+another context by calling `isolate->create_context()` a second time, this second context would also have access to 
+println().  However, if a second isolate were made, contexts created from it would not have the print helpers unless 
+add_print() were also to be called on the second isolate.  Lastly, regardless of how many contexts exist within an 
+isolate, only one of them can be active at a time.   If you want multiple threads running JavaScript, you must have 
+multiple isolates.
 
-Platform manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with your JavaScript execution.  Simply call the static ::init() method on it once and V8 is ready to go.
+Platform manages the per-process configuration for V8 and is used to create isolates.  It has no interaction with 
+your JavaScript execution.  Simply call the static `::init()` method on it once and V8 is ready to go.
 
 ##### v8toolkit provides classes wrapping native V8 classes with the same names.  This means you cannot `use namespace` both the v8 and v8toolkit namespaces at the same time or you will get ambiguity errors.
 
@@ -198,24 +189,25 @@ computer being used:
 
 Successfully running the commands below will build your program as `./a.out`
 
-On OS X (command line - unknown how/if xcode works):
+On Mac:
 
     clang++ -std=c++14 -g -I./ -I\<PATH_TO_V8_BASE_DIRECTORY> -g -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  YOUR_PROGRAM_CPP  
     -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/  -I\<PATH_TO_V8TOOLKIT> \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  
     
-On Linux (tested on Ubuntu Desktop 15.10)
+On Linux (tested on Ubuntu Desktop 15.10):
 
     g++ -std=c++14 -g -I\<PATH_TO_V8TOOLKIT> -I\<PATH_TO_V8_BASE_DIRECTORY>  -I\<PATH_TO_DIRECTORY_WITH_BOOST_INCLUDE_DIR>  -Wall -Werror  \<YOUR_PROGRAM_CPP>
     -L\<PATH_TO_V8_BASE_DIRECTORY>/native/obj.target/tools/gyp/ -L\<PATH_TO_V8_BASE_DIRECTORY>/out/native/obj.target/third_party/icu/  -I\<PATH_TO_V8TOOLKIT>
     \<PATH_TO_V8TOOLKIT>/libv8toolkit.a -lv8_base -lv8_libbase -lv8_base -lv8_libplatform -lv8_nosnapshot -licudata -licuuc -licui18n  -lpthread -licuuc -licudata -ldl
     
-Currently no information on windows builds using either MinGW or MSVC++
-
+On Windows:
+    v8toolkit is currently untested on windows, but has worked in the past in Visual Studio.
 
 #### Exposing C++ functions to JavaScript
 
-Simply running pure javascript as in the previous example just isn't interesting, though.  We want to cross the boundary between JavaScript and C++ seemlessly.  
-Skipping some of the boilerplate in the previous example, here's how to call a custom C++ function from JavaScript.
+Simply running pure javascript as in the previous example just isn't interesting, though.  
+We want to cross the boundary between JavaScript and C++ seemlessly.  Skipping some of the 
+boilerplate in the previous example, here's how to call a custom C++ function from JavaScript.
 
     // just a normal function, nothing special about it
     int add_numbers(int x, int y) 
@@ -228,19 +220,14 @@ Skipping some of the boilerplate in the previous example, here's how to call a c
     
     // adds a function named "js_add_numbers" to each context created from this isolate that calls 
     //   the C++ function add_numbers
-    i->add_function("js_add_numbers", add_numbers);
+    i->add_function("add_numbers", add_numbers);
     auto c = i->create_context();
     
     // prints 9
-    c->run("println(js_add_numbers(4,5));");
+    c->run("println(add_numbers(4,5));");
 
-This example introduces add_function() method which takes a name and "something to be called". This "something" can be a function, a functor 
-(a class with an overloaded operator() method), a lambda (capturing or not), or anything else that std::function can hold.   The magic here is 
-that this library knows what the parameter types and return type of the function you're calling are and tries its best to convert the javascript 
-values passed in to match the types the function wants.  All the standard C++ types are supported and 
-conversion happens using the same mechanism used when converting types in javascript.  User-defined types as well as many common STL containers are
-supported as well and are described in detail below.
-
+`add_function` can take anything a std::function can hold and exposes it to javascript with 
+the given name.
 
 #### Exposing global C++ variables to JavaScript
 
@@ -252,16 +239,13 @@ Global variables (as well as class public static variables) can be exposed to ja
     c->run("x = 4; println(x);"); // prints 4
     printf("%d\n", x); // also prints 4
 
-This works very similarly to the add_function method above.  Give it a name and the variable to expose and
-JavaScript now has access to it.  If the variable is const, the setter will (check the code - it will either no-op
-or throw an exception.  I haven't decided).
-
+Virtually identical to adding a function.  Respects `const`ness of variable.
 
 
 #### Using STL containers 
 
 Many common STL containers are supported and behave in a fairly intuitive manner.   If the container acts mostly like an array, it is turned into
-an array when passed back to JavaScript.   If the container acts more like an associatie array/hash/dictionary
+a JavaScript array when passed back to JavaScript.   If the container acts more like an associatie array
 (key/value pairs), it is turned into a plain javascript object.
 
     std::vector<int> make_three_element_vector(int i, int j, int k) {
@@ -273,23 +257,18 @@ an array when passed back to JavaScript.   If the container acts more like an as
     ...
     c->run("a=make_three_element_array(2,3,5); println(a[1]);"); // prints 3
 
-This example shows a C++ function returning a vector which is turned into a JavaScript array.   During that conversion, the std::vector is converted
-to an array and then each element inside the vector is converted, so vectors containing any other supported type are supported.   This includes 
-containers of containers of containers...  The add_function() method does not support funtions taking a variable number of arguments, but if you're 
-willing to learn more about the V8 API, you can write a function taking a variable number of arguments without too much additional work and there's 
-an example on this later.
 
-You can see which STL containers are supported by looking in
-https://github.com/xaxxon/v8toolkit/blob/master/include/casts.hpp   You can also use this as a foundation
-for adding your own conversions for either missing STL containers or your own types.   Make sure any new
-conversions you make are in the `v8toolkit` namespace - but they can be in your own files.
+
+You can find which containers are supported as well as add your own here: https://github.com/xaxxon/v8toolkit/blob/master/include/casts.hpp   
+
+There is experimental support for some EASTL types, as well.   To enable it, in your
+program before including any v8toolkit headers:
+
+     #define V8TOOLKIT_ENABLE_EASTL_SUPPORT
 
 #### Exposing your C++ class to javascript
 
-Now things really start to get interesting: user-defined types.   Most of the commonly-used features of a C++ class are
-supported, though there are some limitations, and other concepts don't map directly, but are still accessible.
-
-Let's first define a type to work with:
+Sample C++ class:
 
     class Person {
     private:
@@ -340,35 +319,23 @@ everything available automatically.
     c->run("p = new Person();  p.speak(); println(p.get_name(), ' is ', p.get_age(), ' years old'); println('Favorite color: ', p.favorite_color);  ");
 
 
-If there was also a default constructor for Person that made "John Smith" age 18, that could be added with an
-additional call to add_constructor(), but a different JavaScript function name would have to be used,
-like "PersonDefault".   This is a limitation of the C++ type system and how constructors must be called.
-`add_constructor<>("PersonNoParams");` would be the syntax to add a default Person constructor if it were present.
+Multiple constructors and overloaded functions must be given different JavaScript names.
 
-The same limitation exists for overloaded plain functions and methods.  They can each be exposed to JavaScript, but they must have different names.
-
-After wrapping your class, you can use your class just as any other primitive type.   On its own, as a paramter to a function, as a return type from
-a function, or in an STL container.
 
 ##### Const User-Defined Types
 
-Const types are automatically handled when wrapping the non-const version.   Each non-static class member
-function (method) and non-static class member variable (data member) is checked to see whether it is
-const-qualified when being added and if it is const, it will automatically be added to the const version
-of the class being wrapped.
+Across all of v8toolkit, const types are automatically handled appropriately.
+
 
 ##### Creating "Fake" Methods
 
-You can use a specially typed lambda (or plain function) to create a "pretend" or "fake" method by
-having the first input parameter of the lambda being a pointer to the class type:
+Fake methods act like member functions, but are actually plain functions which take the 'this'
+object explicitly as their first paramter.
 
     your_class_wrapper.add_method("fake_method_name", [](YourClass * your_class_object, char *){...});
 
-The lambda can have as many parameters as you want as long as the first one is a pointer to the
-wrapped class.  The first parameter is hidden from the javascript caller and it behaves exactly
-like any other method.
 
-From javascript, the caller cannot tell it's not a native class method:
+From JavaScript, it looks just like any other method:
 
     var my_class = new MyClass;
     my_class.fake_method_name("Test"); // the YourClass* parameter is sent automatically
@@ -376,25 +343,10 @@ From javascript, the caller cannot tell it's not a native class method:
 If you want the fake method to be associated with `const YourClass` as well, have the lambda
 take a `const YourClass *` instead.
 
-Since these methods aren't true C++ methods, you can't access private or protected
-methods and members, but they are still useful when you need to adjust the
-javascript values a little bit before they're ready to be sent to the actual
-object methods.
-
-
-###### Const "Fake" Methods
-
-To have a fake method attached to the const-qualified wrapped class as well, it must accept a const pointer
-as its first parameter instead.
-
-    your_class_wrapper.add_method("fake_method_name", [](const YourClass * your_class_object, char *){...});
-
-
 
 #### Introducing the Script Object
 
-There's one more v8toolkit type we haven't talked about, since it's not needed for simple examples shown so far.  In a real-world project
-the same code will be run multiple times and compiling it each time wouuld be wasteful.   That's where the v8toolkit::Script type comes in.
+The `Script` object holds compiled JavaScript.
 
     // returns a compiled script that can be run multiple times without re-compiling
     auto script = context->compile("println('Hello Javascript World!');");
@@ -402,46 +354,31 @@ the same code will be run multiple times and compiling it each time wouuld be wa
     script->run();
     script->run();
 
-That compiled script always runs in the context it was created in.   If you need to run the same code in another context, you will need to recompile it.
+That compiled script always runs in the context it was created in.   If you need to run the 
+same code in another context, you will need to recompile it there.
 
 
 #### v8toolkit object lifetimes
 
-In the following sections, v8toolkit object refers to all of v8toolkit Isolate, Context, and Script
-
-In V8, a context is invalid if the isolate it was created in has been cleaned up.   Similarly, a compiled script isn't valid if its context is
-destroyed or invalid.  To help manage these object dependencies, each v8toolkit object tracks their dependencies and makes
-sure those dependencies are not destroyed until they are no longer needed.
-
-If you've noticed in all the examples, the variable storing all the toolkit objects are always set as "auto".  The actual type
-returned when creating these types is a std::shared_ptr\<> of type IsolatePtr, ContextPtr, ScriptPtr.  In addition, when a v8toolkit Context is created from a v8toolkit Isolate or a v8toolkit Script from a 
-v8toolkit Context, the newly created object has a shared_ptr to it's parent object.  This ensures an Isolate will not be destroyed while a Context 
-is depending on it or a Context destroyed while a Script is depending on it.  This means that even if your variable storing your Isolate 
-goes out of scope, if you've created a Context from it and still have that object around, the associated Isolate will stick around.  This 
-guarantees that as long as you can make the call to run some JavaScript code, the necessary state information will be available for it to succeed.   
-
-To illustrate this:
+The v8toolkit Isolate, Context objects take care of making sure they don't 
+go out of scope while they are still needed.
 
     {
         std::shared_ptr<Script> s;
         {
             // Platform is a singleton and never goes away
-            auto i = Platform::create_context(); // i reference count is 1
-            auto c = i->create_context(); // c reference count is 1, i reference count is now 2
+            auto i = Platform::create_context(); 
+            auto c = i->create_context(); 
         
-            s = c->compile("4;"); // s reference count is 1, c reference count is now 2, i is still 2
-        } // i and c variables go out of scope, dropping the reference count to both their objects from 2 to 1
+            s = c->compile("4;");
+        } // i and c variables go out of scope but are not destroyed since s still needs them
     
         s->run(); // this is fine, i and c still exist and are not leaked
     } 
-    // s goes out of scope, dropping s's reference count from 1 to 0 causing it to be destroyed.   Destroying s
-    // destroys it's shared_ptr to c, dropping c's reference count to 0 causing c to be destroyed.  Destroying
-    // c destroys its shared_ptr to i, dropping i's reference count to 0 causing i to be destroyed  
-
+    // s goes out of scope and is destroyed, followed immediately by c and then i
+    
 This behavior means you never have to worry about having your v8toolkit objects being cleaned up too soon and leaving your compiled scripts unrunnable or
-making sure you manually clean up the v8toolkit objects in order to not have a memory leak.   If you can possibly use a v8toolkit object again, it will be there for you
-and if you can't, it is destroyed automatically.
-
+making sure you manually clean up the v8toolkit objects in order to not have a memory leak.  
 
 #### Running JavaScript in a separate thread
 
@@ -565,77 +502,19 @@ container, look at the existing casts for STL containers: std::vector is quite s
 as it creates an object with vectors for values.
 
 
-#### Exceptions
-
-##### The ignorance-is-bliss short version:
-
-Exceptions work just like you'd expect.  Exceptions thrown in a C++ function called from JavaScript will immediately stop
-JavaScript execution and bubble up to your script->run() call where you should catch and handle them.   There are also a few exception types 
-thrown by the system: V8CompilationException and V8ExecutionException.   These override std::exception and provide the what() method which returns 
-a const char * string description of what happened.  If you are going to be using the v8toolkit objects for all your V8 interactions, you can stop 
-here and be happy.  No need to read any more of this section.
-
-##### The long version:
-
-The V8 JavaScript engine is not exception safe (and is compiled with -fno-exceptions).  Any exception making it into actual V8 library code will 
-cause your application to immediately exit.  To add to the confusion, V8 has "exceptions" but they are not related, in any way, to C++ exceptions.
-
-Knowing this, then, how can "the short version" be true?  Well, exceptions thrown in C++ code called from Script->run() (remember, a Script
-is created behind the scenes if you call context->run()) are wrapped in a V8 
-Exception before re-entering V8 code and then re-thrown once execution leaves the V8 library stack.  This re-thrown exception is the same exception 
-as the one thrown inside the callbacks (using std::current_exception and std::exception_ptr to accomplish this).  Code not using v8toolkit objects, must 
-deal with any thrown C++ exceptions on their own to make sure they don't reach any V8 code.  To throw a V8 exception, use v8::Isolate::ThrowException 
-and to catch a V8 exception, declare a v8::TryCatch object on the stack where you want to catch V8 exceptions and you can test TryCatch::HasCaught() 
-to see if it "has caught" and exception.  Also, often the return value of the V8 call in which the V8 exception was thrown will be a Maybe or a 
-MaybeLocal which will contain no value.   That's a sign to check the TryCatch object for an Exception.   TryCatch::Exception() returns the actual v8::Value 
-passed to v8::Isolate::ThrowException().  
-
-
-
-#### Lifetime rules for wrapped objects
-DO NOT READ THIS SECTION
-
-In the process of JavaScript creating, using, and destroying JavaScript objects backed by C++ objects (like custom-wrapped user-defined classes),
-it's not always clear when the underlying C++ object should be destroyed versus when it should remain.   Take object creation, for example: There
-are many situations in which a user-class C++ object may be instantiated.   JavaScript calls the registered constructor (new Person()), a registered
-C++ function returns a newly created object with C++'s new (a factory method, for instance, returning a Person * or Pereson &), a registered C++ 
-function returning an r-value.  What about a user-defined class containing another user-defined object with an accessor to return that contained type.
-
-How to determine the correct behavior is an ongoing process for this library.  The rest of this section is a bit of a brain-dump.   Usually the time
-when it's known best what the right thing to do
-
-OK TO START READING AGAIN
-
 
 For more examples, look at the files in the `samples` subdirectory.  
 
 
-# Behaviors:
-If a wrapped class type r-value is returned from a function, a default copy will be made and the underlying object will be deleted when the javascript object is garbage collected.
-Subsequent calls to that function will return different javascript objects backed by different c++ objects.
-
-If a wrapped class type reference or pointer value is returned from a function, the first time it will create a new javascript object for the object.   Subsequent calls will return the same javascript object (not different javascript objects wrapping the same c++ object).   This means you can customize the object in javascript outside of the c++ interactions and get it again later.
 
 
+# 'Bidirectional' Types
 
 
+Bidirectional types allow for 'type' creation from both JavaScript and C++.  If a JavaScript 
+'derived' type hasn't implemented a function, it will fall back to the C++ implementation.
 
-# Bidirectional.h
+There are many limitations to these 'types', but they are also quite powerful.  
 
-(The following 'documentation' is highly incomplete - look at bidirectional_sample.cpp for a concrete example)
-
-This is a set of classes for allowing the creation of "subclasses" in javascript and being being able to use them from either C++ or Javascript.
-
-In javascript, you can create a factory for creating new objects that override C++ virtual methods which are called when the object is used
-from either C++ or JavaScript.  In C++, you will want to write a "factory creator" function to expose to javascript that takes a prototype and callback
-function, potentially along with some sort of identifier.
-
-Of course these are not full C++ types, as they are not known to C++ at compile-time, so the terms "type" and "subclass" below refer to bidirectional
-types and subclasses, not pure C++ types and subclasses.
-
-To create a subclass, you create a new JSFactory object with a prototype and a callback for adding attributes to individual objects.   For examples
-see samples/bidirectional_sample.cpp.
-
-In many ways, the Factory type can be thought of as the "type" of these objects and additional functionaity can be put on these by injecting a custom factory
-type into the middle of the chain using the `ParentType` template parameter to insert your type which inherits from the bidirectional factory type.
-
+Look at bidirectional_sample.cpp for a concrete example.  Bidirectional type generation is
+supported in the ClassParser clang plugin.  

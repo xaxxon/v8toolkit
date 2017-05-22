@@ -2,7 +2,7 @@
 #include <memory>
 #include <v8-debug.h>
 
-#include "javascript.h"
+#include "debugger.h"
 
 
 namespace v8toolkit {
@@ -12,14 +12,12 @@ boost::uuids::random_generator uuid_generator;
 std::atomic<int> script_id_counter(0);
 
 
-Context::Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context) :
-    isolate_helper(isolate_helper), isolate(isolate_helper->get_isolate()), context(v8::Global<v8::Context>(isolate, context)) 
+Context::Context(std::shared_ptr<Isolate> isolate_helper,
+                 v8::Local<v8::Context> context) :
+    isolate_helper(isolate_helper),
+    isolate(isolate_helper->get_isolate()),
+    context(v8::Global<v8::Context>(*isolate_helper, context))
 {}
-
-void Context::shutdown() {
-    this->scripts.clear();
-    this->shutting_down = true;
-}
 
 
 
@@ -48,7 +46,9 @@ v8::Local<v8::Value> Context::json(const std::string & json) {
 
 
 
-    Context::~Context() { }
+Context::~Context() {
+//    std::cerr << fmt::format("v8toolkit::Context being destroyed (isolate: {})", (void *)this->isolate) << std::endl;
+}
 
 
 std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
@@ -76,8 +76,8 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
 	v8::String::NewFromUtf8(this->isolate, javascript_source.c_str());
     
     // this script origin data will be cached within the v8::UnboundScript associated with a Script object
-    // http://v8.paulfryzel.com/docs/master/classv8_1_1_script_compiler_1_1_source.html#ae71a5fe18124d71f9acfcc872310d586
-    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, filename.c_str()),
+    // http://v8.paulfryzel.com/docs/master/classv8_1_1_script_compiler_1_1_source.html#ae71a5      fe18124d71f9acfcc872310d586
+    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, this->get_url(filename).c_str()),
                                v8::Integer::New(isolate, 0), // line offset
                                v8::Integer::New(isolate, 0), // column offset
                                v8::Local<v8::Boolean>(), // resource_is_shared_cross_origin
@@ -89,12 +89,9 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
     if (compiled_script.IsEmpty()) {
         throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
     }
-    auto new_script = std::shared_ptr<Script>(new Script(shared_from_this(),
-                                                         compiled_script.ToLocalChecked(),
-                                                         javascript_source,
-                                                         fmt::format("v8toolkit://{}/{}",boost::uuids::to_string(this->uuid), filename)));
-    this->scripts.push_back(new_script);
-    return new_script;
+    return std::shared_ptr<Script>(new Script(shared_from_this(),
+                                       compiled_script.ToLocalChecked(), javascript_source));
+
 }
 
 
@@ -108,10 +105,10 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
     auto local_script = v8::Local<v8::Script>::New(isolate, script);
     auto maybe_result = local_script->Run(context.Get(isolate));
     if (try_catch.HasCaught()) {
-        printf("Context::run threw exception - about to print details:\n");
+//        printf("Context::run threw exception - about to print details:\n");
         ReportException(isolate, &try_catch);
     } else {
-        printf("Context::run ran without throwing exception\n");
+//        printf("Context::run ran without throwing exception\n");
     }
 
     if(maybe_result.IsEmpty()) {
@@ -127,7 +124,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
             // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
             std::rethrow_exception(anyptr_exception_ptr->get());
         } else {
-            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
+//            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -159,26 +156,13 @@ v8::Global<v8::Value> Context::run_from_file(const std::string & filename)
 	return compile_from_file(filename)->run();
 }
 
-std::vector<ScriptPtr> const & Context::get_scripts() const {
-    return this->scripts;
-}
-
-Script const & Context::get_script_by_id(int64_t script_id) {
-    for (::v8toolkit::ScriptPtr const & script : this->scripts) {
-        if (script->get_script_id() == script_id) {
-            return *script;
-        }
-    }
-    throw InvalidCallException(fmt::format("no script found with id {}", script_id));
-}
-
 
 v8::Global<v8::Context> const & Context::get_global_context() const {
     return this->context;
 }
 
 
-std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>>
+std::future<std::pair<ScriptPtr, v8::Global<v8::Value>>>
 Context::run_async(const std::string & source, std::launch launch_policy)
 {
     // copy code into the lambda so it isn't lost when this outer function completes
@@ -209,13 +193,39 @@ boost::uuids::uuid const & Context::get_uuid() const {
     return this->uuid;
 }
 std::string Context::get_uuid_string() const {
+
     return boost::uuids::to_string(this->uuid);
 }
 
+std::string Context::get_url(std::string const & name) const {
+    return fmt::format("v8toolkit://{}/{}", this->get_uuid_string(), name);
+}
 
-    Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
-{   
-    v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void{
+
+
+
+
+v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<std::string> const & paths) {
+    v8::Local<v8::Value> require_result;
+    v8toolkit::require(this->get_context(), filename,
+                       require_result, paths, false, true, [this](RequireResult const & require_result) {},
+    [this](std::string const & filename){return this->get_url(filename);}
+    );
+    return require_result;
+}
+
+void Context::require_directory(std::string const & directory_name) {
+
+    foreach_file(directory_name, [&](std::string const & filename) {
+       this->require(filename, {directory_name});
+    });
+
+}
+
+Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
+{
+    isolate->SetData(0, (void *)&this->uuid);
+    v8toolkit::scoped_run(isolate, [this](v8::Isolate * isolate)->void {
         this->global_object_template.Reset(isolate, v8::ObjectTemplate::New(this->get_isolate()));
     });
 }
@@ -228,23 +238,26 @@ v8::Local<v8::UnboundScript> Script::get_unbound_script() const {
 }
 
 
-    Isolate::operator v8::Isolate*()
+Isolate::operator v8::Isolate*()
 {
     return this->isolate;
 }
+
 
 Isolate::operator v8::Local<v8::ObjectTemplate>()
 {
     return this->global_object_template.Get(this->isolate);
 }
 
-Isolate & Isolate::add_print(std::function<void(const std::string &)> callback)
+
+Isolate & Isolate::add_print(func::function<void(const std::string &)> callback)
 {
     (*this)([this, callback](){
         v8toolkit::add_print(isolate, get_object_template(), callback);
     });
     return *this;
 }
+
 
 Isolate & Isolate::add_print()
 {
@@ -261,6 +274,7 @@ void Isolate::add_require(std::vector<std::string> paths)
        v8toolkit::add_require(isolate, get_object_template(), paths);
     });
 }
+
 
 v8::Isolate * Isolate::get_isolate() 
 {
@@ -286,8 +300,28 @@ std::shared_ptr<Context> Isolate::create_context()
     auto context_helper = new Context(shared_from_this(), context);
 
     return std::shared_ptr<Context>(context_helper);
-	
 }
+
+std::shared_ptr<DebugContext> Isolate::create_debug_context(short port) {
+    ISOLATE_SCOPED_RUN(this->isolate);
+    v8::TryCatch tc(this->isolate);
+
+    auto ot = this->get_object_template();
+    auto context = v8::Context::New(this->isolate, NULL, ot);
+
+
+    if (tc.HasCaught() || context.IsEmpty()) {
+	    throw V8ExecutionException(this->isolate, tc);
+    }
+
+
+    // can't use make_shared since the constructor is private
+    auto debug_context = new DebugContext(shared_from_this(), context, port);
+
+    return std::shared_ptr<DebugContext>(debug_context);
+
+}
+
 
 v8::Local<v8::ObjectTemplate> Isolate::get_object_template()
 {
@@ -308,6 +342,8 @@ Isolate::~Isolate()
     printf("Deleting isolate helper %p for isolate %p\n", this, this->isolate);
 #endif
 
+    wrapper_registery.cleanup_isolate(this->isolate);
+
     // must explicitly Reset this because the isolate will be
     //   explicitly disposed of before the Global is destroyed
     this->global_object_template.Reset();
@@ -316,6 +352,8 @@ Isolate::~Isolate()
 
 void Isolate::add_assert()
 {
+
+    // evals an expression and tests for t
     add_function("assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
@@ -343,7 +381,8 @@ void Isolate::add_assert()
         }
         
     });
-    
+
+    // Does deep element inspection to determine equality
     add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
         auto isolate = args.GetIsolate();
         if(args.Length() != 2 || !compare_contents(*this, args[0], args[1])) {
@@ -365,15 +404,8 @@ void Platform::set_max_memory(int new_memory_size_in_mb) {
 }
 
 
-void Platform::expose_debug_as(const std::string & debug_object_name) {
-    assert(!Platform::initialized);
-    expose_debug_value = true;
-    expose_debug_name = debug_object_name;    
-}
 
-    
-
-void Platform::init(int argc, char ** argv) 
+void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
     assert(!initialized);
     process_v8_flags(argc, argv);
@@ -381,20 +413,17 @@ void Platform::init(int argc, char ** argv)
     if (expose_gc_value) {
 	    v8toolkit::expose_gc();
     }
-    if (expose_debug_value) {
-	    v8toolkit::expose_debug(expose_debug_name);
-    }
+
     
     // Initialize V8.
     v8::V8::InitializeICU();
     
     // startup data is in the current directory
-    
-    // if being built for snapshot use, must call this, otherwise must not call this
-#ifdef USE_SNAPSHOTS
-    v8::V8::InitializeExternalStartupData(argv[0]);
-#endif
-    
+
+    if (snapshot_directory != "") {
+        v8::V8::InitializeExternalStartupData(snapshot_directory.c_str());
+    }
+
     Platform::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();
@@ -423,24 +452,20 @@ std::shared_ptr<Isolate> Platform::create_isolate()
 
     // can't use make_shared since the constructor is private
     auto isolate_helper = new Isolate(v8::Isolate::New(create_params));
+
     return std::shared_ptr<Isolate>(isolate_helper);
 }
 
 
 Script::Script(std::shared_ptr<Context> context_helper,
                v8::Local<v8::Script> script,
-               std::string const & source_code,
-               std::string const & source_location) :
+               std::string const & source_code) :
     context_helper(context_helper),
-    isolate(*context_helper),
+    isolate(context_helper->get_isolate()),
     script(v8::Global<v8::Script>(isolate, script)),
-    source_code(source_code),
-    source_location(source_location)
+    script_source_code(source_code)
 {
-    // if no location provided, create a unique identification string
-    if (this->source_location == "") {
-        this->source_location = boost::uuids::to_string(boost::uuids::uuid());
-    }
+//    std::cerr << "source code length: " << source_code.length() << std::endl;
 }
 
 std::thread Script::run_thread()
@@ -462,12 +487,14 @@ void Script::run_detached(){
 }
 
 std::string const & Script::get_source_code() const {
-    return this->source_code;
+    return this->script_source_code;
 }
 
-std::string const & Script::get_source_location() const {
-    return this->source_location;
+std::string Script::get_source_location() const {
+//    return *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetSourceURL()->ToString());
+    return std::string("v8toolkit://") + this->context_helper->get_uuid_string() + "/" + *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetScriptName());
 }
+
 
 int64_t Script::get_script_id() const {
     auto unbound_script = this->get_unbound_script();
@@ -484,8 +511,6 @@ std::unique_ptr<v8::Platform> Platform::platform;
 v8toolkit::ArrayBufferAllocator Platform::allocator;
 
 bool Platform::expose_gc_value = false;
-bool Platform::expose_debug_value = false;
-std::string Platform::expose_debug_name = "";
 int Platform::memory_size_in_mb = -1;
     
 } // end v8toolkit namespace

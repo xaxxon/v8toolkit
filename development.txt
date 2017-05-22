@@ -1,5 +1,0 @@
-bidirectional Factory objects need to be wrapped so they can be used from javascript, not just have their objects
-passed back from c++ helpers
-
-Debugging support - looks like there are packages out there for integrating it with chrome for debugging
-

@@ -18,35 +18,76 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 
 
 
-// void MyClass(const v8::FunctionCallbackInfo<v8::Value> & info) {
-//   printf("Allocating MyClass object\n");
-//   auto js_object = info.This();
-//   int * i = new int();
-//   printf("Allocating int at %p\n", i);
+void add_handler_to_object_template(Local<ObjectTemplate> ot) {
+
+    ot->SetHandler(v8::NamedPropertyHandlerConfiguration(
+            // Getter
+            [](v8::Local<v8::Name> property_name,
+               v8::PropertyCallbackInfo<v8::Value> const & info){
+                printf("IN GETTER CALLBACK1112 %s\n", *v8::String::Utf8Value(property_name));
+
+                info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), "this value created by getter"));
+            },
+            // setter
+            [](v8::Local<v8::Name> property_name,
+               v8::Local<v8::Value> new_property_value,
+               v8::PropertyCallbackInfo<v8::Value> const & info){
+                printf("IN SETTER CALLBACK222 %s\n", *v8::String::Utf8Value(property_name));
+//
+                info.GetReturnValue().Set(true);
+            },
+            // query - returns attributes on the given property name
+            // http://brendanashworth.github.io/v8-docs/namespacev8.html#a05f25f935e108a1ea2d150e274602b87
+            [](v8::Local< v8::Name > property_name, v8::PropertyCallbackInfo< v8::Integer> const & info){
+                printf("In query callback %s\n", *v8::String::Utf8Value(property_name));
+                info.GetReturnValue().Set(v8::None);
+            },
+            // deleter
+            [](v8::Local<v8::Name> property_name,
+               v8::PropertyCallbackInfo<v8::Boolean> const & info){
+                printf("IN DELETER CALLBACK333 %s\n", *v8::String::Utf8Value(property_name));
+                info.GetReturnValue().Set(true);
+            },
+            // enumerator
+            [](v8::PropertyCallbackInfo<v8::Array> const & info) {
+                printf("IN ENUMERATOR CALLBACK444\n");
+
+                auto array = v8::Array::New(info.GetIsolate(), 1);
+                array->Set(0, v8::String::NewFromUtf8(info.GetIsolate(), "foo"));
+            }
+    ));
+
+}
 
 
-//   js_object->SetInternalField(0, v8::External::New(info.GetIsolate(),i));
+Local<ObjectTemplate> make_object_with_named_property_callbacks(Isolate * i) {
 
-// }
+    auto ft = FunctionTemplate::New(i);
+    ft->SetClassName(String::NewFromUtf8(i, "TestObject"));
+    auto parent_ft = FunctionTemplate::New(i);
+    parent_ft->InstanceTemplate()->Set(i, "parent_foo", ObjectTemplate::New(i));
+    parent_ft->InstanceTemplate()->SetAccessor(v8::String::NewFromUtf8(i, "parent accessor"), [](Local<String> property,
+                                                             const PropertyCallbackInfo<Value>& info){info.GetReturnValue().Set(v8::String::NewFromUtf8(info.GetIsolate(), "value from accessor getter"));});
+    add_handler_to_object_template(parent_ft->InstanceTemplate());
+    parent_ft->PrototypeTemplate()->Set(i, "parent_bar", FunctionTemplate::New(i, [](const FunctionCallbackInfo< Value > &info){info.GetReturnValue().Set(444);}));
+    parent_ft->PrototypeTemplate()->Set(i, "parent_obj", ObjectTemplate::New(i));
+    ft->Inherit(parent_ft);
 
-// void do_something(const v8::FunctionCallbackInfo<v8::Value> & info) {
-//   printf("Top of do_something\n");
-//   Global<FunctionTemplate> * gftp = (Global<FunctionTemplate>*)Local<External>::Cast(info.Data())->Value();
-//   printf("Got gftp at %p\n", gftp);
-//   auto instance = info.Holder()->FindInstanceInPrototypeChain(gftp->Get(info.GetIsolate()));
-//   if (instance.IsEmpty()) return; 
-//   void* ptr = instance->GetAlignedPointerFromInternalField(0); 
+    v8::Local<v8::ObjectTemplate> instance_template = ft->InstanceTemplate();
+    instance_template->SetInternalFieldCount(1);
+    add_handler_to_object_template(instance_template);
+    instance_template->SetAccessor(v8::String::NewFromUtf8(i, "accessor"), [](Local<String> property,
+              const PropertyCallbackInfo<Value>& info){info.GetReturnValue().Set(v8::String::NewFromUtf8(info.GetIsolate(), "value from accessor getter"));});
 
+    auto prototype_template = ft->PrototypeTemplate();
+    prototype_template->Set(i, "foo", FunctionTemplate::New(i, [](const FunctionCallbackInfo< Value > &info){info.GetReturnValue().Set(44);}));
+    prototype_template->Set(i, "bar", ObjectTemplate::New(i));
 
-// //   auto self = info.Holder();
-// //   auto ptr =  v8::Local<v8::External>::Cast(self->GetInternalField(0))->Value();
-// //   while(ptr==nullptr) {
-// //     printf("Nope, checking prototype\n");
-// //     self=Local<Object>::Cast(self->GetPrototype());
-// //     ptr =  v8::Local<v8::External>::Cast(self->GetInternalField(0))->Value();
-// //   }
-//   printf("Eventually got internal field pointer of %p\n", ptr);
-// }
+    auto context_template = ObjectTemplate::New(i);
+    context_template->Set(String::NewFromUtf8(i, "Test"), ft);
+    return context_template;
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -63,53 +104,20 @@ int main(int argc, char ** argv)
 	{
 		v8::Isolate::Scope is(i);
 		v8::HandleScope hs(i);
-		auto got = v8::ObjectTemplate::New(i);
 
-		//auto ft = v8::FunctionTemplate::New(i);
-		//	ft->SetClassName(v8::String::NewFromUtf8(i, "MyClass"));
-		//ft->InstanceTemplate()->SetInternalFieldCount(1);
-		//got->Set(i, "MyClass", ft);
-
-		//	auto ft2 = v8::FunctionTemplate::New(i);
-		//auto gftp = new Global<FunctionTemplate>(i,ft);
-		//printf("Created gftp at %p\n", gftp);
-		//	ft2->SetCallHandler(do_something, v8::External::New(i,gftp));
-		//	ft->InstanceTemplate()->Set(i, "do_something", ft2);
-
-		auto security_token = String::NewFromUtf8(i,"SecTok");
-
-
-		auto c = v8::Context::New(i, nullptr, got);
-		c->SetSecurityToken(security_token);
-		{
+		auto c = v8::Context::New(i, nullptr,  make_object_with_named_property_callbacks(i));
+        {
 		  v8::Context::Scope cs(c);
+//            auto callback_object = make_object_with_named_property_callbacks(c);
+//
+//            c->Global()->Set(v8::String::NewFromUtf8(i, "object_with_callbacks"), callback_object);
 
 
-		  //	auto s = v8::Script::Compile(c, v8::String::NewFromUtf8(i,"a=new MyClass();a.do_something(); b=Object.create(a); b.do_something();a.do_something();")).ToLocalChecked();
+		 auto s = v8::Script::Compile(c, v8::String::NewFromUtf8(i,"obj = new Test(); obj.accessorxxx=4")).ToLocalChecked();
 
-		 auto s = v8::Script::Compile(c, v8::String::NewFromUtf8(i,"a=function(){return b;}")).ToLocalChecked();
-
-		  (void)s->Run(c);
+		  printf("result: %s\n", *String::Utf8Value(s->Run(c).ToLocalChecked()));
 		}
 
 
-		(void)c->Global()->Set(c,String::NewFromUtf8(i,"b"), String::NewFromUtf8(i,"HELLO1"));
-		//auto a_val = c->Global()->Get(c, String::NewFromUtf8(i,"a")).ToLocalChecked();
-		//auto a_func = Local<Function>::Cast(a_val);
-		//auto result = a_func->Call(c, c->Global(), 0, nullptr);
-		//printf("result: %s\n", *String::Utf8Value(result.ToLocalChecked()));
-
-
-
-		auto c2 = v8::Context::New(i, nullptr, got);
-		c2->SetSecurityToken(security_token);
-		{
-		  Context::Scope cs2(c2);
-		  //(void)c2->Global()->Set(c2,String::NewFromUtf8(i,"b"), String::NewFromUtf8(i,"HELLO2"));
-		  auto a_val2 = c->Global()->Get(c, String::NewFromUtf8(i,"a")).ToLocalChecked();
-		  auto a_func2 = Local<Function>::Cast(a_val2);
-		  auto result2 = a_func2->Call(c2, c2->Global(), 0, nullptr);
-		  printf("result: %s\n", *String::Utf8Value(result2.ToLocalChecked()));
-		}
 	}
 }

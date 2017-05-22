@@ -3,7 +3,6 @@
 #include <thread>
 #include <mutex>
 #include <future>
-#include <functional>
 
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include <boost/uuid/uuid_generators.hpp> // generators
@@ -13,7 +12,11 @@
 
 #include "v8_class_wrapper.h"
 
+//#define V8TOOLKIT_JAVASCRIPT_DEBUG
+
 namespace v8toolkit {
+
+class DebugContext;
 
 extern boost::uuids::random_generator uuid_generator;
 
@@ -32,7 +35,10 @@ using ScriptPtr = std::shared_ptr<Script>;
 class Context : public std::enable_shared_from_this<Context>
 {
     friend class Isolate;
-public:
+protected:
+	/// constructor should only be called by an Isolate or derived class
+	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
+
 
 private:
 	std::atomic<int> script_id_counter;
@@ -47,27 +53,20 @@ private:
 	/// The Isolate that created this Context will be kept around as long as a Context it created is still around
 	std::shared_ptr<Isolate> isolate_helper;
 	
-	/// shortcut to the v8::isolate object instead of always going through the Isolate
-	v8::Isolate * isolate;
-	
+
 	/// The actual v8::Context object backing this Context
 	v8::Global<v8::Context> context;
-    
-    /// constructor should only be called by an Isolate
-	Context(std::shared_ptr<Isolate> isolate_helper, v8::Local<v8::Context> context);
 
-    /// stores the list of scripts
-    std::vector<ScriptPtr> scripts;
 
-	ScriptPtr get_script(std::string const & string);
-
-    /// whether shutdown has been called on the context
-    bool shutting_down = false;
 
 	/// unique identifier for each context
-	boost::uuids::uuid uuid = v8toolkit::uuid_generator();
+	boost::uuids::uuid const uuid = v8toolkit::uuid_generator();
+
 
 public:
+
+	/// shortcut to the v8::isolate object instead of always going through the Isolate
+	v8::Isolate * const isolate;
 
 	virtual ~Context();
 
@@ -84,11 +83,28 @@ public:
 	 */
     std::vector<ScriptPtr> const & get_scripts() const;
 
+    /**
+     * Returns a list of functions compiled directly to this context (vs those in a script)
+     * @return a list of functions compiled directly to this context (vs those in a script)
+     */
+    std::vector<v8::Global<v8::Function>> const & get_functions() const;
 
-	/**
-	 * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
-	 * @return the global context object
-	 */
+
+    /**
+     * Registers an externally created script object with this Context and returns a wrapped
+     * Script object
+     * @param external_script script that was created 'by hand' not with a method on this context
+     * @return wrapped v8toolkit::Script object
+     */
+	void register_external_script(v8::Local<v8::Script> external_script, std::string const & source_code);
+
+	void register_external_function(v8::Global<v8::Function> external_function);
+
+
+		/**
+         * Returns the global context object - useful for GLOBAL_CONTEXT_SCOPED_RUN
+         * @return the global context object
+         */
 	v8::Global<v8::Context> const & get_global_context() const;
 
     /**
@@ -168,7 +184,7 @@ public:
     * TODO: what happens if there are errors in compilation?
     * TODO: what happens if there are errors in execution?
     */
-	std::future<std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>>> 
+	std::future<std::pair<ScriptPtr, v8::Global<v8::Value>>>
         run_async(const std::string & source,
                   std::launch launch_policy = 
                      std::launch::async | std::launch::deferred);
@@ -285,9 +301,13 @@ public:
 		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 		v8toolkit::add_function(get_context(), get_context()->Global(), name.c_str(), function);
 	}
-    
-    template<class T>
-    void add_variable(std::string name, v8::Local<T> variable)
+
+	/**
+	 * Creates a global javascript variable to the specified context and sets it to the given javascript value.
+	 * @param name name of the JavaScript variable
+	 * @param variable JavaScript value for the variable to refer to
+	 */
+    inline void add_variable(std::string name, v8::Local<v8::Value> variable)
     {
 		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 		v8toolkit::add_variable(get_context(), get_context()->Global(), name.c_str(), variable);
@@ -323,6 +343,7 @@ public:
 
 	boost::uuids::uuid const & get_uuid() const;
 	std::string get_uuid_string() const;
+	std::string get_url(std::string const & name) const;
 
     /**
      * Returns the script corresponding to the given id or throws
@@ -330,6 +351,16 @@ public:
      * @return script with given script_id
      */
     Script const & get_script_by_id(int64_t script_id);
+
+	v8::Local<v8::Function> get_function_by_id(int64_t script_id);
+
+	/**
+	 * Evaluates the specified file and returns the result - can be .js or .json
+	 * @param filename file containing javascript or json to evaluate
+	 * @return the result of the evaluation or empty on failure
+	 */
+	v8::Local<v8::Value> require(std::string const & filename, std::vector<std::string> const & paths);
+	void require_directory(std::string const & directory_name);
 
 };
 
@@ -345,17 +376,16 @@ class Script : public std::enable_shared_from_this<Script>
     friend class Context;
     
 private:
-    Script(std::shared_ptr<Context> context_helper,
+    Script(ContextPtr context_helper,
            v8::Local<v8::Script> script,
-           std::string const & script_source,
-           std::string const & source_location = "");
+		   std::string const & source_code = "");
 
     // shared_ptr to Context should be first so it's the last cleaned up
     std::shared_ptr<Context> context_helper;
     v8::Isolate * isolate;
     v8::Global<v8::Script> script;
-    std::string source_code;
-    std::string source_location; // url or any identifier
+	std::string script_source_code;
+
 public:
     
 	Script() = delete;
@@ -370,7 +400,9 @@ public:
     }
 
     std::string const & get_source_code() const;
-    std::string const & get_source_location() const;
+
+	// this should go back to being a ref to an instance variable
+    std::string get_source_location() const;
 	int64_t get_script_id() const;
 
 	/**
@@ -398,13 +430,14 @@ public:
     *   shared_ptr to the Script so the Script (and it's associated dependencies) 
     *   cannot be destroyed until after the async has finished and the caller has had a chance 
     *   to use the results contained in the future
+	* The order of the pair elements matters to make sure the Global is cleaned up before the ScriptPtr
     */ 
 	auto run_async(std::launch launch_policy = std::launch::async | std::launch::deferred){
 
-        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<v8::Global<v8::Value>, std::shared_ptr<Script>> {
+        return std::async(launch_policy, [this](ScriptPtr script)->std::pair<std::shared_ptr<Script>, v8::Global<v8::Value>> {
 
 			return (*this->context_helper)([this, script](){
-				return std::make_pair(this->run(), script);
+				return std::make_pair(script, this->run());
             });
 
 		}, shared_from_this());
@@ -458,9 +491,10 @@ private:
     *   subsequently created ones
     */
 	v8::Global<v8::ObjectTemplate> global_object_template;
-    
-    
-	
+
+    boost::uuids::uuid const uuid = v8toolkit::uuid_generator();
+
+
 public:
 
 	virtual ~Isolate();
@@ -481,7 +515,7 @@ public:
     * Adds print helpers to global object template as defined in 
     *   v8toolkit::add_print()
     */
-    Isolate & add_print(std::function<void(const std::string &)>);
+    Isolate & add_print(func::function<void(const std::string &)>);
     Isolate & add_print();
     
     void add_assert();
@@ -501,6 +535,8 @@ public:
     *   created.
     */
 	std::shared_ptr<Context> create_context();
+
+    std::shared_ptr<DebugContext> create_debug_context(short port);
 
     /**
     * Returns the isolate associated with this Isolate
@@ -623,7 +659,6 @@ class Platform {
 	static v8toolkit::ArrayBufferAllocator allocator;
 	static bool initialized;
 	static bool expose_gc_value;
-	static bool expose_debug_value;
 	static std::string expose_debug_name;
 	static int memory_size_in_mb; // used for Isolate::CreateParams::constraints::set_max_old_space_size()
 public:
@@ -634,22 +669,15 @@ public:
 
 	static void expose_gc();
 
-	static void expose_debug_as(const std::string & debug_object_name);
 	static void set_max_memory(int memory_size_in_mb);
-    /**
-    * Initializes the v8 platform with default values and tells v8 to look
-    *   for its .bin files in the given directory (often argv[0])
-    * Only useful if build with snapshot support which I recommend against for 
-    *   simplicity's sake
-    */
-    static void init(char * path_to_bin_files);
 
     /**
     * Parses argv for v8-specific options, applies them, and removes them
-    *   from argv and adjusts argc accordingly.  Looks in argv[0] for the
-    *    v8 .bin files
+    *   from argv and adjusts argc accordingly.
+ 	* @param snapshot_directory directory in which to look for v8 snapshot .bin files.  Leave as empty
+     * string if linking against v8 compiled with use_snapshots=false
     */
-    static void init(int argc, char ** argv);
+    static void init(int argc, char ** argv, std::string const & snapshot_directory = "");
 	
     /**
     * Shuts down V8.  Any subsequent V8 usage is probably undefined, so
@@ -671,7 +699,7 @@ template<class T>
 v8::Local<v8::Value> Context::wrap_object(T* object)
 {
 	auto & class_wrapper = V8ClassWrapper<T>::get_instance(this->get_isolate());
-	return class_wrapper.template wrap_existing_cpp_object<DestructorBehavior_LeaveAlone>(this->get_context(), object);
+	return class_wrapper.template wrap_existing_cpp_object(this->get_context(), object, *class_wrapper.destructor_behavior_leave_alone);
 }
 
 

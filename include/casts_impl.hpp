@@ -21,7 +21,7 @@ std::function<Return(Params...)> CastToNative<std::function<Return(Params...)>>:
                                                               shared_global_function->Get(isolate),
                                                               context->Global(),
                                                               std::tuple<Params...>(params...));
-            return CastToNative<typename std::remove_reference<Return>::type>()(isolate, result);
+            return CastToNative<Return>()(isolate, result);
         });
     };
 }

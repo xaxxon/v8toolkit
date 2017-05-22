@@ -7,12 +7,15 @@
 #include <set>
 #include <typeinfo>
 
+
 #include <fmt/ostream.h>
 
-
-// Everything in here is standalone and does not require any other v8toolkit files
 #include <libplatform/libplatform.h>
 #include <v8.h>
+
+
+#include "stdfunctionreplacement.h"
+
 
 // if it can be determined safely that cxxabi.h is available, include it for name demangling
 #if defined __has_include
@@ -25,10 +28,113 @@
 
 namespace v8toolkit {
 
+    template<class MemberT, class ClassT>
+    constexpr bool get_member_is_readonly(MemberT(ClassT::*member)) {
+        return std::is_const_v<MemberT>;
+    };
+
+
+    template<auto member>
+    constexpr bool is_pointer_to_const_data_member_v = get_member_is_readonly(member);
+
+
+
+    using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
+    struct MethodAdderData {
+        std::string method_name;
+        StdFunctionCallbackType callback;
+
+        MethodAdderData();
+        MethodAdderData(std::string const &, StdFunctionCallbackType const &);
+    };
+
+    /**
+    * Returns a string with the given stack trace and a leading and trailing newline
+    * @param stack_trace stack trace to return a string representation of
+    * @return string representation of the given stack trace
+    */
+    std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
+
+
+
+
+    template<class T>
+    using void_t = void;
+
+    template<class T>
+    using int_t = int;
+
+
+    namespace literals {
+
+        // put the following in your code to use these:
+        //     using namespace v8toolkit::literals;
+        inline v8::Local<v8::String> operator "" _v8(char const * string, unsigned long) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::String::NewFromUtf8(isolate, string);
+        }
+        inline v8::Local<v8::Number> operator"" _v8(long double number) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::Number::New(isolate, number);
+        }
+        inline v8::Local<v8::Integer> operator"" _v8(unsigned long long int number) {
+            v8::Isolate * isolate = v8::Isolate::GetCurrent();
+            return v8::Integer::New(isolate, number);
+        }
+
+    }
+
+
+
+template<class ReturnType, class... Args, class... Ts>
+auto run_function(func::function<ReturnType(Args...)> & function,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return function(std::forward<Args>(ts)...);
+}
+
+
+template<class ReturnType, class... Args, class Callable, class... Ts>
+auto run_function(Callable callable,
+                  const v8::FunctionCallbackInfo<v8::Value> & info,
+                  Ts&&... ts) -> ReturnType {
+    return callable(std::forward<Args>(ts)...);
+};
+
+
+
+
+// thrown when data cannot be converted properly
+class CastException : public std::exception {
+private:
+    std::string reason;
+
+public:
+    template<class... Ts>
+    CastException(const std::string & reason, Ts&&... ts) : reason(fmt::format(reason, std::forward<Ts>(ts)...) + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
+    virtual const char * what() const noexcept override {return reason.c_str();}
+};
+
+template<typename T, typename = void>
+struct ProxyType {
+    using PROXY_TYPE = T;
+};
+
+template<typename T>
+struct ProxyType<T,void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
+    using PROXY_TYPE = typename T::V8TOOLKIT_PROXY_TYPE;
+};
+
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
-    
+
+// use V8TOOLKIT_MACRO_TYPE instead
 #define V8TOOLKIT_COMMA ,
-  
+
+// protects and allows subsequent calls to additional macros for types with commas (templated types)
+#define V8TOOLKIT_MACRO_TYPE(...) __VA_ARGS__
+
+
+
 /**
  * Returns a demangled version of the typeid(T).name() passed in if it knows how,
  *   otherwise returns the mangled name exactly as passed in
@@ -36,59 +142,112 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
 std::string demangle_typeid_name(const std::string & mangled_name);
 
 template<class T>
-std::string demangle(){
-    auto demangled_name =  demangle_typeid_name(typeid(T).name());
-    std::string constness = std::is_const<T>::value ? "const " : "";
-    std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+std::string & demangle(){
+    static std::string cached_name;
+    std::atomic<bool> cache_set = false;
 
-    return constness + volatility + demangled_name;
+    if (cache_set) {
+        return cached_name;
+    } else {
+        static std::mutex mutex;
+
+        std::lock_guard<std::mutex> lock_guard(mutex);
+        if (!cache_set) {
+            auto demangled_name = demangle_typeid_name(typeid(T).name());
+            std::string constness = std::is_const<T>::value ? "const " : "";
+            std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
+            cached_name = constness + volatility + demangled_name;
+        }
+    }
+
+    return cached_name;
  }
 
+// polymorphic types work just like normal
 template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-    fprintf(stderr, "safe dynamic cast doing real cast\n");
+//    fprintf(stderr, "safe dynamic cast doing real cast\n");
     return dynamic_cast<Destination>(source);
 };
+
+
+// trivial casts always succeed even if the type isn't polymoprhic
+template<class Destination>
+Destination * safe_dynamic_cast(Destination * source) {
+    return source;
+}
+
+// non-trivial casts for non-polymorphic types always fail
 template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
+//    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
     return nullptr;
 };
 
 
+#define SAFE_MOVE_CONSTRUCTOR_SFINAE !std::is_const<T>::value && std::is_move_constructible<T>::value
+template<class T, std::enable_if_t<SAFE_MOVE_CONSTRUCTOR_SFINAE, int> = 0>
+std::unique_ptr<T> safe_move_constructor(T && original) {
+    return std::make_unique<T>(std::move(original));
+};
+template<class T, std::enable_if_t<!(SAFE_MOVE_CONSTRUCTOR_SFINAE), int> = 0>
+std::unique_ptr<T> safe_move_constructor(T && original) {
+    assert(false); // This shouldn't be called
+    return std::unique_ptr<T>();
+};
 
-template<typename Test, template<typename...> class Ref>
+
+
+    template<typename Test, template<typename...> class Ref>
 struct is_specialization : std::false_type {};
 
 template<template<typename...> class Ref, typename... Args>
 struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
 
 /**
- * Returns a std::function type compatible with the lambda passed in
+ * Returns a func::function type compatible with the lambda passed in
  */
 template<class T>
 struct LTG {
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const)->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...)const)->func::function<R(Args...)>;
 
     template<class R, class... Args>
-    static auto go(R(T::*)(Args...))->std::function<R(Args...)>;
+    static auto go(R(T::*)(Args...))->func::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const &)->func::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...) &)->func::function<R(Args...)>;
+
 };
+
+template<class T>
+struct LTG<T &&> {
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...)const &&)->func::function<R(Args...)>;
+
+    template<class R, class... Args>
+    static auto go(R(T::*)(Args...) &&)->func::function<R(Args...)>;
+
+};
+
 
 
 template <class... > struct TypeList {};
 
 // for use inside a decltype only
 template <class R, class... Ts>
-auto get_typelist_for_function(std::function<R(Ts...)>) ->TypeList<Ts...>;
+auto get_typelist_for_function(func::function<R(Ts...)>) ->TypeList<Ts...>;
 
 // for use inside a decltype only
 template <class R, class Head, class... Tail>
-auto get_typelist_for_function_strip_first(std::function<R(Head, Tail...)>) -> TypeList<Tail...>;
+auto get_typelist_for_function_strip_first(func::function<R(Head, Tail...)>) -> TypeList<Tail...>;
 
 // for use inside a decltype only
 template <class... Ts>
@@ -127,20 +286,6 @@ struct static_all_of<false, tail...> : std::false_type {};
 template <> struct static_all_of<> : std::true_type {};
 
 
-
-#define TYPE_DETAILS(thing) fmt::format("const: {} type: {}", std::is_const<decltype(thing)>::value, demangle<decltype(thing)>()).c_str()
-
-// thrown when data cannot be converted properly
-class CastException : public std::exception {
-private:
-    std::string reason;
-
-public:
-    CastException(const std::string & reason) : reason(reason) {}
-    virtual const char * what() const noexcept override {return reason.c_str();}
-};
-
- 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
@@ -149,7 +294,7 @@ private:
     std::string message;
 
 public:
-    InvalidCallException(const std::string & message) : message(message) {}
+    InvalidCallException(const std::string & message);
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 
@@ -195,20 +340,19 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
                                                 bool own_properties_only = true);
 
 
-    /**
-* When passed a value representing an array, runs callable with each element of that array (but not on arrays 
-*   contained within the outer array)
-* On any other object type, runs callable with that element
-*/
+/**d
+ * When passed a value representing an array, runs callable with each element of that array (but not on arrays
+ *   contained within the outer array)
+ * On any other object type, runs callable with that element
+ */
 template<class Callable>
 void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Value> value, Callable callable) {
-    
+
     if (value->IsArray()) {
-        auto array = v8::Object::Cast(*value);
-        int i = 0;
-        while(array->Has(context, i).FromMaybe(false)) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+        auto length = get_array_length(context->GetIsolate(), array);
+        for (int i = 0; i < length; i++) {
             callable(array->Get(context, i).ToLocalChecked());
-            i++;
         }
     } else {
         callable(value);
@@ -244,7 +388,6 @@ void process_v8_flags(int & argc, char ** argv);
 *   while(!v8::Isolate::IdleNotificationDeadline([time])) {};
 */  
 void expose_gc();
-void expose_debug(const std::string & debug_name);
 
 // calls a javascript function with no parameters and returns the value
 v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
@@ -326,6 +469,12 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
 };
 
 
+/** IF YOU GET AN ERROR ABOUT RESULT_OF::TYPE NOT EXISTING, MAKE SURE YOUR LAMBDA PARAMETER TYPE IS EXACTLY RIGHT,
+ * ESPECTIALLY RE; CONST
+ * @param container input container
+ * @param callable  transformation callback
+ * @return container of the transformed results
+ */
 template <class Container, class Callable>
 auto mapper(const Container & container, Callable callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
 {
@@ -357,7 +506,22 @@ auto reducer(const Container & container, Callable callable) ->
 */
 
 // if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-//#define ANYBASE_DEBUG
+#define ANYBASE_DEBUG
+
+/**
+ * If ANYBASE_DEBUG is defined, then this flag controls whether type conversion information logs are printed to stderr
+ */
+extern bool AnybaseDebugPrintFlag;
+
+
+#ifdef ANYBASE_DEBUG
+#define ANYBASE_PRINT(format_string, ...) \
+if (AnybaseDebugPrintFlag) { \
+    std::cerr << fmt::format(format_string, ##__VA_ARGS__) << std::endl; \
+}
+#else
+#define ANYBASE_PRINT(format_string, ...)
+#endif
 
 
  struct AnyBase
@@ -366,7 +530,7 @@ auto reducer(const Container & container, Callable callable) ->
 #ifdef ANYBASE_DEBUG
     std::string type_name;
 #endif
-AnyBase(const std::string &&
+AnyBase(const std::string
 #ifdef ANYBASE_DEBUG
 	     type_name
 #endif
@@ -374,20 +538,44 @@ AnyBase(const std::string &&
 #ifdef ANYBASE_DEBUG
 : type_name(std::move(type_name))
 #endif
-    {}
+       {}
 };
 
- template<class T, class = void>
- struct AnyPtr;
+
+template<class T, class = void>
+struct AnyPtr;
 
 
- template<class T>
-     struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
- AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
+template<class T>
+struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
+    AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
     virtual ~AnyPtr(){}
     T* data;
     T * get() {return data;}
 };
+
+
+
+
+struct StuffBase{
+    // virtual destructor makes sure derived class destructor is called to actually
+    //   delete the data
+    virtual ~StuffBase(){}
+};
+
+template<class T>
+struct Stuff : public StuffBase {
+    Stuff(T && t) : stuffed(std::make_unique<T>(std::move(t))) {}
+    Stuff(std::unique_ptr<T> t) : stuffed(std::move(t)) {}
+
+
+    static std::unique_ptr<Stuff<T>> stuffer(T && t) {return std::make_unique<Stuff<T>>(std::move(t));}
+    static std::unique_ptr<Stuff<T>> stuffer(T const & t) {return std::make_unique<Stuff<T>>(std::move(const_cast<T &>(t)));}
+
+    T * get(){return stuffed.get();}
+    std::unique_ptr<T> stuffed;
+};
+
 
 /**
 * Best used for types that are intrinsically pointers like std::shared_ptr or
@@ -426,9 +614,10 @@ v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
     if (valid){
         return v8::Local<T>::Cast(value);
     } else {
-        printf("Throwing exception, failed while trying to cast value as type: %s\n", typeid(T).name());
-        print_v8_value_details(value);
-	throw v8toolkit::CastException("Couldn't cast value to requested type");
+
+        //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
+        //print_v8_value_details(value);
+	    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
     }
 }
 
@@ -444,13 +633,17 @@ v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) 
 template<class T>
 v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
 
-    
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
     auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
 
     if(get_maybe.IsEmpty() || get_maybe.ToLocalChecked()->IsUndefined()) {
-	throw UndefinedPropertyException(key);
+//        if (get_maybe.IsEmpty()) {
+//            std::cerr << "empty" << std::endl;
+//        } else {
+//            std::cerr << "undefined" << std::endl;
+//        }
+        throw UndefinedPropertyException(key);
     }
     return get_value_as<T>(get_maybe.ToLocalChecked());
 }
@@ -472,7 +665,10 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> obj
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & value, bool toplevel=true, bool show_all_properties=false);
+std::string stringify_value(v8::Isolate * isolate,
+                            const v8::Local<v8::Value> & value,
+                            bool show_all_properties=false,
+                            std::vector<v8::Local<v8::Value>> && processed_values = std::vector<v8::Local<v8::Value>>{});
 
 /**
  * Tests if the given name conflicts with a reserved javascript top-level name
@@ -481,5 +677,23 @@ std::string stringify_value(v8::Isolate * isolate, const v8::Local<v8::Value> & 
  */
 bool global_name_conflicts(const std::string & name);
 extern std::vector<std::string> reserved_global_names;
+
+
+
+inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, std::string const & class_name) {
+    if (!value->IsObject()) {
+        print_v8_value_details(value);
+        throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: '{}'", class_name, *v8::String::Utf8Value(value)));
+    }
+
+    auto object = value->ToObject();
+
+    if (object->InternalFieldCount() == 0) {
+        throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: '{}'", class_name, *v8::String::Utf8Value(value)));
+    }
+
+    return object;
+
+}
 
 } // End v8toolkit namespace
