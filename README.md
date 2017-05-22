@@ -51,6 +51,7 @@ supports all major platforms.
     }
 ```
 
+## Exposing a C++ class to JavaScript
 
 Here is an example class and the code required to make the class useable from JavaScript:
 
@@ -80,8 +81,10 @@ Here is an example class and the code required to make the class useable from Ja
 
 ```
 
-Or, you can automatically generate the source code above by annotating the C++ class definition to tell it anything
-that shouldn't be exposed, and run the clang plugin over it and then compile the generated code into your project:
+### Autogenerating JavaScript bindings for a C++ class
+
+By annotating your C++ class (note the `V8TOOLKIT_SKIP` in the code below), you can generate the exact same bindings 
+as above automatically using the clang plugin.  
 
 
 ```language-c++
