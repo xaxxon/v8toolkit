@@ -12,7 +12,7 @@
 namespace v8toolkit {
 
 // define this to log debugging messages while running
-#define V8TOOLKIT_PARAMETER_BUILDER_LOGGING
+//#define V8TOOLKIT_PARAMETER_BUILDER_LOGGING
 
 #ifdef V8TOOLKIT_PARAMETER_BUILDER_LOGGING
 #define PB_PRINT(format_string, ...) \
@@ -76,7 +76,7 @@ struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
         PB_PRINT("ParameterBuilder handling rvalue reference to unwrapped type: {}", demangle<T>());
-        std::cerr << fmt::format("default_arg_position: {}", default_arg_position) << std::endl;
+//        std::cerr << fmt::format("default_arg_position: {}", default_arg_position) << std::endl;
         return std::move(*(ParameterBuilder<T*>().template operator()<default_arg_position>(info, i, stuff, std::move(default_args_tuple))));
     }
 };

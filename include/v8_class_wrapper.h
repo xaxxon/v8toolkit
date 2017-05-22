@@ -86,7 +86,7 @@ struct DestructorBehavior
 template<class T>
 struct DestructorBehavior_Delete : DestructorBehavior {
 	DestructorBehavior_Delete(){
-		std::cerr << fmt::format("creating destructor behavior delete at {}", (void*)this) << std::endl;
+//		std::cerr << fmt::format("creating destructor behavior delete at {}", (void*)this) << std::endl;
 	}
 	void operator()(v8::Isolate * isolate, const void * void_object) const override {
 		T* object = (T*)void_object;
@@ -95,7 +95,7 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
 	bool destructive() const override {
-		std::cerr << fmt::format("_Delete::destructive") << std::endl;
+//		std::cerr << fmt::format("_Delete::destructive") << std::endl;
 		return true;
 	}
 	virtual std::string name() const override {
@@ -110,14 +110,14 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 */
 struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 	DestructorBehavior_LeaveAlone(){
-		std::cerr << fmt::format("creating DestructorBehavior_LeageAlone at {}", (void*)this) << std::endl;
+//		std::cerr << fmt::format("creating DestructorBehavior_LeageAlone at {}", (void*)this) << std::endl;
 	}
 
 	void operator()(v8::Isolate * isolate, const void * void_object) const override {
         V8TOOLKIT_DEBUG("Not deleting underlying C++ object %p during V8 garbage collection\n", void_object);
 	}
 	bool destructive() const override {
-		std::cerr << fmt::format("_Delete::destructive") << std::endl;
+//		std::cerr << fmt::format("_Delete::destructive") << std::endl;
 		return false;
 	}
 	virtual std::string name() const override {
@@ -644,7 +644,7 @@ public:
 	 * @return the cpp object from inside the provided JS object
 	 */
 	T * release_internal_field_memory(v8::Local<v8::Object> object) {
-		std::cerr << fmt::format("Trying to releasing internal field memory") << std::endl;
+//		std::cerr << fmt::format("Trying to release internal field memory") << std::endl;
 		auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
 
@@ -671,9 +671,9 @@ public:
     static bool does_object_own_memory(v8::Local<v8::Object> object) {
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data, demangle<T>(), (void*)wrapped_data) << std::endl;
+//		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data, demangle<T>(), (void*)wrapped_data) << std::endl;
 		if (wrapped_data->weak_callback_data) {
-			std::cerr << fmt::format("callback data destructive? {}", wrapped_data->weak_callback_data->destructive) << std::endl;
+//			std::cerr << fmt::format("callback data destructive? {}", wrapped_data->weak_callback_data->destructive) << std::endl;
 		}
         return wrapped_data->weak_callback_data != nullptr && wrapped_data->weak_callback_data->destructive;
     }
@@ -1690,16 +1690,16 @@ struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
 
 
-		std::cerr << fmt::format("cast to js {} type {}", (void*)unique_ptr.get(), demangle<T>()) << std::endl;
+//		std::cerr << fmt::format("cast to js {} type {}", (void*)unique_ptr.get(), demangle<T>()) << std::endl;
         auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
         // create new owning JavaScript object with the contents of the unique_ptr
-		std::cerr << fmt::format("creating object from unique ptr with destructor behavior {}: {} {}", wrapper.destructor_behavior_delete->name(), (void*)wrapper.destructor_behavior_delete.get(), wrapper.destructor_behavior_delete->destructive()) << std::endl;
+//		std::cerr << fmt::format("creating object from unique ptr with destructor behavior {}: {} {}", wrapper.destructor_behavior_delete->name(), (void*)wrapper.destructor_behavior_delete.get(), wrapper.destructor_behavior_delete->destructive()) << std::endl;
         auto result = wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.release(), *wrapper.destructor_behavior_delete);
-		std::cerr << fmt::format("Immediately after creation from unique_ptr, does own memory?  {} ", V8ClassWrapper<T>::does_object_own_memory(result)) << std::endl;
+//		std::cerr << fmt::format("Immediately after creation from unique_ptr, does own memory?  {} ", V8ClassWrapper<T>::does_object_own_memory(result)) << std::endl;
 		auto wrap = v8::Local<v8::External>::Cast(result->ToObject()->GetInternalField(0));
 		WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-		std::cerr << fmt::format("WrappedData: {}", (void*)wrapped_data) << std::endl;
+//		std::cerr << fmt::format("WrappedData: {}", (void*)wrapped_data) << std::endl;
 		return result;
 
     }
@@ -1987,6 +1987,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 			if (value->IsObject()) {
 				auto object = value->ToObject();
 				if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
+
 					if constexpr(std::is_rvalue_reference_v<T>)
 					{
 						if (wrapper.does_object_own_memory(object)) {
@@ -2031,16 +2032,20 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_copy_constructible_v<T> && i
 		PB_PRINT("ParameterBuilder handling wrapped type: {}", demangle<T>());
 		auto isolate = info.GetIsolate();
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
-		auto value = info[i++];
 
-		if (value->IsObject()) {
-			auto object = value->ToObject();
-			if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
-				// make a copy, put it in stuff, and return an rvalue ref to the copy
-				return *cpp_object;
+		if (i >= info.Length()) {
+			return *get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple);
+		} else {
+			auto value = info[i++];
+			if (value->IsObject()) {
+				auto object = value->ToObject();
+				if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
+					// make a copy, put it in stuff, and return an rvalue ref to the copy
+					return *cpp_object;
+				}
 			}
+			return CastToNative<T>()(isolate, value);
 		}
-		return CastToNative<T>()(isolate, value);
 	}
 };
 

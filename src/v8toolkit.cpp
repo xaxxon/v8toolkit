@@ -855,7 +855,7 @@ SetWeakCallbackData::SetWeakCallbackData(func::function<void(v8::WeakCallbackInf
     callback(callback),
     destructive(destructive)
     {
-        std::cerr << fmt::format("Creating weak callback data with destructive: {}", this->destructive) << std::endl;
+//        std::cerr << fmt::format("Creating weak callback data with destructive: {}", this->destructive) << std::endl;
         this->global.Reset(isolate, javascript_object);
     }
 
