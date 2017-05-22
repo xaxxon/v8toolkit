@@ -1,51 +1,33 @@
+# v8toolkit
+v8toolkit is a library to make integrating JavaScript to C++ as painless as possible.   Just tell v8toolkit what 
+parts of your C++ you want it to expose to JavaScript and it takes care of the rest.   Or you can annotate
+your C++ code with C++ attributes and use the included clang plugin to scan your code and generate the JavaScript bindings
+automatically.
+
+## Features
+* Type-aware bindings for C++ fundamental types, and a good number of STL containers.
+* Straight-forward support for adding custom C++ to JavaScript serializer/deserializers for user-defined types.
+* Simple syntax to expose your class to JavaScript including member functions, static functions,
+and data members.
+* Debugger support via anything supporting the Chrome Debugging Protocol.  Point Chrome at your application
+and see your JavaScript source, set breakpoints, inspect and set variables.   
+* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for 
+the clang compiler using the actual AST generated during compilation.
+* Understands memory ownership and C++11 `std::unique_ptr`.   C++ functions taking/returning rvalue references 
+or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the
+JavaScript garbage collector.
+* Default parameters when calling C++ functions from JavaScript and not providing enough parameters.  There is
+experimental support for automatically generating the default values directly from your C++ source code while
+using the clang plugin.
+
+## Requirements
+* Recent version of V8.  The V8 API is constantly evolving and this library tends to track the recent versions.
+* C++17.  C++17 adds features drastically simplifying v8toolkit's heavily templated code.  Fortunately, clang 4.0
+supports all major platforms.  
 
 ## Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/html/index.html
 
-## New Feature: Default Arguments
-
-Support for specifying default arguments for native calls is now supported and they are
-automatically generated from your C++ source when using the ClassParser plugin.
-
-
-## New Feature: Memory handoff to std::unique_ptr
-
-In JavaScript, if you create a JavaScript object wrapping a C++ object and pass it to a function taking
-a `std::unique_ptr`:
-
-    JavaScript: native_function_taking_std_unique_ptr_MyType(new MyType());
-
-the memory ownership of the C++ `MyType` will be handed off to the unique_ptr.  The JavaScript object
-will still have access to the embedded C++ object, but when the JavaScript object is garbage collected,
-it will not free the memory.  Also, the object may be cleaned up by the `unique_ptr` while the JavaScript object
-is still reachable, so care must be observed.
-
-This is not related to calling a function which takes an rvalue reference.  In that case, while the underlying
-C++ object may be moved out of, the fundamental C++ object (albeit potentially only a skeleton object after
-having been the source object of a move constructor call) still has its lifetime tied to the JavaScript object's.
-
-This memory handoff behavior is available to any other user-defined C++ types by calling
-`V8ClassWrapper::release_internal_field_memory` in the corresponding `CastToNative` specialization for the type.
-
    
-## New Feature: Debugging embedded JavaScript from Chrome's javascript debugger.
-
-* Viewing code 
-* Add/remove breakpoints
-* Step over/into/out
-* Notification on breakpoint being hit
-* Resuming execution
-
-
-To debug, you must start chrome with the `--remote-debugging-port=9222`.
-Then, go to `http://localhost:9222/devtools/inspector.html?ws=localhost:9002`.
-
-Note the two different ports above.  The first is a local port to serve the debugger from, the second is the port
-in the program you wish to debug.
-
-This code will be rewritten using the newly implemented debugging interface in V8, but
-until then, the existing code has some of the functionality.
-
-
 ## New Feature: ClassParser - Automatic class binding generator
 
 `class_parser/` directory now contains a clang plugin that can automatically generate bindings for your existing
