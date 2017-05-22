@@ -4,12 +4,6 @@
   <component name="CidrRootsConfiguration">
     <sourceRoots>
       <file path="$PROJECT_DIR$/include" />
-<<<<<<< HEAD
-    </sourceRoots>
-  </component>
-  <component name="JavaScriptSettings">
-    <option name="languageLevel" value="ES6" />
-=======
       <file path="$PROJECT_DIR$/test" />
     </sourceRoots>
     <libraryRoots>
@@ -18,6 +12,5 @@
     <excludeRoots>
       <file path="$PROJECT_DIR$/docs" />
     </excludeRoots>
->>>>>>> master
   </component>
 </project>
