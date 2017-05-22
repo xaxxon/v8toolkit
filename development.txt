@@ -198,4 +198,9 @@ casttojs of std::function isn't done
 
 Test WrapAsMostDerived
 
+For a wrapped type, is it possible we are returning a reference/pointer to a object that doesn't exist if it is being constructed from a
+  non-default CastToNative?   like if it has a user-defined one for the specific data type to build it from a javascript string or something
+
+Should shared_ptr be used as the "deleter" in wrapped objects?   That would help know when the object was deleted and to treat a new object
+at the same location as a new object.. maybe?
 

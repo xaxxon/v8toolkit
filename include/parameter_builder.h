@@ -89,20 +89,20 @@ struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
 template <class T>
 struct ParameterBuilder<T*, std::enable_if_t<!is_wrapped_type_v<T> >
 > {
-    using WrappedT = std::remove_pointer_t<std::remove_reference_t<T>>;
+    using WrappedT = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
 
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-    T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+    WrappedT * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+
         PB_PRINT("ParameterBuilder handling pointers to unwrapped types: {}", demangle<T>());
         if (i >= info.Length()) {
-            set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
-
+            return get_default_parameter<WrappedT, default_arg_position>(info, i, stuff, default_args_tuple);
         } else {
-            stuff.emplace_back(std::make_unique<Stuff<T>>(CastToNative<T>()(info.GetIsolate(), info[i++])));
+            stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
+            return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
         }
-        return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
     }
 };
 
@@ -119,7 +119,7 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
     using WrappedT = std::remove_pointer_t<std::remove_reference_t<T>>;
 
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-    T * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+    WrappedT * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
@@ -127,11 +127,19 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
 
         //std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
-            //set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple);
-            throw CastException("Default parameters for wrapped types not currently supported");
-        } else {
-            return CastToNative<T *>()(info.GetIsolate(), info[i++]);
+            return *get_default_parameter<WrappedT *, default_arg_position>(info, i, stuff, default_args_tuple);
 
+        } else {
+            // try to get the object from inside a javascript object, otherwise, fall back to a CastToNative<T> call
+            if (auto wrapped_pointer = CastToNative<WrappedT *>()(info.GetIsolate(), info[i++])) {
+                return wrapped_pointer;
+
+            } else if constexpr(CastToNative<WrappedT>::callable()) {
+                stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
+                return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
+            } else {
+                throw CastException("BAD THINGS 1");
+            }
         }
     }
 };
@@ -183,7 +191,7 @@ struct ParameterBuilder<char *> {
 
         // if there is a value, use it, otherwise just use empty string
         if (i >= info.Length()) {
-            return set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple).get();
+            return *get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple);
 
         } else {
             auto string = CastToNative<T>()(info.GetIsolate(), info[i++]);
@@ -257,24 +265,12 @@ struct ParameterBuilder<Container<char const *, Rest...>,
 
         //std::cerr << fmt::format("parameterbuilder type: Container<char const *,...> default_arg_position = {}", default_arg_position) << std::endl;
         if (i >= info.Length()) {
-//         static_assert(false, "implement me");
+            return *get_default_parameter<ResultType, default_arg_position>(info, i, stuffs, default_args_tuple);
 
-            throw InvalidCallException(fmt::format(
-                "Not enough javascript parameters for function call - requires {} but only {} were specified",
-                i + 1 + sizeof(Rest)..., info.Length()));
+        } else {
+            stuffs.emplace_back(Stuff<ResultType>::stuffer(CastToNative<ResultType>()(info.GetIsolate(), info[i++])));
+            return *static_cast<Stuff<ResultType> &>(*stuffs.back()).get()->get();
         }
-        Stuff<DataHolderType> stuff(CastToNative<ResultType>()(info.GetIsolate(), info[i++]));
-        auto data_holder = stuff.get();
-
-        stuffs.emplace_back(std::make_unique<Stuff<DataHolderType>>
-                                (std::move(stuff)));
-
-
-        ResultType result;
-        for (auto & str : *data_holder) {
-            result.push_back(str.get());
-        }
-        return result;
     }
 };
 
@@ -296,7 +292,7 @@ struct ParameterBuilder<char const *> {
 
         // if there is a value, use it, otherwise just use empty string
         if (i >= info.Length()) {
-            return set_unspecified_parameter_value<default_arg_position, T>(info, i, stuff, default_args_tuple).get();
+            return *get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple);
 
         } else {
             auto string = CastToNative<T>()(info.GetIsolate(), info[i++]);

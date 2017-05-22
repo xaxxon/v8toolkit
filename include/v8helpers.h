@@ -569,8 +569,8 @@ struct Stuff : public StuffBase {
     Stuff(std::unique_ptr<T> t) : stuffed(std::move(t)) {}
 
 
-    static std::unique_ptr<T> stuffer(T && t) {return std::make_unique<T>(std::move(t));}
-    static std::unique_ptr<T> stuffer(T const & t) {return std::make_unique<T>(std::move(const_cast<T &>(t)));}
+    static std::unique_ptr<Stuff<T>> stuffer(T && t) {return std::make_unique<Stuff<T>>(std::move(t));}
+    static std::unique_ptr<Stuff<T>> stuffer(T const & t) {return std::make_unique<Stuff<T>>(std::move(const_cast<T &>(t)));}
 
     T * get(){return stuffed.get();}
     std::unique_ptr<T> stuffed;

@@ -42,8 +42,8 @@ public:
         return x;
     }
 
-    void default_parameters(int i = 1, char const * s = "asdf", vector<std::string> && = {}){
-        EXPECT_EQ(i, 1);
+    void default_parameters(int j = 1, char const * s = "asdf", vector<std::string> && = {}, CopyableWrappedClass && = {}){
+        EXPECT_EQ(j, 1);
         EXPECT_STREQ(s, "asdf");
     };
 
@@ -87,7 +87,7 @@ public:
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
             w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
-            w.add_method("default_parameters", &WrappedClass::default_parameters, std::tuple<int, char const *, vector<std::string>>(1, "asdf", {}));
+            w.add_method("default_parameters", &WrappedClass::default_parameters, std::tuple<int, char const *, vector<std::string>, CopyableWrappedClass>(1, "asdf", {}, {}));
             w.add_static_method("static_method", &WrappedClass::static_method);
             w.set_compatible_types<WrappedClassChild>();
             w.finalize();

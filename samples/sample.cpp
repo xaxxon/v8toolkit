@@ -542,13 +542,15 @@ int main(int argc, char* argv[])
 
             {
                 auto script = v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
-                assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
+                v8toolkit::print_v8_value_details(script->Run(context).ToLocalChecked());
+
+                assert(script->Run(context).ToLocalChecked()->IsFunction());
             }
 
             {
                 auto script = v8::Script::Compile(context,
                                                   v8::String::NewFromUtf8(isolate, "()=>42.2")).ToLocalChecked();
-                assert(CastToNative<float>()(isolate, script->Run(context).ToLocalChecked()) == 42.2f);
+                assert(script->Run(context).ToLocalChecked()->IsFunction());
             }
 
             {

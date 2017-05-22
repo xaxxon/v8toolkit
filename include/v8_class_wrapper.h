@@ -1788,7 +1788,7 @@ template<typename T>
 struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
 	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
-	void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 		static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
 	}
 	static constexpr bool callable(){return false;}
@@ -1970,42 +1970,50 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 	using NoConstRefT = std::remove_const_t<NoRefT>;
 
     template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-	T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+	T /*T& or T&&*/ operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 					std::vector<std::unique_ptr<StuffBase>> & stuff,
 					DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder handling wrapped type: {} {}", demangle<T>(), std::is_rvalue_reference_v<T> ? "&&" : "&");
+		PB_PRINT("ParameterBuilder handling wrapped type: {} {}", demangle<T>(),
+				 std::is_rvalue_reference_v<T> ? "&&" : "&");
 		auto isolate = info.GetIsolate();
-		auto & wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
-		auto value = info[i++];
 
-        if (value->IsObject()) {
-            auto object = value->ToObject();
-            if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
-				if constexpr(std::is_rvalue_reference_v<T>)
-				{
-					if (wrapper.does_object_own_memory(object)) {
-						return std::move(*cpp_object);
-					} else if constexpr(std::is_copy_constructible_v<NoConstRefT>)
+		if (i >= info.Length()) {
+			return std::forward<T>(*get_default_parameter<NoConstRefT, default_arg_position>(info, i, stuff, default_args_tuple));
+		} else {
+
+			auto & wrapper = V8ClassWrapper<NoRefT>::get_instance(isolate);
+			auto value = info[i++];
+
+			if (value->IsObject()) {
+				auto object = value->ToObject();
+				if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
+					if constexpr(std::is_rvalue_reference_v<T>)
 					{
-						// make a copy, put it in stuff, and return an rvalue ref to the copy
-						stuff.emplace_back(
-							std::make_unique<Stuff<NoConstRefT>>(std::make_unique<NoRefT>(*cpp_object)));
-						return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
+						if (wrapper.does_object_own_memory(object)) {
+							return std::move(*cpp_object);
+						} else if constexpr(std::is_copy_constructible_v<NoConstRefT>)
+						{
+							// make a copy, put it in stuff, and return an rvalue ref to the copy
+							stuff.emplace_back(
+								std::make_unique<Stuff<NoConstRefT>>(std::make_unique<NoRefT>(*cpp_object)));
+							return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
+						}
+					}
+					// as a policy, only do this if it's an lvalue reference requested
+					else {
+						return *cpp_object;
 					}
 				}
-				// as a policy, only do this if it's an lvalue reference requested
-				else {
-					return *cpp_object;
-				}
 			}
-        }
-        if constexpr(std::is_move_constructible_v<NoConstRefT> && CastToNative<NoConstRefT>::callable()) {
-            stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(isolate, value)));
-            return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
-        }
-        throw CastException("Could not create requested object of type: {} {}.  Maybe you don't 'own' your memory?",
-							demangle<T>(),
-							std::is_rvalue_reference_v<T> ? "&&" : "&");
+			if constexpr(std::is_move_constructible_v<NoConstRefT> && CastToNative<NoConstRefT>::callable())
+			{
+				stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(isolate, value)));
+				return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
+			}
+			throw CastException("Could not create requested object of type: {} {}.  Maybe you don't 'own' your memory?",
+								demangle<T>(),
+								std::is_rvalue_reference_v<T> ? "&&" : "&");
+		}
 	}
 };
 

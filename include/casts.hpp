@@ -38,6 +38,18 @@ struct is_wrapped_type<T, std::enable_if_t<std::is_base_of<v8toolkit::WrappedCla
 template<class T>
 constexpr bool is_wrapped_type_v = is_wrapped_type<T>::value;
 
+template<typename T, class = void>
+struct CastToNative;
+
+template<class T, class = void>
+struct cast_to_native_supports_default_value : public std::false_type {};
+
+template<class T>
+struct cast_to_native_supports_default_value<T, void_t<std::result_of_t<CastToNative<T>(v8::Isolate *)>>> : public std::true_type {};
+
+template<class T> constexpr bool cast_to_native_supports_default_value_v = cast_to_native_supports_default_value<T>::value;
+
+
 // if it's any compination of a reference to a pointer to a wrapped type
 template<class T>
 constexpr bool is_wrapped_typeish_v =
@@ -91,7 +103,7 @@ template<> \
 /**
 * Casts from a boxed Javascript type to a native type
 */
-template<typename T, class = void>
+template<typename T, class>
 struct CastToNative {
     template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
     void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
