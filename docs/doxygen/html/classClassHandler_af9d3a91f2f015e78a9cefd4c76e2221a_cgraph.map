@@ -1,0 +1,26 @@
+<map id="ClassHandler::run" name="ClassHandler::run">
+<area shape="rect" id="node2" href="$helper__functions_8cpp.html#a01b29be2404bad8b4606d331505b3576" title="get_canonical_name\l_for_decl" alt="" coords="453,114,585,150"/>
+<area shape="rect" id="node3" href="$classWrappedClass.html#a520ae59a7c36287f76d2b32139885ba7" title="WrappedClass::get_if\l_exists" alt="" coords="199,217,335,253"/>
+<area shape="rect" id="node4" href="$class__parser_8cpp.html#a3371e53a4b6b2caf1864605ccdf705d3" title="get_include_string\l_for_fileid" alt="" coords="208,277,327,313"/>
+<area shape="rect" id="node5" href="$structClassTemplate.html#ae1ec079a778a348b5ab134eeed782d9a" title="ClassTemplate::get\l_or_create" alt="" coords="206,337,329,373"/>
+<area shape="rect" id="node6" href="$structFunctionTemplate.html#a53938e3292692ed470f2dd9f5db9fa79" title="FunctionTemplate::get\l_or_create" alt="" coords="198,397,337,433"/>
+<area shape="rect" id="node7" href="$classWrappedClass.html#a2aab3ed599eecb945a0d38cfdac4d486" title="WrappedClass::get_or\l_insert_wrapped_class" alt="" coords="195,55,339,91"/>
+<area shape="rect" id="node10" href="$classAnnotations.html#a2226a0aae3b74489b849aed904c5235e" title="Annotations::get_regex" alt="" coords="195,457,340,481"/>
+<area shape="rect" id="node11" href="$classWrappedClass.html#abe5eae9db4d5c1f6356b6b3002c13cdf" title="WrappedClass::get_short_name" alt="" coords="171,505,364,529"/>
+<area shape="rect" id="node12" href="$classClassHandler.html#a8e52f8db08048c420530677a7ab3a92c" title="ClassHandler::handle\l_class" alt="" coords="199,554,335,590"/>
+<area shape="rect" id="node13" href="$classAnnotations.html#a1d08e627e51922d849290ff986014f5c" title="Annotations::has" alt="" coords="212,615,323,639"/>
+<area shape="rect" id="node14" href="$classWrappedClass.html#a384610510fc2cb9c0900bc074bc8e64b" title="WrappedClass::has_static\l_method" alt="" coords="187,663,348,699"/>
+<area shape="rect" id="node20" href="$classWrappedClass.html#a044a4a0a113f6bbd668f49f5d2dae3de" title="WrappedClass::insert\l_wrapped_class" alt="" coords="199,723,335,759"/>
+<area shape="rect" id="node21" href="$structClassTemplate.html#a9a96056e4bbc43de4649322468462502" title="ClassTemplate::instantiated" alt="" coords="183,784,351,808"/>
+<area shape="rect" id="node22" href="$structFunctionTemplate.html#a17e453866c0b6abb363f0cf3e3e81144" title="FunctionTemplate::instantiated" alt="" coords="175,832,359,856"/>
+<area shape="rect" id="node23" href="$class__parser_8cpp.html#aa92e103605864921980c34d37fa2a1fc" title="is_good_record_decl" alt="" coords="201,904,334,928"/>
+<area shape="rect" id="node24" href="$class__parser_8cpp.html#af9bb1591395239138f5ce61e3355d898" title="print_specialization_info" alt="" coords="193,168,342,192"/>
+<area shape="rect" id="node8" href="$classWrappedClass.html#a5d288eae37853f5bb20e0fb24f94d186" title="WrappedClass::WrappedClass" alt="" coords="426,5,611,29"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a74e40143ab9835015011df2f435afa65" title="WrappedClass::found\l_method_means_wrapped" alt="" coords="437,54,601,90"/>
+<area shape="rect" id="node15" href="$classWrappedClass.html#abbeda9122d2ab874fad1a8c963451052" title="WrappedClass::is_template\l_specialization" alt="" coords="435,577,603,613"/>
+<area shape="rect" id="node16" href="$classWrappedClass.html#a926c7612a139fb7d1bfebd5c457bc922" title="WrappedClass::foreach\l_inheritance_level" alt="" coords="446,637,592,673"/>
+<area shape="rect" id="node17" href="$classWrappedClass.html#a634d2e72b8a67ac97963b0f8bbf5a826" title="WrappedClass::add_member_name" alt="" coords="412,697,626,721"/>
+<area shape="rect" id="node19" href="$classWrappedClass.html#a60efb84864ad326d42943b859c96e1e8" title="WrappedClass::add_static_name" alt="" coords="420,745,618,769"/>
+<area shape="rect" id="node18" href="$classWrappedClass.html#a7a4ec7cd62b9ee7d2f93fbf054912456" title="WrappedClass::set_error" alt="" coords="674,721,828,745"/>
+<area shape="rect" id="node25" href="$class__parser_8cpp.html#a89c2712ccc4f7e7dc9163238fe6cd91f" title="print_vector" alt="" coords="477,175,561,199"/>
+</map>

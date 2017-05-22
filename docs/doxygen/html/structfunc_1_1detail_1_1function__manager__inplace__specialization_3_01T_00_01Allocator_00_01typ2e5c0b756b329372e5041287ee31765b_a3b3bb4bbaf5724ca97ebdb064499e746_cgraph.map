@@ -1,0 +1,3 @@
+<map id="func::detail::function_manager_inplace_specialization&lt; T, Allocator, typename std::enable_if&lt;!is_inplace_allocated&lt; T, Allocator &gt;::value &gt;::type &gt;::get_functor_ptr_ref" name="func::detail::function_manager_inplace_specialization&lt; T, Allocator, typename std::enable_if&lt;!is_inplace_allocated&lt; T, Allocator &gt;::value &gt;::type &gt;::get_functor_ptr_ref">
+<area shape="rect" id="node2" href="$namespacefunc_1_1detail.html#af762566989b86f002da48ff1cd494bb5" title="func::detail::get_default\l_manager" alt="" coords="252,29,398,65"/>
+</map>

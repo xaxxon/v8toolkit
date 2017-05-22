@@ -1,0 +1,12 @@
+<map id="v8toolkit::Context::get_context" name="v8toolkit::Context::get_context">
+<area shape="rect" id="node2" href="$classv8toolkit_1_1Context.html#a5fb2128b3a881f6e56e4b15dba693bbf" title="v8toolkit::Context\l::add_function" alt="" coords="184,5,298,41"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#aa4b23e2bbb774e302eaa93a1d12ba218" title="v8toolkit::Context\l::add_variable" alt="" coords="184,65,298,101"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1DebugContext.html#a7a83cc4953f68adccd5922b69f51bb3f" title="v8toolkit::DebugContext\l::DebugContext" alt="" coords="167,125,315,161"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1Context.html#a29313f33e8fe3a83c453b7eaf98bfb4a" title="v8toolkit::Context\l::expose_variable" alt="" coords="183,185,299,221"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#ad6644755ff30a8305561dfb3de496c6d" title="v8toolkit::Context\l::expose_variable_readonly" alt="" coords="529,328,698,364"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1Context.html#a0958f26802f199469b176b7ca35d6c64" title="v8toolkit::Context\l::Global\&lt; v8::Context \&gt;" alt="" coords="169,297,313,333"/>
+<area shape="rect" id="node9" href="$classv8toolkit_1_1Context.html#afd7caf5c6f3d4f225eb3e7d967469dc9" title="v8toolkit::Context\l::require" alt="" coords="184,357,298,393"/>
+<area shape="rect" id="node11" href="$classv8toolkit_1_1Context.html#ac342882a56cedc9a92d4922c9bd3e9f6" title="v8toolkit::Context\l::wrap_object" alt="" coords="366,416,479,452"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Isolate.html#a16c0887c203ff6a5a08df24a547ce9f5" title="v8toolkit::Isolate\l::add_assert" alt="" coords="369,5,476,41"/>
+<area shape="rect" id="node10" href="$classv8toolkit_1_1Context.html#a28e577fa30695d4fd4814e1253b46a05" title="v8toolkit::Context\l::require_directory" alt="" coords="363,356,481,392"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Annotations::get" name="Annotations::get">
+<area shape="rect" id="node2" href="$classAnnotations.html#a38538b21f1688412f4844c83407e6186" title="Annotations::merge" alt="" coords="185,5,311,29"/>
+<area shape="rect" id="node4" href="$classWrappedClass.html#a33ee13914ae43f9f0836109a2e1e176f" title="WrappedClass::WrappedClass" alt="" coords="383,53,568,77"/>
+<area shape="rect" id="node5" href="$classWrappedClass.html#a1885956b8dc506f2d63d0bf060ee2f89" title="WrappedClass::should\l_be_wrapped" alt="" coords="177,105,319,141"/>
+<area shape="rect" id="node8" href="$classWrappedClass.html#a3e3783d5a4e36e2a6fec567673ff723f" title="WrappedClass::update_data" alt="" coords="161,165,335,189"/>
+<area shape="rect" id="node3" href="$classAnnotations.html#a5cef9b826c7f2d8d50d3327d90c385ca" title="Annotations::Annotations" alt="" coords="398,5,552,29"/>
+<area shape="rect" id="node6" href="$classWrappedClass.html#ae640e718df9a63c35c8483a47727c1ee" title="WrappedClass::ready\l_for_wrapping" alt="" coords="407,103,543,139"/>
+<area shape="rect" id="node7" href="$classWrappedClass.html#a8a6c66c077bce9ed355ba5aff4b0e67d" title="WrappedClass::make\l_sfinae_to_match_wrapped_class" alt="" coords="616,131,818,167"/>
+</map>

@@ -1,0 +1,14 @@
+<map id="testing::MakePolymorphicAction" name="testing::MakePolymorphicAction">
+<area shape="rect" id="node2" href="$namespacetesting.html#abfc4121b8708e8b22a096ff8be88a9d0" title="testing::Assign" alt="" coords="249,5,349,29"/>
+<area shape="rect" id="node4" href="$namespacetesting.html#a12aebaf8363d49a383047529f798b694" title="testing::Invoke" alt="" coords="250,53,348,77"/>
+<area shape="rect" id="node6" href="$namespacetesting.html#a88cc1999296bc630f6a49cdf66bb21f9" title="testing::InvokeWithoutArgs" alt="" coords="217,101,381,125"/>
+<area shape="rect" id="node8" href="$namespacetesting.html#a8da8e53d2e7bc4e3c531f7435ad04823" title="testing::Return" alt="" coords="249,149,349,173"/>
+<area shape="rect" id="node9" href="$namespacetesting.html#aa0331596e269114da101f810d3a1b88b" title="testing::ReturnNull" alt="" coords="239,197,359,221"/>
+<area shape="rect" id="node10" href="$namespacetesting.html#a5740a5033b88c37666fcd09a269d123f" title="testing::SetArgPointee" alt="" coords="229,245,369,269"/>
+<area shape="rect" id="node11" href="$namespacetesting.html#a03b315d27c91a8e719f2b6c09964130b" title="testing::SetArgumentPointee" alt="" coords="212,293,386,317"/>
+<area shape="rect" id="node12" href="$namespacetesting.html#a31095e421f167fade2e6d4d60df1f4da" title="testing::SetErrnoAndReturn" alt="" coords="215,341,383,365"/>
+<area shape="rect" id="node3" href="$gmock__link__test_8h.html#a84f858c615e1a833900ba5cb6fd6035d" title="TEST" alt="" coords="434,5,486,29"/>
+<area shape="rect" id="node5" href="$gmock__link__test_8h.html#a632cd5bfa5abc4dca05bca7e32c3117c" title="TEST" alt="" coords="434,53,486,77"/>
+<area shape="rect" id="node7" href="$gmock__link__test_8h.html#a8677237cca1dcb672f230ba196bf46c9" title="TEST" alt="" coords="434,101,486,125"/>
+<area shape="rect" id="node13" href="$gmock__link__test_8h.html#aef5c583c3e024858d646fd49cb26d38b" title="TEST" alt="" coords="434,341,486,365"/>
+</map>

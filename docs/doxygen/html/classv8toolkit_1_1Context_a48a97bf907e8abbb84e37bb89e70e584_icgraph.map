@@ -1,0 +1,9 @@
+<map id="v8toolkit::Context::compile" name="v8toolkit::Context::compile">
+<area shape="rect" id="node2" href="$classv8toolkit_1_1Context.html#ab16a28412af87eaffb836697d3c5db4f" title="v8toolkit::Context\l::compile_from_file" alt="" coords="174,24,296,60"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Context.html#a0958f26802f199469b176b7ca35d6c64" title="v8toolkit::Context\l::Global\&lt; v8::Context \&gt;" alt="" coords="513,52,658,88"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Context.html#a27126b862ed6ae5f18644ae5efe31576" title="v8toolkit::Context::run" alt="" coords="167,136,304,160"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1Context.html#a3ad82904352bbf5a018c3d525312aaef" title="v8toolkit::Context\l::run_async" alt="" coords="352,158,465,194"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#af887fd94d3bc1a7873b2e4d239616fd8" title="v8toolkit::Context\l::run_detached" alt="" coords="179,235,292,271"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1Context.html#ae19a126f83bf60b5848e9a2586c657c0" title="v8toolkit::Context\l::run_thread" alt="" coords="179,295,292,331"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#a64f76992a1affa96ac7a0b23e77c0b1e" title="v8toolkit::Context\l::run_from_file" alt="" coords="352,24,465,60"/>
+</map>

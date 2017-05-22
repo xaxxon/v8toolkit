@@ -1,0 +1,16 @@
+<map id="get_type_string" name="get_type_string">
+<area shape="rect" id="node2" href="$structClassFunction.html#a05949bd1387490c187529c48f498541e" title="ClassFunction::get\l_default_argument_tuple\l_string" alt="" coords="194,87,348,135"/>
+<area shape="rect" id="node6" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="157,186,384,210"/>
+<area shape="rect" id="node8" href="$classWrappedClass.html#a7b8bff56c62e357f0ee5cee0274bd89d" title="WrappedClass::parse\l_all_methods" alt="" coords="202,259,339,295"/>
+<area shape="rect" id="node3" href="$classConstructorFunction.html#a40fa7885dfb87ce6be4145a7519cb6c1" title="ConstructorFunction\l::generate_js_bindings" alt="" coords="459,5,601,41"/>
+<area shape="rect" id="node4" href="$classMemberFunction.html#aab8c7d7cb4d5ee40e7927f6b04ff5ae2" title="MemberFunction::generate\l_js_bindings" alt="" coords="447,65,613,101"/>
+<area shape="rect" id="node5" href="$classStaticFunction.html#aa824a9e229788e247aff390af403dda8" title="StaticFunction::generate\l_js_bindings" alt="" coords="454,125,606,161"/>
+<area shape="rect" id="node7" href="$classClassHandler.html#ab0d91c03b4f411ccdaec89b159c60c3d" title="ClassHandler::ClassHandler" alt="" coords="444,186,616,210"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a8be4472a198f5ba828d98fda3ee291df" title="WrappedClass::get_constructors" alt="" coords="432,234,628,258"/>
+<area shape="rect" id="node14" href="$classWrappedClass.html#afbe7a6a70688b15d11ebb4d0d07ee0ae" title="WrappedClass::get_member\l_functions" alt="" coords="443,283,617,319"/>
+<area shape="rect" id="node15" href="$classWrappedClass.html#acb45927030162f0ae2501c8ec7687515" title="WrappedClass::get_static\l_functions" alt="" coords="451,343,609,379"/>
+<area shape="rect" id="node10" href="$classWrappedClass.html#ad9790cf48d35eadb2761f79470842f7c" title="WrappedClass::generate\l_js_stub" alt="" coords="686,256,840,292"/>
+<area shape="rect" id="node12" href="$classWrappedClass.html#a7b391d435e506d27c71080e6481b3eb4" title="WrappedClass::get_bindings" alt="" coords="676,319,850,343"/>
+<area shape="rect" id="node11" href="$classWrappedClass.html#a8a6c66c077bce9ed355ba5aff4b0e67d" title="WrappedClass::make\l_sfinae_to_match_wrapped_class" alt="" coords="898,253,1101,289"/>
+<area shape="rect" id="node13" href="$classWrappedClass.html#a8107772793bf868273a4431947cda720" title="WrappedClass::get_base\l_class_string" alt="" coords="922,313,1077,349"/>
+</map>

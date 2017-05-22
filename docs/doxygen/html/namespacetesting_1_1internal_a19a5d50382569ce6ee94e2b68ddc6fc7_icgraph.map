@@ -1,0 +1,10 @@
+<map id="testing::internal::IsReadableTypeName" name="testing::internal::IsReadableTypeName">
+<area shape="rect" id="node2" href="$namespacetesting_1_1internal.html#a0821df2611d54c79bac990719ad8a2dd" title="testing::internal::\lMatchPrintAndExplain" alt="" coords="193,227,333,263"/>
+<area shape="rect" id="node3" href="$classtesting_1_1internal_1_1PredicateFormatterFromMatcher.html#a9b2ba1b95b3037e6f566062ae4ea4484" title="testing::internal::\lPredicateFormatterFromMatcher\l::operator()" alt="" coords="388,5,584,53"/>
+<area shape="rect" id="node4" href="$classtesting_1_1internal_1_1PointeeMatcher.html#a3a96cad4ee9e684ff11023ff35c7551b" title="testing::internal::\lPointeeMatcher::operator\l Matcher\&lt; Pointer \&gt;" alt="" coords="407,77,564,125"/>
+<area shape="rect" id="node5" href="$classtesting_1_1internal_1_1WhenDynamicCastToMatcher.html#afea5e5230fa9955bfdf9902587c44676" title="testing::internal::\lWhenDynamicCastToMatcher\l::MatchAndExplain" alt="" coords="396,149,576,197"/>
+<area shape="rect" id="node6" href="$classtesting_1_1internal_1_1WhenDynamicCastToMatcher_3_01To_01_6_01_4.html#a5459ff45c7b687d42545490226c2f7b2" title="testing::internal::\lWhenDynamicCastToMatcher\l\&lt; To &amp; \&gt;::MatchAndExplain" alt="" coords="396,221,576,269"/>
+<area shape="rect" id="node7" href="$classtesting_1_1internal_1_1FieldMatcher.html#a68fd542e3933c11da824e5e93d3f9858" title="testing::internal::\lFieldMatcher::MatchAndExplain" alt="" coords="390,294,581,330"/>
+<area shape="rect" id="node8" href="$classtesting_1_1internal_1_1PropertyMatcher.html#ac3d365400a10aaee763d5408f8ad6089" title="testing::internal::\lPropertyMatcher::MatchAndExplain" alt="" coords="381,354,591,390"/>
+<area shape="rect" id="node9" href="$classtesting_1_1internal_1_1ResultOfMatcher.html#ad012b9d3c6dcb8eb755d63d5d2d95706" title="testing::internal::\lResultOfMatcher::operator\l Matcher\&lt; T \&gt;" alt="" coords="404,415,567,463"/>
+</map>

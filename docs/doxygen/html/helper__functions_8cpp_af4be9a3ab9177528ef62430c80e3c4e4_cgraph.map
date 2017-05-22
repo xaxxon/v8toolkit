@@ -1,0 +1,10 @@
+<map id="update_wrapped_class_for_type" name="update_wrapped_class_for_type">
+<area shape="rect" id="node2" href="$class__parser_8cpp.html#a769f371f9c87c6ce4e15942bf8134e9f" title="get_include_for_type_decl" alt="" coords="198,18,360,42"/>
+<area shape="rect" id="node5" href="$classWrappedClass.html#a2aab3ed599eecb945a0d38cfdac4d486" title="WrappedClass::get_or\l_insert_wrapped_class" alt="" coords="207,120,351,156"/>
+<area shape="rect" id="node9" href="$class__parser_8cpp.html#a7ad5570fdbdb5bcb390245399f2dc8f2" title="has_wrapped_class" alt="" coords="215,71,343,95"/>
+<area shape="rect" id="node3" href="$class__parser_8cpp.html#a8d0755431174a1c4b0b647f7af6c314f" title="get_include_for_source\l_location" alt="" coords="427,5,573,41"/>
+<area shape="rect" id="node4" href="$class__parser_8cpp.html#a3371e53a4b6b2caf1864605ccdf705d3" title="get_include_string\l_for_fileid" alt="" coords="640,5,759,41"/>
+<area shape="rect" id="node6" href="$helper__functions_8cpp.html#a01b29be2404bad8b4606d331505b3576" title="get_canonical_name\l_for_decl" alt="" coords="434,65,566,101"/>
+<area shape="rect" id="node7" href="$classWrappedClass.html#a5d288eae37853f5bb20e0fb24f94d186" title="WrappedClass::WrappedClass" alt="" coords="408,126,592,150"/>
+<area shape="rect" id="node8" href="$classWrappedClass.html#a74e40143ab9835015011df2f435afa65" title="WrappedClass::found\l_method_means_wrapped" alt="" coords="418,175,582,211"/>
+</map>

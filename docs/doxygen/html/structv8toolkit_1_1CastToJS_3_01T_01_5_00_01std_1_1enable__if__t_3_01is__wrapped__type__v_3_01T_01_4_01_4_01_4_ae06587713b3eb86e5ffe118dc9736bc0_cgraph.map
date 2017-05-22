@@ -1,0 +1,4 @@
+<map id="v8toolkit::CastToJS&lt; T *, std::enable_if_t&lt; is_wrapped_type_v&lt; T &gt; &gt; &gt;::operator()" name="v8toolkit::CastToJS&lt; T *, std::enable_if_t&lt; is_wrapped_type_v&lt; T &gt; &gt; &gt;::operator()">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#ae993c8d8c3525bc07d4fd51bed703f5e" title="v8toolkit::demangle\l_typeid_name" alt="" coords="223,5,348,41"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a7cce198c14ae366263adbdde10acccc3" title="v8toolkit::safe_dynamic_cast" alt="" coords="198,66,373,90"/>
+</map>

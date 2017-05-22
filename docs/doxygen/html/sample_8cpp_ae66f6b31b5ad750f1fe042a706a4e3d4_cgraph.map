@@ -1,0 +1,5 @@
+<map id="main" name="main">
+<area shape="rect" id="node2" href="$classDerivedFromWrappedClassBase.html#ad1125a2072c66a2597a6fd1858d72fc9" title="DerivedFromWrappedClassBase\l::function_in_templated_class" alt="" coords="101,5,297,41"/>
+<area shape="rect" id="node3" href="$classFoo.html#ac1fd631cc0022dcb82b1a9d1b11392d1" title="Foo::templated_function" alt="" coords="124,66,274,90"/>
+<area shape="rect" id="node4" href="$classA.html#a3a18b08819d3578594cbbd023b0e1409" title="A::V8TOOLKIT_USE_NAME" alt="" coords="345,66,520,90"/>
+</map>

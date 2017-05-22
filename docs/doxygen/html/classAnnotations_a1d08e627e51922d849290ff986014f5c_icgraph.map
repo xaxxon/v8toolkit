@@ -1,0 +1,20 @@
+<map id="Annotations::has" name="Annotations::has">
+<area shape="rect" id="node2" href="$structDataMember.html#a62104862810211f479530848543ed109" title="DataMember::DataMember" alt="" coords="164,5,331,29"/>
+<area shape="rect" id="node3" href="$helper__functions_8h.html#ae003efdd74d4bb745c38948b1ea56c19" title="foreach_constructor" alt="" coords="184,53,311,77"/>
+<area shape="rect" id="node4" href="$classWrappedClass.html#a33ee13914ae43f9f0836109a2e1e176f" title="WrappedClass::WrappedClass" alt="" coords="384,76,569,100"/>
+<area shape="rect" id="node5" href="$helper__functions_8h.html#a64258c7cdbb3442b4daa45d027d91417" title="get_method_param_qual\l_types" alt="" coords="170,153,325,189"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a7b8bff56c62e357f0ee5cee0274bd89d" title="WrappedClass::parse\l_all_methods" alt="" coords="179,267,316,303"/>
+<area shape="rect" id="node17" href="$classClassHandler.html#af9d3a91f2f015e78a9cefd4c76e2221a" title="ClassHandler::run" alt="" coords="189,328,306,352"/>
+<area shape="rect" id="node18" href="$classWrappedClass.html#a1885956b8dc506f2d63d0bf060ee2f89" title="WrappedClass::should\l_be_wrapped" alt="" coords="405,207,547,243"/>
+<area shape="rect" id="node6" href="$helper__functions_8h.html#a0cee0527795ed270496aad3a37a3d829" title="generate_bidirectional\l_classes" alt="" coords="407,147,546,183"/>
+<area shape="rect" id="node7" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="622,153,850,177"/>
+<area shape="rect" id="node8" href="$classClassHandler.html#ab0d91c03b4f411ccdaec89b159c60c3d" title="ClassHandler::ClassHandler" alt="" coords="913,153,1085,177"/>
+<area shape="rect" id="node10" href="$classWrappedClass.html#a8be4472a198f5ba828d98fda3ee291df" title="WrappedClass::get_constructors" alt="" coords="379,328,574,352"/>
+<area shape="rect" id="node15" href="$classWrappedClass.html#afbe7a6a70688b15d11ebb4d0d07ee0ae" title="WrappedClass::get_member\l_functions" alt="" coords="389,377,563,413"/>
+<area shape="rect" id="node16" href="$classWrappedClass.html#acb45927030162f0ae2501c8ec7687515" title="WrappedClass::get_static\l_functions" alt="" coords="397,267,555,303"/>
+<area shape="rect" id="node11" href="$classWrappedClass.html#ad9790cf48d35eadb2761f79470842f7c" title="WrappedClass::generate\l_js_stub" alt="" coords="659,317,813,353"/>
+<area shape="rect" id="node13" href="$classWrappedClass.html#a7b391d435e506d27c71080e6481b3eb4" title="WrappedClass::get_bindings" alt="" coords="649,377,823,401"/>
+<area shape="rect" id="node12" href="$classWrappedClass.html#a8a6c66c077bce9ed355ba5aff4b0e67d" title="WrappedClass::make\l_sfinae_to_match_wrapped_class" alt="" coords="898,261,1100,297"/>
+<area shape="rect" id="node14" href="$classWrappedClass.html#a8107772793bf868273a4431947cda720" title="WrappedClass::get_base\l_class_string" alt="" coords="921,371,1077,407"/>
+<area shape="rect" id="node19" href="$classWrappedClass.html#ae640e718df9a63c35c8483a47727c1ee" title="WrappedClass::ready\l_for_wrapping" alt="" coords="668,205,804,241"/>
+</map>

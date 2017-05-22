@@ -1,0 +1,18 @@
+<map id="v8toolkit::WrappedClassBase" name="v8toolkit::WrappedClassBase">
+<area shape="rect" id="node2" href="$classA.html" title="A" alt="" coords="337,5,376,29"/>
+<area shape="rect" id="node3" href="$classCopyableWrappedClass.html" title="CopyableWrappedClass" alt="" coords="281,53,432,77"/>
+<area shape="rect" id="node4" href="$classDerivedFromWrappedClassBase.html" title="DerivedFromWrappedClassBase\&lt; T \&gt;" alt="" coords="244,101,469,125"/>
+<area shape="rect" id="node5" href="$classDerivedFromWrappedClassBase.html" title="DerivedFromWrappedClassBase\l\&lt; char * \&gt;" alt="" coords="258,150,455,186"/>
+<area shape="rect" id="node6" href="$classDerivedFromWrappedClassBase.html" title="DerivedFromWrappedClassBase\l\&lt; short \&gt;" alt="" coords="258,210,455,246"/>
+<area shape="rect" id="node7" href="$classFooGrandParent.html" title="FooGrandParent" alt="" coords="301,271,412,295"/>
+<area shape="rect" id="node10" href="$classThisShouldNotMatch.html" title="ThisShouldNotMatch" alt="" coords="290,319,423,343"/>
+<area shape="rect" id="node11" href="$classv8toolkit_1_1FlexibleParent.html" title="v8toolkit::FlexibleParent\l\&lt; class,... \&gt;" alt="" coords="282,367,431,403"/>
+<area shape="rect" id="node12" href="$classv8toolkit_1_1JSFactory_3_01Base_00_01JSWrapperClass_00_01TypeList_3_01InternalConstructorPad06c3930059b32e92d9f03e1448ffd48.html" title="v8toolkit::JSFactory\l\&lt; Base, JSWrapperClass,\l TypeList\&lt; InternalConstructor\lParams... \&gt;, TypeList\&lt; ExternalConstructor\lParams... \&gt;, &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;FactoryBase,\l &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;\l &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Deleter \&gt;" alt="" coords="231,428,482,524"/>
+<area shape="rect" id="node13" href="$classWrappedClass.html" title="WrappedClass" alt="" coords="307,548,406,572"/>
+<area shape="rect" id="node17" href="$classWrappedString.html" title="WrappedString" alt="" coords="306,596,407,620"/>
+<area shape="rect" id="node8" href="$classFooParent.html" title="FooParent" alt="" coords="587,271,664,295"/>
+<area shape="rect" id="node9" href="$classFoo.html" title="Foo" alt="" coords="769,271,811,295"/>
+<area shape="rect" id="node14" href="$classDoNotWrapEvenThoughInheritsFromWrapped.html" title="DoNotWrapEvenThoughInherits\lFromWrapped" alt="" coords="530,487,721,523"/>
+<area shape="rect" id="node15" href="$classWrappedClassChild.html" title="WrappedClassChild" alt="" coords="562,548,689,572"/>
+<area shape="rect" id="node16" href="$classWrappedClassDerived.html" title="WrappedClassDerived" alt="" coords="555,596,696,620"/>
+</map>

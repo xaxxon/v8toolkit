@@ -1,0 +1,206 @@
+bidirectional Factory objects need to be wrapped so they can be used from javascript, not just have their objects
+passed back from c++ helpers
+
+Debugging support - looks like there are packages out there for integrating it with chrome for debugging
+
+
+
+Building with gn:
+fresh computer:
+fetch v8
+
+existing computer:
+rm -rf v8
+gclient sync (from $HOME)
+
+
+No support for pointer to l/r-value ref qualified member function
+
+
+Need to change debugging to use v8's built-in debugging
+
+
+constructors don't support default arguments yet
+ - fairly difficult to route the parameters through
+
+
+ClassParser:
+-------------
+
+
+FEATURE: std::function default parameters are not supported - ignored with warning message
+ - cast to js then back to native trick doesn't work for them because there's no casttojs for them
+
+
+
+
+
+
+Need to make sure to get include files for constructor input parameter types
+ - it looks like we are, but it's not showing up in the output file for GroundRegionCollection's constructor:
+   -     class_wrapper.add_constructor<class Map &, class GroundRegion &&>("GroundRegionCollection", isolate);
+Logs:
+Went from class Map & to class Map
+is not a FUNCTION TYPE
+0x137572e0Got include string for class Map: "map.h"
+GroundRegionCollection now has 9 include files having added "map.h"
+
+
+constructors don't take default arguments and once they do, it needs to be added to class_parser
+
+Bidirectional types without a specified bidirectional constructor aren't properly setting an error - or error isn't being
+  looked at - program crashes when trying to write out the null constructor later (right after log message cc3 is printed)
+
+
+BUG: ClassParser generates code for multiple constructors with the same name -- also puts an extra newline after each constructor
+       instead of only after last one
+
+TRIVIAL: ClassParser generated code - expose_static_methods indentation is off:
+
+           class_wrapper.finalize(true);
+   class_wrapper.expose_static_methods("InputEvent", isolate);
+
+
+
+Add support for enums.  Here is sample code for how to get enums from a CXXRecordDecl:
+
+ for(auto & childdecl : record_decl->decls()) {
+        if (auto enum_decl = dyn_cast<EnumDecl>(childdecl)) {
+            // prints name of enum class
+            std::cerr << fmt::format("enum decl name: {}", enum_decl->getName().str()) << std::endl;
+            for(auto enumerator : enum_decl->enumerators()) {
+                // prints the name of each value in the enum
+                std::cerr << fmt::format("Enumerator: {}", enumerator->getNameAsString(), enumerator->) << std::endl;
+            }
+        }
+    }
+
+
+
+
+Timings (user time):
+
+on large complex bindings file, normal build took 1:03
+With pretend template for all types:              0:03 <== no real code
+without _add_method:                              0:52
+without add_member:                               0:59
+without add_fake_method:                          1:02
+without add_named_property_handler:               1:00
+without get_object_from_embedded_cpp_object:      0:57
+without calls to CallCallable:                    0:55
+ - and CallCallable bodies commented out:         0:54
+Without all the above:                            0:52
+ - without make_wrapping_function_template:       0:50
+   - without get_cpp_object:                      0:50
+     - wihtout cast or init_instance_object_template: 0:51
+
+     giving up on tracking what I've taken out - just removing tons of stuff til it goes down significantly
+
+lots of stuff, but still v8_constructor in place:  0:51
+- without v8_constructor:                          0:50
+
+REMOVING A BUNCH MORE STUFF:                       0:14 <=== WHAT HAPPENED HERE?
+putting back get_instance:                         0:47
+
+(trimmed some unused prints from get_instance)
+full get_instance function:  46s
+- only without wrapper_map lookup: 43s
+- only without call to constructor: 19s
+- without both above 2 things:    : 17s
+- without if statement:             14s
+
+
+With even more commented out, but with full get_instance, down to 23s.
+
+
+
+Virtually everything commented out - no data members or functions except for get_instance:   4.4s
+With data members back: 9.7s
+
+
+map<string,v8::global> <== EXPENSIVE
+vector<v8::global> <== cheap
+eastl::vector_map <== much closer to cheap than expensive
+
+unique_ptr is expensive
+
+
+========= END OF TIMING TESTS ==========
+
+
+ class parser not generating explicit templates for jswrapper types -- making extern types instead, which leads to
+ linker errors for undefined symbols
+
+I think JSWrapper<T> should have a static per isolate that is the prototype Base-type object for all bidirectional
+  objects created from the JSFactory
+  - Right now I *think* it makes a new prototype for each object, which is at least a little bad, and at worst a memory leak
+    - saw something like this on the v8-users mailing list around early May 2017
+
+
+Should add the ability to know if the wrapped object is owned by the JS object or not (is it DestructorBehavior_Delete or not)
+  - when releasing the memory, would throw exception if not owned - stop from sending bad data to unique_ptr
+
+
+  unique_ptr:
+   - cast to js
+     - wrapped type
+      - rvalue memory should be taken from the unique_ptr and put into the JS object with a deleting deleter
+      - rvalue ref - same as above
+      - lvalue ref - treated just like a pointer
+
+     - primitive type
+      - rvalue - cast it like it's a T, let the unique_ptr go out of scope and clean it's own memory up
+      - rvalue ref - move it into a local unique_ptr, cast it like it's a T, let the local unique_ptr go out of scope
+      - lvalue ref - treated just like a pointer
+
+
+
+   - cast to native
+    - wrapped type
+     - rvalue - if object has a deleting deleter, then it can have it's memory taken from it, otherwise throw an exception
+     - rvalue ref - same as above.  The idea is that if it can possibly take the data, you have to assume it did take the data
+     - lvalue - doesn't work because there's no unique_ptr to create an lvalue reference of.  Can't create one because
+                it would own the memory.   ParameterBuilder could put one somewhere and then make sure to release the memory
+                before it gets cleaned up, but it seems unnecessary.
+    -unwrapped type
+      - rvalue - if copyable, use make_unique<T>(CastToNative<T>()()) and send it in
+      - rvalue ref - same as above
+      - lvalue ref - no unique_ptr to give it so throw an exception.   ParameterBuilder could store one somewhere, but
+                     again, that doesn't seem quite necessary
+
+
+
+Need to write/fix casttonative for unique_ptr of wrapped type
+ - make is_wrapped_type work differently based on whether v8_class_wrapper has been included previously?
+   - have it look for a #define'd value or make it's own that makes everything not wrapped if it doesn't find a value from elsewhere?
+
+- let users make their own SFINAE for wrapping classes to allow not using WrappedClassBase
+ - in v8_class_wrapper, look for a user-#define'd value for the sfinae, otherwise fall back to WrappedClassBase as default SFINAE
+
+
+
+Unit Tests:
+-------------
+
+Rest of the STL containers (including move'ing elements when appropriate)
+EASTL containers (including move'ing elements when appropriate)
+- maps can take reference values, so need to test for that
+
+Need to fix wrapped functions that take a reference to a pure virtual type
+Test casting null unique_ptr
+test casting null returns undefined and undefined returns nullptr
+
+
+
+if you don't wrap a type SFINAE'd to be wrapped, should it still work, just hold the pointer and do nothing else?
+
+casttojs of std::function isn't done
+
+Test WrapAsMostDerived
+
+For a wrapped type, is it possible we are returning a reference/pointer to a object that doesn't exist if it is being constructed from a
+  non-default CastToNative?   like if it has a user-defined one for the specific data type to build it from a javascript string or something
+
+Should shared_ptr be used as the "deleter" in wrapped objects?   That would help know when the object was deleted and to treat a new object
+at the same location as a new object.. maybe?
+

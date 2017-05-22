@@ -1,0 +1,8 @@
+<map id="v8toolkit::Context::get_isolate" name="v8toolkit::Context::get_isolate">
+<area shape="rect" id="node2" href="$classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="197,5,312,41"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Context.html#a0958f26802f199469b176b7ca35d6c64" title="v8toolkit::Context\l::Global\&lt; v8::Context \&gt;" alt="" coords="183,65,327,101"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#a28e577fa30695d4fd4814e1253b46a05" title="v8toolkit::Context\l::require_directory" alt="" coords="196,125,314,161"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1WebsocketChannel.html#a2de722d6ce435038e6b969cda855b687" title="v8toolkit::WebsocketChannel\l::WebsocketChannel" alt="" coords="167,185,343,221"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#ac342882a56cedc9a92d4922c9bd3e9f6" title="v8toolkit::Context\l::wrap_object" alt="" coords="198,245,311,281"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Context.html#ad6644755ff30a8305561dfb3de496c6d" title="v8toolkit::Context\l::expose_variable_readonly" alt="" coords="391,185,559,221"/>
+</map>

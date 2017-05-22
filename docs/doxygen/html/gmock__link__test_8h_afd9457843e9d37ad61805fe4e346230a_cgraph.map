@@ -1,0 +1,6 @@
+<map id="TEST" name="TEST">
+<area shape="rect" id="node2" href="$namespacetesting.html#a0cb8ba7eae844c871eccb29e7c81635f" title="testing::Eq" alt="" coords="138,5,216,29"/>
+<area shape="rect" id="node3" href="$namespacetesting.html#a4df3849391696aa93ac3a7703a717c2a" title="testing::Field" alt="" coords="133,53,222,77"/>
+<area shape="rect" id="node5" href="$classtesting_1_1internal_1_1MatcherBase.html#a105a9dae7afecee8898db8ad1887b0db" title="testing::internal::\lMatcherBase::Matches" alt="" coords="105,102,249,138"/>
+<area shape="rect" id="node4" href="$namespacetesting.html#a667ca94f190ec2e17ee2fbfdb7d3da04" title="testing::MakePolymorphic\lMatcher" alt="" coords="297,47,456,83"/>
+</map>

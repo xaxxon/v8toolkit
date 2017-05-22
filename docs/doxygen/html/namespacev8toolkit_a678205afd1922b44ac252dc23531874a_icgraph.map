@@ -1,0 +1,4 @@
+<map id="v8toolkit::vector_type_helper" name="v8toolkit::vector_type_helper">
+<area shape="rect" id="node2" href="$structv8toolkit_1_1CastToNative_3_01eastl_1_1vector_3_01T_00_01Args_8_8_8_01_4_01_4.html#a4f61163da27ea9b48c2c287aa64891bb" title="v8toolkit::CastToNative\l\&lt; eastl::vector\&lt; T, Args...\l \&gt; \&gt;::operator()" alt="" coords="191,5,344,53"/>
+<area shape="rect" id="node3" href="$structv8toolkit_1_1CastToNative_3_01std_1_1vector_3_01T_00_01Rest_8_8_8_01_4_00_01std_1_1enable_78359043e0d78742535dd853aed10bc0.html#a04d6ef61b10f6344b18be95ae6e458d2" title="v8toolkit::CastToNative\l\&lt; std::vector\&lt; T, Rest...\l \&gt;, std::enable_if_t\&lt; std\l::is_copy_constructible\&lt; T\l \&gt;::value \&gt; \&gt;::operator()" alt="" coords="187,77,348,149"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="v8toolkit::WebsocketChannel::WebsocketChannel" name="v8toolkit::WebsocketChannel::WebsocketChannel">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a6da9b8afaf4da8b94331922f38360711" title="v8toolkit::bind" alt="" coords="270,5,364,29"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#a5fa19a7ffa845f3211d864234ab37014" title="v8toolkit::Context\l::get_global_context" alt="" coords="253,54,382,90"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Context.html#aab50f4b3425b7a47454c74654ee3d02c" title="v8toolkit::Context\l::get_isolate" alt="" coords="260,114,374,150"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1DebugContext.html#a00fdb79c62dede2f235d02f22525ca00" title="v8toolkit::DebugContext\l::get_session" alt="" coords="243,174,392,210"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1DebugContext.html#a04f85c17619b11fb84417b501842ae48" title="v8toolkit::DebugContext\l::reset_session" alt="" coords="243,234,392,270"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1WebsocketChannel.html#aa51db117da7f89660fbc5d92de24ea39" title="v8toolkit::WebsocketChannel\l::send_message" alt="" coords="229,294,405,330"/>
+<area shape="rect" id="node3" href="$namespacetesting.html#aaca153f67b689b8b9d5b8c67ecf8cee4" title="testing::Args" alt="" coords="453,5,541,29"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node2" href="$structfunc_1_1force__function__heap__allocation.html" title="func::force_function\l_heap_allocation\&lt; typename \&gt;" alt="" coords="129,5,315,41"/>
+<area shape="rect" id="node3" href="$structv8toolkit_1_1always__false.html" title="v8toolkit::always_false\&lt; T \&gt;" alt="" coords="138,66,306,90"/>
+<area shape="rect" id="node4" href="$structv8toolkit_1_1cast__to__native__supports__default__value.html" title="v8toolkit::cast_to\l_native_supports_default\l_value\&lt; T, class \&gt;" alt="" coords="144,114,300,162"/>
+<area shape="rect" id="node5" href="$structv8toolkit_1_1is__specialization.html" title="v8toolkit::is_specialization\l\&lt; Test, Ref \&gt;" alt="" coords="142,187,302,223"/>
+<area shape="rect" id="node6" href="$structv8toolkit_1_1is__wrapped__type.html" title="v8toolkit::is_wrapped\l_type\&lt; T, class \&gt;" alt="" coords="155,247,289,283"/>
+<area shape="rect" id="node7" href="$structv8toolkit_1_1static__all__of_3_01false_00_01tail_8_8_8_01_4.html" title="v8toolkit::static_all\l_of\&lt; false, tail... \&gt;" alt="" coords="163,307,281,343"/>
+<area shape="rect" id="node8" href="$structv8toolkit_1_1static__any_3_4.html" title="v8toolkit::static_any\&lt;\&gt;" alt="" coords="152,367,292,391"/>
+</map>

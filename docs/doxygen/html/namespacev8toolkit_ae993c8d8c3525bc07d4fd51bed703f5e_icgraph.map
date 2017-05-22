@@ -1,0 +1,6 @@
+<map id="v8toolkit::demangle_typeid_name" name="v8toolkit::demangle_typeid_name">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a6be5a6677ce14bc6c379319c4ee2d87e" title="v8toolkit::demangle" alt="" coords="205,17,330,41"/>
+<area shape="rect" id="node4" href="$structv8toolkit_1_1CastToJS_3_01T_01_5_00_01std_1_1enable__if__t_3_01is__wrapped__type__v_3_01T_01_4_01_4_01_4.html#ae06587713b3eb86e5ffe118dc9736bc0" title="v8toolkit::CastToJS\l\&lt; T *, std::enable_if\l_t\&lt; is_wrapped_type_v\l\&lt; T \&gt; \&gt; \&gt;::operator()" alt="" coords="195,66,340,126"/>
+<area shape="rect" id="node5" href="$structv8toolkit_1_1ParameterBuilder_3_01T_00_01std_1_1enable__if__t_3_01std_1_1is__copy__constru3683ff81044a3c98f0a27aba60238ac8.html#a7e7b173c4b1f3ef91f5fda4d76f479d4" title="v8toolkit::ParameterBuilder\l\&lt; T, std::enable_if_t\&lt; std\l::is_copy_constructible_v\l\&lt; T \&gt; &amp;&amp;is_wrapped_type_v\&lt;\l T \&gt; \&gt; \&gt;::operator()" alt="" coords="178,151,357,223"/>
+<area shape="rect" id="node3" href="$structv8toolkit_1_1CastToNative_3_01std_1_1tuple_3_01Ts_8_8_8_01_4_01_4.html#a62b1179741e852f0e87d8f13d23dd0a8" title="v8toolkit::CastToNative\l\&lt; std::tuple\&lt; Ts... \&gt;\l \&gt;::operator()" alt="" coords="405,5,548,53"/>
+</map>

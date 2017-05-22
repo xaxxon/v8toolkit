@@ -1,0 +1,5 @@
+<map id="testing::CardinalityInterface::ConservativeUpperBound" name="testing::CardinalityInterface::ConservativeUpperBound">
+<area shape="rect" id="node2" href="$classtesting_1_1CardinalityInterface.html#a3e89d86e9741ae8e633f30ead5385a87" title="testing::CardinalityInterface\l::DescribeTo" alt="" coords="220,5,387,41"/>
+<area shape="rect" id="node3" href="$classtesting_1_1CardinalityInterface.html#abe30f716b18f5928c861c2d58dab23d3" title="testing::CardinalityInterface\l::IsSatisfiedByCallCount" alt="" coords="220,65,387,101"/>
+<area shape="rect" id="node4" href="$classtesting_1_1CardinalityInterface.html#a98c52a908c0a8fe67255e9f4becf9f7d" title="testing::CardinalityInterface\l::IsSaturatedByCallCount" alt="" coords="220,125,387,161"/>
+</map>

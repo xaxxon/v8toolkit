@@ -1,0 +1,5 @@
+<map id="FooGrandParent" name="FooGrandParent">
+<area shape="rect" id="node3" href="$classFooParent.html" title="FooParent" alt="" coords="56,149,133,173"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1WrappedClassBase.html" title="v8toolkit::WrappedClassBase" alt="" coords="5,5,183,29"/>
+<area shape="rect" id="node4" href="$classFoo.html" title="Foo" alt="" coords="73,221,115,245"/>
+</map>

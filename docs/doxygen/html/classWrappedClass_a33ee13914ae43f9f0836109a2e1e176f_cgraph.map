@@ -1,0 +1,21 @@
+<map id="WrappedClass::WrappedClass" name="WrappedClass::WrappedClass">
+<area shape="rect" id="node2" href="$helper__functions_8cpp.html#ab2edab7e13797732451d994c5ad844b5" title="data_error" alt="" coords="704,50,781,74"/>
+<area shape="rect" id="node3" href="$helper__functions_8h.html#ae003efdd74d4bb745c38948b1ea56c19" title="foreach_constructor" alt="" coords="252,74,379,98"/>
+<area shape="rect" id="node5" href="$helper__functions_8cpp.html#a01b29be2404bad8b4606d331505b3576" title="get_canonical_name\l_for_decl" alt="" coords="677,217,809,253"/>
+<area shape="rect" id="node6" href="$classAnnotations.html#a1d08e627e51922d849290ff986014f5c" title="Annotations::has" alt="" coords="466,123,577,147"/>
+<area shape="rect" id="node7" href="$classWrappedClass.html#a74e40143ab9835015011df2f435afa65" title="WrappedClass::found\l_method_means_wrapped" alt="" coords="661,375,824,411"/>
+<area shape="rect" id="node8" href="$classAnnotations.html#aa1eaf802d1a8a71d4753d7ea2b426a85" title="Annotations::get" alt="" coords="467,537,576,561"/>
+<area shape="rect" id="node9" href="$class__parser_8cpp.html#a769f371f9c87c6ce4e15942bf8134e9f" title="get_include_for_type_decl" alt="" coords="441,287,602,311"/>
+<area shape="rect" id="node12" href="$classWrappedClass.html#a2aab3ed599eecb945a0d38cfdac4d486" title="WrappedClass::get_or\l_insert_wrapped_class" alt="" coords="449,349,594,385"/>
+<area shape="rect" id="node13" href="$classWrappedClass.html#a5d288eae37853f5bb20e0fb24f94d186" title="WrappedClass::WrappedClass" alt="" coords="650,449,835,473"/>
+<area shape="rect" id="node14" href="$classAnnotations.html#a2226a0aae3b74489b849aed904c5235e" title="Annotations::get_regex" alt="" coords="243,610,388,634"/>
+<area shape="rect" id="node15" href="$classWrappedClass.html#a044a4a0a113f6bbd668f49f5d2dae3de" title="WrappedClass::insert\l_wrapped_class" alt="" coords="248,659,383,695"/>
+<area shape="rect" id="node16" href="$classAnnotations.html#a38538b21f1688412f4844c83407e6186" title="Annotations::merge" alt="" coords="253,562,378,586"/>
+<area shape="rect" id="node17" href="$class__parser_8cpp.html#a89c2712ccc4f7e7dc9163238fe6cd91f" title="print_vector" alt="" coords="274,719,358,743"/>
+<area shape="rect" id="node18" href="$classWrappedClass.html#a7a4ec7cd62b9ee7d2f93fbf054912456" title="WrappedClass::set_error" alt="" coords="238,767,393,791"/>
+<area shape="rect" id="node19" href="$helper__functions_8cpp.html#af4be9a3ab9177528ef62430c80e3c4e4" title="update_wrapped_class\l_for_type" alt="" coords="243,248,388,284"/>
+<area shape="rect" id="node4" href="$helper__functions_8h.html#a961a02a884906cbeb6c06cce2ec6037a" title="get_export_type" alt="" coords="468,74,575,98"/>
+<area shape="rect" id="node10" href="$class__parser_8cpp.html#a8d0755431174a1c4b0b647f7af6c314f" title="get_include_for_source\l_location" alt="" coords="670,281,816,317"/>
+<area shape="rect" id="node11" href="$class__parser_8cpp.html#a3371e53a4b6b2caf1864605ccdf705d3" title="get_include_string\l_for_fileid" alt="" coords="883,281,1002,317"/>
+<area shape="rect" id="node20" href="$class__parser_8cpp.html#a7ad5570fdbdb5bcb390245399f2dc8f2" title="has_wrapped_class" alt="" coords="458,231,585,255"/>
+</map>

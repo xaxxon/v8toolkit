@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$namespacev8toolkit.html" title="v8toolkit::WrapAsMostDerived\l\&lt; T, TypeList\&lt; Tail... \&gt; \&gt;" alt="" coords="5,71,187,107"/>
+<area shape="rect" id="node2" href="$structv8toolkit_1_1WrapAsMostDerived_3_01T_00_01TypeList_3_01Head_00_01Tail_8_8_8_01_4_00_01std_34da8d0a4cbddfc02d187aab246d3f3a.html" title="v8toolkit::WrapAsMostDerived\l\&lt; T, TypeList\&lt; Head, Tail...\l \&gt;, std::enable_if_t\&lt; std::is\l_const\&lt; T \&gt;::value &amp;&amp;!std::is\l_const\&lt; Head \&gt;::value \&gt; \&gt;" alt="" coords="241,5,422,77"/>
+<area shape="rect" id="node3" href="$structv8toolkit_1_1WrapAsMostDerived_3_01T_00_01TypeList_3_01Head_00_01Tail_8_8_8_01_4_00_01std_24709476d0a5f65145c236b79ececb45.html" title="v8toolkit::WrapAsMostDerived\l\&lt; T, TypeList\&lt; Head, Tail...\l \&gt;, std::enable_if_t\&lt;!std::is\l_const\&lt; T \&gt;::value\|\|std::is_const\l\&lt; Head \&gt;::value \&gt; \&gt;" alt="" coords="235,101,428,173"/>
+</map>

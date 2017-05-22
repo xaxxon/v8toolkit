@@ -1,2 +1,0 @@
-/usr/bin/ar qc libv8toolkit.a  CMakeFiles/v8toolkit_static.dir/src/javascript.cpp.o CMakeFiles/v8toolkit_static.dir/src/v8helpers.cpp.o CMakeFiles/v8toolkit_static.dir/src/v8toolkit.cpp.o
-/usr/bin/ranlib libv8toolkit.a

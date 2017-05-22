@@ -1,0 +1,24 @@
+<map id="v8toolkit::Context::expose_variable_readonly" name="v8toolkit::Context::expose_variable_readonly">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#ac0fb737d0fdd175312db9f6112c58e8d" title="v8toolkit::expose_variable\l_readonly" alt="" coords="221,5,381,41"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Context.html#a08b53272266c916c4c2087c8ba19a2ad" title="v8toolkit::Context\l::get_context" alt="" coords="616,112,729,148"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#a8b770d0c4e444d801d4362649c0f7a15" title="v8toolkit::Context\l::get_function_by_id" alt="" coords="237,487,366,523"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Context.html#a9c0b07489f170f0fdb46ab04ba7f024f" title="v8toolkit::Context\l::get_script_by_id" alt="" coords="243,547,359,583"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1Context.html#a86bb30790511dbb0abb35ea0e72a632b" title="v8toolkit::Context\l::get_url" alt="" coords="616,299,729,335"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#ae3f6bf246c4bf9d0303ca85316d1f12a" title="v8toolkit::Context\l::get_uuid_string" alt="" coords="781,360,895,396"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1Context.html#abdb88aa953700d7344fe234551656546" title="v8toolkit::Context\l::get_uuid" alt="" coords="244,607,358,643"/>
+<area shape="rect" id="node9" href="$classv8toolkit_1_1Context.html#a82d199b74a8f0dad20cc7c8efd9b9032" title="v8toolkit::Context\l::json" alt="" coords="244,667,358,703"/>
+<area shape="rect" id="node11" href="$classv8toolkit_1_1Context.html#afd7caf5c6f3d4f225eb3e7d967469dc9" title="v8toolkit::Context\l::require" alt="" coords="440,228,553,264"/>
+<area shape="rect" id="node18" href="$classv8toolkit_1_1Context.html#a28e577fa30695d4fd4814e1253b46a05" title="v8toolkit::Context\l::require_directory" alt="" coords="242,284,360,320"/>
+<area shape="rect" id="node23" href="$classv8toolkit_1_1Context.html#ac342882a56cedc9a92d4922c9bd3e9f6" title="v8toolkit::Context\l::wrap_object" alt="" coords="244,168,358,204"/>
+<area shape="rect" id="node10" href="$namespacev8toolkit.html#ae6f772c688e5aec19a1f374ebbc38a77" title="v8toolkit::get_debug\l_context" alt="" coords="432,667,561,703"/>
+<area shape="rect" id="node12" href="$namespacev8toolkit.html#a483ea7b1a17796b9a545585a88b2e9e5" title="v8toolkit::require" alt="" coords="618,234,727,258"/>
+<area shape="rect" id="node13" href="$namespacev8toolkit.html#a0e289e45c2d99764aae0d035c2039e73" title="v8toolkit::execute\l_module" alt="" coords="781,199,895,235"/>
+<area shape="rect" id="node16" href="$namespacev8toolkit.html#aa5be1ed8fc478de03af12711e8866602" title="v8toolkit::get_file\l_contents" alt="" coords="783,259,893,295"/>
+<area shape="rect" id="node14" href="$namespacev8toolkit.html#a829aa66a75ba942369e710b2493be837" title="v8toolkit::add_variable" alt="" coords="953,207,1094,231"/>
+<area shape="rect" id="node15" href="$namespacev8toolkit.html#a2558a3881b4a74a4ecbe3f0c0c3699ec" title="v8toolkit::ReportException" alt="" coords="943,159,1104,183"/>
+<area shape="rect" id="node17" href="$namespacetesting_1_1internal.html#a40bcfd87e26aae36e0cc51e5db64fd89" title="testing::internal::\lGetFileSize" alt="" coords="969,259,1078,295"/>
+<area shape="rect" id="node19" href="$namespacev8toolkit.html#a78a54533e8cf440d43d8c3a50fb376bd" title="v8toolkit::foreach_file" alt="" coords="429,289,563,313"/>
+<area shape="rect" id="node21" href="$classv8toolkit_1_1Context.html#aab50f4b3425b7a47454c74654ee3d02c" title="v8toolkit::Context\l::get_isolate" alt="" coords="440,168,553,204"/>
+<area shape="rect" id="node22" href="$namespacev8toolkit.html#a4baf01f085b9dd9dca826103b00713b6" title="v8toolkit::scoped_run" alt="" coords="429,337,564,361"/>
+<area shape="rect" id="node20" href="$namespacev8toolkit.html#a6c425127880065616fa32279905dfe82" title="v8toolkit::foreach\l_filesystem_helper" alt="" coords="612,359,733,395"/>
+</map>

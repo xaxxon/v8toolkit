@@ -1,0 +1,11 @@
+<map id="testing::ContainsRegex" name="testing::ContainsRegex">
+<area shape="rect" id="node2" href="$namespacetesting.html#a899838630a71376aa071dfd7c500f2ca" title="testing::ContainsRegex" alt="" coords="199,5,344,29"/>
+<area shape="rect" id="node3" href="$namespacetesting.html#a667ca94f190ec2e17ee2fbfdb7d3da04" title="testing::MakePolymorphic\lMatcher" alt="" coords="392,194,551,230"/>
+<area shape="rect" id="node4" href="$namespacetesting.html#aec11c4e418a835ca2c0c3cbdb29b28ba" title="testing::EndsWith" alt="" coords="214,104,329,128"/>
+<area shape="rect" id="node5" href="$namespacetesting.html#a7d27682e38d57eea81ba145a2772e1c7" title="testing::HasSubstr" alt="" coords="212,152,331,176"/>
+<area shape="rect" id="node6" href="$namespacetesting.html#ae0502232432b1fe8361d296c6de6beda" title="testing::StartsWith" alt="" coords="212,200,331,224"/>
+<area shape="rect" id="node7" href="$namespacetesting.html#addbdb8c0902ab09cade24fa6db7c0073" title="testing::StrCaseEq" alt="" coords="211,248,332,272"/>
+<area shape="rect" id="node8" href="$namespacetesting.html#a9596fd67bdd5df195bc54382f91a1906" title="testing::StrCaseNe" alt="" coords="210,296,332,320"/>
+<area shape="rect" id="node9" href="$namespacetesting.html#a154de81376ae7d584c6e5a619b45fb09" title="testing::StrEq" alt="" coords="225,344,318,368"/>
+<area shape="rect" id="node10" href="$namespacetesting.html#a6f6b8af3d19cb969df0eb995c47a14d2" title="testing::StrNe" alt="" coords="224,392,318,416"/>
+</map>

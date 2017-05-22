@@ -1,0 +1,11 @@
+<map id="testing::internal::WhenDynamicCastToMatcher::MatchAndExplain" name="testing::internal::WhenDynamicCastToMatcher::MatchAndExplain">
+<area shape="rect" id="node2" href="$namespacetesting_1_1internal.html#a0821df2611d54c79bac990719ad8a2dd" title="testing::internal::\lMatchPrintAndExplain" alt="" coords="233,216,373,252"/>
+<area shape="rect" id="node3" href="$classtesting_1_1MatchResultListener.html#a68dc4f2f3c3425f4d4dd90ab02244615" title="testing::MatchResultListener\l::IsInterested" alt="" coords="430,5,603,41"/>
+<area shape="rect" id="node4" href="$namespacetesting_1_1internal.html#a19a5d50382569ce6ee94e2b68ddc6fc7" title="testing::internal::\lIsReadableTypeName" alt="" coords="447,65,587,101"/>
+<area shape="rect" id="node5" href="$classtesting_1_1internal_1_1MatcherBase.html#ae3f5f3150a95cafb1c2ab7c864a42e65" title="testing::internal::\lMatcherBase::MatchAndExplain" alt="" coords="421,125,613,161"/>
+<area shape="rect" id="node6" href="$classtesting_1_1internal_1_1MatcherBase.html#a105a9dae7afecee8898db8ad1887b0db" title="testing::internal::\lMatcherBase::Matches" alt="" coords="445,185,589,221"/>
+<area shape="rect" id="node7" href="$namespacetesting_1_1internal.html#a77c9e2b66d2b2414db4763971180d53c" title="testing::internal::\lPrintIfNotEmpty" alt="" coords="462,245,572,281"/>
+<area shape="rect" id="node8" href="$classtesting_1_1StringMatchResultListener.html#a601171722243ac405f40c3efbec6f982" title="testing::StringMatchResult\lListener::str" alt="" coords="436,305,598,341"/>
+<area shape="rect" id="node9" href="$classtesting_1_1MatchResultListener.html#a5abecb247e005f7f50a94898e3f44ee3" title="testing::MatchResultListener\l::stream" alt="" coords="430,365,603,401"/>
+<area shape="rect" id="node10" href="$namespacetesting_1_1internal.html#ad121a890bddf866e59605d1a0198dada" title="testing::internal::\lUniversalPrint" alt="" coords="462,425,572,461"/>
+</map>

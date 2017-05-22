@@ -1,0 +1,13 @@
+<map id="join" name="join">
+<area shape="rect" id="node2" href="$helper__functions_8h.html#a0cee0527795ed270496aad3a37a3d829" title="generate_bidirectional\l_classes" alt="" coords="108,5,248,41"/>
+<area shape="rect" id="node5" href="$classWrappedClass.html#aa59328250f745a2ef97f1af3d6730b3a" title="WrappedClass::get_derived\l_classes_string" alt="" coords="93,65,263,101"/>
+<area shape="rect" id="node8" href="$classWrappedClass.html#acc000156618e31b03c76c39c794a1c40" title="WrappedClass::get_derived\l_type_includes" alt="" coords="340,123,509,159"/>
+<area shape="rect" id="node10" href="$class__parser_8cpp.html#ad440fc9a49d2f1d8260723c815e94773" title="get_sfinae_matching\l_wrapped_classes" alt="" coords="112,177,244,213"/>
+<area shape="rect" id="node11" href="$classWrappedClass.html#a1885956b8dc506f2d63d0bf060ee2f89" title="WrappedClass::should\l_be_wrapped" alt="" coords="107,237,249,273"/>
+<area shape="rect" id="node3" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="311,11,538,35"/>
+<area shape="rect" id="node4" href="$classClassHandler.html#ab0d91c03b4f411ccdaec89b159c60c3d" title="ClassHandler::ClassHandler" alt="" coords="602,11,774,35"/>
+<area shape="rect" id="node6" href="$classWrappedClass.html#a7b391d435e506d27c71080e6481b3eb4" title="WrappedClass::get_bindings" alt="" coords="337,71,512,95"/>
+<area shape="rect" id="node7" href="$classWrappedClass.html#a8107772793bf868273a4431947cda720" title="WrappedClass::get_base\l_class_string" alt="" coords="610,65,766,101"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a8a6c66c077bce9ed355ba5aff4b0e67d" title="WrappedClass::make\l_sfinae_to_match_wrapped_class" alt="" coords="586,181,789,217"/>
+<area shape="rect" id="node12" href="$classWrappedClass.html#ae640e718df9a63c35c8483a47727c1ee" title="WrappedClass::ready\l_for_wrapping" alt="" coords="356,237,493,273"/>
+</map>

@@ -1,0 +1,31 @@
+<map id="testing::MakePolymorphicMatcher" name="testing::MakePolymorphicMatcher">
+<area shape="rect" id="node2" href="$namespacetesting.html#a5928ffc4e976a4da981512c422792840" title="testing::ContainerEq" alt="" coords="236,5,366,29"/>
+<area shape="rect" id="node4" href="$namespacetesting.html#a899838630a71376aa071dfd7c500f2ca" title="testing::ContainsRegex" alt="" coords="229,53,374,77"/>
+<area shape="rect" id="node7" href="$namespacetesting.html#aec11c4e418a835ca2c0c3cbdb29b28ba" title="testing::EndsWith" alt="" coords="244,101,359,125"/>
+<area shape="rect" id="node9" href="$namespacetesting.html#a4df3849391696aa93ac3a7703a717c2a" title="testing::Field" alt="" coords="257,437,346,461"/>
+<area shape="rect" id="node12" href="$namespacetesting.html#a7d27682e38d57eea81ba145a2772e1c7" title="testing::HasSubstr" alt="" coords="242,149,361,173"/>
+<area shape="rect" id="node13" href="$namespacetesting.html#a56ffb1a169c14ce585fc5bed32add2db" title="testing::IsNull" alt="" coords="255,485,348,509"/>
+<area shape="rect" id="node15" href="$namespacetesting.html#a4dac232f315edc259b62ce88e413b107" title="testing::MatchesRegex" alt="" coords="230,533,373,557"/>
+<area shape="rect" id="node18" href="$namespacetesting.html#a39d1f92b53b8b2a0b6db6a22ac146416" title="testing::NotNull" alt="" coords="250,581,353,605"/>
+<area shape="rect" id="node20" href="$namespacetesting.html#a0fad10571e23f7bc0d5c83d4c31ba740" title="testing::Property" alt="" coords="247,629,356,653"/>
+<area shape="rect" id="node22" href="$namespacetesting.html#ae0502232432b1fe8361d296c6de6beda" title="testing::StartsWith" alt="" coords="242,197,361,221"/>
+<area shape="rect" id="node23" href="$namespacetesting.html#addbdb8c0902ab09cade24fa6db7c0073" title="testing::StrCaseEq" alt="" coords="241,341,362,365"/>
+<area shape="rect" id="node25" href="$namespacetesting.html#a9596fd67bdd5df195bc54382f91a1906" title="testing::StrCaseNe" alt="" coords="240,389,362,413"/>
+<area shape="rect" id="node26" href="$namespacetesting.html#a154de81376ae7d584c6e5a619b45fb09" title="testing::StrEq" alt="" coords="255,245,348,269"/>
+<area shape="rect" id="node27" href="$namespacetesting.html#a6f6b8af3d19cb969df0eb995c47a14d2" title="testing::StrNe" alt="" coords="254,293,348,317"/>
+<area shape="rect" id="node28" href="$namespacetesting.html#a5faf05cfaae6074439960048e478b1c8" title="testing::Truly" alt="" coords="257,677,346,701"/>
+<area shape="rect" id="node30" href="$namespacetesting.html#aabfc320cc132d0a1da2a255b45a17b7a" title="testing::WhenDynamicCastTo" alt="" coords="212,725,391,749"/>
+<area shape="rect" id="node3" href="$gmock__link__test_8h.html#a16f49ffd8b6c3926dd3be08475a84cea" title="TEST" alt="" coords="500,5,552,29"/>
+<area shape="rect" id="node5" href="$namespacetesting.html#ad8efafa15630a8274f41f5e22f8f0e49" title="testing::ContainsRegex" alt="" coords="453,221,599,245"/>
+<area shape="rect" id="node6" href="$gmock__link__test_8h.html#a77a83a48b183a392eddae15de6162950" title="TEST" alt="" coords="500,53,552,77"/>
+<area shape="rect" id="node8" href="$gmock__link__test_8h.html#a0e620555ef048587252b680112dca0a1" title="TEST" alt="" coords="500,149,552,173"/>
+<area shape="rect" id="node10" href="$gmock__link__test_8h.html#afd9457843e9d37ad61805fe4e346230a" title="TEST" alt="" coords="500,413,552,437"/>
+<area shape="rect" id="node11" href="$namespacestd_1_1tr1.html#ad0769041710d18b917067576f84b0303" title="std::tr1::GTEST_ADD_REF_" alt="" coords="439,365,613,389"/>
+<area shape="rect" id="node14" href="$gmock__link__test_8h.html#a9c49e996772a00f039252ed51b929c07" title="TEST" alt="" coords="500,461,552,485"/>
+<area shape="rect" id="node16" href="$namespacetesting.html#afea6e0eaf0ae69b409fc1c0285df6c8c" title="testing::MatchesRegex" alt="" coords="454,557,598,581"/>
+<area shape="rect" id="node17" href="$gmock__link__test_8h.html#a2703b6bda7d6a9fe9ca0c3a545cb0794" title="TEST" alt="" coords="500,509,552,533"/>
+<area shape="rect" id="node19" href="$gmock__link__test_8h.html#a88c24d00f8d1ef0bc424e44ef0d02c47" title="TEST" alt="" coords="500,605,552,629"/>
+<area shape="rect" id="node21" href="$gmock__link__test_8h.html#a4f1efb4c1404ef1987ead7fbcda62f97" title="TEST" alt="" coords="500,653,552,677"/>
+<area shape="rect" id="node24" href="$gmock__link__test_8h.html#acd4cefd0a0c481117e8450bb3e26995a" title="TEST" alt="" coords="500,293,552,317"/>
+<area shape="rect" id="node29" href="$gmock__link__test_8h.html#a371f2d2cb3d6de8d92bcdc7880c396e9" title="TEST" alt="" coords="500,701,552,725"/>
+</map>

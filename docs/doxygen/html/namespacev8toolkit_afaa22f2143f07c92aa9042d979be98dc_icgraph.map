@@ -1,0 +1,18 @@
+<map id="v8toolkit::make_function_template" name="v8toolkit::make_function_template">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a572628d73c659540fe1957e251d1f7cb" title="v8toolkit::add_function" alt="" coords="249,174,389,198"/>
+<area shape="rect" id="node16" href="$classv8toolkit_1_1V8ClassWrapper_3_01T_00_01V8TOOLKIT__V8CLASSWRAPPER__USE__REAL__TEMPLATE__SFINAE_01_4.html#acf9178455760bcd292bd1000a325ed0d" title="v8toolkit::V8ClassWrapper\l\&lt; T, V8TOOLKIT_V8CLASSWRAPPER\l_USE_REAL_TEMPLATE_SFINAE \&gt;\l::add_static_method" alt="" coords="203,223,435,283"/>
+<area shape="rect" id="node17" href="$namespacev8toolkit.html#a5404aca059662431c9298992454aed5f" title="v8toolkit::make_function\l_template" alt="" coords="244,307,394,343"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Context.html#a5fb2128b3a881f6e56e4b15dba693bbf" title="v8toolkit::Context\l::add_function" alt="" coords="506,5,619,41"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Isolate.html#a305780f9b5602a408863b9eee931583e" title="v8toolkit::Isolate\l::add_function" alt="" coords="509,65,616,101"/>
+<area shape="rect" id="node6" href="$namespacev8toolkit.html#a241a9ec36f478d9373719ac5a636e836" title="v8toolkit::add_function" alt="" coords="492,126,633,150"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#a81e98c75206e9eb84e5f2ae0e3552759" title="v8toolkit::add_print" alt="" coords="501,222,623,246"/>
+<area shape="rect" id="node10" href="$namespacev8toolkit.html#a2c259af106d29be6f28d19a838cd9ad2" title="v8toolkit::add_assert" alt="" coords="497,174,628,198"/>
+<area shape="rect" id="node11" href="$namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="483,282,642,306"/>
+<area shape="rect" id="node14" href="$namespacev8toolkit.html#a6639e33e5019d03d3555f72af8938ed3" title="v8toolkit::add_require" alt="" coords="494,342,630,366"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Isolate.html#a16c0887c203ff6a5a08df24a547ce9f5" title="v8toolkit::Isolate\l::add_assert" alt="" coords="726,5,833,41"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a8ae59aa794af37cba4fb80307e9b7901" title="v8toolkit::expose_variable\l_readonly" alt="" coords="700,156,859,192"/>
+<area shape="rect" id="node9" href="$classv8toolkit_1_1Isolate.html#a2bdafa580d20a440c6ba00dc5bf804e2" title="v8toolkit::Isolate\l::add_print" alt="" coords="726,216,833,252"/>
+<area shape="rect" id="node12" href="$classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="722,276,837,312"/>
+<area shape="rect" id="node13" href="$classv8toolkit_1_1ArrayBufferAllocator.html#ada2b622996c55addb6a63b1006a06b5b" title="v8toolkit::ArrayBufferAllocator\l::Free" alt="" coords="690,336,869,372"/>
+<area shape="rect" id="node15" href="$classv8toolkit_1_1Isolate.html#af330712955e2a32daf315f64be1e4567" title="v8toolkit::Isolate\l::add_require" alt="" coords="726,396,833,432"/>
+</map>

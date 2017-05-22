@@ -1,0 +1,5 @@
+<map id="v8toolkit::_printf_helper" name="v8toolkit::_printf_helper">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a81e98c75206e9eb84e5f2ae0e3552759" title="v8toolkit::add_print" alt="" coords="159,61,281,85"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a8ae59aa794af37cba4fb80307e9b7901" title="v8toolkit::expose_variable\l_readonly" alt="" coords="329,5,488,41"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Isolate.html#a2bdafa580d20a440c6ba00dc5bf804e2" title="v8toolkit::Isolate\l::add_print" alt="" coords="355,65,462,101"/>
+</map>

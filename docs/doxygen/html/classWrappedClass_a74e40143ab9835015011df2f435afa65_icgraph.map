@@ -1,0 +1,10 @@
+<map id="WrappedClass::found_method_means_wrapped" name="WrappedClass::found_method_means_wrapped">
+<area shape="rect" id="node2" href="$classWrappedClass.html#a2aab3ed599eecb945a0d38cfdac4d486" title="WrappedClass::get_or\l_insert_wrapped_class" alt="" coords="217,103,361,139"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a33ee13914ae43f9f0836109a2e1e176f" title="WrappedClass::WrappedClass" alt="" coords="623,160,808,184"/>
+<area shape="rect" id="node3" href="$classClassHandler.html#af9d3a91f2f015e78a9cefd4c76e2221a" title="ClassHandler::run" alt="" coords="423,5,540,29"/>
+<area shape="rect" id="node4" href="$helper__functions_8h.html#af4be9a3ab9177528ef62430c80e3c4e4" title="update_wrapped_class\l_for_type" alt="" coords="409,78,554,114"/>
+<area shape="rect" id="node5" href="$structClassFunction.html#afbd73ff1b5322dee6a7e0223abb65bc5" title="ClassFunction::ClassFunction" alt="" coords="625,16,805,40"/>
+<area shape="rect" id="node6" href="$structDataMember.html#a62104862810211f479530848543ed109" title="DataMember::DataMember" alt="" coords="632,64,799,88"/>
+<area shape="rect" id="node7" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="602,112,829,136"/>
+<area shape="rect" id="node8" href="$classClassHandler.html#ab0d91c03b4f411ccdaec89b159c60c3d" title="ClassHandler::ClassHandler" alt="" coords="877,112,1049,136"/>
+</map>

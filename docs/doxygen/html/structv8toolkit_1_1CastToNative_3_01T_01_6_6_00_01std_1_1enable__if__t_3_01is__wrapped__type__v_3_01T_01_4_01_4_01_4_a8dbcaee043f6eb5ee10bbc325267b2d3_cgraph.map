@@ -1,0 +1,5 @@
+<map id="v8toolkit::CastToNative&lt; T &amp;&amp;, std::enable_if_t&lt; is_wrapped_type_v&lt; T &gt; &gt; &gt;::operator()" name="v8toolkit::CastToNative&lt; T &amp;&amp;, std::enable_if_t&lt; is_wrapped_type_v&lt; T &gt; &gt; &gt;::operator()">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#ac2fba829706551972e2ae03459a4b8c2" title="v8toolkit::check_value\l_is_object" alt="" coords="205,5,344,41"/>
+<area shape="rect" id="node4" href="$namespacetesting_1_1internal.html#a0f6d06bf8c3093b9c22bb08723db201e" title="testing::internal::move" alt="" coords="205,66,344,90"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d" title="v8toolkit::print_v8\l_value_details" alt="" coords="392,5,507,41"/>
+</map>

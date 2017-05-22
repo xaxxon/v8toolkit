@@ -1,0 +1,20 @@
+<map id="testing::internal::MatcherBase&lt; T &gt;" name="testing::internal::MatcherBase&lt; T &gt;">
+<area shape="rect" id="node2" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const ::std\l::vector\&lt; LhsValue \&gt; &amp; \&gt;" alt="" coords="202,5,354,41"/>
+<area shape="rect" id="node3" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const ArgTuple &amp; \&gt;" alt="" coords="190,66,366,90"/>
+<area shape="rect" id="node4" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const ArgumentTuple &amp; \&gt;" alt="" coords="173,114,383,138"/>
+<area shape="rect" id="node5" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const Element &amp; \&gt;" alt="" coords="191,162,364,186"/>
+<area shape="rect" id="node6" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const FieldType &amp; \&gt;" alt="" coords="187,210,368,234"/>
+<area shape="rect" id="node7" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const FirstType &amp; \&gt;" alt="" coords="189,258,367,282"/>
+<area shape="rect" id="node8" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const KeyType &amp; \&gt;" alt="" coords="190,306,365,330"/>
+<area shape="rect" id="node9" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const Pointee &amp; \&gt;" alt="" coords="193,354,362,378"/>
+<area shape="rect" id="node10" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; const SecondType &amp; \&gt;" alt="" coords="180,402,376,426"/>
+<area shape="rect" id="node11" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; DistanceType \&gt;" alt="" coords="199,450,357,474"/>
+<area shape="rect" id="node12" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; InnerMatcherArg \&gt;" alt="" coords="190,498,365,522"/>
+<area shape="rect" id="node13" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; RefToConstProperty \&gt;" alt="" coords="181,546,374,570"/>
+<area shape="rect" id="node14" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; ResultType \&gt;" alt="" coords="205,594,350,618"/>
+<area shape="rect" id="node15" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; SizeType \&gt;" alt="" coords="210,642,345,666"/>
+<area shape="rect" id="node16" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; To &amp; \&gt;" alt="" coords="223,690,332,714"/>
+<area shape="rect" id="node17" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; To \&gt;" alt="" coords="229,738,327,762"/>
+<area shape="rect" id="node18" href="$classtesting_1_1Matcher.html" title="Matcher\&lt; U \&gt;" alt="" coords="231,786,325,810"/>
+<area shape="rect" id="node19" href="$classtesting_1_1Matcher.html" title="testing::Matcher\&lt; T \&gt;" alt="" coords="211,834,345,858"/>
+</map>

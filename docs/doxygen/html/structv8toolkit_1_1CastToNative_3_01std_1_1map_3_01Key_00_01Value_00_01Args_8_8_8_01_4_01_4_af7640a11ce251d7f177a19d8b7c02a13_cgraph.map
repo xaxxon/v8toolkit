@@ -1,0 +1,5 @@
+<map id="v8toolkit::CastToNative&lt; std::map&lt; Key, Value, Args... &gt; &gt;::callable" name="v8toolkit::CastToNative&lt; std::map&lt; Key, Value, Args... &gt; &gt;::callable">
+<area shape="rect" id="node2" href="$namespacetesting.html#a6212e76b542f4ffd3079de59092a826a" title="testing::Key" alt="" coords="206,5,290,29"/>
+<area shape="rect" id="node3" href="$namespacetesting.html#ae44c50a3a7f0a46f05c8a0b0592b4a62" title="testing::Value" alt="" coords="201,53,294,77"/>
+<area shape="rect" id="node4" href="$namespacetesting.html#ad53b509ae9cd51040d67f668f99702ae" title="testing::Matches" alt="" coords="342,53,451,77"/>
+</map>

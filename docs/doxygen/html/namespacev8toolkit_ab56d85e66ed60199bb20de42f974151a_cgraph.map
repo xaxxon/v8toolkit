@@ -1,0 +1,19 @@
+<map id="v8toolkit::map_type_helper" name="v8toolkit::map_type_helper">
+<area shape="rect" id="node2" href="$namespacetesting.html#aaca153f67b689b8b9d5b8c67ecf8cee4" title="testing::Args" alt="" coords="193,156,281,180"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#ad53d46ec15ebf6cceb9ca48498a48c90" title="v8toolkit::for_each\l_own_property" alt="" coords="178,205,297,241"/>
+<area shape="rect" id="node12" href="$namespacetesting.html#a6212e76b542f4ffd3079de59092a826a" title="testing::Key" alt="" coords="195,265,279,289"/>
+<area shape="rect" id="node13" href="$namespacev8toolkit.html#abdbdd9093e22705b24c544ac3e342362" title="v8toolkit::stringify\l_value" alt="" coords="181,314,294,350"/>
+<area shape="rect" id="node16" href="$namespacetesting.html#ae44c50a3a7f0a46f05c8a0b0592b4a62" title="testing::Value" alt="" coords="368,435,461,459"/>
+<area shape="rect" id="node4" href="$namespacev8toolkit.html#a32da88429bc851279514d78314256fe6" title="v8toolkit::for_each\l_value" alt="" coords="355,154,474,190"/>
+<area shape="rect" id="node5" href="$namespacev8toolkit.html#a058f9fbbc90a28c21f7fa1d8241cce9e" title="v8toolkit::get_array\l_length" alt="" coords="536,294,659,330"/>
+<area shape="rect" id="node6" href="$namespacev8toolkit.html#a3186ba9791dfe15390af63c7646fd17c" title="v8toolkit::set_global\l_object_alias" alt="" coords="534,114,661,150"/>
+<area shape="rect" id="node7" href="$namespacev8toolkit.html#a2de05d949bb90a0894afe8c66014edee" title="v8toolkit::get_type\l_string_for_value" alt="" coords="538,174,656,210"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c" title="v8toolkit::process\l_v8_flags" alt="" coords="540,234,654,270"/>
+<area shape="rect" id="node9" href="$namespacev8toolkit.html#a849759dd00446ac0a4a99fcd958ce328" title="v8toolkit::expose_gc" alt="" coords="532,5,662,29"/>
+<area shape="rect" id="node10" href="$namespacev8toolkit.html#adb06b066e8fa943dd8be3e906fb335dd" title="v8toolkit::call_simple\l_javascript_function" alt="" coords="532,54,663,90"/>
+<area shape="rect" id="node11" href="$namespacev8toolkit.html#a2558a3881b4a74a4ecbe3f0c0c3699ec" title="v8toolkit::ReportException" alt="" coords="711,60,872,84"/>
+<area shape="rect" id="node14" href="$namespacev8toolkit.html#a29444df591cd5d038ed1f9466ccd4f1d" title="v8toolkit::print_v8\l_value_details" alt="" coords="357,374,471,410"/>
+<area shape="rect" id="node15" href="$namespacetesting_1_1internal.html#a0f6d06bf8c3093b9c22bb08723db201e" title="testing::internal::move" alt="" coords="345,215,484,239"/>
+<area shape="rect" id="node18" href="$namespacev8toolkit.html#aebccd87b133b788665d7877e64b48809" title="v8toolkit::make_set\l_from_object_keys" alt="" coords="352,314,476,350"/>
+<area shape="rect" id="node17" href="$namespacetesting.html#ad53b509ae9cd51040d67f668f99702ae" title="testing::Matches" alt="" coords="543,435,652,459"/>
+</map>

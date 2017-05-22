@@ -1,0 +1,9 @@
+<map id="v8toolkit::scoped_run" name="v8toolkit::scoped_run">
+<area shape="rect" id="node2" href="$namespacev8toolkit.html#a7eff9a25386faa32c87137a24fc6703a" title="v8toolkit::add_module_list" alt="" coords="188,43,347,67"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Isolate.html#a66e2b15dc2b0fd4abc7c6a7c9caed583" title="v8toolkit::Isolate\l::operator()" alt="" coords="214,92,321,128"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1Context.html#a28e577fa30695d4fd4814e1253b46a05" title="v8toolkit::Context\l::require_directory" alt="" coords="209,152,327,188"/>
+<area shape="rect" id="node8" href="$namespacev8toolkit.html#a445cc8c695d3cea0f97e936a1588a2d1" title="v8toolkit::scoped_run" alt="" coords="200,213,335,237"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Isolate.html#a8e7812c8653e5d19bf94f63d99b48ae0" title="v8toolkit::Isolate\l::add_module_list" alt="" coords="427,5,543,41"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1ArrayBufferAllocator.html#ada2b622996c55addb6a63b1006a06b5b" title="v8toolkit::ArrayBufferAllocator\l::Free" alt="" coords="395,65,575,101"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#ad6644755ff30a8305561dfb3de496c6d" title="v8toolkit::Context\l::expose_variable_readonly" alt="" coords="401,152,569,188"/>
+</map>

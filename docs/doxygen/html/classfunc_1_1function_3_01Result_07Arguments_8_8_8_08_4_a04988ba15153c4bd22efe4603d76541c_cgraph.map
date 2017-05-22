@@ -1,0 +1,6 @@
+<map id="func::function&lt; Result(Arguments...)&gt;::function" name="func::function&lt; Result(Arguments...)&gt;::function">
+<area shape="rect" id="node2" href="$namespacefunc_1_1detail.html#acd6cdb234c354d8687a429f2e4196dee" title="func::detail::empty_call" alt="" coords="206,5,350,29"/>
+<area shape="rect" id="node3" href="$namespacefunc_1_1detail.html#a371adbf399045b5c5e20af076c02d5bf" title="func::detail::is_null" alt="" coords="218,53,338,77"/>
+<area shape="rect" id="node4" href="$namespacefunc.html#a5964a70e19131043814eee27077cbd67" title="func::swap" alt="" coords="239,101,317,125"/>
+<area shape="rect" id="node5" href="$namespacefunc_1_1detail.html#a932aeee6df84cc4dc7f328368e318d8b" title="func::detail::to_functor" alt="" coords="208,149,348,173"/>
+</map>

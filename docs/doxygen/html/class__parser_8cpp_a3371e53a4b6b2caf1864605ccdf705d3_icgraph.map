@@ -1,0 +1,11 @@
+<map id="get_include_string_for_fileid" name="get_include_string_for_fileid">
+<area shape="rect" id="node2" href="$class__parser_8cpp.html#a8d0755431174a1c4b0b647f7af6c314f" title="get_include_for_source\l_location" alt="" coords="172,115,318,151"/>
+<area shape="rect" id="node10" href="$classClassHandler.html#af9d3a91f2f015e78a9cefd4c76e2221a" title="ClassHandler::run" alt="" coords="186,176,304,200"/>
+<area shape="rect" id="node3" href="$helper__functions_8h.html#a769f371f9c87c6ce4e15942bf8134e9f" title="get_include_for_type_decl" alt="" coords="366,121,528,145"/>
+<area shape="rect" id="node4" href="$helper__functions_8h.html#af4be9a3ab9177528ef62430c80e3c4e4" title="update_wrapped_class\l_for_type" alt="" coords="576,87,720,123"/>
+<area shape="rect" id="node9" href="$classWrappedClass.html#a33ee13914ae43f9f0836109a2e1e176f" title="WrappedClass::WrappedClass" alt="" coords="790,149,975,173"/>
+<area shape="rect" id="node5" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="768,5,996,29"/>
+<area shape="rect" id="node7" href="$structDataMember.html#a62104862810211f479530848543ed109" title="DataMember::DataMember" alt="" coords="799,53,966,77"/>
+<area shape="rect" id="node8" href="$structClassFunction.html#afbd73ff1b5322dee6a7e0223abb65bc5" title="ClassFunction::ClassFunction" alt="" coords="792,101,972,125"/>
+<area shape="rect" id="node6" href="$classClassHandler.html#ab0d91c03b4f411ccdaec89b159c60c3d" title="ClassHandler::ClassHandler" alt="" coords="1044,5,1216,29"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="v8toolkit::AnyPtr&lt; T, std::enable_if_t&lt;!std::is_pointer&lt; T &gt;::value &amp;&amp;!std::is_reference&lt; T &gt;::value &gt; &gt;" name="v8toolkit::AnyPtr&lt; T, std::enable_if_t&lt;!std::is_pointer&lt; T &gt;::value &amp;&amp;!std::is_reference&lt; T &gt;::value &gt; &gt;">
+<area shape="rect" id="node2" href="$structv8toolkit_1_1AnyBase.html" title="v8toolkit::AnyBase" alt="" coords="5,175,125,199"/>
+<area shape="rect" id="node3" title="STL class. " alt="" coords="29,91,102,115"/>
+<area shape="rect" id="node4" title="STL class. " alt="" coords="8,5,123,41"/>
+</map>

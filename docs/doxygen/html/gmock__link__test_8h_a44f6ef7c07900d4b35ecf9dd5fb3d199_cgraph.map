@@ -1,0 +1,5 @@
+<map id="TEST" name="TEST">
+<area shape="rect" id="node2" href="$namespacetesting.html#a81cfefd9f75cdce827d5bc873cf73aac" title="testing::AnyOf" alt="" coords="129,5,226,29"/>
+<area shape="rect" id="node3" href="$namespacetesting.html#a0cb8ba7eae844c871eccb29e7c81635f" title="testing::Eq" alt="" coords="138,53,216,77"/>
+<area shape="rect" id="node4" href="$classtesting_1_1internal_1_1MatcherBase.html#a105a9dae7afecee8898db8ad1887b0db" title="testing::internal::\lMatcherBase::Matches" alt="" coords="105,102,249,138"/>
+</map>

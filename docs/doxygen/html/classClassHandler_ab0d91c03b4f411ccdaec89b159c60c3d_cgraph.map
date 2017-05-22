@@ -1,0 +1,26 @@
+<map id="ClassHandler::ClassHandler" name="ClassHandler::ClassHandler">
+<area shape="rect" id="node2" href="$classClassHandler.html#a8e52f8db08048c420530677a7ab3a92c" title="ClassHandler::handle\l_class" alt="" coords="271,41,407,77"/>
+<area shape="rect" id="node3" href="$classClassHandler.html#a0b1b332958b237ed49957c4d2e8e67bd" title="ClassHandler::handle\l_data_member" alt="" coords="511,39,647,75"/>
+<area shape="rect" id="node4" href="$classClassHandler.html#af3f7a5ce2ec31da88043099e6d452187" title="ClassHandler::onEndOfTranslationUnit" alt="" coords="225,209,453,233"/>
+<area shape="rect" id="node5" href="$helper__functions_8cpp.html#a5d03cf7ecd33073b3a0e87618748c33f" title="generate_javascript_stub" alt="" coords="501,100,656,124"/>
+<area shape="rect" id="node6" href="$helper__functions_8cpp.html#a0cee0527795ed270496aad3a37a3d829" title="generate_bidirectional\l_classes" alt="" coords="509,149,648,185"/>
+<area shape="rect" id="node12" href="$helper__functions_8cpp.html#a232e51fb44b3365ce036786a487b19ee" title="generate_bindings" alt="" coords="519,209,639,233"/>
+<area shape="rect" id="node14" href="$helper__functions_8cpp.html#aa90b00ce56ce93776622bbd31d738bc3" title="get_export_type" alt="" coords="525,308,632,332"/>
+<area shape="rect" id="node15" href="$helper__functions_8cpp.html#ab2edab7e13797732451d994c5ad844b5" title="data_error" alt="" coords="749,259,826,283"/>
+<area shape="rect" id="node17" href="$helper__functions_8cpp.html#af4be9a3ab9177528ef62430c80e3c4e4" title="update_wrapped_class\l_for_type" alt="" coords="506,381,651,417"/>
+<area shape="rect" id="node25" href="$class__parser_8cpp.html#a75adde85b87b605941bd3b104d601e56" title="get_type_string" alt="" coords="527,465,630,489"/>
+<area shape="rect" id="node7" href="$class__parser_8cpp.html#a9878087cf8f9434a6fc229e3e6462f4f" title="generate_variable_names" alt="" coords="707,5,868,29"/>
+<area shape="rect" id="node8" href="$class__parser_8cpp.html#a489ff95e9767b282e9881e7409967af6" title="get_method_param_qual\l_types" alt="" coords="710,54,865,90"/>
+<area shape="rect" id="node10" href="$helper__functions_8h.html#a276670a586b1614d65cdc0a1d1fe91f4" title="join" alt="" coords="767,115,808,139"/>
+<area shape="rect" id="node11" href="$helper__functions_8cpp.html#a502ba8b261e3bf3026f6081576a86914" title="make_macro_safe_comma" alt="" coords="704,163,871,187"/>
+<area shape="rect" id="node9" href="$classAnnotations.html#a1d08e627e51922d849290ff986014f5c" title="Annotations::has" alt="" coords="956,60,1066,84"/>
+<area shape="rect" id="node13" href="$ast__action_8cpp.html#a1b511b5f1d82aec79dc8223ae41e4119" title="write_classes" alt="" coords="741,211,834,235"/>
+<area shape="rect" id="node16" href="$helper__functions_8cpp.html#a01b29be2404bad8b4606d331505b3576" title="get_canonical_name\l_for_decl" alt="" coords="945,326,1077,362"/>
+<area shape="rect" id="node18" href="$class__parser_8cpp.html#a769f371f9c87c6ce4e15942bf8134e9f" title="get_include_for_type_decl" alt="" coords="707,484,868,508"/>
+<area shape="rect" id="node21" href="$classWrappedClass.html#a2aab3ed599eecb945a0d38cfdac4d486" title="WrappedClass::get_or\l_insert_wrapped_class" alt="" coords="715,406,860,442"/>
+<area shape="rect" id="node24" href="$class__parser_8cpp.html#a7ad5570fdbdb5bcb390245399f2dc8f2" title="has_wrapped_class" alt="" coords="724,357,851,381"/>
+<area shape="rect" id="node19" href="$class__parser_8cpp.html#a8d0755431174a1c4b0b647f7af6c314f" title="get_include_for_source\l_location" alt="" coords="938,495,1084,531"/>
+<area shape="rect" id="node20" href="$class__parser_8cpp.html#a3371e53a4b6b2caf1864605ccdf705d3" title="get_include_string\l_for_fileid" alt="" coords="1152,495,1270,531"/>
+<area shape="rect" id="node22" href="$classWrappedClass.html#a5d288eae37853f5bb20e0fb24f94d186" title="WrappedClass::WrappedClass" alt="" coords="919,387,1104,411"/>
+<area shape="rect" id="node23" href="$classWrappedClass.html#a74e40143ab9835015011df2f435afa65" title="WrappedClass::found\l_method_means_wrapped" alt="" coords="929,435,1093,471"/>
+</map>

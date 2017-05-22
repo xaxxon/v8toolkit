@@ -1,0 +1,5 @@
+<map id="v8toolkit::V8ClassWrapper&lt; T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE &gt;::initialize_new_js_object" name="v8toolkit::V8ClassWrapper&lt; T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE &gt;::initialize_new_js_object">
+<area shape="rect" id="node2" href="$structv8toolkit_1_1DestructorBehavior.html#a19025328c48ea0bd3670cd99e2cc77ab" title="v8toolkit::DestructorBehavior\l::destructive" alt="" coords="285,5,459,41"/>
+<area shape="rect" id="node3" href="$namespacev8toolkit.html#ac9193aecf4580dc74bec42bc132d55e4" title="v8toolkit::global_set_weak" alt="" coords="291,66,453,90"/>
+<area shape="rect" id="node4" href="$structv8toolkit_1_1SetWeakCallbackData.html#a7e17c9f84ecd0c50bd867516b5714a97" title="v8toolkit::SetWeakCallback\lData::SetWeakCallbackData" alt="" coords="507,60,681,96"/>
+</map>

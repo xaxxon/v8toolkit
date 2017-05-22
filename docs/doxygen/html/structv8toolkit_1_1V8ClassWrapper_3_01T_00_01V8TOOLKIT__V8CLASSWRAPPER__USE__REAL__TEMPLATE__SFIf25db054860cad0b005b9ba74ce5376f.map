@@ -1,0 +1,4 @@
+<map id="v8toolkit::V8ClassWrapper&lt; T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE &gt;::NamedPropertyCallbackData" name="v8toolkit::V8ClassWrapper&lt; T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE &gt;::NamedPropertyCallbackData">
+<area shape="rect" id="node2" href="$namespacefunc.html#namespacefunc" title="func::function\&lt; void\l(v8::Local\&lt; v8::Name\l \&gt; property_name, v8::\lLocal\&lt; v8::Value \&gt; new\l_property_value, v8::PropertyCallback\lInfo\&lt; v8::Value \&gt; const &amp;)\&gt;" alt="" coords="5,5,230,89"/>
+<area shape="rect" id="node4" href="$namespacefunc.html#namespacefunc" title="func::function\&lt; void\l(v8::Local\&lt; v8::Name\l \&gt; property_name, v8::\lPropertyCallbackInfo\&lt; v8\l::Value \&gt; const &amp;)\&gt;" alt="" coords="40,162,196,234"/>
+</map>

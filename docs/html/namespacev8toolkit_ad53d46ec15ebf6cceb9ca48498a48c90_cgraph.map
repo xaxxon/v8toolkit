@@ -1,6 +1,0 @@
-<map id="v8toolkit::for_each_own_property" name="v8toolkit::for_each_own_property">
-<area shape="rect" id="node2" href="$namespacev8toolkit.html#a32da88429bc851279514d78314256fe6" title="v8toolkit::for_each\l_value" alt="" coords="172,54,291,90"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a849759dd00446ac0a4a99fcd958ce328" title="v8toolkit::expose_gc" alt="" coords="339,5,469,29"/>
-<area shape="rect" id="node4" href="$namespacev8toolkit.html#af61c605180d6163dcf8c93f24929316c" title="v8toolkit::process\l_v8_flags" alt="" coords="347,54,461,90"/>
-<area shape="rect" id="node5" href="$namespacev8toolkit.html#a3186ba9791dfe15390af63c7646fd17c" title="v8toolkit::set_global\l_object_alias" alt="" coords="340,114,467,150"/>
-</map>

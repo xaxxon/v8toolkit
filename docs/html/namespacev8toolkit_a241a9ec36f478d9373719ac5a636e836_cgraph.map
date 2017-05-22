@@ -1,7 +1,0 @@
-<map id="v8toolkit::add_function" name="v8toolkit::add_function">
-<area shape="rect" id="node2" href="$namespacev8toolkit.html#af79e1ca661d54dc1591affd1f1ecfc04" title="v8toolkit::add_function" alt="" coords="194,5,335,29"/>
-<area shape="rect" id="node3" href="$namespacev8toolkit.html#a79aaaf536e31f8fab5d2e3d8cd44aaa3" title="v8toolkit::make_function\l_template" alt="" coords="398,25,548,61"/>
-<area shape="rect" id="node4" href="$namespacev8toolkit.html#a829aa66a75ba942369e710b2493be837" title="v8toolkit::add_variable" alt="" coords="194,104,335,128"/>
-<area shape="rect" id="node5" href="$namespacev8toolkit.html#a4baf01f085b9dd9dca826103b00713b6" title="v8toolkit::scoped_run" alt="" coords="197,152,332,176"/>
-<area shape="rect" id="node6" href="$classv8toolkit_1_1InvalidCallException.html#aa09957325429d764eea9b8cb60aa273f" title="v8toolkit::InvalidCallException\l::InvalidCallException" alt="" coords="383,146,563,182"/>
-</map>

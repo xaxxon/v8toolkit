@@ -1,0 +1,9 @@
+<map id="Foo" name="Foo">
+<area shape="rect" id="node2" href="$classFooParent.html" title="FooParent" alt="" coords="515,9,593,33"/>
+<area shape="rect" id="node3" href="$classFooGrandParent.html" title="FooGrandParent" alt="" coords="256,5,367,29"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1WrappedClassBase.html" title="v8toolkit::WrappedClassBase" alt="" coords="5,55,183,79"/>
+<area shape="rect" id="node8" href="$classDerivedFromWrappedClassBase.html" title="DerivedFromWrappedClassBase\l\&lt; short \&gt;" alt="" coords="456,59,652,95"/>
+<area shape="rect" id="node14" href="$classDerivedFromWrappedClassBase.html" title="DerivedFromWrappedClassBase\l\&lt; char * \&gt;" alt="" coords="456,171,652,207"/>
+<area shape="rect" id="node6" href="$sample_8cpp.html#classUnwrappedClassThatIsUsed" title="UnwrappedClassThatIsUsed" alt="" coords="467,232,641,256"/>
+<area shape="rect" id="node10" href="$class__parser_2sample2_8h.html#classOnlyUsedInTemplate" title="OnlyUsedInTemplate" alt="" coords="245,335,378,359"/>
+</map>

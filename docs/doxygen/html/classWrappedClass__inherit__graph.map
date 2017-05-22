@@ -1,0 +1,6 @@
+<map id="WrappedClass" name="WrappedClass">
+<area shape="rect" id="node3" href="$classDoNotWrapEvenThoughInheritsFromWrapped.html" title="DoNotWrapEvenThoughInherits\lFromWrapped" alt="" coords="5,149,197,185"/>
+<area shape="rect" id="node4" href="$classWrappedClassChild.html" title="WrappedClassChild" alt="" coords="220,155,347,179"/>
+<area shape="rect" id="node5" href="$classWrappedClassDerived.html" title="WrappedClassDerived" alt="" coords="372,155,513,179"/>
+<area shape="rect" id="node2" href="$classv8toolkit_1_1WrappedClassBase.html" title="v8toolkit::WrappedClassBase" alt="" coords="195,5,373,29"/>
+</map>

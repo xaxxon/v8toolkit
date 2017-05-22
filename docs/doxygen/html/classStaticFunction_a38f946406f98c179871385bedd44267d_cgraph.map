@@ -1,0 +1,11 @@
+<map id="StaticFunction::generate_js_stub" name="StaticFunction::generate_js_stub">
+<area shape="rect" id="node2" href="$structClassFunction.html#aa8250388cb75edd1518cd1a08179377a" title="ClassFunction::get\l_js_input_parameter\l_string" alt="" coords="214,74,345,122"/>
+<area shape="rect" id="node3" href="$structClassFunction_1_1TypeInfo.html#af8389883eb9621349b0a950ccdcbd1dc" title="corresponding javascript type " alt="" coords="205,147,355,183"/>
+<area shape="rect" id="node10" href="$structClassFunction_1_1TypeInfo.html#a108459d4991cb841b7a8d03f01129e5c" title="ClassFunction::TypeInfo\l::is_void" alt="" coords="205,207,355,243"/>
+<area shape="rect" id="node4" href="$structClassFunction_1_1TypeInfo.html#ad7535722a0700c8519527781902b6fa5" title="ClassFunction::TypeInfo\l::for_each_templated_type" alt="" coords="403,5,566,41"/>
+<area shape="rect" id="node5" href="$structClassFunction_1_1TypeInfo.html#a90c243cb58e552749b95d0a939d514c1" title="ClassFunction::TypeInfo\l::get_plain_type_decl" alt="" coords="614,104,764,140"/>
+<area shape="rect" id="node6" href="$structClassFunction_1_1TypeInfo.html#aba9a58a23d14387752138d981dc380e4" title="ClassFunction::TypeInfo\l::is_templated" alt="" coords="409,117,560,153"/>
+<area shape="rect" id="node7" href="$structClassFunction_1_1TypeInfo.html#a9cdba16b459f519828569e9beb0d4d6a" title="ClassFunction::TypeInfo\l::plain_without_const" alt="" coords="409,177,560,213"/>
+<area shape="rect" id="node8" href="$structClassFunction_1_1TypeInfo.html#a4bd6523e421adcc96efe2dbaebffbbbf" title="ClassFunction::TypeInfo\l::TypeInfo" alt="" coords="614,192,764,228"/>
+<area shape="rect" id="node9" href="$class__parser_8cpp.html#a89c2712ccc4f7e7dc9163238fe6cd91f" title="print_vector" alt="" coords="443,289,527,313"/>
+</map>

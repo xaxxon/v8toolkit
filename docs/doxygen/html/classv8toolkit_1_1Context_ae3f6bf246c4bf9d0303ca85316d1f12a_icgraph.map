@@ -1,0 +1,14 @@
+<map id="v8toolkit::Context::get_uuid_string" name="v8toolkit::Context::get_uuid_string">
+<area shape="rect" id="node2" href="$classv8toolkit_1_1Context.html#ad6644755ff30a8305561dfb3de496c6d" title="v8toolkit::Context\l::expose_variable_readonly" alt="" coords="675,31,843,67"/>
+<area shape="rect" id="node3" href="$classv8toolkit_1_1Context.html#a86bb30790511dbb0abb35ea0e72a632b" title="v8toolkit::Context\l::get_url" alt="" coords="167,87,280,123"/>
+<area shape="rect" id="node4" href="$classv8toolkit_1_1Context.html#a48a97bf907e8abbb84e37bb89e70e584" title="v8toolkit::Context\l::compile" alt="" coords="328,291,441,327"/>
+<area shape="rect" id="node12" href="$classv8toolkit_1_1Context.html#afd7caf5c6f3d4f225eb3e7d967469dc9" title="v8toolkit::Context\l::require" alt="" coords="328,59,441,95"/>
+<area shape="rect" id="node5" href="$classv8toolkit_1_1Context.html#ab16a28412af87eaffb836697d3c5db4f" title="v8toolkit::Context\l::compile_from_file" alt="" coords="497,291,619,327"/>
+<area shape="rect" id="node6" href="$classv8toolkit_1_1Context.html#a0958f26802f199469b176b7ca35d6c64" title="v8toolkit::Context\l::Global\&lt; v8::Context \&gt;" alt="" coords="891,321,1035,357"/>
+<area shape="rect" id="node8" href="$classv8toolkit_1_1Context.html#a27126b862ed6ae5f18644ae5efe31576" title="v8toolkit::Context::run" alt="" coords="489,402,627,426"/>
+<area shape="rect" id="node9" href="$classv8toolkit_1_1Context.html#a3ad82904352bbf5a018c3d525312aaef" title="v8toolkit::Context\l::run_async" alt="" coords="702,424,816,460"/>
+<area shape="rect" id="node10" href="$classv8toolkit_1_1Context.html#af887fd94d3bc1a7873b2e4d239616fd8" title="v8toolkit::Context\l::run_detached" alt="" coords="501,171,615,207"/>
+<area shape="rect" id="node11" href="$classv8toolkit_1_1Context.html#ae19a126f83bf60b5848e9a2586c657c0" title="v8toolkit::Context\l::run_thread" alt="" coords="501,231,615,267"/>
+<area shape="rect" id="node7" href="$classv8toolkit_1_1Context.html#a64f76992a1affa96ac7a0b23e77c0b1e" title="v8toolkit::Context\l::run_from_file" alt="" coords="702,240,816,276"/>
+<area shape="rect" id="node13" href="$classv8toolkit_1_1Context.html#a28e577fa30695d4fd4814e1253b46a05" title="v8toolkit::Context\l::require_directory" alt="" coords="499,59,617,95"/>
+</map>
