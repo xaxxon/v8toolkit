@@ -49,3 +49,5 @@ samples/javascript_sample
 
 samples/toolbox_sample
 samples/bidirectional_sample
+
+.idea/*
