@@ -624,7 +624,8 @@ public:
 
 
 	/**
-     * Returns the embedded C++ object in a JavaScript object
+     * Returns the embedded C++ object in a JavaScript object, or nullptr if the JavaScript object is either
+     * a plain JavaScript object or is wrapping another, incompatible, C++ type
      * @param object JavaScript object containing an embedded C++ object
      * @return The embedded C++ object
      */
@@ -639,7 +640,9 @@ public:
     
 	/**
 	 * Object still has the memory, it just doesn't own it.  It may or may not have owned it before, but now
-	 * it definitely doesn't.
+	 * it doesn't.  For example, this is called passing an object to a C++ function taking a parameter type of a
+	 * std::unique_ptr, since responsibility for the memory now belongs to the std::unique_ptr.  After calling this
+	 * function, calling `does_object_own_memory` on the same object will always return `false`
 	 * @param object JS object to make sure no longer owns its internal CPP object
 	 * @return the cpp object from inside the provided JS object
 	 */
@@ -668,6 +671,14 @@ public:
 		return V8ClassWrapper<T>::get_cpp_object(object);
 	}
 
+    /**
+     * Returns true if the destructor associated with the object has a destructive() static method which returns true.
+     * In general, this means that when the object is garbage collected in JavaScript that the C++ object will be destroyed.
+     * Some examples of when an "owning" JavaScript object is created are when creating the C++ object from JavaScript
+     * or when turning a std::unique_ptr or rvalue reference into a JavaScript object.
+     * @param object Object whose DestructorBehavior object is to be checked
+     * @return whether the object "owns" the memory or not.
+     */
     static bool does_object_own_memory(v8::Local<v8::Object> object) {
         auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
         WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
@@ -678,7 +689,13 @@ public:
         return wrapped_data->weak_callback_data != nullptr && wrapped_data->weak_callback_data->destructive;
     }
 
-	// Common tasks to do for any new js object regardless of how it is created
+    /**
+     * Sets up all the necessary state in a newly-created JavaScript object to support holding a wrapped C++ object
+     * @param isolate isolate the Object will exist in
+     * @param js_object newly-created JavaScript object
+     * @param cpp_object the C++ object to be wrapped by the JavaScript object
+     * @param destructor_behavior the DestructorBehavior to use for this object.
+     */
 	static void initialize_new_js_object(v8::Isolate * isolate,
 										 v8::Local<v8::Object> js_object,
 										 T * cpp_object,

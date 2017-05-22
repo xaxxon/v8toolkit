@@ -16,8 +16,14 @@ namespace v8toolkit {
 
 
 
-
-template<class Function, class... T>
+/**
+ * Calls a C++ function/callable object with the provided JavaScript objects and takes the value returned by
+ * C++ and returns it to JavaScript.  Delegates to ParameterBuilder to generate the correct data for each individual
+ * parameter.
+ * @tparam Function Callable type
+ * @tparam Args These have a different meaning per specialization
+ */
+template<class Function, class... Args>
 struct CallCallable;
 
 
