@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="CMakeRunConfigurationManager" shouldGenerate="true" assignedExecutableTargets="true" buildAllGenerated="true">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
       <config projectName="v8toolkit" targetName="toolbox_sample" />
       <config projectName="v8toolkit" targetName="copy_sample_resources" />
@@ -19,15 +19,84 @@
       <config projectName="v8toolkit" targetName="javascript_sample" />
     </generated>
   </component>
-  <component name="CMakeSettings" AUTO_RELOAD="false" GENERATION_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON" GENERATION_PASS_SYSTEM_ENVIRONMENT="true">
-    <ADDITIONAL_GENERATION_ENVIRONMENT>
-      <envs />
-    </ADDITIONAL_GENERATION_ENVIRONMENT>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration CONFIG_NAME="Debug" GENERATION_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON" />
+    </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a2fefb6b-59b9-4d1a-8155-4e59099c3400" name="Default" comment="" />
+    <list default="true" id="2a775d25-51db-4390-bdee-711dd532f9e7" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/v8toolkit.iml" afterPath="$PROJECT_DIR$/.idea/v8toolkit.iml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/annotated.html" afterPath="$PROJECT_DIR$/docs/html/annotated.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/casts_8hpp.html" afterPath="$PROJECT_DIR$/docs/html/casts_8hpp.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/casts_8hpp_source.html" afterPath="$PROJECT_DIR$/docs/html/casts_8hpp_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/classes.html" afterPath="$PROJECT_DIR$/docs/html/classes.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1ArrayBufferAllocator-members.html" afterPath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1ArrayBufferAllocator-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1ArrayBufferAllocator.html" afterPath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1ArrayBufferAllocator.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1InvalidCallException-members.html" afterPath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1InvalidCallException-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1InvalidCallException.html" afterPath="$PROJECT_DIR$/docs/html/classv8toolkit_1_1InvalidCallException.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/files.html" afterPath="$PROJECT_DIR$/docs/html/files.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/functions.html" afterPath="$PROJECT_DIR$/docs/html/functions.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/functions_func.html" afterPath="$PROJECT_DIR$/docs/html/functions_func.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/functions_rela.html" afterPath="$PROJECT_DIR$/docs/html/functions_rela.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/functions_type.html" afterPath="$PROJECT_DIR$/docs/html/functions_type.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/functions_vars.html" afterPath="$PROJECT_DIR$/docs/html/functions_vars.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/globals.html" afterPath="$PROJECT_DIR$/docs/html/globals.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/globals_defs.html" afterPath="$PROJECT_DIR$/docs/html/globals_defs.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/globals_func.html" afterPath="$PROJECT_DIR$/docs/html/globals_func.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/globals_vars.html" afterPath="$PROJECT_DIR$/docs/html/globals_vars.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/graph_legend.html" afterPath="$PROJECT_DIR$/docs/html/graph_legend.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/hierarchy.html" afterPath="$PROJECT_DIR$/docs/html/hierarchy.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/index.html" afterPath="$PROJECT_DIR$/docs/html/index.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/inherits.html" afterPath="$PROJECT_DIR$/docs/html/inherits.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/javascript_8cpp.html" afterPath="$PROJECT_DIR$/docs/html/javascript_8cpp.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/javascript_8cpp_source.html" afterPath="$PROJECT_DIR$/docs/html/javascript_8cpp_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/javascript_8h.html" afterPath="$PROJECT_DIR$/docs/html/javascript_8h.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/javascript_8h_source.html" afterPath="$PROJECT_DIR$/docs/html/javascript_8h_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/namespacemembers.html" afterPath="$PROJECT_DIR$/docs/html/namespacemembers.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/namespacemembers_func.html" afterPath="$PROJECT_DIR$/docs/html/namespacemembers_func.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/namespaces.html" afterPath="$PROJECT_DIR$/docs/html/namespaces.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/namespacev8toolkit.html" afterPath="$PROJECT_DIR$/docs/html/namespacev8toolkit.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_1.js" afterPath="$PROJECT_DIR$/docs/html/search/all_1.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_11.js" afterPath="$PROJECT_DIR$/docs/html/search/all_11.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_3.js" afterPath="$PROJECT_DIR$/docs/html/search/all_3.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_4.js" afterPath="$PROJECT_DIR$/docs/html/search/all_4.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_8.js" afterPath="$PROJECT_DIR$/docs/html/search/all_8.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_9.js" afterPath="$PROJECT_DIR$/docs/html/search/all_9.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_c.js" afterPath="$PROJECT_DIR$/docs/html/search/all_c.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/all_f.js" afterPath="$PROJECT_DIR$/docs/html/search/all_f.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/defines_1.js" afterPath="$PROJECT_DIR$/docs/html/search/defines_1.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/defines_2.js" afterPath="$PROJECT_DIR$/docs/html/search/defines_2.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/defines_3.js" afterPath="$PROJECT_DIR$/docs/html/search/defines_3.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/files_1.js" afterPath="$PROJECT_DIR$/docs/html/search/files_1.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/search/functions_c.js" afterPath="$PROJECT_DIR$/docs/html/search/functions_c.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structCastToNative_3_01char_01_5_01_4-members.html" afterPath="$PROJECT_DIR$/docs/html/structCastToNative_3_01char_01_5_01_4-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structCastToNative_3_01char_01_5_01_4.html" afterPath="$PROJECT_DIR$/docs/html/structCastToNative_3_01char_01_5_01_4.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structCastToNative_3_01const_01char_01_5_01_4-members.html" afterPath="$PROJECT_DIR$/docs/html/structCastToNative_3_01const_01char_01_5_01_4-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structCastToNative_3_01const_01char_01_5_01_4.html" afterPath="$PROJECT_DIR$/docs/html/structCastToNative_3_01const_01char_01_5_01_4.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4-members.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CallCallable_3_01std_1_1function_3_01void_07Args_8_8_8_08_4_01_4.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS-members.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS_3_01T_01_6_01_4-members.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS_3_01T_01_6_01_4-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS_3_01T_01_6_01_4.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToJS_3_01T_01_6_01_4.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToNative-members.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToNative-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToNative.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1CastToNative.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1DestructorBehavior-members.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1DestructorBehavior-members.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1DestructorBehavior.html" afterPath="$PROJECT_DIR$/docs/html/structv8toolkit_1_1DestructorBehavior.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8__class__wrapper_8h.html" afterPath="$PROJECT_DIR$/docs/html/v8__class__wrapper_8h.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8__class__wrapper_8h_source.html" afterPath="$PROJECT_DIR$/docs/html/v8__class__wrapper_8h_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8toolkit_8cpp.html" afterPath="$PROJECT_DIR$/docs/html/v8toolkit_8cpp.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8toolkit_8cpp_source.html" afterPath="$PROJECT_DIR$/docs/html/v8toolkit_8cpp_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8toolkit_8h.html" afterPath="$PROJECT_DIR$/docs/html/v8toolkit_8h.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/docs/html/v8toolkit_8h_source.html" afterPath="$PROJECT_DIR$/docs/html/v8toolkit_8h_source.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/doxygen.cfg" afterPath="$PROJECT_DIR$/doxygen.cfg" />
+    </list>
     <ignored path="v8toolkit.iws" />
     <ignored path=".idea/workspace.xml" />
+    <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
+    <ignored path="$PROJECT_DIR$/cmake-build-relwithdebinfo/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -44,67 +113,12 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="v8helpers.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/include/v8helpers.h">
+      <file leaf-file-name="format.h" pinned="false" current-in-tab="false">
+        <entry file="file:///usr/local/include/fmt/format.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="670">
-              <caret line="312" column="54" selection-start-line="312" selection-start-column="54" selection-end-line="312" selection-end-column="54" />
+            <state relative-caret-position="31680">
+              <caret line="2112" column="0" lean-forward="false" selection-start-line="2112" selection-start-column="0" selection-end-line="2112" selection-end-column="0" />
               <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="103">
-              <caret line="128" column="0" selection-start-line="128" selection-start-column="0" selection-end-line="128" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="v8helpers.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/v8helpers.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4695">
-              <caret line="313" column="0" selection-start-line="313" selection-start-column="0" selection-end-line="313" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="v8toolkit.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/include/v8toolkit.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="14565">
-              <caret line="971" column="63" selection-start-line="971" selection-start-column="63" selection-end-line="971" selection-end-column="63" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="javascript.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/javascript.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2685">
-              <caret line="179" column="0" selection-start-line="179" selection-start-column="0" selection-end-line="179" selection-end-column="0" />
-              <folding>
-                <marker date="1475554355000" expanded="true" signature="14385:14387" ph="{...}" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="javascript.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/include/javascript.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4965">
-              <caret line="331" column="28" selection-start-line="331" selection-start-column="28" selection-end-line="331" selection-end-column="28" />
-              <folding>
-                <marker date="1475554355000" expanded="true" signature="22626:22659" ph="{...}" />
-                <marker date="1475554355000" expanded="true" signature="22626:22663" ph="{...}" />
-              </folding>
             </state>
           </provider>
         </entry>
@@ -112,13 +126,79 @@
       <file leaf-file-name="v8toolkit.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/v8toolkit.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1605">
-              <caret line="107" column="97" selection-start-line="107" selection-start-column="97" selection-end-line="107" selection-end-column="97" />
-              <folding>
-                <marker date="1475554355000" expanded="true" signature="32311:32738" ph="{...}" />
-                <marker date="1475554355000" expanded="true" signature="32342:32432" ph="/.../" />
-                <marker date="1475554355000" expanded="true" signature="32547:32730" ph="{...}" />
-              </folding>
+            <state relative-caret-position="1575">
+              <caret line="105" column="0" lean-forward="false" selection-start-line="105" selection-start-column="0" selection-end-line="105" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="v8_class_wrapper.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/include/v8_class_wrapper.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1274">
+              <caret line="1517" column="0" lean-forward="false" selection-start-line="1517" selection-start-column="0" selection-end-line="1517" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="177">
+              <caret line="74" column="6" lean-forward="false" selection-start-line="74" selection-start-column="6" selection-end-line="74" selection-end-column="6" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="doxygen.cfg" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/doxygen.cfg">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="294">
+              <caret line="1053" column="38" lean-forward="false" selection-start-line="1053" selection-start-column="38" selection-end-line="1053" selection-end-column="38" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="casts.hpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/include/casts.hpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3240">
+              <caret line="216" column="15" lean-forward="false" selection-start-line="216" selection-start-column="15" selection-end-line="216" selection-end-column="15" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="casts_impl.hpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/include/casts_impl.hpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="240">
+              <caret line="16" column="36" lean-forward="false" selection-start-line="16" selection-start-column="36" selection-end-line="16" selection-end-column="36" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="casts_eastl.hpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/include/casts_eastl.hpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="345">
+              <caret line="23" column="0" lean-forward="false" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="debugger.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/debugger.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="876">
+              <caret line="299" column="0" lean-forward="false" selection-start-line="299" selection-start-column="0" selection-end-line="299" selection-end-column="0" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -136,18 +216,28 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/README.md" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/string" root0="SKIP_INSPECTION" />
-    <setting file="file://$USER_HOME$/v8/include/v8.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/CMakeLists.txt" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/development.txt" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/include/v8toolkit.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/include/v8_class_wrapper_impl.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/include/debugger.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/include/casts_eastl.hpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/include/javascript.h" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/include/v8_class_wrapper.h" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/v8toolkit.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/v8helpers.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/include/bidirectional.h" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/javascript.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/include/casts.hpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/include/v8helpers.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/samples/sample.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/include/v8_class_wrapper.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/samples/javascript_sample.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/samples/bidirectional.js" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/javascript.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/v8helpers.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/v8toolkit.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/debugger.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/samples/bidirectional_sample.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/Downloads/clang+llvm-4.0.0-x86_64-apple-darwin/include/c++/v1/memory" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/v8/include/v8.h" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/README.md" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -172,6 +262,7 @@
         <option value="$PROJECT_DIR$/include/debugger.h" />
         <option value="$PROJECT_DIR$/include/v8helpers.h" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/doxygen.cfg" />
       </list>
     </option>
   </component>
@@ -183,19 +274,11 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="y" value="14" />
-    <option name="width" value="1680" />
-    <option name="height" value="1023" />
+    <option name="width" value="1440" />
+    <option name="height" value="900" />
   </component>
-  <component name="ProjectLevelVcsManager" settingsEditedManually="false">
-    <OptionsSetting value="true" id="Add" />
-    <OptionsSetting value="true" id="Remove" />
-    <OptionsSetting value="true" id="Checkout" />
-    <OptionsSetting value="true" id="Update" />
-    <OptionsSetting value="true" id="Status" />
-    <OptionsSetting value="true" id="Edit" />
-    <ConfirmationsSetting value="0" id="Add" />
-    <ConfirmationsSetting value="0" id="Remove" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
@@ -214,12 +297,6 @@
     <panes>
       <pane id="ProjectPane">
         <subPane>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="v8toolkit" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-          </PATH>
           <PATH>
             <PATH_ELEMENT>
               <option name="myItemId" value="v8toolkit" />
@@ -244,34 +321,6 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="v8toolkit" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="v8toolkit" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="samples" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="v8toolkit" />
-              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="v8toolkit" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="include" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
         </subPane>
       </pane>
     </panes>
@@ -286,13 +335,60 @@
     <property name="JavaScriptPreferStrict" value="false" />
     <property name="JavaScriptWeakerCompletionTypeGuess" value="true" />
   </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
   <component name="RunManager" selected="Application.debugger_sample">
+    <configuration default="true" type="CLion_Remote" factoryName="GDB Remote Debug" remoteCommand="" symbolFile="" sysroot="">
+      <method />
+    </configuration>
+    <configuration default="true" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" PASS_PARENT_ENVS_2="true" TEST_MODE="SUITE_TEST">
+      <envs />
+      <method />
+    </configuration>
     <configuration default="true" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="bidirectional_sample" CONFIG_NAME="Debug" TEST_MODE="SUITE_TEST">
       <envs />
       <method />
     </configuration>
     <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="bidirectional_sample" CONFIG_NAME="Debug">
       <envs />
+      <method />
+    </configuration>
+    <configuration default="true" type="ChromiumRemoteDebugType" factoryName="Chromium Remote">
+      <method />
+    </configuration>
+    <configuration default="true" type="CompoundRunConfigurationType" factoryName="Compound Run Configuration">
+      <method />
+    </configuration>
+    <configuration default="true" type="FirefoxRemoteDebugType" factoryName="Firefox Remote">
+      <method />
+    </configuration>
+    <configuration default="true" type="JavaScriptTestRunnerJest" factoryName="Jest">
+      <node-interpreter value="project" />
+      <working-dir value="" />
+      <envs />
+      <scope-kind value="ALL" />
+      <method />
+    </configuration>
+    <configuration default="true" type="JavaScriptTestRunnerProtractor" factoryName="Protractor">
+      <config-file value="" />
+      <node-interpreter value="project" />
+      <envs />
+      <method />
+    </configuration>
+    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug">
+      <method />
+    </configuration>
+    <configuration default="true" type="NodeWebKit" factoryName="NW.js">
       <method />
     </configuration>
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
@@ -310,6 +406,13 @@
       <option name="SCRIPT_NAME" value="" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="ReactNative" factoryName="React Native">
+      <node-interpreter value="project" />
+      <platform value="ANDROID" />
+      <envs />
       <method />
     </configuration>
     <configuration default="true" type="Tox" factoryName="Tox">
@@ -324,6 +427,25 @@
       <module name="v8toolkit" />
       <method />
     </configuration>
+    <configuration default="true" type="XSLT" factoryName="XSLT">
+      <option name="myOutputFile" />
+      <option name="myOpenOutputFile" value="false" />
+      <option name="myOpenInBrowser" value="false" />
+      <option name="mySmartErrorHandling" value="true" />
+      <option name="myRunnerPort" value="34873" />
+      <option name="myVmArguments" />
+      <option name="myWorkingDirectory" />
+      <option name="myModule" />
+      <option name="myJdk" />
+      <parameters />
+      <OutputType value="CONSOLE" save-to-file="false" />
+      <FileType name="XML" />
+      <JdkChoice value="FROM_MODULE" />
+      <method />
+    </configuration>
+    <configuration default="true" type="js.build_tools.grunt" factoryName="Grunt.js">
+      <method />
+    </configuration>
     <configuration default="true" type="js.build_tools.gulp" factoryName="Gulp.js">
       <node-interpreter>project</node-interpreter>
       <node-options />
@@ -334,29 +456,10 @@
       <method />
     </configuration>
     <configuration default="true" type="js.build_tools.npm" factoryName="npm">
-      <command value="run-script" />
+      <command value="run" />
       <scripts />
       <node-interpreter value="project" />
       <envs />
-      <method />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="Attests">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="v8toolkit" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="Doctests">
@@ -388,15 +491,10 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="v8toolkit" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
+      <option name="_new_regexPattern" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;.&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="Unittests">
@@ -409,16 +507,9 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="v8toolkit" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PUREUNITTEST" value="true" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;.&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="py.test">
@@ -431,18 +522,10 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="v8toolkit" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="testToRun" value="" />
-      <option name="keywords" value="" />
-      <option name="params" value="" />
-      <option name="USE_PARAM" value="false" />
-      <option name="USE_KEYWORD" value="false" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;.&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method />
     </configuration>
     <configuration default="false" name="Build All" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" EXPLICIT_BUILD_TARGET_NAME="all">
@@ -469,7 +552,7 @@
       <envs />
       <method />
     </configuration>
-    <configuration default="false" name="javascript_sample" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="javascript_sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="javascript_sample">
+    <configuration default="false" name="javascript_sample" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="javascript_sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="javascript_sample">
       <envs>
         <env name="DYLD_LIBRARY_PATH" value="/Users/xaxxon/v8libs/x64.release.shared" />
       </envs>
@@ -479,7 +562,7 @@
       <envs />
       <method />
     </configuration>
-    <configuration default="false" name="sample" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="sample">
+    <configuration default="false" name="sample" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="sample">
       <envs>
         <env name="DYLD_LIBRARY_PATH" value="/Users/xaxxon/v8libs/x64.debug.shared" />
         <env name="ASAN_OPTIONS" value="detect_container_overflow=0" />
@@ -506,7 +589,7 @@
       <envs />
       <method />
     </configuration>
-    <configuration default="false" name="debugger_sample" type="CMakeRunConfiguration" factoryName="Application" singleton="true" WORKING_DIR="" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="debugger_sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="debugger_sample">
+    <configuration default="false" name="debugger_sample" type="CMakeRunConfiguration" factoryName="Application" singleton="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="v8toolkit" TARGET_NAME="debugger_sample" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="v8toolkit" RUN_TARGET_NAME="debugger_sample">
       <envs>
         <env name="DYLD_LIBRARY_PATH" value="/Users/xaxxon/v8libs/x64.debug.shared" />
       </envs>
@@ -534,6 +617,25 @@
       <item index="14" class="java.lang.String" itemvalue="Application.debugger_sample" />
       <item index="15" class="java.lang.String" itemvalue="Application.copy_debugger_resources" />
     </list>
+    <configuration default="true" type="tests" factoryName="Attests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="v8toolkit" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
   </component>
   <component name="ShelveChangesManager" show_recycled="false">
     <option name="remove_strategy" value="false" />
@@ -557,31 +659,66 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="144259000" />
+    <option name="totallyTimeSpent" value="144266000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="14" width="1680" height="1023" extended-state="6" />
+    <frame x="0" y="0" width="1440" height="900" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16636528" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.21666667" sideWeight="0.49285713" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26164383" sideWeight="0.50625" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24894515" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32473624" sideWeight="0.49722221" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32121924" sideWeight="0.5083333" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32808718" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3292978" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32942554" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2375" sideWeight="0.4951574" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16736111" sideWeight="0.50714284" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39976552" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3298611" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3122449" sideWeight="0.49375" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Documentation" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" x="100" y="100" width="1240" height="700" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26164383" sideWeight="0.50625" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16636528" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24894515" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.40816328" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout>
+    <layout-to-restore>
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.44665885" sideWeight="0.49166667" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32473624" sideWeight="0.49722221" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32121924" sideWeight="0.5083333" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Documentation" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" x="100" y="100" width="1240" height="700" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3292978" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32942554" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16736111" sideWeight="0.49285713" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32808718" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2375" sideWeight="0.4951574" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16736111" sideWeight="0.50714284" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.39976552" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3298611" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+    </layout-to-restore>
   </component>
   <component name="Vcs.Log.UiProperties">
     <option name="RECENTLY_FILTERED_USER_GROUPS">
@@ -607,222 +744,186 @@
     <entry file="file://$USER_HOME$/v8/include/v8.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="6375">
-          <caret line="425" column="5" selection-start-line="425" selection-start-column="5" selection-end-line="425" selection-end-column="5" />
+          <caret line="425" column="5" lean-forward="false" selection-start-line="425" selection-start-column="5" selection-end-line="425" selection-end-column="5" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/windows_v8_build.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="0">
-            <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/osx_v8_build.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="FIRST">
-          <first_editor relative-caret-position="30">
-            <caret line="2" column="97" selection-start-line="2" selection-start-column="94" selection-end-line="2" selection-end-column="97" />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/windows_v8_build.md" />
+    <entry file="file://$PROJECT_DIR$/osx_v8_build.md" />
     <entry file="file://$PROJECT_DIR$/build_instructions.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="30">
-          <caret line="2" column="0" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
+          <caret line="2" column="0" lean-forward="false" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tools/class_parser.cpp" />
     <entry file="file://$PROJECT_DIR$/tools/sample.cpp" />
-    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/string">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="306">
-          <caret line="1745" column="8" selection-start-line="1745" selection-start-column="8" selection-end-line="1745" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/string" />
     <entry file="file:///usr/local/include/EASTL/initializer_list.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="175">
-          <caret line="64" column="0" selection-start-line="64" selection-start-column="0" selection-end-line="64" selection-end-column="0" />
+          <caret line="64" column="0" lean-forward="false" selection-start-line="64" selection-start-column="0" selection-end-line="64" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/EASTL/iterator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
-          <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+          <caret line="11" column="0" lean-forward="false" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/EASTL/string.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
-          <caret line="96" column="0" selection-start-line="96" selection-start-column="0" selection-end-line="96" selection-end-column="0" />
+          <caret line="96" column="0" lean-forward="false" selection-start-line="96" selection-start-column="0" selection-end-line="96" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/EASTL/fixed_string.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="205">
-          <caret line="80" column="11" selection-start-line="80" selection-start-column="11" selection-end-line="80" selection-end-column="11" />
+          <caret line="80" column="11" lean-forward="false" selection-start-line="80" selection-start-column="11" selection-end-line="80" selection-end-column="11" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/EASTL/vector_map.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="331">
-          <caret line="128" column="42" selection-start-line="128" selection-start-column="42" selection-end-line="128" selection-end-column="42" />
+          <caret line="128" column="42" lean-forward="false" selection-start-line="128" selection-start-column="42" selection-end-line="128" selection-end-column="42" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/EASTL/vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="172">
-          <caret line="1882" column="124" selection-start-line="1882" selection-start-column="124" selection-end-line="1882" selection-end-column="124" />
+          <caret line="1882" column="124" lean-forward="false" selection-start-line="1882" selection-start-column="124" selection-end-line="1882" selection-end-column="124" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/include/casts_eastl.hpp" />
+    <entry file="file://$PROJECT_DIR$/include/casts_eastl.hpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="23" column="0" lean-forward="false" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/include/casts.hpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="195">
-          <caret line="632" column="22" selection-start-line="632" selection-start-column="22" selection-end-line="632" selection-end-column="22" />
+        <state relative-caret-position="3240">
+          <caret line="216" column="15" lean-forward="false" selection-start-line="216" selection-start-column="15" selection-end-line="216" selection-end-column="15" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/samples/sample.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="840">
-          <caret line="56" column="15" selection-start-line="56" selection-start-column="15" selection-end-line="56" selection-end-column="15" />
+          <caret line="56" column="15" lean-forward="false" selection-start-line="56" selection-start-column="15" selection-end-line="56" selection-end-column="15" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/boost/asio/impl/io_service.ipp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="285">
-          <caret line="71" column="27" selection-start-line="71" selection-start-column="27" selection-end-line="71" selection-end-column="27" />
+          <caret line="71" column="27" lean-forward="false" selection-start-line="71" selection-start-column="27" selection-end-line="71" selection-end-column="27" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/boost/asio/detail/impl/task_io_service.ipp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="154">
-          <caret line="327" column="65" selection-start-line="327" selection-start-column="65" selection-end-line="327" selection-end-column="65" />
+          <caret line="327" column="65" lean-forward="false" selection-start-line="327" selection-start-column="65" selection-end-line="327" selection-end-column="65" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/include/unistd.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="149">
-          <caret line="479" column="5" selection-start-line="479" selection-start-column="5" selection-end-line="479" selection-end-column="5" />
+          <caret line="479" column="5" lean-forward="false" selection-start-line="479" selection-start-column="5" selection-end-line="479" selection-end-column="5" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/websocketpp/transport/asio/endpoint.hpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="327">
-          <caret line="448" column="41" selection-start-line="448" selection-start-column="41" selection-end-line="448" selection-end-column="41" />
+          <caret line="448" column="41" lean-forward="false" selection-start-line="448" selection-start-column="41" selection-end-line="448" selection-end-column="41" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/websocketpp/config/asio_no_tls.hpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-443">
-          <caret line="1" column="51" selection-start-line="1" selection-start-column="49" selection-end-line="1" selection-end-column="51" />
+          <caret line="1" column="51" lean-forward="false" selection-start-line="1" selection-start-column="49" selection-end-line="1" selection-end-column="51" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/include/netdb.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="379">
-          <caret line="133" column="0" selection-start-line="133" selection-start-column="0" selection-end-line="133" selection-end-column="0" />
+          <caret line="133" column="0" lean-forward="false" selection-start-line="133" selection-start-column="0" selection-end-line="133" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/include/bidirectional.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="309">
-          <caret line="233" column="2" selection-start-line="233" selection-start-column="2" selection-end-line="233" selection-end-column="2" />
+          <caret line="233" column="2" lean-forward="false" selection-start-line="233" selection-start-column="2" selection-end-line="233" selection-end-column="2" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/memory">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="154">
-          <caret line="4145" column="17" selection-start-line="4145" selection-start-column="17" selection-end-line="4145" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/memory" />
     <entry file="file://$PROJECT_DIR$/samples/javascript_sample.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="315">
-          <caret line="21" column="0" selection-start-line="21" selection-start-column="0" selection-end-line="21" selection-end-column="0" />
+          <caret line="21" column="0" lean-forward="false" selection-start-line="21" selection-start-column="0" selection-end-line="21" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$USER_HOME$/v8/src/objects-inl.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="133">
-          <caret line="2339" column="0" selection-start-line="2339" selection-start-column="0" selection-end-line="2339" selection-end-column="0" />
+          <caret line="2339" column="0" lean-forward="false" selection-start-line="2339" selection-start-column="0" selection-end-line="2339" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/local/include/fmt/ostream.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="149">
-          <caret line="96" column="0" selection-start-line="96" selection-start-column="0" selection-end-line="96" selection-end-column="0" />
+          <caret line="96" column="0" lean-forward="false" selection-start-line="96" selection-start-column="0" selection-end-line="96" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$USER_HOME$/v8/src/api.cc">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="133">
-          <caret line="5659" column="0" selection-start-line="5659" selection-start-column="0" selection-end-line="5659" selection-end-column="0" />
+          <caret line="5659" column="0" lean-forward="false" selection-start-line="5659" selection-start-column="0" selection-end-line="5659" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$USER_HOME$/v8/src/api.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="133">
-          <caret line="335" column="0" selection-start-line="335" selection-start-column="0" selection-end-line="335" selection-end-column="0" />
+          <caret line="335" column="0" lean-forward="false" selection-start-line="335" selection-start-column="0" selection-end-line="335" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="FIRST">
-          <first_editor relative-caret-position="451">
-            <caret line="616" column="72" selection-start-line="616" selection-start-column="72" selection-end-line="616" selection-end-column="72" />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md" />
     <entry file="file:///usr/local/include/nlohmann/json.hpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="134">
-          <caret line="3110" column="0" selection-start-line="3110" selection-start-column="0" selection-end-line="3110" selection-end-column="0" />
+          <caret line="3110" column="0" lean-forward="false" selection-start-line="3110" selection-start-column="0" selection-end-line="3110" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/functional">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="2253" column="0" selection-start-line="2253" selection-start-column="0" selection-end-line="2253" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$USER_HOME$/Downloads/clang+llvm-3.9.0-x86_64-apple-darwin/include/c++/v1/functional" />
     <entry file="file:///usr/local/include/fmt/format.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="15">
-          <caret line="3722" column="0" selection-start-line="3722" selection-start-column="0" selection-end-line="3722" selection-end-column="0" />
+        <state relative-caret-position="31680">
+          <caret line="2112" column="0" lean-forward="false" selection-start-line="2112" selection-start-column="0" selection-end-line="2112" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -830,7 +931,7 @@
     <entry file="file://$PROJECT_DIR$/samples/toolbox_sample.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="15">
-          <caret line="40" column="43" selection-start-line="40" selection-start-column="29" selection-end-line="40" selection-end-column="43" />
+          <caret line="40" column="43" lean-forward="false" selection-start-line="40" selection-start-column="29" selection-end-line="40" selection-end-column="43" />
         </state>
       </provider>
     </entry>
@@ -838,7 +939,7 @@
     <entry file="file://$USER_HOME$/v8/src/base/platform/platform-posix.cc">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="240">
-          <caret line="229" column="0" selection-start-line="229" selection-start-column="0" selection-end-line="229" selection-end-column="0" />
+          <caret line="229" column="0" lean-forward="false" selection-start-line="229" selection-start-column="0" selection-end-line="229" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -846,94 +947,89 @@
     <entry file="file://$USER_HOME$/v8/include/v8-debug.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="104">
-          <caret line="16" column="7" selection-start-line="16" selection-start-column="2" selection-end-line="16" selection-end-column="7" />
+          <caret line="16" column="7" lean-forward="false" selection-start-line="16" selection-start-column="2" selection-end-line="16" selection-end-column="7" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/include/v8_class_wrapper.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="125">
-          <caret line="509" column="28" selection-start-line="509" selection-start-column="28" selection-end-line="509" selection-end-column="28" />
+        <state relative-caret-position="1274">
+          <caret line="1517" column="0" lean-forward="false" selection-start-line="1517" selection-start-column="0" selection-end-line="1517" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/include/v8toolkit.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="14565">
-          <caret line="971" column="63" selection-start-line="971" selection-start-column="63" selection-end-line="971" selection-end-column="63" />
-          <folding />
+          <caret line="971" column="63" lean-forward="false" selection-start-line="971" selection-start-column="63" selection-end-line="971" selection-end-column="63" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/include/javascript.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4965">
-          <caret line="331" column="28" selection-start-line="331" selection-start-column="28" selection-end-line="331" selection-end-column="28" />
-          <folding>
-            <marker date="1475554355000" expanded="true" signature="22626:22659" ph="{...}" />
-            <marker date="1475554355000" expanded="true" signature="22626:22663" ph="{...}" />
-          </folding>
+          <caret line="331" column="28" lean-forward="false" selection-start-line="331" selection-start-column="28" selection-end-line="331" selection-end-column="28" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/javascript.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2685">
-          <caret line="179" column="0" selection-start-line="179" selection-start-column="0" selection-end-line="179" selection-end-column="0" />
-          <folding>
-            <marker date="1475554355000" expanded="true" signature="14385:14387" ph="{...}" />
-          </folding>
+          <caret line="179" column="0" lean-forward="false" selection-start-line="179" selection-start-column="0" selection-end-line="179" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/v8toolkit.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1605">
-          <caret line="107" column="97" selection-start-line="107" selection-start-column="97" selection-end-line="107" selection-end-column="97" />
-          <folding>
-            <marker date="1475554355000" expanded="true" signature="32311:32738" ph="{...}" />
-            <marker date="1475554355000" expanded="true" signature="32342:32432" ph="/.../" />
-            <marker date="1475554355000" expanded="true" signature="32547:32730" ph="{...}" />
-          </folding>
+        <state relative-caret-position="1575">
+          <caret line="105" column="0" lean-forward="false" selection-start-line="105" selection-start-column="0" selection-end-line="105" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/v8helpers.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4695">
-          <caret line="313" column="0" selection-start-line="313" selection-start-column="0" selection-end-line="313" selection-end-column="0" />
-          <folding />
+          <caret line="313" column="0" lean-forward="false" selection-start-line="313" selection-start-column="0" selection-end-line="313" selection-end-column="0" />
         </state>
       </provider>
     </entry>
     <entry file="file://$USER_HOME$/v8/include/v8config.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="215">
-          <caret line="215" column="5" selection-start-line="215" selection-start-column="5" selection-end-line="215" selection-end-column="5" />
+          <caret line="215" column="5" lean-forward="false" selection-start-line="215" selection-start-column="5" selection-end-line="215" selection-end-column="5" />
         </state>
       </provider>
     </entry>
     <entry file="file://$USER_HOME$/v8/include/v8.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="209">
-          <caret line="2865" column="62" selection-start-line="2865" selection-start-column="62" selection-end-line="2865" selection-end-column="62" />
+          <caret line="2865" column="62" lean-forward="false" selection-start-line="2865" selection-start-column="62" selection-end-line="2865" selection-end-column="62" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/include/debugger.h" />
-    <entry file="file://$PROJECT_DIR$/src/debugger.cpp" />
+    <entry file="file://$PROJECT_DIR$/src/debugger.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="876">
+          <caret line="299" column="0" lean-forward="false" selection-start-line="299" selection-start-column="0" selection-end-line="299" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/include/v8helpers.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="670">
-          <caret line="312" column="54" selection-start-line="312" selection-start-column="54" selection-end-line="312" selection-end-column="54" />
+          <caret line="312" column="54" lean-forward="false" selection-start-line="312" selection-start-column="54" selection-end-line="312" selection-end-column="54" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="103">
-          <caret line="128" column="0" selection-start-line="128" selection-start-column="0" selection-end-line="128" selection-end-column="0" />
+        <state relative-caret-position="177">
+          <caret line="74" column="6" lean-forward="false" selection-start-line="74" selection-start-column="6" selection-end-line="74" selection-end-column="6" />
           <folding />
         </state>
       </provider>
