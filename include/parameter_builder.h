@@ -138,7 +138,8 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
                 stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
                 return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
             } else {
-                throw CastException("BAD THINGS 1");
+                throw CastException("Tried to send a pointer to a function but the JavaScript object wasn't a wrapped "
+                                        "C++ object and a new object couldn't be created from the JavaScript value provided");
             }
         }
     }

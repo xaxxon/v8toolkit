@@ -488,7 +488,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
 //#define REQUIRE_DEBUG_PRINTS false
-#define REQUIRE_DEBUG_PRINTS true
+//#define REQUIRE_DEBUG_PRINTS true
 bool require(
     v8::Local<v8::Context> context,
     std::string filename,

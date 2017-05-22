@@ -65,8 +65,7 @@ constexpr bool is_wrapped_typeish_v =
 #define V8TOOLKIT_COMMA ,
 
 
-    // add inside CastToNative::operator() to have it handle
-    //   with no parameters
+    // add inside CastToNative::operator() to have it handle values that are functions
 #define HANDLE_FUNCTION_VALUES \
     { \
 	if (value->IsFunction()) { \
@@ -139,30 +138,30 @@ struct CastToNative<void> {
 };
 
 
-CAST_TO_NATIVE(bool, {return static_cast<bool>(value->ToBoolean()->Value());});
+CAST_TO_NATIVE(bool, {HANDLE_FUNCTION_VALUES; return static_cast<bool>(value->ToBoolean()->Value());});
 
 
 
 // integers
-CAST_TO_NATIVE(long long, {return static_cast<long long>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned long long, {return static_cast<unsigned long long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(long long, {HANDLE_FUNCTION_VALUES; return static_cast<long long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long long, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned long long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(long, {return static_cast<long>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned long, {return static_cast<unsigned long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(long, {HANDLE_FUNCTION_VALUES; return static_cast<long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(int, { return static_cast<int>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned int, {return static_cast<unsigned int>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(int, {HANDLE_FUNCTION_VALUES; return static_cast<int>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned int, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned int>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(short, {return static_cast<short>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned short, {return static_cast<unsigned short>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(short, {HANDLE_FUNCTION_VALUES; return static_cast<short>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned short, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned short>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(char, {return static_cast<char>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned char, {return static_cast<unsigned char>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char, {HANDLE_FUNCTION_VALUES; return static_cast<char>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned char, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned char>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(wchar_t, {return static_cast<wchar_t>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(char16_t, {return static_cast<char16_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(wchar_t, {HANDLE_FUNCTION_VALUES; return static_cast<wchar_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char16_t, {HANDLE_FUNCTION_VALUES; return static_cast<char16_t>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(char32_t, {return static_cast<char32_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char32_t, {HANDLE_FUNCTION_VALUES; return static_cast<char32_t>(value->ToInteger()->Value());});
 
 
 
@@ -253,9 +252,9 @@ struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
 };
 
 
-CAST_TO_NATIVE(float, { return static_cast<float>(value->ToNumber()->Value());});
-CAST_TO_NATIVE(double, { return static_cast<double>(value->ToNumber()->Value());});
-CAST_TO_NATIVE(long double, { return static_cast<long double>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(float, {HANDLE_FUNCTION_VALUES; return static_cast<float>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(double, {HANDLE_FUNCTION_VALUES; return static_cast<double>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(long double, {HANDLE_FUNCTION_VALUES; return static_cast<long double>(value->ToNumber()->Value());});
 
 
 
@@ -298,6 +297,7 @@ struct CastToNative<const char *> {
 };
 
 CAST_TO_NATIVE(std::string, {
+    HANDLE_FUNCTION_VALUES;
     return std::string(*v8::String::Utf8Value(value));
 });
 
