@@ -7,7 +7,6 @@
 #include <websocketpp/endpoint.hpp>
 
 #include <nlohmann/json.hpp>
-#include "debugger_message_types/frame_resource_tree.h"
 
 namespace v8toolkit {
 

@@ -8,7 +8,7 @@
 #include <v8.h>
 
 #include "v8helpers.h"
-#include "casts.hpp"
+#include "casts.h"
 
 namespace v8toolkit {
 

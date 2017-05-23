@@ -1,6 +1,6 @@
 #pragma once
 
-#include "casts.hpp"
+#include "casts.h"
 
 // Tell EASTL not to redefine initializer_list
 #define EA_HAVE_CPP11_INITIALIZER_LIST 1

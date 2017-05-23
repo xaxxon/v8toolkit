@@ -7,7 +7,7 @@
 #include <v8.h>
 
 #include "v8helpers.h"
-#include "casts.hpp"
+#include "casts.h"
 #include "parameter_builder.h"
 #include "stdfunctionreplacement.h"
 

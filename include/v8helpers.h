@@ -13,7 +13,7 @@
 #include <libplatform/libplatform.h>
 #include <v8.h>
 
-
+#include "type_traits.h"
 #include "stdfunctionreplacement.h"
 
 
@@ -28,7 +28,11 @@
 
 namespace v8toolkit {
 
-    template<class MemberT, class ClassT>
+
+
+
+
+template<class MemberT, class ClassT>
     constexpr bool get_member_is_readonly(MemberT(ClassT::*member)) {
         return std::is_const_v<MemberT>;
     };
@@ -57,12 +61,6 @@ namespace v8toolkit {
 
 
 
-
-    template<class T>
-    using void_t = void;
-
-    template<class T>
-    using int_t = int;
 
 
     namespace literals {
@@ -121,7 +119,7 @@ struct ProxyType {
 };
 
 template<typename T>
-struct ProxyType<T,void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
+struct ProxyType<T, void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
     using PROXY_TYPE = typename T::V8TOOLKIT_PROXY_TYPE;
 };
 
@@ -695,5 +693,172 @@ inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, s
     return object;
 
 }
+
+
+
+
+
+
+
+/* Use these to try to decrease the amount of template instantiations */
+#define CONTEXT_SCOPED_RUN(local_context) \
+    v8::Isolate * _v8toolkit_internal_isolate = (local_context)->GetIsolate(); \
+    v8::Locker _v8toolkit_internal_locker(_v8toolkit_internal_isolate);                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope(_v8toolkit_internal_isolate); \
+    v8::HandleScope _v8toolkit_internal_handle_scope(_v8toolkit_internal_isolate);     \
+    v8::Context::Scope _v8toolkit_internal_context_scope((local_context));
+
+#define GLOBAL_CONTEXT_SCOPED_RUN(isolate, global_context) \
+    v8::Locker _v8toolkit_internal_locker(isolate);                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope(isolate); \
+    v8::HandleScope _v8toolkit_internal_handle_scope(isolate);     \
+    /* creating local context must be after creating handle scope */	\
+    v8::Local<v8::Context> _v8toolkit_internal_local_context = global_context.Get(isolate); \
+    v8::Context::Scope _v8toolkit_internal_context_scope(_v8toolkit_internal_local_context);
+
+#define ISOLATE_SCOPED_RUN(isolate) \
+    v8::Locker _v8toolkit_internal_locker((isolate));                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope((isolate)); \
+    v8::HandleScope _v8toolkit_internal_handle_scope((isolate));
+
+#define DEBUG_SCOPED_RUN(isolate) \
+    v8::Locker _v8toolkit_internal_locker((isolate));                \
+    v8::Isolate::Scope _v8toolkit_internal_isolate_scope((isolate)); \
+    v8::HandleScope _v8toolkit_internal_handle_scope((isolate));     \
+    v8::Context::Scope _v8toolkit_internal_context_scope(v8::Debug::GetDebugContext((isolate)));
+
+
+/**
+ * Helper function to run the callable inside contexts.
+ * If the isolate is currently inside a context, it will use that context automatically
+ *   otherwise no context::scope will be created
+ */
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T()>::type
+{
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+
+    if (isolate->InContext()) {
+        auto context = isolate->GetCurrentContext();
+        v8::Context::Scope context_scope(context);
+        return callable();
+    } else {
+        return callable();
+    }
+}
+
+
+/**
+* Helper function to run the callable inside contexts.
+* If the isolate is currently inside a context, it will use that context automatically
+*   otherwise no context::scope will be created
+* The isolate will be passed to the callable
+*/
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T(v8::Isolate*)>::type
+{
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+
+    return callable(isolate);
+}
+
+/**
+* Helper function to run the callable inside contexts.
+* If the isolate is currently inside a context, it will use that context automatically
+*   otherwise no context::scope will be created
+* This version requires the isolate is currently in a context
+* The isolate and context will be passed to the callable
+*/
+template<class T>
+auto scoped_run(v8::Isolate * isolate, T callable) -> typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
+{
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+
+    if (isolate->InContext()) {
+        auto context = isolate->GetCurrentContext();
+        v8::Context::Scope context_scope(context);
+        return callable(isolate, context);
+    } else {
+        throw InvalidCallException("Isolate not currently in a context, but callable expects a context.");
+    }
+}
+
+
+
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
+/**
+* Helper function to run the callable inside contexts.
+* This version is good when the isolate isn't currently within a context but a context
+*   has been created to be used
+*/
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) -> typename std::result_of<T()>::type
+{
+
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
+
+    return callable();
+}
+
+
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
+/**
+* Helper function to run the callable inside contexts.
+* This version is good when the isolate isn't currently within a context but a context
+*   has been created to be used
+* The isolate will be passed to the callable
+*/
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) -> typename std::result_of<T(v8::Isolate*)>::type
+{
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
+
+    return callable(isolate);
+}
+
+// TODO: Probably don't need to take both an isolate and a local<context> - you can get isolate from a local<context> (but not a global one)
+/**
+* Helper function to run the callable inside contexts.
+* This version is good when the isolate isn't currently within a context but a context
+*   has been created to be used
+* The isolate and context will be passed to the callable
+*/
+template<class T>
+auto scoped_run(v8::Isolate * isolate, v8::Local<v8::Context> context, T callable) ->
+typename std::result_of<T(v8::Isolate*, v8::Local<v8::Context>)>::type
+{
+    v8::Locker locker(isolate);
+    v8::Isolate::Scope isolate_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
+    v8::Context::Scope context_scope(context);
+
+    return callable(isolate, context);
+}
+
+// Same as the ones above, but this one takes a global context for convenience
+// Isolate is required since a Local<Context> cannot be created without creating a locker
+//   and handlescope which require an isolate to create
+template<class T>
+auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, T callable)
+{
+    v8::Locker l(isolate);
+    v8::HandleScope hs(isolate);
+    auto local_context = context.Get(isolate);
+    return scoped_run(isolate, local_context, callable);
+}
+
+
 
 } // End v8toolkit namespace

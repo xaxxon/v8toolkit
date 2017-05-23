@@ -26,7 +26,7 @@ using MapT=std::map<ArgTs...>;
 
 #include "wrapped_class_base.h"
 #include "v8toolkit.h"
-#include "casts.hpp"
+#include "casts.h"
 
 // allow _v8 suffix for making v8::String objects
 using namespace v8toolkit::literals;

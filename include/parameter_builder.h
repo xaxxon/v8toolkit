@@ -5,7 +5,7 @@
 
 #include <v8.h>
 
-#include "casts.hpp"
+#include "casts_impl.h"
 #include "v8helpers.h"
 #include "unspecified_parameter_value.h"
 
