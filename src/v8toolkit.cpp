@@ -487,7 +487,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 * The goal of this function is to be as close to node.js require as possible, so patches or descriptions of how it differs are appreciated.
 *   Not that much time was spent trying to determine the exact behavior, so there are likely significant differences
 */
-//#define REQUIRE_DEBUG_PRINTS false
+#define REQUIRE_DEBUG_PRINTS false
 //#define REQUIRE_DEBUG_PRINTS true
 bool require(
     v8::Local<v8::Context> context,

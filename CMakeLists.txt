@@ -1,12 +1,29 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 project(v8toolkit)
-#set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_files)
 include(ucm)
 ucm_set_runtime(STATIC)
+
+
+include(v8)
+
+#message(looking for v8 libs in ${V8_LIB_DIR})
+#FOREACH(LIB_NAME ${V8_LIB_NAMES})
+#	FIND_LIBRARY(FOUND_LIB_${LIB_NAME} ${LIB_NAME} PATHS ${V8_LIB_DIR})
+#	add_library(v8::${LIB_NAME} UNKNOWN IMPORTED)
+#	set_target_properties(v8::${LIB_NAME} PROPERTIES
+#			IMPORTED_LOCATION "${FOUND_LIB_${LIB_NAME}}"
+#			INTERFACE_COMPILE_OPTIONS ""
+#			INTERFACE_INCLUDE_DIRECTORIES ${V8_INCLUDE_DIR})
+#
+#	LIST(APPEND V8_LIBS v8::${LIB_NAME})
+#	MESSAGE("Lib: v8::${LIB_NAME}")
+#	MESSAGE("Found Lib: ${FOUND_LIB_${LIB_NAME}}")
+#ENDFOREACH(LIB_NAME)
 
 
 file(GLOB HEADER_FILES
@@ -22,20 +39,8 @@ file(GLOB SOURCE_FILES
 		src/debugger_message_types/*.cpp
         )
 
-set(V8_STATIC_LIBS
-        v8_libplatform
-        v8_libbase
-        icui18n
-        icuuc
-        v8_nosnapshot
-        v8_libplatform)
 
-set(V8_SHARED_LIBS
-	icui18n
-	icuuc 
-	v8
-	v8_libbase
-	v8_libplatform)
+
 
 # https://github.com/fmtlib/fmt
 #find_package(fmt REQUIRED)
@@ -51,18 +56,16 @@ include_directories(${Boost_INCLUDE_DIR})
 
 
 if (WIN32)
-    set(V8_STATIC_LIBS ${V8_LIBS} v8_base_0 v8_base_1 v8_base_2 v8_base_3)
 
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -std=gnu++1z")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type")
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
-    set(V8_STATIC_LIBS ${V8_STATIC_LIBS} v8_base icudata)
 
 endif()
 
 # -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files
-set(V8_BASE_SHARED_LIB_DIR CACHE PATH "full path containing V8 library files")
-link_directories(${V8_BASE_SHARED_LIB_DIR})
+set(V8_LIB_DIR CACHE PATH "full path containing V8 library files")
+#link_directories(${V8_BASE_SHARED_LIB_DIR})
 
 
 # -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
@@ -75,7 +78,7 @@ include_directories(./include ${V8_INCLUDE_DIR})
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_SHARED_LIBS})
+target_link_libraries(v8toolkit_shared ${V8_LIBS})
 
 # Linux doesn't need to link to this to make a shared object
 target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
@@ -105,8 +108,7 @@ add_custom_command(TARGET copy_snapshots PRE_BUILD
 add_executable(bidirectional_sample samples/bidirectional_sample.cpp)
 #add_dependencies(bidirectional_sample v8toolkit_static copy_bidirectional_sample_resources)
 add_dependencies(bidirectional_sample v8toolkit_shared copy_bidirectional_sample_resources copy_snapshots)
-#target_link_libraries(bidirectional_sample ${V8_STATIC_LIBS})
-target_link_libraries(bidirectional_sample ${V8_SHARED_LIBS})
+target_link_libraries(bidirectional_sample ${V8_LIBS})
 target_link_libraries(bidirectional_sample v8toolkit_shared)
 target_link_libraries(bidirectional_sample fmt)
 
@@ -116,8 +118,7 @@ add_custom_command(TARGET copy_bidirectional_sample_resources POST_BUILD
 
 add_executable(exception_sample samples/exception_sample.cpp)
 add_dependencies(exception_sample v8toolkit_shared copy_snapshots)
-#target_link_libraries(exception_sample ${V8_STATIC_LIBS})
-target_link_libraries(exception_sample ${V8_SHARED_LIBS})
+target_link_libraries(exception_sample ${V8_LIBS})
 target_link_libraries(exception_sample v8toolkit_shared fmt)
 #add_custom_command(TARGET bidirectional_sample PRE_BUILD
 #        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/bidirectional.js
@@ -126,14 +127,12 @@ target_link_libraries(exception_sample v8toolkit_shared fmt)
 
 add_executable(thread_sample samples/thread_sample.cpp)
 add_dependencies(thread_sample v8toolkit_shared copy_snapshots)
-target_link_libraries(thread_sample ${V8_SHARED_LIBS})
-#target_link_libraries(thread_sample ${V8_STATIC_LIBS})
+target_link_libraries(thread_sample ${V8_LIBS})
 target_link_libraries(thread_sample v8toolkit_shared fmt)
 
 add_executable(toolbox_sample samples/toolbox_sample.cpp)
 add_dependencies(toolbox_sample v8toolkit_shared copy_toolbox_sample_resources copy_snapshots)
-target_link_libraries(toolbox_sample ${V8_SHARED_LIBS})
-#target_link_libraries(toolbox_sample ${V8_STATIC_LIBS})
+target_link_libraries(toolbox_sample ${V8_LIBS})
 target_link_libraries(toolbox_sample v8toolkit_shared fmt)
 
 add_custom_target(copy_toolbox_sample_resources)
@@ -146,8 +145,7 @@ add_custom_command(TARGET copy_toolbox_sample_resources POST_BUILD
 
 add_executable(javascript_sample samples/javascript_sample.cpp)
 add_dependencies(javascript_sample v8toolkit_shared copy_snapshots copy_javacsript_sample_modules_dir)
-#target_link_libraries(javascript_sample ${V8_STATIC_LIBS})
-target_link_libraries(javascript_sample ${V8_SHARED_LIBS})
+target_link_libraries(javascript_sample ${V8_LIBS})
 target_link_libraries(javascript_sample v8toolkit_shared fmt pthread)
 
 add_custom_target(copy_javacsript_sample_modules_dir)
@@ -158,8 +156,7 @@ add_custom_command(TARGET copy_javacsript_sample_modules_dir POST_BUILD
 
 add_executable(sample samples/sample.cpp)
 add_dependencies(sample v8toolkit_shared copy_sample_resources copy_snapshots)
-target_link_libraries(sample ${V8_SHARED_LIBS})
-#target_link_libraries(sample ${V8_STATIC_LIBS})
+target_link_libraries(sample ${V8_LIBS})
 target_link_libraries(sample v8toolkit_shared fmt EASTL)
 
 add_custom_target(copy_sample_resources)
@@ -171,7 +168,7 @@ add_custom_command(TARGET copy_sample_resources POST_BUILD
 # DEBUGGER SAMPLE
 add_executable(debugger_sample samples/debugger_sample.cpp)
 add_dependencies(debugger_sample v8toolkit_shared copy_debugger_resources copy_snapshots)
-target_link_libraries(debugger_sample ${V8_SHARED_LIBS} v8toolkit_shared fmt)
+target_link_libraries(debugger_sample ${V8_LIBS} v8toolkit_shared fmt)
 add_custom_target(copy_debugger_resources)
 add_custom_command(TARGET copy_debugger_resources POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/samples/debugger_sample.js
