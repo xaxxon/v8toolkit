@@ -16,6 +16,8 @@ struct ClassFunction {
     WrappedClass & wrapped_class;
     bool is_static;
     bool is_virtual;
+    bool is_virtual_final = false;
+    bool is_virtual_override = false;
 
     // if this virtual function doesn't exist in a parent class
     bool new_virtual;

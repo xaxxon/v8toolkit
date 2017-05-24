@@ -265,7 +265,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
 
 
 ClassFunction::ClassFunction(WrappedClass & wrapped_class,
-                           CXXMethodDecl const * method_decl) :
+                             CXXMethodDecl const * method_decl) :
     compiler_instance(wrapped_class.compiler_instance),
     return_type(method_decl->getReturnType()),
     method_decl(method_decl),
@@ -620,6 +620,19 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
     ClassFunction(wrapped_class, method_decl)
 {
     wrapped_class.add_member_name(this->js_name);
+
+    for (auto a = method_decl->attr_begin(); a != method_decl->attr_end(); a++) {
+        std::cerr << fmt::format("on function {} looking at attribute {}", this->name, (*a)->getSpelling()) << std::endl;
+        if ((*a)->getKind() == attr::Kind::Final) {
+            std::cerr << fmt::format("setting is_virtual_final = true") << std::endl;
+            this->is_virtual_final = true;
+        }
+        if ((*a)->getKind() == attr::Kind::Override) {
+            std::cerr << fmt::format("setting is_virtual_override= true") << std::endl;
+
+            this->is_virtual_override = true;
+        }
+    };
 }
 
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl) :

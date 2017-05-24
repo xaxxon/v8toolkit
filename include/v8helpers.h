@@ -119,7 +119,7 @@ struct ProxyType {
 };
 
 template<typename T>
-struct ProxyType<T, void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
+struct ProxyType<T, std::void_t<typename T::V8TOOLKIT_PROXY_TYPE>>{
     using PROXY_TYPE = typename T::V8TOOLKIT_PROXY_TYPE;
 };
 

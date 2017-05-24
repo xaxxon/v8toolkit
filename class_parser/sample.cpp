@@ -176,6 +176,8 @@ public:
    virtual void fooparent_purevirtual_tobeoverridden();
    virtual char const_virtual(int) const;
 
+    // final virtual methods should not be included in bidirectional types
+    virtual void final_virtual() final;
 
     /**
      * description

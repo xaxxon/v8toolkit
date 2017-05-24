@@ -459,9 +459,12 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             cerr << fmt::format(" ** Inheritance hierarchy class: {} with {} base types", current_inheritance_class->name_alias, current_inheritance_class->base_types.size()) << endl;
 
             for (auto & method : current_inheritance_class->get_member_functions()) {
-                if (!method->is_virtual) {
+                if (!method->is_virtual || method->is_virtual_final) {
+                    std::cerr << fmt::format("Skipping method {} because it's either not virtual (virtual: {}) or it is final (final: {})",
+                        method->name, method->is_virtual, method->is_virtual_final) << std::endl;
                     continue;
                 }
+                
                 auto added_method = js_access_virtual_methods_added.find(method->get_signature_string());
 
                 // check if it's already been added at a more derived type

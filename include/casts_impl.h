@@ -7,7 +7,7 @@
 #include "cast_to_native_impl.h"
 
 #ifdef V8TOOLKIT_ENABLE_EASTL_SUPPORT
-#include "casts_eastl.hpp"
+#include "casts_eastl.h"
 #endif
 
 
