@@ -127,7 +127,7 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
 
         //std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
-            return *get_default_parameter<WrappedT *, default_arg_position>(info, i, stuff, default_args_tuple);
+            return *get_default_parameter<std::remove_const_t<WrappedT> *, default_arg_position>(info, i, stuff, default_args_tuple);
 
         } else {
             // try to get the object from inside a javascript object, otherwise, fall back to a CastToNative<T> call
