@@ -53,6 +53,9 @@ public:
     virtual void foo_parent_pure_virtual(char, char, char, char) = 0;
     virtual void foo_grandparent_but_not_foo_virtual() override;
 
+    // marked final in derived type
+    virtual void final_virtual();
+
 };
 
 

@@ -554,6 +554,7 @@ bool is_nontrivial_std_type(QualType & qual_type, std::string & output) {
 
 #endif
 
+
 std::string get_type_string(QualType qual_type,
                             const std::string & indentation) {
 
@@ -732,6 +733,217 @@ std::string get_type_string(QualType qual_type,
 #endif
 }
 
+
+QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> template_types) {
+
+    if (!original_type->isDependentType()) {
+        return original_type;
+    }
+
+    std::cerr << fmt::format("in get_substitution_type_for_type for {}, have {} template_type options", original_type.getAsString(), template_types.size()) << std::endl;
+
+    QualType current_type = original_type;
+
+
+    current_type = current_type.getNonReferenceType();
+
+    bool changed = true;
+    while(changed) {
+        changed = false;
+        if (current_type.isConstQualified()) {
+            current_type.removeLocalConst();
+        }
+
+        // if it's a pointer...
+        if (!current_type->getPointeeType().isNull()) {
+            changed = true;
+            current_type = current_type->getPointeeType();
+            continue; // check for more pointers first
+        }
+
+        // This code traverses all the typdefs and pointers to get to the actual base type
+        if (dyn_cast<TypedefType>(current_type) != nullptr) {
+            changed = true;
+            if (print_logging) cerr << "stripped typedef, went to: " << current_type.getAsString() << endl;
+            current_type = dyn_cast<TypedefType>(current_type)->getDecl()->getUnderlyingType();
+        }
+    }
+
+    auto i = template_types.find(current_type.getAsString());
+
+    if (i == template_types.end()) {
+        // if this is being called, a stripped down type is fine, so ship back the stripped down original type
+        return current_type;
+    } else {
+        return i->second;
+    }
+}
+
+
+std::string substitute_type(QualType original_type, map<string, QualType> template_types) {
+
+    if (!original_type->isDependentType()) {
+        auto result = get_type_string(original_type);
+        std::cerr << fmt::format("Not dependent type, short circuiting template substitution: {}", result) << std::endl;
+        return result;
+    }
+
+
+    std::cerr << fmt::format("Substituting dependent type: {} with template_types size: {}", original_type.getAsString(),
+    template_types.size()) << std::endl;
+    std::string suffix;
+
+
+
+
+
+//********************************************************************************
+
+
+
+    QualType current_type = original_type;
+
+    if (current_type->isLValueReferenceType()) {
+        suffix = " &";
+    } else if (current_type->isRValueReferenceType()) {
+        suffix = " &&";
+    }
+    current_type = current_type.getNonReferenceType();
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        if (current_type.isConstQualified()) {
+            suffix = std::string(" const") + suffix;
+            current_type.removeLocalConst();
+        }
+
+        // if it's a pointer...
+        if (!current_type->getPointeeType().isNull()) {
+            changed = true;
+            suffix = std::string(" *") + suffix;
+            current_type = current_type->getPointeeType();
+            continue; // check for more pointers first
+        }
+
+        // This code traverses all the typdefs and pointers to get to the actual base type
+        if (dyn_cast<TypedefType>(current_type) != nullptr) {
+            changed = true;
+            if (print_logging) cerr << "stripped typedef, went to: " << current_type.getAsString() << endl;
+            current_type = dyn_cast<TypedefType>(current_type)->getDecl()->getUnderlyingType();
+        }
+    }
+
+    std::cerr << fmt::format("Got down to: {}", current_type.getAsString()) << std::endl;
+
+    auto qual_type = get_substitution_type_for_type(current_type, template_types);
+
+    std::cerr << fmt::format("after substitution: {}", qual_type.getAsString()) << std::endl;
+
+
+
+    // strip any references
+    qual_type = qual_type.getLocalUnqualifiedType();
+
+
+    // remove pointers
+    while(!qual_type->getPointeeType().isNull()) {
+        qual_type = qual_type->getPointeeType();
+    }
+
+    // remove const/volatile
+    qual_type = qual_type.getLocalUnqualifiedType();
+
+
+    if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
+        std::cerr << fmt::format("treating as function") << std::endl;
+
+        // the type int(bool) from std::function<int(bool)> is a FunctionProtoType
+        if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
+            cerr << "IS A FUNCTION PROTOTYPE" << endl;
+
+
+            cerr << "Recursing on return type" << endl;
+            string result = fmt::format("{}(", substitute_type(function_prototype->getReturnType(), template_types));
+
+            bool first_parameter = true;
+            for ( auto param : function_prototype->param_types()) {
+                if (!first_parameter) {
+                    result += ", ";
+                }
+                first_parameter = false;
+
+                cerr << "Recursing on param type" << endl;
+                result += substitute_type(param, template_types);
+            }
+
+            result += ")";
+            std::cerr << fmt::format("returning substituted function type: {}", result) << std::endl;
+            return result;
+        } else {
+            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+        }
+
+    } else {
+        cerr << "is not a FUNCTION TYPE" << endl;
+    }
+
+
+    if (auto template_specialization_type = dyn_cast<TemplateSpecializationType>(&*qual_type)) {
+        std::cerr << fmt::format("is template specialization type: {}", template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString()) << std::endl;
+
+
+        auto template_decl = template_specialization_type->getTemplateName().getAsTemplateDecl();
+
+        // named_decl
+        auto templated_decl = template_decl->getTemplatedDecl();
+        string result = fmt::format("{}<", templated_decl->getQualifiedNameAsString());
+
+
+        std::cerr << fmt::format("CANONICAL NAME FOR DECL: {}", templated_decl->getQualifiedNameAsString()) << std::endl;
+
+        // go through the template args
+        bool first_arg = true;
+        for (int i = 0; i < template_specialization_type->getNumArgs(); i++) {
+            if (!first_arg) {
+                result += ", ";
+            }
+            first_arg = false;
+
+
+            auto & arg = template_specialization_type->getArg(i);
+
+            // this code only cares about types, so skip non-type template arguments
+            if (arg.getKind() != clang::TemplateArgument::Type) {
+                continue;
+            }
+            auto template_arg_qual_type = arg.getAsType();
+            if (template_arg_qual_type.isNull()) {
+                if (print_logging) cerr << "qual type is null" << endl;
+                continue;
+            }
+            if (print_logging) {
+                cerr << "Recursing on templated type " << template_arg_qual_type.getAsString() << endl;
+            }
+            result += substitute_type(template_arg_qual_type, template_types);
+        }
+        result += fmt::format(">");
+        std::cerr << fmt::format("returning substituted type: {}", result) << std::endl;
+        return result;
+    } else {
+        if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+    }
+
+//********************************************************************************
+
+
+
+    std::string new_type_string = get_type_string(qual_type) + suffix;
+
+    std::cerr << fmt::format("returning: {}", new_type_string) << std::endl;
+    return new_type_string;
+
+}
 
 
 /**

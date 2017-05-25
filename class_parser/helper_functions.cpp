@@ -10,6 +10,24 @@
 
 #include "wrapped_class.h"
 
+// remove trailing & or && from the end of a string
+string remove_reference_from_type_string(string const & type_string) {
+    std::cerr << fmt::format("removing reference from string: '{}'", type_string) << std::endl;
+    auto result = std::regex_replace(type_string, std::regex("\\s*&{1,2}\\s*$"), "");
+    std::cerr << fmt::format("result: '{}'", result) << std::endl;
+    return result;
+
+}
+
+string remove_local_const_from_type_string(string const & type_string) {
+    std::cerr << fmt::format("removing const from string: '{}'", type_string) << std::endl;
+
+    auto result = std::regex_replace(type_string, std::regex("^\\s*const\\s*"), "");
+    std::cerr << fmt::format("result: '{}'", result) << std::endl;
+    return result;
+
+}
+
 
 string make_macro_safe_comma(string const & input) {
     return std::regex_replace(input, std::regex("\\s*,\\s*"), " V8TOOLKIT_COMMA ");
@@ -209,14 +227,14 @@ void data_warning(const string & warning) {
     cerr << "DATA WARNING: " << warning << endl;
     data_warnings.push_back(warning);
 }
-
-QualType get_plain_type(QualType qual_type) {
-    auto type = qual_type.getNonReferenceType();//.getUnqualifiedType();
-    while(!type->getPointeeType().isNull()) {
-        type = type->getPointeeType();//.getUnqualifiedType();
-    }
-    return type;
-}
+//
+//QualType get_plain_type(QualType qual_type) {
+//    auto type = qual_type.getNonReferenceType();//.getUnqualifiedType();
+//    while(!type->getPointeeType().isNull()) {
+//        type = type->getPointeeType();//.getUnqualifiedType();
+//    }
+//    return type;
+//}
 
 
 
@@ -431,7 +449,7 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
         int param_position = 1;
         for (auto & parameter : bidirectional_constructor.parameters) {
         std::cerr << fmt::format("cc3.in_loop top") << std::endl;
-            bidirectional_file << fmt::format(", {} var{}", parameter.type.name, param_position++);
+            bidirectional_file << fmt::format(", {} var{}", parameter.type.get_name(), param_position++);
             std::cerr << fmt::format("cc3.in_loop bottom") << std::endl;
         }
 
@@ -459,20 +477,25 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             cerr << fmt::format(" ** Inheritance hierarchy class: {} with {} base types", current_inheritance_class->name_alias, current_inheritance_class->base_types.size()) << endl;
 
             for (auto & method : current_inheritance_class->get_member_functions()) {
-                if (!method->is_virtual || method->is_virtual_final) {
-                    std::cerr << fmt::format("Skipping method {} because it's either not virtual (virtual: {}) or it is final (final: {})",
-                        method->name, method->is_virtual, method->is_virtual_final) << std::endl;
-                    continue;
-                }
-                
-                auto added_method = js_access_virtual_methods_added.find(method->get_signature_string());
-
-                // check if it's already been added at a more derived type
-                if (added_method != js_access_virtual_methods_added.end()) {
+                if (!method->is_virtual) {
+                    std::cerr << fmt::format("Skipping method {} because it's either not virtual",
+                        method->name) << std::endl;
                     continue;
                 }
 
-                js_access_virtual_methods_added.insert(method->get_signature_string());
+                // this is done correctly lower down, so I think this is not needed but signature includes the class name
+                // so it doesn't dedupe virtuals across inheritance hierarchy
+//                auto added_method = js_access_virtual_methods_added.find(method->get_signature_string());
+//
+//                // check if it's already been added at a more derived type
+//                if (added_method != js_access_virtual_methods_added.end()) {
+//                    std::cerr << fmt::format("skipping {} because it's already been added", method->name) << std::endl;
+//                    continue;
+//                }
+//                std::cerr << fmt::format("adding {} as having been added", method->get_signature_string()) << std::endl;
+//                js_access_virtual_methods_added.insert(method->get_signature_string());
+
+
 
 
                 auto bidirectional_virtual_method = method->method_decl;
@@ -486,7 +509,7 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
                 js_access_virtual_method_string << "  JS_ACCESS_" << num_params
                                                 << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
 
-                js_access_virtual_method_string << make_macro_safe_comma(method->return_type.name) << ", ";
+                js_access_virtual_method_string << make_macro_safe_comma(method->return_type.get_name()) << ", ";
 
                 //std::cerr << fmt::format("11 - num_params: {}", num_params) << std::endl;
                 js_access_virtual_method_string << bidirectional_virtual_method->getName().str();
@@ -511,12 +534,20 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
                 if (js_access_virtual_methods_added.count(js_access_virtual_method_string.str())) {
                     continue;
                 }
+                std::cerr << fmt::format("marking as added: {}", js_access_virtual_method_string.str()) << std::endl;
                 js_access_virtual_methods_added.insert(js_access_virtual_method_string.str());
+
+                // do this after marking it as added so if it doesn't get added when found in a parent type of
+                //   the current class where it wouldn't be marked as final
+                if (method->is_virtual_final) {
+                    std::cerr << fmt::format("Skipping method {} because it's marked as final",
+                                             method->name) << std::endl;
+                    continue;
+                }
+
                 bidirectional_file << js_access_virtual_method_string.str();
 
             }
-
-
 
             current_inheritance_class = *current_inheritance_class->base_types.begin();
         }

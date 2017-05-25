@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <type_traits.h>
+#include "type_traits.h"
 #include "wrapped_class_base.h"
 
 
@@ -11,6 +11,16 @@ namespace v8toolkit {
 
 template<typename T, class = void>
 struct CastToNative;
+
+
+
+template<class T, class = void>
+struct cast_to_native_supports_default_value : public std::false_type {};
+
+template<class T>
+struct cast_to_native_supports_default_value<T, std::void_t<std::result_of_t<CastToNative<T>(v8::Isolate *)>>> : public std::true_type {};
+
+template<class T> constexpr bool cast_to_native_supports_default_value_v = cast_to_native_supports_default_value<T>::value;
 
 
 // if a value to send to a macro has a comma in it, use this instead so it is parsed as a comma character in the value

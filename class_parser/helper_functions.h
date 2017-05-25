@@ -55,6 +55,12 @@ enum EXPORT_TYPE {
 
 EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED);
 
+string remove_reference_from_type_string(string const & type_string);
+string remove_local_const_from_type_string(string const & type_string);
+
+// for a possibly templated type, return either the stripped down original type or the default template parameter type
+QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> template_types);
+
 template<class T>
 std::string join(const T & source, const std::string & between = ", ", bool leading_between = false);
 void data_error(const string & error);
@@ -90,7 +96,7 @@ vector<string> generate_variable_names(vector<QualType> qual_types, bool with_st
 
 void print_specialization_info(const CXXRecordDecl * decl);
 
-
+std::string substitute_type(QualType original_type, map<string, QualType> template_types);
 std::string get_type_string(QualType qual_type,
                             const std::string & indentation = "");
 

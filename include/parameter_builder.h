@@ -165,7 +165,7 @@ struct ParameterBuilder<T, std::enable_if_t<!std::is_pointer_v<T> && !std::is_re
 
             std::cerr << fmt::format("getting default value from default args tuple: {} => {}",
                                      demangle<T>(),
-                                     std::get<(std::size_t) default_arg_position>(default_args_tuple)) << std::endl;
+                                     demangle<std::tuple_element_t<default_arg_position, DefaultArgsTuple>>()) << std::endl;
 
             return std::get<(std::size_t) default_arg_position>(default_args_tuple);
         } else {

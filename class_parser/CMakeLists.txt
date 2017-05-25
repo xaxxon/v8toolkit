@@ -1,7 +1,7 @@
 
 include(cotire)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(CLANG_HOME $ENV{CLANG_HOME})
 
@@ -47,13 +47,13 @@ add_custom_target(class_parser_driver
         ${CLANG_HOME}/bin/clang++ -D_GNU_SOURCE -D_DEBUG -D__STDC_CONSTANT_MACROS
         -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D_GNU_SOURCE
         ${PROJECT_BINARY_DIR}/class_parser/sample.cpp
-        -fsyntax-only -std=c++14 -O0
+        -fsyntax-only -std=c++1z -O0
         -Xclang -load
         -Xclang ${CMAKE_BINARY_DIR}/class_parser/$<TARGET_FILE_NAME:class_parser_plugin>
         -Xclang -plugin
         -Xclang v8toolkit-generate-bindings
         -Xclang -plugin-arg-v8toolkit-generate-bindings
-        -Xclang --declaration-count=25
+        -Xclang --declaration-count=1000
     )
 
 add_custom_target(copy_driver_resources)

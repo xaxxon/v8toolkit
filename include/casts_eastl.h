@@ -101,16 +101,19 @@ struct CastToNative<eastl::fixed_string<CharType, Length, Overflow, Allocator>> 
 template<class T, class... Rest>
 struct CastToJS<eastl::vector<T, Rest...>> {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector);
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> && vector) {
-        return this->operator()(isolate, vector);
-    }
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> && vector);
 };
 
 
 template<class T, class... Rest>
 v8::Local<v8::Value>CastToJS<eastl::vector<T, Rest...>>::operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> const & vector) {
-    return cast_to_js_vector_helper<eastl::vector, T, Rest...>(isolate, vector);
+    return cast_to_js_vector_helper<eastl::vector, T&, Rest...>(isolate, vector);
 }
+template<class T, class... Rest>
+v8::Local<v8::Value>CastToJS<eastl::vector<T, Rest...>>::operator()(v8::Isolate *isolate, eastl::vector<T, Rest...> && vector) {
+    return cast_to_js_vector_helper<eastl::vector, T&&, Rest...>(isolate, vector);
+}
+
 
 
 template<class A, class B, class... Rest>

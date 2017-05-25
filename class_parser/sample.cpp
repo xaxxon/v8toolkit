@@ -1,7 +1,8 @@
 #include "class_parser.h"
 
-
+#include <vector>
 #include <functional>
+#include <string>
 #include "sample2.h"
 
 
@@ -58,6 +59,7 @@ public:
     double double_member_readwrite;
     V8TOOLKIT_READONLY double double_member_readonly1;
     double const double_member_readonly2;
+    string const const_string_value;
     std::vector<std::string> vector_of_ints;
     std::vector<WrappedClass *> vector_of_selfs;
 
@@ -68,6 +70,8 @@ public:
     static std::string simple_static_function(double some_double);
 
     void std_function_default_parameter(std::function<void()> some_function = std::function<void()>());
+
+    void const_ref_default_parameter(std::string const & string = "asdf");
 
     enum class EnumClass{A, B, C, D};
 
@@ -134,6 +138,10 @@ public:
 class UnwrappedClassThatIsUsed {};
 
 
+class SomeParentClass {};
+class SomeClass : SomeParentClass {};
+
+
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
 V8TOOLKIT_USE_BASE_TYPE(FooParent)
@@ -146,12 +154,25 @@ Foo : public FooParent, public Test::MyTemplate<vector<int>> {
 
     double a;
 public:
+
+    template <class T = SomeClass, std::enable_if_t<std::is_base_of_v<SomeParentClass, T>>* = nullptr>
+    vector<T *> create(vector<T> && message_base) const {
+        return nullptr;
+    }
+
+    Foo *  const_value;
+
+    template <class T = SomeClass, std::enable_if_t<std::is_base_of_v<SomeParentClass, T>>* = nullptr>
+    V8TOOLKIT_SKIP T * create_skipped(vector<T> && message_base) const {
+        return nullptr;
+    }
+
     using Using=int;
     using Using2 = Using;
     V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short &&);
 
     UnwrappedClassThatIsUsed uctiu;
-    
+
     Test::MyTemplate<vector<int>> my_template_int;
     Test::MyTemplate<vector<char>> my_template_char;
 
@@ -165,8 +186,8 @@ public:
     const asdf const_typedef_to_int = 1;
 
 
-    template<class T2>
-	const T2& templated_function(const T2 & t){return t;};
+    template<class T = int, class T2 = char *>
+	T templated_function(const T & t, float f, T2 const t2){return t;};
 
 
    V8TOOLKIT_SKIP Foo(int, char*); // skip this constructor, otherwise name error
@@ -274,10 +295,10 @@ int main() {
     
     Foo f(5,5,5);
 
-    f.templated_function(5);
-    f.templated_function<short>(5);
-    f.templated_function<long>(5);
-        f.templated_function<unsigned int>(5);
+    f.templated_function(5, 5.5, "hello");
+    f.templated_function<short>(5, 5.5, "hello");
+    f.templated_function<long>(5, 5.5, "hello");
+        f.templated_function<unsigned int>(5, 5.5, "hello");
 	DerivedFromWrappedClassBase<int> dfwcb;
 	dfwcb.function_in_templated_class(5);
 

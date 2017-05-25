@@ -1,8 +1,10 @@
 #pragma once
 
+#include <map>
+
+
 #include "class_parser.h"
 #include "helper_functions.h"
-
 
 
 
@@ -19,6 +21,13 @@ struct ClassFunction {
     bool is_virtual_final = false;
     bool is_virtual_override = false;
 
+
+    // empty if function isn't a template
+    FunctionTemplateDecl const * function_template_decl = nullptr;
+
+    // default template type mapping - empty if not templated
+    map<string, QualType> template_parameter_types;
+
     // if this virtual function doesn't exist in a parent class
     bool new_virtual;
 
@@ -26,27 +35,29 @@ struct ClassFunction {
 
     private:
         static string convert_simple_typename_to_jsdoc(string simple_type_name);
+        map<string, QualType> template_parameter_types;
 
-    public:
+        // the type cannot be gotten because after template substitution there may not be an actual
+        //   Type object for the resulting type.  It is only available as a string.  However, the "plain type"
+        //   is guaranteed to exist as a Type object
         QualType type;
 
-        // removes reference and all pointers, but keeps qualifications on the "plain type"
-        // double const * const **& => double const
-        // double * const **& => double
-        QualType plain_type;
+    public:
+        TypeInfo(QualType const & type, map<string, QualType> template_parameter_types = {});
 
         CXXRecordDecl const * get_plain_type_decl() const;
 
+        QualType get_plain_type() const;
+
         /// name of actual type
-        string name;
+        string get_name() const;
 
         /// name of type without reference or pointers
-        string plain_name;
+        string get_plain_name() const;
 
         /// corresponding javascript type
         string get_jsdoc_type_name() const;
 
-        TypeInfo(QualType const & type);
 
         // return if the type (or the type being pointed/referred to) is const (not is the pointer const)
         // double * const => false
@@ -58,7 +69,7 @@ struct ClassFunction {
         bool is_templated() const;
         void for_each_templated_type(std::function<void(QualType)>) const;
 
-        bool is_void() const {return this->type->isVoidType();}
+        bool is_void() const;
     };
 
 
@@ -106,7 +117,9 @@ struct ClassFunction {
     string get_signature_string();
 
     ClassFunction(WrappedClass & wrapped_class,
-                 CXXMethodDecl const * method_decl);
+                 CXXMethodDecl const * method_decl,
+                  std::map<string, QualType> const & template_parameter_types = {},
+                  FunctionTemplateDecl const * function_template_decl = nullptr);
 
 
 
@@ -124,7 +137,8 @@ struct ClassFunction {
 
 class MemberFunction : public ClassFunction {
 public:
-    MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl);
+    MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
+                   map<string, QualType> const & map = {}, FunctionTemplateDecl const * function_template_decl = nullptr);
     string generate_js_bindings();
     string generate_js_stub();
     string generate_bidirectional();
@@ -132,7 +146,8 @@ public:
 
 class StaticFunction : public ClassFunction {
 public:
-    StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl);
+    StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
+                   map<string, QualType> const & map = {}, FunctionTemplateDecl const * function_template_decl = nullptr);
     string generate_js_bindings();
     string generate_js_stub();
 };

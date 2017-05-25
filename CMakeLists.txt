@@ -30,7 +30,6 @@ file(GLOB HEADER_FILES
         include/*.h
 		include/*.hpp
 		include/debugger_message_types/*.h
-
 		class_parser/class_parser.h
 	)
 

@@ -277,18 +277,63 @@ void WrappedClass::parse_all_methods() {
             current_decl = target_decl;
         }
 
-        if (auto template_method = dyn_cast<FunctionTemplateDecl>(current_decl)) {
-            std::string full_method_name(template_method->getQualifiedNameAsString());
+        Annotations annotations(current_decl);
+        if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+            if (auto named_decl = dyn_cast<NamedDecl>(current_decl)) {
+                std::cerr << fmt::format("Skipping {} in {} because V8TOOLKIT_NONE_STRING", named_decl->getNameAsString(), this->class_name) << std::endl;
+            } else {
+                std::cerr << fmt::format("Skipping non-named_decl in {} because V8TOOLKIT_NONE_STRING", this->class_name) << std::endl;
+            }
+        }
+
+        CXXMethodDecl const * method = dyn_cast<CXXMethodDecl>(current_decl);
+        map<string, QualType> template_parameter_types;
+        FunctionTemplateDecl const * function_template_decl = nullptr;
+
+
+        if ((function_template_decl = dyn_cast<FunctionTemplateDecl>(current_decl))) {
+
+
+            method = dyn_cast<CXXMethodDecl>(function_template_decl->getTemplatedDecl());
+
+            if (method == nullptr) {
+                llvm::report_fatal_error(fmt::format("FunctionTemplateDecl wasn't a CXXMethodDecl while going through "
+                "decl's in {} - not sure what this would mean", this->class_name));
+            }
+
+            std::string full_method_name(method->getQualifiedNameAsString());
+
             std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
-            auto template_parameters = template_method->getTemplateParameters();
+
+            if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
+                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
+                continue;
+            }
+
+
+
+            // store mapping of templated types to default types
+            bool all_template_parameters_have_default_value = true;
+
+            std::cerr << fmt::format("num template parameters for function: {}",
+                                     function_template_decl->getTemplateParameters()->size()) << std::endl;
+            auto template_parameters = function_template_decl->getTemplateParameters();
             for (auto i = template_parameters->begin(); i != template_parameters->end(); i++) {
                 std::cerr << fmt::format("template parameter: {}", (*i)->getNameAsString()) << std::endl;
+
                 if (auto template_type_param_decl = dyn_cast<TemplateTypeParmDecl>(*i)) {
                     std::cerr << fmt::format("--is a type parameter") << std::endl;
                     if (template_type_param_decl->hasDefaultArgument()) {
                         auto default_type = template_type_param_decl->getDefaultArgument();
-                        std::cerr << fmt::format("----has default argument: {}", get_type_string(default_type)) << std::endl;
+                        std::cerr << fmt::format("----has default argument: {}", get_type_string(default_type))
+                                  << std::endl;
+
+                        std::cerr << fmt::format("In template map: {} => {}", (*i)->getNameAsString(),
+                                                 default_type.getAsString()) << std::endl;
+                        template_parameter_types[(*i)->getNameAsString()] = default_type;
+                    } else {
+                        all_template_parameters_have_default_value = false;
                     }
                 } else if (auto template_value_param_decl = dyn_cast<ValueDecl>(*i)) {
                     std::cerr << fmt::format("--is a value parameter") << std::endl;
@@ -297,23 +342,31 @@ void WrappedClass::parse_all_methods() {
                     std::cerr << fmt::format("--is unknown type of parameter") << std::endl;
                 }
             }
+            std::cerr << fmt::format("Do all template parameters have defaults? {}",
+                                     all_template_parameters_have_default_value) << std::endl;
+            if (!all_template_parameters_have_default_value) {
+                continue;
 
-//            // find the CXXMethodDecl
-//            for(auto actual_method_decl : template_method->) {
-//
-//            }
+            }
         }
 
-        if (auto method = dyn_cast<CXXMethodDecl>(current_decl)) {
+        // if a CXXMethodDecl hasn't been found yet, there's nothing to do for this
+        if (!method) {
+            continue;
+        }
+
+
+        if (method) {
 
             Annotations method_annotations(method);
 
             std::string full_method_name(method->getQualifiedNameAsString());
             cerr << fmt::format("looking at {}", full_method_name) << endl;
 
-            if (method->isTemplateDecl()) {
-                std::cerr << fmt::format("{} is template decl", full_method_name) << std::endl;
-            }
+            // this is handled now
+//            if (method->isTemplateDecl()) {
+//                std::cerr << fmt::format("{} is template decl", full_method_name) << std::endl;
+//            }
 
             if (method->hasInheritedPrototype()) {
                 cerr << fmt::format("Skipping method %s because it has inherited prototype", full_method_name) << endl;
@@ -430,9 +483,9 @@ void WrappedClass::parse_all_methods() {
             std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
 
             if (method->isStatic()) {
-                this->static_functions.insert(make_unique<StaticFunction>(*this, method));
+                this->static_functions.insert(make_unique<StaticFunction>(*this, method, template_parameter_types, function_template_decl));
             } else {
-                this->member_functions.insert(make_unique<MemberFunction>(*this, method));
+                this->member_functions.insert(make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl));
             }
         }
     }
