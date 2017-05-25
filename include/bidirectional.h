@@ -333,7 +333,6 @@ protected:
     TupleType internal_param_tuple;
 
 
-public:
 
     /**
      * Helper function for creating JSFactory objects from javascript
@@ -375,6 +374,7 @@ public:
     }
 
 
+
     template<std::size_t... Is>
     std::unique_ptr<JSWrapperClass, Deleter> call_operator_helper(v8::Local<v8::Object> new_js_object,
                                 ExternalConstructorParams&&... constructor_args,
@@ -389,6 +389,7 @@ public:
 						std::forward<ExternalConstructorParams>(constructor_args)...);
     }
 
+public:
 
     /**
      * Takes a context to use while calling a javascript_function that returns an object

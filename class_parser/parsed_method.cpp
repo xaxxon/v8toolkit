@@ -148,7 +148,7 @@ bool ClassFunction::TypeInfo::is_const() const {
 ClassFunction::TypeInfo ClassFunction::TypeInfo::plain_without_const() const {
     QualType non_const = this->get_plain_type();
     non_const.removeLocalConst();
-    return TypeInfo(non_const);
+    return TypeInfo(non_const, this->template_parameter_types);
 }
 
 

@@ -791,6 +791,13 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
     std::cerr << fmt::format("Substituting dependent type: {} with template_types size: {}", original_type.getAsString(),
     template_types.size()) << std::endl;
+
+    if (template_types.size() == 0) {
+        char * f = nullptr;
+
+        llvm::report_fatal_error("can't have no substitutions for a dependent type");
+    }
+
     std::string suffix;
 
 
@@ -856,7 +863,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
 
     if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
-        std::cerr << fmt::format("treating as function") << std::endl;
+        std::cerr << fmt::format("treating as function type") << std::endl;
 
         // the type int(bool) from std::function<int(bool)> is a FunctionProtoType
         if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
@@ -888,6 +895,9 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         cerr << "is not a FUNCTION TYPE" << endl;
     }
 
+    if (auto elaborated_type = dyn_cast<ElaboratedType>(&*qual_type)) {
+        qual_type = elaborated_type->getNamedType();
+    }
 
     if (auto template_specialization_type = dyn_cast<TemplateSpecializationType>(&*qual_type)) {
         std::cerr << fmt::format("is template specialization type: {}", template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString()) << std::endl;
@@ -931,7 +941,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         std::cerr << fmt::format("returning substituted type: {}", result) << std::endl;
         return result;
     } else {
-        if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+        if (print_logging) cerr << "In substitute_types, not a template specialization type " << qual_type.getAsString() << endl;
     }
 
 //********************************************************************************

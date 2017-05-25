@@ -59,7 +59,7 @@ public:
     double double_member_readwrite;
     V8TOOLKIT_READONLY double double_member_readonly1;
     double const double_member_readonly2;
-    string const const_string_value;
+    std::string const const_string_value;
     std::vector<std::string> vector_of_ints;
     std::vector<WrappedClass *> vector_of_selfs;
 
@@ -96,7 +96,9 @@ class DoNotWrapEvenThoughInheritsFromWrapped : public WrappedClass {};
 
 namespace Test {
     template<class = char> class V8TOOLKIT_WRAPPED_CLASS MyTemplate;
-    template<class T> class MyTemplate<vector<T>> {};
+
+template<class T>
+    class MyTemplate<std::vector<T>> {};
 }
 
 
@@ -127,7 +129,7 @@ namespace v8toolkit {
 
 
 template<class T>
-class  DerivedFromWrappedClassBase : public Test::MyTemplate<vector<int>>, public v8toolkit::WrappedClassBase {
+class  DerivedFromWrappedClassBase : public Test::MyTemplate<std::vector<int>>, public v8toolkit::WrappedClassBase {
 public:
     void function_in_templated_class(T t){
 
@@ -145,7 +147,7 @@ class SomeClass : SomeParentClass {};
 class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
 //V8TOOLKIT_IGNORE_BASE_TYPE(MyTemplate<int>)
 V8TOOLKIT_USE_BASE_TYPE(FooParent)
-Foo : public FooParent, public Test::MyTemplate<vector<int>> {
+Foo : public FooParent, public Test::MyTemplate<std::vector<int>> {
     struct NestedFooStruct{};
 
 
@@ -156,14 +158,14 @@ Foo : public FooParent, public Test::MyTemplate<vector<int>> {
 public:
 
     template <class T = SomeClass, std::enable_if_t<std::is_base_of_v<SomeParentClass, T>>* = nullptr>
-    vector<T *> create(vector<T> && message_base) const {
+    const vector<T *> create(std::vector<T> && message_base) const {
         return nullptr;
     }
 
     Foo *  const_value;
 
     template <class T = SomeClass, std::enable_if_t<std::is_base_of_v<SomeParentClass, T>>* = nullptr>
-    V8TOOLKIT_SKIP T * create_skipped(vector<T> && message_base) const {
+    V8TOOLKIT_SKIP T * create_skipped(std::vector<T> && message_base) const {
         return nullptr;
     }
 
@@ -173,14 +175,14 @@ public:
 
     UnwrappedClassThatIsUsed uctiu;
 
-    Test::MyTemplate<vector<int>> my_template_int;
-    Test::MyTemplate<vector<char>> my_template_char;
+    Test::MyTemplate<std::vector<int>> my_template_int;
+    Test::MyTemplate<std::vector<char>> my_template_char;
 
     DerivedFromWrappedClassBase<short> derived_my_template_short;
     DerivedFromWrappedClassBase<char*> derived_my_template_charp;
 
     std::vector<int> returns_vector_of_ints();
-    std::map<string, int> returns_map_of_string_to_int();
+    std::map<std::string, int> returns_map_of_string_to_int();
 
 
     const asdf const_typedef_to_int = 1;
@@ -216,10 +218,10 @@ public:
    virtual void fooparent_virtual_tobeoverridden();
    static int foo_static_method(const int *){return 8;}
    const Using2 & using_return_type_test();
-   std::string take_and_return_string(string);
-   const std::string take_and_return_const_string(const string);
-   volatile const std::string & take_and_return_const_volatile_string(const volatile string *&);
-    const volatile map<const volatile int*&,const volatile Using2*&>*& map_test(const volatile std::map<const volatile Using2 *&,
+   std::string take_and_return_string(std::string);
+   const std::string take_and_return_const_string(const std::string);
+   volatile const std::string & take_and_return_const_volatile_string(const volatile std::string *&);
+    const volatile std::map<const volatile int*&,const volatile Using2*&>*& map_test(const volatile std::map<const volatile Using2 *&,
             const volatile std::set<const volatile int*&>*&>*&);
 
    void nested_foo_struct_test(const NestedFooStruct *&);
@@ -303,7 +305,7 @@ int main() {
 	dfwcb.function_in_templated_class(5);
 
 
-	NeedIncludeForTemplatedType<function<bool(Uninteresting&)>> uninteresting;
+//	NeedIncludeForTemplatedType<function<bool(Uninteresting&)>> uninteresting;
     //    DerivedFromWrappedClassBase<char>;
 }
 

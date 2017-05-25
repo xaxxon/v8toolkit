@@ -125,7 +125,7 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
             update_wrapped_class_for_type(wrapped_class, template_arg_qual_type);
         }
     } else {
-        if (print_logging) cerr << "Not a template specializaiton type " << qual_type.getAsString() << endl;
+        if (print_logging) cerr << "Not a template specialization type " << qual_type.getAsString() << endl;
     }
 }
 
