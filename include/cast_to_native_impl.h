@@ -12,15 +12,17 @@ namespace v8toolkit {
 template<typename T, class>
 struct CastToNative {
     template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
-    void operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         static_assert(!std::is_pointer<T>::value, "Cannot CastToNative to a pointer type of an unwrapped type");
         static_assert(!(std::is_lvalue_reference<T>::value && !std::is_const<std::remove_reference_t<T>>::value),
                       "Cannot CastToNative to a non-const "
                           "lvalue reference of an unwrapped type because there is no lvalue variable to send");
         static_assert(!is_wrapped_type_v<T>,
                       "CastToNative<SomeWrappedType> shouldn't fall through to this specialization");
-        static_assert(always_false_v<T>, "Invalid CastToNative configuration");
+        static_assert(always_false_v<T>, "Invalid CastToNative configuration - maybe an unwrapped type without a CastToNative defined for it?");
     }
+
+
     static constexpr bool callable(){return false;}
 };
 
@@ -126,6 +128,8 @@ static constexpr bool callable(){return true;}
 
 
 
+
+
 template<template<class,class> class ContainerTemplate, class FirstT, class SecondT>
 ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
     HANDLE_FUNCTION_VALUES;
@@ -180,10 +184,8 @@ static constexpr bool callable(){return true;}
 
 };
 
-/**
- * char * and const char * are the only types that don't actually return their own type.  Since a buffer is needed
- *   to store the string, a std::unique_ptr<char[]> is returned.
- */
+
+// Returns a std::unique_ptr<char[]> because a char * doesn't hold it's own memory
 template<>
 struct CastToNative<char *> {
     std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
@@ -193,6 +195,8 @@ struct CastToNative<char *> {
     static constexpr bool callable(){return true;}
 
 };
+
+// Returns a std::unique_ptr<char[]> because a char const * doesn't hold it's own memory
 template<>
 struct CastToNative<const char *> {
     std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
@@ -200,13 +204,29 @@ struct CastToNative<const char *> {
         return CastToNative<char *>()(isolate, value);
     }
     static constexpr bool callable(){return true;}
-
 };
 
-CAST_TO_NATIVE(std::string, {
-HANDLE_FUNCTION_VALUES;
-return std::string(*v8::String::Utf8Value(value));
-});
+// Returns a std::unique_ptr<char[]> because a string_view doesn't hold it's own memory
+template<class CharT, class Traits>
+struct CastToNative<std::basic_string_view<CharT, Traits>> {
+    std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        HANDLE_FUNCTION_VALUES;
+        return CastToNative<char *>()(isolate, value);
+    }
+    static constexpr bool callable(){return true;}
+};
+
+
+
+template<class CharT, class Traits, class Allocator>
+struct CastToNative<std::basic_string<CharT, Traits, Allocator>> {
+    std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        HANDLE_FUNCTION_VALUES;
+        return std::string(*v8::String::Utf8Value(value));
+    }
+    static constexpr bool callable(){return true;}
+};
+
 
 
 template<template<class,class...> class VectorTemplate, class T, class... Rest>

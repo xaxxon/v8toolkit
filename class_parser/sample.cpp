@@ -184,6 +184,7 @@ public:
     std::vector<int> returns_vector_of_ints();
     std::map<std::string, int> returns_map_of_string_to_int();
 
+    void takes_const_wrapped_ref(Foo const &);
 
     const asdf const_typedef_to_int = 1;
 

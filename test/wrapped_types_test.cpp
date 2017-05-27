@@ -59,6 +59,9 @@ public:
 
     CopyableWrappedClass copyable_wrapped_class;
     std::unique_ptr<WrappedClass> up_wrapped_class;
+
+    void takes_const_wrapped_ref(WrappedClass const &) {}
+    bool takes_const_unwrapped_ref(std::string_view const & name) { return false; }
 };
 
 class WrappedClassChild : public WrappedClass {
@@ -95,6 +98,10 @@ public:
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
             w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+            w.add_method("takes_const_wrapped_ref", &WrappedClass::takes_const_wrapped_ref);
+
+
+            w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
                              int,
@@ -428,6 +435,28 @@ TEST_F(WrappedClassFixture, DerivedTypesUniquePointerReverseCast) {
 
 
 TEST_F(WrappedClassFixture, CastToJSRValueRef) {
+    WrappedClass wc;
+    (*c)([&]() {
+
+        auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+    });
+}
+
+
+TEST_F(WrappedClassFixture, TakesConstWrappedRef) {
+    WrappedClass wc;
+    (*c)([&]() {
+
+        auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+    });
+}
+
+
+
+
+TEST_F(WrappedClassFixture, TakesConstUnwrappedRef) {
     WrappedClass wc;
     (*c)([&]() {
 

@@ -22,17 +22,32 @@ namespace v8toolkit {
 #endif
 
 
+
+
+
 /**
  * Used by CallCallable to build an actual list of values to send to a function.  Each call to ParameterBuilder
  * is responsible for one parameter.
  *
- * If the parameter isn't self contained (like a char *), then the memory allocated for it will be stored in `stuff`
- * which is automatically cleaned up when the function returns.
+ * If the parameter isn't self contained (pointers, references, and things that behave like a char*, then the memory
+ * allocated for it will be stored in `stuff` which is automatically cleaned up when the function returns.
  *
  * If no explicit parameter is provided from JavaScript, a default value may be available in `default_args_tuple`
  */
 template<class T, class = void>
 struct ParameterBuilder;
+
+
+template<class T>
+struct ParameterBuilder<T const> {
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+    const T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+                   std::vector<std::unique_ptr<StuffBase>> & stuff,
+                   DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+        PB_PRINT("ParameterBuilder proxying const {} => {}", demangle<T>(), demangle<T>());
+        return ParameterBuilder<T>()(info, i, stuff, std::move(default_args_tuple));
+    }
+};
 
 
 /**
@@ -87,20 +102,27 @@ struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
 * Pointers to unwrapped types
 */
 template <class T>
-struct ParameterBuilder<T*, std::enable_if_t<!is_wrapped_type_v<T> >
-> {
+struct ParameterBuilder<T*,
+    std::enable_if_t<
+        !is_wrapped_type_v<T> &&
+        !std::is_same_v<std::remove_const_t<T>, char>
+    >>
+{
     using WrappedT = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
+    static_assert(!std::is_pointer_v<WrappedT>, "multi-pointer types not supported");
 
-    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+    template<int default_arg_position = -1, class DefaultArgsTupleRef = std::tuple<>>
     WrappedT * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
-                   DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+                   DefaultArgsTupleRef && default_args_tuple = DefaultArgsTupleRef()) {
+
+        using DefaultArgsTuple = std::remove_reference_t<DefaultArgsTupleRef>;
 
         PB_PRINT("ParameterBuilder handling pointers to unwrapped types: {}", demangle<T>());
         if (i >= info.Length()) {
             return get_default_parameter<WrappedT, default_arg_position>(info, i, stuff, default_args_tuple);
         } else {
-            stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
+            stuff.push_back(Stuff<WrappedT>::stuffer(ParameterBuilder<WrappedT>().template operator()<default_arg_position>(info, i, stuff, default_args_tuple)));
             return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
         }
     }
@@ -148,20 +170,28 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
 
 
 template<class T>
-struct ParameterBuilder<T, std::enable_if_t<!std::is_pointer_v<T> && !std::is_reference_v<T> && !is_wrapped_type_v<T>>> {
+struct ParameterBuilder<T, std::enable_if_t<
+    !is_v8_type_v<T> && // v8 types passed straight through
+    !is_string_not_owning_memory_v<T> && // strings needing memory stored for them are handled differently
+        !std::is_pointer_v<T> &&
+        !std::is_reference_v<T> &&
+        !is_wrapped_type_v<T>>> // wrapped types handled from ParameterBuilder in v8_class_wrapper.h
+{
     using NoRefT = std::remove_reference_t<T>;
 
 
-    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
+    template<int default_arg_position = -1, class DefaultArgsTupleRef = std::tuple<>>
     T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                std::vector<std::unique_ptr<StuffBase>> & stuff,
-               DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+               DefaultArgsTupleRef && default_args_tuple = DefaultArgsTupleRef()) {
+
+        using DefaultArgsTuple = std::remove_reference_t<DefaultArgsTupleRef>;
 
         PB_PRINT("ParameterBuilder handling type: {}", demangle<T>());
         if (i < info.Length()) {
             return CastToNative<T>()(info.GetIsolate(), info[i++]);
 
-        } else if constexpr(default_arg_position >= 0 && default_arg_position < std::tuple_size_v<DefaultArgsTuple>) {
+        } else if constexpr(default_arg_position >= 0 && default_arg_position < std::tuple_size_v<std::remove_reference_t<DefaultArgsTuple>>) {
 
             std::cerr << fmt::format("getting default value from default args tuple: {} => {}",
                                      demangle<T>(),
@@ -200,7 +230,6 @@ struct ParameterBuilder<char *> {
             return static_cast<Stuff<decltype(string)> &>(*stuff.back()).get()->get();
         }
     }
-
 };
 
 
@@ -276,24 +305,22 @@ struct ParameterBuilder<Container<char const *, Rest...>,
 };
 
 
-// const char *
-template<>
-struct ParameterBuilder<char const *> {
-    using T = char const *;
+template<class T>
+struct ParameterBuilder<T, std::enable_if_t<is_string_not_owning_memory_v<T>>> {
 
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
-    char const * operator()(const v8::FunctionCallbackInfo<v8::Value> & info,
+    T operator()(const v8::FunctionCallbackInfo<v8::Value> & info,
                             int & i,
                             std::vector<std::unique_ptr<StuffBase>> & stuff,
                             DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-        PB_PRINT("ParameterBuilder handling char const *");
+        PB_PRINT("ParameterBuilder handling {}", demangle<T>());
 
         //std::cerr << fmt::format("ParameterBuilder type: char const *, default_arg_position = {}", default_arg_position) << std::endl;
 
         // if there is a value, use it, otherwise just use empty string
         if (i >= info.Length()) {
-            return *get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple);
+            return T(*get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple));
 
         } else {
             auto string = CastToNative<T>()(info.GetIsolate(), info[i++]);
@@ -302,6 +329,7 @@ struct ParameterBuilder<char const *> {
         }
     }
 };
+
 
 
 template<>
@@ -319,6 +347,9 @@ struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
 };
 
 
+/**
+ * If the type wants a raw JavaScript isolate, pass it through
+ */
 template<>
 struct ParameterBuilder<v8::Isolate *> {
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
@@ -332,6 +363,9 @@ struct ParameterBuilder<v8::Isolate *> {
 };
 
 
+/**
+ * If the type wants a raw JavaScript context, pass it through.
+ */
 template<>
 struct ParameterBuilder<v8::Local<v8::Context>> {
     template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
@@ -346,7 +380,7 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
 
 
 /**
- * If the type wants a JavaScript object directly, pass it through
+ * If the type wants a raw JavaScript object, pass it through
  * @tparam T
  */
 template <class T>
