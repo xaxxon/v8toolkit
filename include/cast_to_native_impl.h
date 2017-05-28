@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "cast_to_native.h"
 #include "call_javascript_function.h"
 #include "v8helpers.h"

@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <v8_class_wrapper.h>
 #include <javascript.h>
 #include "wrapped_class_base.h"
