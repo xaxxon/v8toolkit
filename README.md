@@ -7,17 +7,11 @@ automatically.
 ## Features
 * Bindings for C++ fundamental types, and many STL containers.
 * Straight-forward support for adding custom C++ to JavaScript serializer/deserializers for user-defined types.
-* Simple syntax to expose your class to JavaScript including member functions, static functions,
-and data members.
-* JavaScript debugging support.  Point Chrome ([or many other debuggers](https://developer.chrome.com/devtools/docs/debugging-clients)) z at your 
-application and see your JavaScript source, set breakpoints, inspect and set variables.   
-* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for 
-the clang compiler using the actual AST generated during compilation.
-* Understands memory ownership and C++11 `std::unique_ptr` and rvalues.   C++ functions taking/returning rvalue references 
-or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the
-JavaScript garbage collector.
-* Default parameters for calling C++ functions from JavaScript and not providing enough parameters.  Experimental
-support in the clang plugin for generating the defaults from the default values in your C++ source.
+* Simple syntax to expose your class to JavaScript including member functions, static functions, and data members.
+* JavaScript debugging support.  Point Chrome ([or many other debuggers](https://developer.chrome.com/devtools/docs/debugging-clients)) at your application and see your JavaScript source, set breakpoints, inspect and set variables.   
+* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for the clang compiler using the actual AST generated during compilation.  A stubbed out .js file is also generated with JSDoc comments and type information, directly from your C++ source, for autocompletion in compatible editors while using your C++ types from JavaScript. 
+* Understands memory ownership and C++11 `std::unique_ptr` and rvalues.   C++ functions taking/returning rvalue references or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the JavaScript garbage collector.
+* Default parameters for calling C++ functions from JavaScript and not providing enough parameters.  Experimental support in the clang plugin for generating the defaults from the default values in your C++ source.
 
 ## Requirements
 * Recent version of V8.  The V8 API is constantly evolving and this library tracks recent versions.
