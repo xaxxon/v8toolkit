@@ -573,19 +573,44 @@ std::string WrappedClass::generate_js_stub() {
     if (this->base_types.size() == 1) {
         result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
     }
-    result << "{\n";
+    result << " {";
 
+    // not sure what to do if there are multiple constructors...
+    bool first_method = true;
     for (auto & constructor : this->get_constructors()) {
+        if (!first_method) {
+            result << ",";
+        }
+        first_method = false;
+
+        result << endl << endl;
         result << constructor->generate_js_stub();
     }
 
     std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
+    first_method = true;
     for (auto & method : this->get_member_functions()) {
+
+        if (!first_method) {
+            result << ",";
+        }
+        first_method = false;
+
+        result << endl << endl;
+
         result << method->generate_js_stub();
     }
 
+
+    first_method = true;
     std::cerr << fmt::format("generating stub for {} methods", this->get_static_functions().size()) << std::endl;
     for (auto & method : this->get_static_functions()) {
+        if (!first_method) {
+            result << ",";
+        }
+        first_method = false;
+
+        result << endl << endl;
         result << method->generate_js_stub();
     }
 

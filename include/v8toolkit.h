@@ -150,21 +150,24 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
 }
 
 
+
 /**
-* Takes an arbitrary class method and returns a func::function wrapping it
-*/
+ * Takes a class with a const-qualified operator() defined on it and returns a func::function calling it
+ */
 template<class R, class CLASS, class... Args>
 func::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...) const, CLASS callable)
 {
     return func::function<R(Args...)>(callable);
 }
 
-
-
-template<class R, class... Args>
-func::function<R(Args...)> make_std_function_from_callable(R(*callable)(Args...), std::string name) {
+/**
+ * Takes a class with an operator() defined on it and returns a func::function calling it
+ */
+template<class R, class CLASS, class... Args>
+func::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...), CLASS callable)
+{
     return func::function<R(Args...)>(callable);
-};
+}
 
 
 /**

@@ -1008,43 +1008,25 @@ public:
 
 
 
-	
+	// this form is required for selecting between different overloaded instances of the same function name
 	template<class R, class... Params, class DefaultArgs = std::tuple<>>
-	void add_static_method(const std::string & method_name, R(*callable)(Params...), DefaultArgs const & default_args_tuple = DefaultArgs{}) {
-        static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
-                                                          "length", "name", "prototype"};
+	void add_static_method(const std::string & method_name, R(*function)(Params...), DefaultArgs const default_args_tuple = DefaultArgs{}) {
 
-        if (std::find(reserved_names.begin(), reserved_names.end(), method_name) != reserved_names.end()) {
-            throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
-        }
-
-		if (!std::is_const<T>::value) {
-			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
-		}
-
-		// must be set before finalization
-		assert(!this->finalized);
-
-		this->check_if_static_name_used(method_name);
-
-
-		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
-
-		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-											     callable, method_name);
-//		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
-		    constructor_function_template->Set(this->isolate,
-						       method_name.c_str(),
-						       static_method_function_template);
-		};
-
-		this->static_method_adders.emplace_back(static_method_adder);
+		return add_static_method(method_name, function_type_t<decltype(function)>(function), default_args_tuple);
 	};
 
 
 
+
 	template<class Callable, class DefaultArgs = std::tuple<>>
-	void add_static_method(const std::string & method_name, Callable callable, DefaultArgs const & default_args_tuple = DefaultArgs{}) {
+	void add_static_method(const std::string & method_name, Callable callable, DefaultArgs const default_args_tuple = DefaultArgs{}) {
+		static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
+														  "length", "name", "prototype"};
+
+		if (std::find(reserved_names.begin(), reserved_names.end(), method_name) != reserved_names.end()) {
+			throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
+		}
+
 		if (!std::is_const<T>::value) {
 			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
 		}
@@ -1054,18 +1036,30 @@ public:
 
 		this->check_if_static_name_used(method_name);
 
-		auto static_method_adder = [this, method_name, callable](v8::Local<v8::FunctionTemplate> constructor_function_template) {
 
-		    auto static_method_function_template = v8toolkit::make_function_template(this->isolate,
-											     callable, method_name);
+		auto static_method_adder = [this, method_name, callable, default_args_tuple](v8::Local<v8::FunctionTemplate> constructor_function_template) {
+
+			// the function called is this capturing lambda, which calls the actual function being registered
+			auto static_method_function_template =
+				v8toolkit::make_function_template(this->isolate, [default_args_tuple, callable](const v8::FunctionCallbackInfo<v8::Value>& info) {
+
+					auto callable_func = function_type_t<Callable>(callable);
+					CallCallable<decltype(callable_func)>()(
+						callable_func,
+						info,
+						get_index_sequence_for_func_function(callable_func),
+						default_args_tuple);
+
+				}, method_name);
 
 //		    fprintf(stderr, "Adding static method %s onto %p for %s\n", method_name.c_str(), &constructor_function_template, this->class_name.c_str());
-		    constructor_function_template->Set(this->isolate,
-						       method_name.c_str(),
-						       static_method_function_template);
+			constructor_function_template->Set(this->isolate,
+											   method_name.c_str(),
+											   static_method_function_template);
 		};
 
 		this->static_method_adders.emplace_back(static_method_adder);
+
 	}
 
 	    
@@ -1394,87 +1388,98 @@ public:
 
 
     template<class M, class... Args, class... DefaultArgTypes>
-	void _add_method(const std::string & method_name,
+	void _add_method(std::string const & method_name,
                                     M method,
                                     TypeList<Args...> const &,
                                     std::tuple<DefaultArgTypes...> const & default_args_tuple,
-                                    bool add_as_callable_object_callback = false)
-    {
-        // TODO: EXPENSIVE - when combined with
-        assert(this->finalized == false);
+                                    bool add_as_callable_object_callback = false) {
+		assert(this->finalized == false);
 
 		this->check_if_name_used(method_name);
 
-    		MethodAdderData method_adder_data = MethodAdderData{method_name,
-                                                 StdFunctionCallbackType([this, default_args_tuple, method, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
-                auto isolate = info.GetIsolate();
 
-                // get the behind-the-scenes c++ object
-                // However, Holder() refers to the most-derived object, so the prototype chain must be
-                //   inspected to find the appropriate v8::Object with the T* in its internal field
-                auto holder = info.Holder();
-                v8::Local<v8::Object> self;
+		// adds this method to the list of methods to be added when a new "javascript constructor"
+		// is created for the type being wrapped
+		MethodAdderData method_adder_data =
+			MethodAdderData{method_name, StdFunctionCallbackType(
+
+				// This is the function called (via a level of indirection because this is a capturing lambda)
+				//   when the JavaScript method is called.
+				[this, default_args_tuple, method, method_name]
+					(const v8::FunctionCallbackInfo<v8::Value> & info) {
+					auto isolate = info.GetIsolate();
+
+					// get the behind-the-scenes c++ object
+					// However, Holder() refers to the most-derived object, so the prototype chain must be
+					//   inspected to find the appropriate v8::Object with the T* in its internal field
+					auto holder = info.Holder();
+					v8::Local<v8::Object> self;
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
                     fprintf(stderr, "Looking for instance match in prototype chain %s :: %s\n", demangle<T>().c_str(),
                             demangle<M>().c_str());
-                fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
-                dump_prototypes(isolate, holder);
+                    fprintf(stderr, "Holder: %s\n", stringify_value(isolate, holder).c_str());
+                    dump_prototypes(isolate, holder);
 #endif
 
-                auto function_template_count = this->this_class_function_templates.size();
-                int current_template_count = 0;
-                for (auto &function_template : this->this_class_function_templates) {
-                    current_template_count++;
-                    V8TOOLKIT_DEBUG("Checking function template %d / %d\n", current_template_count,
-                                (int) function_template_count);
-                    self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
-                    if (!self.IsEmpty() && !self->IsNull()) {
-                        V8TOOLKIT_DEBUG("Found instance match in prototype chain\n");
-                        break;
-                    } else {
-                        V8TOOLKIT_DEBUG("No match on this one\n");
-                    }
-                }
-                if (self.IsEmpty()) {
-                    V8TOOLKIT_DEBUG("No match in prototype chain after looking through all potential function templates\n");
-                    assert(false);
-                }
+					auto function_template_count = this->this_class_function_templates.size();
+					int current_template_count = 0;
+					for (auto & function_template : this->this_class_function_templates) {
+						current_template_count++;
+						V8TOOLKIT_DEBUG("Checking function template %d / %d\n", current_template_count,
+										(int) function_template_count);
+						self = holder->FindInstanceInPrototypeChain(function_template.Get(isolate));
+						if (!self.IsEmpty() && !self->IsNull()) {
+							V8TOOLKIT_DEBUG("Found instance match in prototype chain\n");
+							break;
+						} else {
+							V8TOOLKIT_DEBUG("No match on this one\n");
+						}
+					}
+					if (self.IsEmpty()) {
+						V8TOOLKIT_DEBUG(
+							"No match in prototype chain after looking through all potential function templates\n");
+						assert(false);
+					}
 
 
-                // void* pointer = instance->GetAlignedPointerFromInternalField(0);
-                auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+					// void* pointer = instance->GetAlignedPointerFromInternalField(0);
+
+					auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "uncasted internal field: %p\n", wrap->Value());
-                WrappedData<T> *wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-                auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(
-                    wrapped_data->native_object);
+					WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+					auto backing_object_pointer = V8ClassWrapper<T>::get_instance(isolate).cast(
+						wrapped_data->native_object);
 
 //			    assert(backing_object_pointer != nullptr);
-                // bind the object and method into a func::function then build the parameters for it and call it
+					// bind the object and method into a func::function then build the parameters for it and call it
 //                if (V8_CLASS_WRAPPER_DEBUG) fprintf(stderr, "binding with object %p\n", backing_object_pointer);
-                auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
+					auto bound_method = v8toolkit::bind<T>(*backing_object_pointer, method);
 
 
 
-                // V8 does not support C++ exceptions, so all exceptions must be caught before control
-                //   is returned to V8 or the program will instantly terminate
-                try {
-					// make a copy of default_args_tuple so it's non-const - probably better to do this on a per-parameter basis
-                    CallCallable<decltype(bound_method)>()(bound_method, info, std::index_sequence_for<Args...>{}, std::tuple<DefaultArgTypes...>(default_args_tuple));
-                } catch (std::exception &e) {
-                    isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
-                    return;
-                }
-                return;
-            })};
+					// V8 does not support C++ exceptions, so all exceptions must be caught before control
+					//   is returned to V8 or the program will instantly terminate
+					try {
+						// make a copy of default_args_tuple so it's non-const - probably better to do this on a per-parameter basis
+						CallCallable<decltype(bound_method)>()(bound_method, info,
+															   std::index_sequence_for<Args...>{},
+															   std::tuple<DefaultArgTypes...>(
+																   default_args_tuple));
+					} catch (std::exception & e) {
+						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+						return;
+					}
+					return;
+				})};
 
 		if (add_as_callable_object_callback) {
-		    // can only set this once
-		    assert(!callable_adder.callback);
-		    callable_adder = method_adder_data;
+			// can only set this once
+			assert(!callable_adder.callback);
+			callable_adder = method_adder_data;
 		} else {
-		    method_adders.push_back(method_adder_data);
+			method_adders.push_back(method_adder_data);
 		}
 	}
 
@@ -1788,8 +1793,6 @@ struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
 };
 
 
-
-
 template<typename T>
 struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
@@ -1798,7 +1801,6 @@ struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_cons
 	}
 	static constexpr bool callable(){return true;}
 };
-
 
 
 template<typename T>
@@ -1811,7 +1813,6 @@ struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value &&
 	static constexpr bool callable(){return false;}
 
 };
-
 
 
 template<typename T>
@@ -1841,6 +1842,7 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 	static constexpr bool callable(){return true;}
 };
 
+
 template<typename T>
 struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 {
@@ -1852,7 +1854,6 @@ struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 	}
 	static constexpr bool callable(){return true;}
 };
-
 
 
 template<class T>

@@ -770,6 +770,7 @@ string MemberFunction::generate_js_bindings() {
     return result.str();
 }
 
+
 string MemberFunction::generate_js_stub() {
     stringstream result;
     result << fmt::format("    /**") << endl;
@@ -781,8 +782,7 @@ string MemberFunction::generate_js_stub() {
     }
 
     result << fmt::format("     */") << endl;
-    result << fmt::format("    {}({}){{}}", this->js_name, this->get_js_input_parameter_string()) << endl;
-    result << endl;
+    result << fmt::format("    {}({}){{}}", this->js_name, this->get_js_input_parameter_string());
 
     return result.str();
 }
@@ -833,8 +833,7 @@ string ConstructorFunction::generate_js_stub() {
     }
     result << fmt::format("     */") << endl;
 
-    result << fmt::format("    constructor({}){{}}", this->get_js_input_parameter_string()) << endl;
-    result << endl;
+    result << fmt::format("    constructor({}){{}}", this->get_js_input_parameter_string());
 
     return result.str();
 

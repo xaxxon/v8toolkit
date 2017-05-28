@@ -784,13 +784,11 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
     if (!original_type->isDependentType()) {
         auto result = get_type_string(original_type);
-        std::cerr << fmt::format("Not dependent type, short circuiting template substitution: {}", result) << std::endl;
         return result;
     }
 
 
-    std::cerr << fmt::format("Substituting dependent type: {} with template_types size: {}", original_type.getAsString(),
-    template_types.size()) << std::endl;
+//    std::cerr << fmt::format("Substituting dependent type: {} with template_types size: {}", original_type.getAsString(), template_types.size()) << std::endl;
 
     if (template_types.size() == 0) {
         char * f = nullptr;

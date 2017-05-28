@@ -220,7 +220,8 @@ namespace v8toolkit {
 	}
 
 
-    template<class T> void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
+    template<class T>
+	void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
 	init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 //	    fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
 		for (auto &adder : this->method_adders) {
@@ -229,7 +230,9 @@ namespace v8toolkit {
 
 			// create a function template, set the lambda created above to be the handler
 			auto function_template = v8::FunctionTemplate::New(this->isolate);
-			function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, &adder.callback));
+
+			// callback_helper knows how to call a StdFunctionCallbackType from the void* in the v8::External
+			function_template->SetCallHandler(this->callback_helper, v8::External::New(this->isolate, &adder.callback));
 
 			// methods are put into the protype of the newly created javascript object
 			object_template->Set(v8::String::NewFromUtf8(isolate, adder.method_name.c_str()), function_template);

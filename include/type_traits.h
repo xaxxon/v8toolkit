@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include "wrapped_class_base.h"
-
+#include "stdfunctionreplacement.h"
 namespace v8toolkit {
 
 // always returns false, in a dependent fashionf
@@ -82,6 +82,89 @@ struct is_v8_type<T, std::enable_if_t<
 
 template<class T>
 constexpr bool is_v8_type_v = is_v8_type<T>::value;
+
+
+template<class T, class = void>
+struct function_type {
+    static_assert(always_false_v<T>, "unknown type for std_function_type");
+};
+
+// class member functions
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...)> {
+    using type = func::function<R(Args...)>;
+};
+
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...) const> {
+    using type = func::function<R(Args...)>;
+};
+
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...) &> {
+    using type = func::function<R(Args...)>;
+};
+
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...) const &> {
+    using type = func::function<R(Args...)>;
+};
+
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...) &&> {
+    using type = func::function<R(Args...)>;
+};
+
+template<class R, class T, class... Args>
+struct function_type<R(T::*)(Args...) const && > {
+    using type = func::function<R(Args...)>;
+};
+
+// free function
+template<class R, class... Args>
+struct function_type<R(*)(Args...)> {
+using type = func::function<R(Args...)>;
+};
+
+// std::function
+template<class R, class... Args>
+struct function_type<std::function<R(Args...)>> {
+using type = func::function<R(Args...)>;
+};
+
+// func::function
+template<class R, class... Args>
+struct function_type<func::function<R(Args...)>> {
+    using type = func::function<R(Args...)>;
+};
+
+// functors
+template<class T>
+struct function_type<T> {
+    using type = typename function_type<decltype(&T::operator())>::type;
+};
+
+template<class R, class... Args>
+struct function_type<R(Args...)> {
+    using type = function_type<R(Args...)>;
+};
+
+
+template<class T>
+using function_type_t = typename function_type<T>::type;
+
+
+template<class R, class... Args>
+auto get_index_sequence_for_func_function(func::function<R(Args...)>) {
+    return std::index_sequence_for<Args...>{};
+};
+
+
+
+
+
+
+
 
 
 } // end namespace v8toolkit

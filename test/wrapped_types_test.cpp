@@ -55,7 +55,10 @@ public:
         this->default_parameters_called = true;
     };
 
-    static std::string static_method(){return "static_method";}
+    static std::string static_method(int i = 5, char const * str = "asdf"){
+        EXPECT_EQ(i, 5);
+        EXPECT_STREQ(str, "asdf");
+        return "static_method";}
 
     CopyableWrappedClass copyable_wrapped_class;
     std::unique_ptr<WrappedClass> up_wrapped_class;
@@ -110,7 +113,10 @@ public:
                              CopyableWrappedClass,
                              CopyableWrappedClass,
                              CopyableWrappedClass*>(1, "asdf", {}, {}, {}, nullptr));
-            w.add_static_method("static_method", &WrappedClass::static_method);
+            w.add_static_method("static_method", &WrappedClass::static_method, std::make_tuple(5, "asdf"));
+            w.add_static_method("inline_static_method", [](int i){
+                EXPECT_EQ(i, 7);
+            }, std::tuple<int>(7));
             w.set_compatible_types<WrappedClassChild>();
             w.finalize();
             w.add_constructor("WrappedClass", *i);
@@ -463,6 +469,18 @@ TEST_F(WrappedClassFixture, TakesConstUnwrappedRef) {
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
         EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
     });
+}
+
+
+// test calling
+TEST_F(WrappedClassFixture, StaticMethodDefaultValue) {
+    c->run("WrappedClass.static_method(5)");
+    c->run("WrappedClass.static_method()");
+    c->run("WrappedClass.static_method()");
+
+    c->run("WrappedClass.inline_static_method(7);");
+    c->run("WrappedClass.inline_static_method();");
+    c->run("WrappedClass.inline_static_method();");
 }
 
 

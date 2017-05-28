@@ -40,7 +40,7 @@ T * get_default_parameter(const v8::FunctionCallbackInfo<v8::Value> & info, int 
 
     // prioritize the default_args_tuple value if available
     if constexpr(default_arg_position >= 0) {
-        return &std::get<default_arg_position>(default_args_tuple);
+        return const_cast<T*>(&std::get<default_arg_position>(default_args_tuple));
     } else if constexpr(cast_to_native_supports_default_value_v<T>) {
         stuff.push_back(Stuff<T>::stuffer(CastToNative<T>()(info.GetIsolate())));
         return static_cast<Stuff<T>&>(stuff.back()).get();

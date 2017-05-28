@@ -24,7 +24,9 @@ namespace v8toolkit {
  * @tparam Args These have a different meaning per specialization
  */
 template<class Function, class... Args>
-struct CallCallable;
+struct CallCallable {
+    static_assert(always_false_v<Function>, "CallCallable must have a template parameter type of the func::function being called");
+};
 
 
 /**
@@ -131,30 +133,31 @@ void operator()(func::function<ReturnType(Args...)> & function,
 template<class... Args>
 struct CallCallable<func::function<void(Args...)>> {
 
-template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
-void operator()(func::function<void(Args...)> & function,
-                const v8::FunctionCallbackInfo<v8::Value> & info,
-                std::index_sequence<ArgIndexes...>,
-                DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
+    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    void operator()(func::function<void(Args...)> & function,
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-    int i = 0;
+        int i = 0;
 
-    constexpr int user_parameter_count = sizeof...(Args);
-    constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+        constexpr int user_parameter_count = sizeof...(Args);
+        constexpr int default_arg_count = std::tuple_size<std::remove_reference_t<DefaultArgsTuple>>::value;
 
-    // while this is negative, no default argument is available
+        // while this is negative, no default argument is available
 
-    // if there are 3 parameters, 1 default parameter (3-1=2), calls to ParameterBuilder will have positions:
-    // 0 - 2 = -2 (no default available)
-    // 1 - 2 = -1 (no default available)
-    // 2 - 2 = 0 (lookup at std::get<0>(default_args_tuple)
-    constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
+        // if there are 3 parameters, 1 default parameter (3-1=2), calls to ParameterBuilder will have positions:
+        // 0 - 2 = -2 (no default available)
+        // 1 - 2 = -1 (no default available)
+        // 2 - 2 = 0 (lookup at std::get<0>(default_args_tuple)
+        constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
 
-    std::vector<std::unique_ptr<StuffBase>> stuff;
-    run_function(function, info,
-                 std::forward<Args>(ParameterBuilder<Args>().
-                     template operator()<(((int)ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple>(info, i, stuff, std::move(default_args_tuple)))...);
-}
+        std::vector<std::unique_ptr<StuffBase>> stuff;
+        run_function(function, info,
+                     std::forward<Args>(ParameterBuilder<Args>().
+                         template operator()<(((int) ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple>(
+                         info, i, stuff, std::move(default_args_tuple)))...);
+    }
 };
 
 

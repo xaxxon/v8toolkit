@@ -193,41 +193,11 @@ struct ParameterBuilder<T, std::enable_if_t<
 
         } else if constexpr(default_arg_position >= 0 && default_arg_position < std::tuple_size_v<std::remove_reference_t<DefaultArgsTuple>>) {
 
-            std::cerr << fmt::format("getting default value from default args tuple: {} => {}",
-                                     demangle<T>(),
-                                     demangle<std::tuple_element_t<default_arg_position, DefaultArgsTuple>>()) << std::endl;
+//            `                         demangle<std::tuple_element_t<default_arg_position, DefaultArgsTuple>>()) << std::endl;
 
             return std::get<(std::size_t) default_arg_position>(default_args_tuple);
         } else {
             throw CastException("Not enough parameters and no default value for {}", demangle<T>());
-        }
-    }
-};
-
-
-
-
-template<>
-struct ParameterBuilder<char *> {
-    using T = char *;
-
-    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>>
-    char * operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
-                      std::vector<std::unique_ptr<StuffBase>> & stuff,
-                      DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-
-        PB_PRINT("ParameterBuilder handling char *");
-
-        //std::cerr << fmt::format("ParameterBuilder type: char* default_arg_position = {}", default_arg_position) << std::endl;
-
-        // if there is a value, use it, otherwise just use empty string
-        if (i >= info.Length()) {
-            return *get_default_parameter<T, default_arg_position>(info, i, stuff, default_args_tuple);
-
-        } else {
-            auto string = CastToNative<T>()(info.GetIsolate(), info[i++]);
-            stuff.emplace_back(std::make_unique<Stuff<decltype(string)>>(std::move(string)));
-            return static_cast<Stuff<decltype(string)> &>(*stuff.back()).get()->get();
         }
     }
 };
