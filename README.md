@@ -1,28 +1,21 @@
 # v8toolkit
-v8toolkit is a library to make integrating JavaScript to C++ as painless as possible.   Just tell v8toolkit what 
-parts of your C++ you want it to expose to JavaScript and it takes care of the rest.   Or you can annotate
-your C++ code with C++ attributes and use the included clang plugin to scan your code and generate the JavaScript bindings
+v8toolkit is a library for easily integrating JavaScript with C++.   Just tell v8toolkit what 
+parts of your C++ you want it to expose to JavaScript and v8toolkit takes care of the rest -- or you can annotate
+your C++ code inline and use the included clang plugin to scan your code and generate the JavaScript bindings
 automatically.
 
 ## Features
-* Type-aware bindings for C++ fundamental types, and a good number of STL containers.
+* Bindings for C++ fundamental types, and many STL containers.
 * Straight-forward support for adding custom C++ to JavaScript serializer/deserializers for user-defined types.
-* Simple syntax to expose your class to JavaScript including member functions, static functions,
-and data members.
-* Debugger support via anything supporting the Chrome Debugging Protocol.  Point Chrome at your application
-and see your JavaScript source, set breakpoints, inspect and set variables.   
-* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for 
-the clang compiler using the actual AST generated during compilation.
-* Understands memory ownership and C++11 `std::unique_ptr`.   C++ functions taking/returning rvalue references 
-or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the
-JavaScript garbage collector.
-* Default parameters when calling C++ functions from JavaScript and not providing enough parameters.  There is
-experimental support for automatically generating the default values directly from your C++ source code while
-using the clang plugin.
+* Simple syntax to expose your class to JavaScript including member functions, static functions, and data members.
+* JavaScript debugging support.  Point Chrome ([or many other debuggers](https://developer.chrome.com/devtools/docs/debugging-clients)) at your application and see your JavaScript source, set breakpoints, inspect and set variables.   
+* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for the clang compiler using the actual AST generated during compilation.  A stubbed out .js file is also generated with JSDoc comments and type information, directly from your C++ source, for autocompletion in compatible editors while using your C++ types from JavaScript. 
+* Understands memory ownership and C++11 `std::unique_ptr` and rvalues.   C++ functions taking/returning rvalue references or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the JavaScript garbage collector.
+* Default parameters for calling C++ functions from JavaScript and not providing enough parameters.  Experimental support in the clang plugin for generating the defaults from the default values in your C++ source.
 
 ## Requirements
-* Recent version of V8.  The V8 API is constantly evolving and this library tends to track the recent versions.
-* C++17.  C++17 adds features drastically simplifying v8toolkit's heavily templated code.  Fortunately, clang 4.0
+* Recent version of V8.  The V8 API is constantly evolving and this library tracks recent versions.
+* C++17.  C++17 adds features drastically simplifying v8toolkit's implementation.  Fortunately, clang
 supports all major platforms.  
 
 #### Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/doxygen/html/index.html
