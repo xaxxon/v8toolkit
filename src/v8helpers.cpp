@@ -8,9 +8,6 @@
 namespace v8toolkit {
 
 
-bool AnybaseDebugPrintFlag = false;
-
-
 MethodAdderData::MethodAdderData() = default;
 MethodAdderData::MethodAdderData(std::string const & method_name,
                                  StdFunctionCallbackType const & callback) :
@@ -291,7 +288,7 @@ v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Objec
 }
 
 v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value> value, std::string key) {
-    return get_key_as<v8::Value>(context, get_value_as<v8::Object>(value), key);
+    return get_key_as<v8::Value>(context, get_value_as<v8::Object>(context->GetIsolate(), value), key);
 }
 
 

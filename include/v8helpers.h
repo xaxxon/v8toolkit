@@ -15,7 +15,7 @@
 
 #include "type_traits.h"
 #include "stdfunctionreplacement.h"
-
+#include "cast_to_native.h"
 
 // if it can be determined safely that cxxabi.h is available, include it for name demangling
 #if defined __has_include
@@ -25,9 +25,22 @@
 #endif
 #endif
 
+#include <boost/serialization/strong_typedef.hpp>
 
 namespace v8toolkit {
 
+inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const &) {
+    return false;
+}
+
+
+/**
+ * class used to signify the caller wants the this object of a function call.
+ * Note: the `this` object may not have a wrapped C++ class containing it, even when calling a C++ function.  If a native
+ * JavaScript object has another JavaScript object in its prototype chain, that may be where it's getting the function.
+ * If you always want that object, instead, use Holder, not This
+ */
+BOOST_STRONG_TYPEDEF(v8::Local<v8::Object>, This)
 
 
 
@@ -496,62 +509,6 @@ auto reducer(const Container & container, Callable callable) ->
 
 
 
-/**
-* When passing an Any-type through a void *, always static_cast it to an AnyBase *
-*   pointer and pass that as the void *.  This allows you to safely cast it back to
-*   a AnyBase* on the other side and then dynamic_cast to any child types to 
-*   determine the type of the object actually stored.
-*/
-
-// if this is defined, AnyBase will store the actual typename but this is only needed for debugging
-#define ANYBASE_DEBUG
-
-/**
- * If ANYBASE_DEBUG is defined, then this flag controls whether type conversion information logs are printed to stderr
- */
-extern bool AnybaseDebugPrintFlag;
-
-
-#ifdef ANYBASE_DEBUG
-#define ANYBASE_PRINT(format_string, ...) \
-if (AnybaseDebugPrintFlag) { \
-    std::cerr << fmt::format(format_string, ##__VA_ARGS__) << std::endl; \
-}
-#else
-#define ANYBASE_PRINT(format_string, ...)
-#endif
-
-
- struct AnyBase
-{
-    virtual ~AnyBase();
-#ifdef ANYBASE_DEBUG
-    std::string type_name;
-#endif
-AnyBase(const std::string
-#ifdef ANYBASE_DEBUG
-	     type_name
-#endif
-	    )
-#ifdef ANYBASE_DEBUG
-: type_name(std::move(type_name))
-#endif
-       {}
-};
-
-
-template<class T, class = void>
-struct AnyPtr;
-
-
-template<class T>
-struct AnyPtr<T, std::enable_if_t<!std::is_pointer<T>::value && !std::is_reference<T>::value>> : public AnyBase {
-    AnyPtr(T * data) : AnyBase(demangle<T>()), data(data) {}
-    virtual ~AnyPtr(){}
-    T* data;
-    T * get() {return data;}
-};
-
 
 
 
@@ -575,61 +532,65 @@ struct Stuff : public StuffBase {
 };
 
 
-/**
-* Best used for types that are intrinsically pointers like std::shared_ptr or
-*   std::exception_ptr
-*/
 template<class T>
-struct Any : public AnyBase {
- Any(T data) : AnyBase(demangle<T>()), data(data) {}
-    virtual ~Any(){}
-    T data;
-    T get() {return data;}
-};
-
-
-template<class T>
-v8::Local<T> get_value_as(v8::Local<v8::Value> value) {
+auto get_value_as(v8::Isolate * isolate, v8::Local<v8::Value> value) {
     bool valid = false;
-    if (std::is_same<T, v8::Function>::value) {
-        valid = value->IsFunction();
-    } else if (std::is_same<T, v8::Object>::value) {
-        valid = value->IsObject();
-    } else if (std::is_same<T, v8::Array>::value) {
-        valid = value->IsArray();
-    } else if (std::is_same<T, v8::String>::value) {
-        valid = value->IsString();
-    } else if (std::is_same<T, v8::Boolean>::value) {
-        valid = value->IsBoolean();
-    } else if (std::is_same<T, v8::Number>::value) {
-        valid = value->IsNumber();
-    } else if (std::is_same<T, v8::Value>::value) {
+    if constexpr(std::is_same<T, v8::Function>::value) {
+        if (value->IsFunction()) {
+            return v8::Local<T>::Cast(value);
+        }
+
+    } else if constexpr(std::is_same<T, v8::Object>::value) {
+        if (value->IsObject()) {
+            return v8::Local<T>::Cast(value);
+        }
+
+    } else if constexpr(std::is_same<T, v8::Array>::value) {
+        if (value->IsArray()) {
+            return v8::Local<T>::Cast(value);
+        }
+
+    } else if constexpr(std::is_same<T, v8::String>::value) {
+        if (value->IsString()) {
+            return v8::Local<T>::Cast(value);
+        }
+
+    } else if constexpr(std::is_same<T, v8::Boolean>::value) {
+        if (value->IsBoolean()) {
+            return v8::Local<T>::Cast(value);
+        }
+
+    } else if constexpr(std::is_same<T, v8::Number>::value) {
+        if(value->IsNumber()) {
+            return v8::Local<T>::Cast(value);
+        }
+    } else if constexpr(std::is_same<T, v8::Value>::value) {
         // this can be handy for dealing with global values
         //   passed in through the version that takes globals
-        valid = true;
-    }
-
-    if (valid){
         return v8::Local<T>::Cast(value);
+
     } else {
-
-        //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
-        //print_v8_value_details(value);
-	    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
+        return CastToNative<T>()(isolate, value);
     }
+
+    //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
+    //print_v8_value_details(value);
+    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
+
 }
 
 
 template<class T>
-v8::Local<T> get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
-    return get_value_as<T>(value.Get(isolate));
+auto get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
+    return get_value_as<T>(isolate, value.Get(isolate));
 }
 
 
 
 
+
 template<class T>
-v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key) {
+auto get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string const & key) {
 
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
@@ -643,14 +604,20 @@ v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> ob
 //        }
         throw UndefinedPropertyException(key);
     }
-    return get_value_as<T>(get_maybe.ToLocalChecked());
+    return get_value_as<T>(isolate, get_maybe.ToLocalChecked());
 }
 
 
 
 template<class T>
-v8::Local<T> get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> object, std::string key) {
-    return get_key_as<T>(context, get_value_as<v8::Object>(object), key);
+auto get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> object, std::string const & key) {
+    return get_key_as<T>(context, get_value_as<v8::Object>(context->GetIsolate(), object), key);
+}
+
+
+template<class T>
+auto get_key_as(v8::Local<v8::Context> context, v8::Global<v8::Value> & object, std::string const & key) {
+    return get_key_as<T>(context, object.Get(context->GetIsolate()), key);
 }
 
  v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key);
@@ -677,22 +644,6 @@ bool global_name_conflicts(const std::string & name);
 extern std::vector<std::string> reserved_global_names;
 
 
-
-inline v8::Local<v8::Object> check_value_is_object(v8::Local<v8::Value> value, std::string const & class_name) {
-    if (!value->IsObject()) {
-        print_v8_value_details(value);
-        throw CastException(fmt::format("Value sent to CastToNative<{} &&> wasn't a JavaScript object, it was: '{}'", class_name, *v8::String::Utf8Value(value)));
-    }
-
-    auto object = value->ToObject();
-
-    if (object->InternalFieldCount() == 0) {
-        throw CastException(fmt::format("Object sent to CastToNative<{} &&> wasn't a wrapped native object, it was a pure JavaScript object: '{}'", class_name, *v8::String::Utf8Value(value)));
-    }
-
-    return object;
-
-}
 
 
 

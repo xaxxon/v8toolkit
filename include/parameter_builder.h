@@ -35,7 +35,9 @@ namespace v8toolkit {
  * If no explicit parameter is provided from JavaScript, a default value may be available in `default_args_tuple`
  */
 template<class T, class = void>
-struct ParameterBuilder;
+struct ParameterBuilder {
+    static_assert("No ParameterBuilder for specified type");
+};
 
 
 template<class T>
@@ -63,6 +65,7 @@ struct ParameterBuilder<T &, std::enable_if_t<!std::is_same_v<std::remove_const_
         PB_PRINT("ParameterBuilder handling lvalue reference: {}", demangle<T>());
         return * ParameterBuilder<T*>()(info, i, stuff, std::move(default_args_tuple));
     }
+
 };
 
 
@@ -79,6 +82,7 @@ struct ParameterBuilder<T &, std::enable_if_t<std::is_same_v<std::remove_const_t
         return *static_cast<Stuff<char> &>(*stuff.back()).get();
 
     }
+
 };
 
 
@@ -94,6 +98,7 @@ struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
 //        std::cerr << fmt::format("default_arg_position: {}", default_arg_position) << std::endl;
         return std::move(*(ParameterBuilder<T*>().template operator()<default_arg_position>(info, i, stuff, std::move(default_args_tuple))));
     }
+
 };
 
 
@@ -126,6 +131,7 @@ struct ParameterBuilder<T*,
             return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
         }
     }
+
 };
 
 
@@ -165,6 +171,7 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
             }
         }
     }
+
 };
 
 
@@ -200,6 +207,7 @@ struct ParameterBuilder<T, std::enable_if_t<
             throw CastException("Not enough parameters and no default value for {}", demangle<T>());
         }
     }
+
 };
 
 
@@ -242,6 +250,7 @@ struct ParameterBuilder<Container<char *, Rest...>, std::enable_if_t<!std::is_re
         }
         return result;
     }
+
 };
 
 template<template<class, class...> class Container, class... Rest>
@@ -272,6 +281,7 @@ struct ParameterBuilder<Container<char const *, Rest...>,
             return *static_cast<Stuff<ResultType> &>(*stuffs.back()).get()->get();
         }
     }
+
 };
 
 
@@ -298,6 +308,7 @@ struct ParameterBuilder<T, std::enable_if_t<is_string_not_owning_memory_v<T>>> {
             return static_cast<Stuff<decltype(string)> &>(*stuff.back()).get()->get();
         }
     }
+
 };
 
 
@@ -314,6 +325,7 @@ struct ParameterBuilder<const v8::FunctionCallbackInfo<v8::Value> &> {
 
         return info;
     }
+
 };
 
 
@@ -330,6 +342,7 @@ struct ParameterBuilder<v8::Isolate *> {
 
         return info.GetIsolate();
     }
+
 };
 
 
@@ -346,11 +359,12 @@ struct ParameterBuilder<v8::Local<v8::Context>> {
 
         return info.GetIsolate()->GetCurrentContext();
     }
+
 };
 
 
 /**
- * If the type wants a raw JavaScript object, pass it through
+ * If the type wants a raw JavaScript value of any type except v8::object, pass it the current parameter in the list
  * @tparam T
  */
 template <class T>
@@ -367,10 +381,59 @@ struct ParameterBuilder<
     v8::Local<T> operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                                      std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        static_assert(default_arg_position < 0, "Cannot have a default value for a v8::Local<T> parameter");
         PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
 
-        return v8toolkit::get_value_as<T>(info.This());
+        return v8toolkit::get_value_as<T>(info.GetIsolate(), info[i++]);
     }
 };
+//
+///**
+// * If the type wants a raw JavaScript object, pass it the receiving objects
+// * @tparam T
+// */
+//template <>
+//struct ParameterBuilder<
+//    v8toolkit::Holder,
+//    std::enable_if_t<
+//        !std::is_pointer_v<v8::Local<v8::Object>> &&
+//        !std::is_reference_v<v8::Local<v8::Object>> &&
+//        !is_wrapped_type_v<v8::Local<v8::Object>>
+//    > // enable_if
+//> {
+//
+//    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+//    v8toolkit::Holder operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+//                            std::vector<std::unique_ptr<StuffBase>> & stuff,
+//                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+//        PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
+//
+//        // holder is the JavaScript object which is the actual WrappedClass, not something which may have that as a
+//        //   prototype
+//    }
+//};
+
+template <>
+struct ParameterBuilder<
+    v8toolkit::This,
+    std::enable_if_t<
+        !std::is_pointer_v<v8::Local<v8::Object>> &&
+        !std::is_reference_v<v8::Local<v8::Object>> &&
+        !is_wrapped_type_v<v8::Local<v8::Object>>
+    > // enable_if
+> {
+
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>>
+    v8toolkit::This operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
+                                     std::vector<std::unique_ptr<StuffBase>> & stuff,
+                                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+        PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
+
+        // holder is the JavaScript object which is the actual WrappedClass, not something which may have that as a
+        //   prototype
+        return v8toolkit::This(info.This());
+    }
+};
+
 
 } // namespace v8toolkit

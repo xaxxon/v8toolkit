@@ -1,6 +1,6 @@
 
 #pragma once
-
+#include <deque>
 
 
 #include <algorithm>
@@ -9,6 +9,19 @@
 #include "v8_class_wrapper.h"
 
 namespace v8toolkit {
+
+template<class T> WrappedData<T> &
+V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrapped_data(v8::Local<v8::Object> object) {
+
+    if (object->InternalFieldCount() == 0) {
+        throw InvalidCallException("JavaScript object for making native call has no InternalField.  Pure JavaScript object specified where wrapped native object required?");
+    }
+
+    auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
+    WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
+
+    return *wrapped_data;
+}
 
     template<class T>
 	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) :
@@ -93,7 +106,6 @@ namespace v8toolkit {
 	
     /**
      * Creates a new v8::FunctionTemplate capable of creating wrapped T objects based on previously added methods and members.
-     * TODO: This needs to track all FunctionTemplates ever created so it can try to use them in GetInstanceByPrototypeChain
      */
     template<class T>
 	v8::Local<v8::FunctionTemplate>
@@ -102,9 +114,10 @@ namespace v8toolkit {
 
 		assert(this->finalized == true);
 
-        // fprintf(stderr, "Making new wrapping function template for type %s\n", demangle<T>().c_str());
-
 		auto function_template = v8::FunctionTemplate::New(isolate, callback, data);
+
+        // do NOT use signatures, because they prevent JavaScript-style inheritance objects from ever calling the function
+//		auto signature = v8::Signature::New(this->isolate, function_template);
 		init_instance_object_template(function_template->InstanceTemplate());
 		init_prototype_object_template(function_template->PrototypeTemplate());
 		for (auto &adder : this->static_method_adders) {
@@ -129,7 +142,6 @@ namespace v8toolkit {
         // fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
 		this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
 		return function_template;
-
 	}
 
     /**
@@ -223,16 +235,17 @@ namespace v8toolkit {
     template<class T>
 	void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
 	init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
-//	    fprintf(stderr, "Adding %d methods\n", (int)this->method_adders.size());
+
 		for (auto &adder : this->method_adders) {
 
 			//std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
 
 			// create a function template, set the lambda created above to be the handler
-			auto function_template = v8::FunctionTemplate::New(this->isolate);
-
-			// callback_helper knows how to call a StdFunctionCallbackType from the void* in the v8::External
-			function_template->SetCallHandler(this->callback_helper, v8::External::New(this->isolate, &adder.callback));
+			auto function_template = v8::FunctionTemplate::New(this->isolate,
+															   this->callback_helper,
+															   v8::External::New(this->isolate, &adder.callback)
+                /*** DO NOT SET A SIGNATURE otherwise traditional JavaScript inheritance objects can't call the function ever ***/
+            );
 
 			// methods are put into the protype of the newly created javascript object
 			object_template->Set(v8::String::NewFromUtf8(isolate, adder.method_name.c_str()), function_template);
@@ -284,7 +297,13 @@ namespace v8toolkit {
         }
 	    this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
         this->finalized = true;
-        get_function_template(); // force creation of a function template that doesn't call v8_constructor
+
+		// ****************
+		// first created function template must not call any type of constructor function, so make one immediately
+		//   otherwise when trying to wrap an existing cpp object, it will call the constructor, which is bad
+		// ****************
+		assert(this->this_class_function_templates.size() == 0);
+        get_function_template();
     }
 
 

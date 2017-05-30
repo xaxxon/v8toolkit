@@ -1,10 +1,21 @@
 
-#pragma once
 
 #include <v8_class_wrapper.h>
 #include <javascript.h>
 #include "wrapped_class_base.h"
 #include "testing.h"
+
+
+
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
 
 
 using namespace v8toolkit;
@@ -19,11 +30,14 @@ public:
 
 };
 
-
-
+bool takes_holder_called = false;
+bool takes_this_called = false;
+bool takes_isolate_and_int_called = false;
+bool returns_wrapped_class_lvalue_called = false;
 class WrappedClass : public WrappedClassBase {
 public:
-    WrappedClass() = default;
+    // class is not default constructible
+    WrappedClass(int) {};
     WrappedClass(WrappedClass const &) = default;
     WrappedClass(WrappedClass &&) = default;
     virtual ~WrappedClass(){}
@@ -45,7 +59,6 @@ public:
     }
 
     bool default_parameters_called = false;
-
     void default_parameters(int j = 1,
                             char const * s = "asdf",
                             vector<std::string> && = {},
@@ -57,6 +70,12 @@ public:
         this->default_parameters_called = true;
     };
 
+    WrappedClass & returns_wrapped_class_lvalue() {
+        returns_wrapped_class_lvalue_called = true;
+        std::cerr << fmt::format("wrapped_class lvalue at {}", (void*)this) << std::endl;
+        return *this;
+    }
+
     static std::string static_method(int i = 5, char const * str = "asdf"){
         EXPECT_EQ(i, 5);
         EXPECT_STREQ(str, "asdf");
@@ -67,10 +86,26 @@ public:
 
     void takes_const_wrapped_ref(WrappedClass const &) {}
     bool takes_const_unwrapped_ref(std::string_view const & name) { return false; }
+
+
+    static void takes_isolate_and_int(v8::Isolate * isolate, int i, v8::Local<v8::Value> value, int j) {
+        EXPECT_EQ(i, 1);
+        EXPECT_EQ(v8toolkit::CastToNative<int>()(isolate, value), 2);
+        EXPECT_EQ(j, 3);
+        takes_isolate_and_int_called = true;
+    }
+
+    void takes_this(v8::Isolate * isolate, v8toolkit::This this_object) {
+        std::cout << "inside takes_this: " << stringify_value(isolate, get_value_as<v8::Value>(isolate, v8::Local<v8::Object>(this_object))) << endl << endl;
+
+        EXPECT_EQ(V8ClassWrapper<WrappedClass>::get_instance(isolate).get_cpp_object(this_object), nullptr);
+        takes_this_called = true;
+    }
 };
 
 class WrappedClassChild : public WrappedClass {
-
+public:
+    WrappedClassChild() : WrappedClass(0) {}
 };
 
 
@@ -104,8 +139,9 @@ public:
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
             w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
             w.add_method("takes_const_wrapped_ref", &WrappedClass::takes_const_wrapped_ref);
-
-
+            w.add_static_method("takes_isolate_and_int", &WrappedClass::takes_isolate_and_int, std::tuple<int>(3));
+            w.add_method("takes_this", &WrappedClass::takes_this);
+            w.add_method("returns_wrapped_class_lvalue", &WrappedClass::returns_wrapped_class_lvalue);
             w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
@@ -120,8 +156,8 @@ public:
                 EXPECT_EQ(i, 7);
             }, std::tuple<int>(7));
             w.set_compatible_types<WrappedClassChild>();
-            w.finalize();
-            w.add_constructor("WrappedClass", *i);
+            w.finalize(true);
+            w.add_constructor<int>("WrappedClass", *i);
         }
         {
             auto & w = V8ClassWrapper<WrappedClassChild>::get_instance(*i);
@@ -163,7 +199,8 @@ public:
         });
 
         i->add_function("returns_wrapped_class_lvalue_ref", []()->WrappedClass&{
-            static WrappedClass static_wrapped_class;
+
+            static WrappedClass static_wrapped_class(1);
             return static_wrapped_class;
         });
 
@@ -179,11 +216,11 @@ TEST_F(WrappedClassFixture, Accessors) {
 
     (*c)([&] {
         {
-            c->run("EXPECT_TRUE(new WrappedClass().i == 5)");
-            c->run("EXPECT_TRUE(new WrappedClass().ci == 5)");
+            c->run("EXPECT_TRUE(new WrappedClass(1).i == 5)");
+            c->run("EXPECT_TRUE(new WrappedClass(2).ci == 5)");
 
-            c->run("EXPECT_TRUE(new WrappedClass().upf == 3.5)");
-            c->run("EXPECT_TRUE(new WrappedClass().cupf == 4.5)");
+            c->run("EXPECT_TRUE(new WrappedClass(3).upf == 3.5)");
+            c->run("EXPECT_TRUE(new WrappedClass(4).cupf == 4.5)");
         }
     });
 }
@@ -192,8 +229,8 @@ TEST_F(WrappedClassFixture, SimpleFunctions) {
 
     (*c)([&] {
         {
-            c->run("EXPECT_TRUE(new WrappedClass().takes_int_5(5) == 5)");
-            c->run("EXPECT_TRUE(new WrappedClass().takes_const_int_6(6) == 6)");
+            c->run("EXPECT_TRUE(new WrappedClass(5).takes_int_5(5) == 5)");
+            c->run("EXPECT_TRUE(new WrappedClass(6).takes_const_int_6(6) == 6)");
 
             c->run("EXPECT_TRUE(WrappedClass.static_method() == `static_method`)");
         }
@@ -208,7 +245,7 @@ TEST_F(WrappedClassFixture, CallingWithLvalueWrappedClass) {
         {
             // calling with owning object
             auto result = c->run(
-                "wc = new WrappedClass(); takes_wrapped_class_lvalue(wc);"
+                "wc = new WrappedClass(7); takes_wrapped_class_lvalue(wc);"
                     "EXPECT_EQJS(wc.string, `string value`); wc;"
             );
             EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject()));
@@ -229,7 +266,7 @@ TEST_F(WrappedClassFixture, CallingWithRvalueWrappedClass) {
     (*c)([&] {
         {
             // calling with owning object
-            auto result = c->run("wc = new WrappedClass(); takes_wrapped_class_rvalue(wc);"
+            auto result = c->run("wc = new WrappedClass(8); takes_wrapped_class_rvalue(wc);"
                                      "EXPECT_EQJS(wc.string, ``); wc;"
             );
 
@@ -255,7 +292,7 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
         {
             // calling with owning object
             auto result = c->run(
-                "wc = new WrappedClass(); takes_wrapped_class_unique_ptr(wc);"
+                "wc = new WrappedClass(9); takes_wrapped_class_unique_ptr(wc);"
                     // "EXPECT_EQJS(wc.string, ``);" <== can't do this, the memory is *GONE* not just moved out of
                 "wc;"
             );
@@ -266,7 +303,7 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
             // call with unique_ptr when owning, then call again after first call takes ownership
             EXPECT_THROW(
                 c->run(
-                    "wc = new WrappedClass(); takes_wrapped_class_unique_ptr(wc); takes_wrapped_class_unique_ptr(wc);"
+                    "wc = new WrappedClass(10); takes_wrapped_class_unique_ptr(wc); takes_wrapped_class_unique_ptr(wc);"
                         "EXPECT_EQJS(wc.string, ``); wc;"
                 ), V8Exception);
         }
@@ -285,7 +322,7 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
 TEST_F(WrappedClassFixture, ReturningUniquePtr) {
 
     c->add_function("returns_unique_ptr", [&](){
-        return std::make_unique<WrappedClass>();
+        return std::make_unique<WrappedClass>(4);
     });
 
 
@@ -356,7 +393,7 @@ TEST_F(WrappedClassFixture, DefaultParameters) {
 
     (*c)([&](){
 
-        auto result = c->run("let wc = new WrappedClass(); wc.default_parameters(); wc;");
+        auto result = c->run("let wc = new WrappedClass(11); wc.default_parameters(); wc;");
         WrappedClass * pwc = CastToNative<WrappedClass *>()(*i, result.Get(*i));
         EXPECT_TRUE(pwc->default_parameters_called);
     });
@@ -435,7 +472,7 @@ TEST_F(WrappedClassFixture, DerivedTypesUniquePointerReverseCast) {
 
     // really return a wrapped class child, but call it a wrapped class instead
     c->add_function("returns_wrapped_class_child", [&]()->std::unique_ptr<WrappedClass> {
-        return std::make_unique<WrappedClass>();
+        return std::make_unique<WrappedClass>(6);
     });
 
     c->run("wants_wrapped_class(returns_wrapped_class_child());");
@@ -443,7 +480,7 @@ TEST_F(WrappedClassFixture, DerivedTypesUniquePointerReverseCast) {
 
 
 TEST_F(WrappedClassFixture, CastToJSRValueRef) {
-    WrappedClass wc;
+    WrappedClass wc(2);
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
@@ -453,7 +490,7 @@ TEST_F(WrappedClassFixture, CastToJSRValueRef) {
 
 
 TEST_F(WrappedClassFixture, TakesConstWrappedRef) {
-    WrappedClass wc;
+    WrappedClass wc(3);
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
@@ -465,7 +502,7 @@ TEST_F(WrappedClassFixture, TakesConstWrappedRef) {
 
 
 TEST_F(WrappedClassFixture, TakesConstUnwrappedRef) {
-    WrappedClass wc;
+    WrappedClass wc(4);
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
@@ -486,4 +523,53 @@ TEST_F(WrappedClassFixture, StaticMethodDefaultValue) {
 }
 
 
+TEST_F(WrappedClassFixture, FunctionTakesIsolatePointer) {
+    takes_isolate_and_int_called = false;
+    c->run("WrappedClass.takes_isolate_and_int(1, 2, 3);");
+    EXPECT_TRUE(takes_isolate_and_int_called);
+
+    takes_isolate_and_int_called = false;
+    c->run("WrappedClass.takes_isolate_and_int(1, 2);");
+    EXPECT_TRUE(takes_isolate_and_int_called);
+
+}
+
+
+TEST_F(WrappedClassFixture, WrapDerivedTypeFromBaseWrapper) {
+    (*c)([&]() {
+
+        returns_wrapped_class_lvalue_called = false;
+        auto result = c->run("new WrappedClass(12).returns_wrapped_class_lvalue();");
+        EXPECT_TRUE(returns_wrapped_class_lvalue_called);
+        auto wrapped_class = get_value_as<WrappedClass*>(*i, result);
+        EXPECT_EQ(wrapped_class->i, 5);
+    });
+}
+
+
+TEST_F(WrappedClassFixture, FunctionTakesHolder) {
+    cerr << V8ClassWrapper<WrappedClass>::get_instance(*i).get_class_details_string() << endl;
+    (*c)([&]() {
+
+        takes_this_called = false;
+        c->run("var wc2 = new WrappedClass(13);wc2.base = true;"
+                   "var derived_wc2 = Object.create(wc2); derived_wc2.derived = true;");
+
+        auto base = c->run("wc2");
+        auto derived = c->run("derived_wc2");
+
+        dump_prototypes(*i, get_value_as<v8::Object>(*i, base.Get(*i)));
+
+        dump_prototypes(*i, get_value_as<v8::Object>(*i, derived.Get(*i)));
+
+
+        c->run("println(`printing base:`);"
+                   "printobjall(wc2);"
+                   "println(`printing derived:`);"
+                   "printobjall(derived_wc2);"
+                   "println(`about to call derived.takes_this()`);"
+                   "derived_wc2.takes_this();");
+        EXPECT_TRUE(takes_this_called);
+    });
+}
 

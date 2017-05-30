@@ -48,6 +48,7 @@ void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
     int i = 0;
 
     constexpr int user_parameter_count = sizeof...(Args);
+
     constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
 
     // while this is negative, no default argument is available
@@ -117,7 +118,7 @@ void operator()(func::function<ReturnType(Args...)> & function,
 
     std::vector<std::unique_ptr<StuffBase>> stuff;
 
-    info.GetReturnValue().Set(v8toolkit::CastToJS<std::remove_reference_t<ReturnType>>()(info.GetIsolate(),
+    info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
                                                                                          run_function(function, info, std::forward<Args>(
                                                                                              ParameterBuilder<Args>().template operator()
                                                                                                  <(((int)ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple> (info, i,
@@ -140,6 +141,7 @@ struct CallCallable<func::function<void(Args...)>> {
                     DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
+
 
         constexpr int user_parameter_count = sizeof...(Args);
         constexpr int default_arg_count = std::tuple_size<std::remove_reference_t<DefaultArgsTuple>>::value;

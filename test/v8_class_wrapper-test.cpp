@@ -443,7 +443,27 @@ TEST_F(JavaScriptFixture, StdFunctionCasts) {
 }
 
 
+TEST_F(JavaScriptFixture, get_value_as_NativeType) {
+    this->create_context();
 
+    (*c)([&] {
+        {
+            auto result = c->run("4.5");
+            EXPECT_EQ(get_value_as<float>(*i, result), 4.5);
+            EXPECT_EQ(get_value_as<int>(*i, result), 4);
+            EXPECT_EQ(get_value_as<std::string>(*i, result), "4.5");
+        }
+        {
+            auto result = c->run("new Object({"
+                                     "float: 5.5,"
+                                     "string: `asdf`,"
+                                     "})");
+            EXPECT_EQ(get_key_as<float>(*c, result, "float"), 5.5);
+            EXPECT_EQ(get_key_as<std::string>(*c, result, "string"), "asdf");
+        }
+
+    });
+}
 
 
 TEST_F(JavaScriptFixture, TEST_NAME) {

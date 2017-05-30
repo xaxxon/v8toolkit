@@ -20,23 +20,7 @@
 #include "./v8toolkit.h"
 
 
-
-
-
-void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-	return malloc(size);
-}
-
-void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-	return malloc(size);
-}
-
 namespace v8toolkit {
-
-// used in v8_class_wrapper_impl.h to track which global names have been used
-std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
 
 // used in v8_class_wrapper.h to store callbacks for cleaning up wrapper objects when an isolate is destroyed
 V8ClassWrapperInstanceRegistry wrapper_registery;
@@ -398,16 +382,9 @@ v8::Local<v8::Value> run_script(v8::Local<v8::Context> context, v8::Local<v8::Sc
         // print_v8_value_details(e);
 
 
-	// This functionality causes the javascript to not be able to catch and understand the exception
         if(e->IsExternal()) {
-            auto anybase = (AnyBase *)v8::External::Cast(*e)->Value();
-            auto anyptr_exception_ptr = dynamic_cast<Any<std::exception_ptr> *>(anybase);
-            assert(anyptr_exception_ptr); // cannot handle other types at this time TODO: throw some other type of exception if this happens UnknownExceptionException or something
-
-            // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
-            std::rethrow_exception(anyptr_exception_ptr->get());
+            // no longer supported
         } else {
-            printf("v8 internal exception thrown: %s\n", *v8::String::Utf8Value(e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -711,6 +688,7 @@ void require_directory(v8::Local<v8::Context> context, std::string directory_nam
 void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 {
     fprintf(stderr, "Looking at prototype chain\n");
+    int i = 0;
 	while (!object->IsNull()) {
 	    /* This code assumes things about what is in the internfieldcount that isn't safe to assume
 	    if (object->InternalFieldCount() == 1) {
@@ -720,7 +698,7 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 		fprintf(stderr, "Prototype is wrapped object with debug string type name: %s\n", wrapped_data->native_object_type.c_str());
 	    }
 	    */
-	    fprintf(stderr, "%s:\n", *v8::String::Utf8Value(object));
+	    fprintf(stderr, "[level: %d] %s:\n", i++, *v8::String::Utf8Value(object));
 	    // print_v8_value_details(foo);
 	    fprintf(stderr, "%s\n", stringify_value(isolate, object).c_str());
 	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());

@@ -37,45 +37,16 @@
 namespace v8toolkit {
 
 
+struct SetWeakCallbackData {
+    SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
+                        v8::Isolate * isolate,
+                        const v8::Local<v8::Object> & javascript_object,
+                        bool destructive);
 
-    struct SetWeakCallbackData {
-        SetWeakCallbackData(func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
-                            v8::Isolate * isolate,
-                            const v8::Local<v8::Object> & javascript_object,
-                            bool destructive);
-
-        func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback;
-        v8::Global<v8::Object> global;
-        bool destructive;
-    };
-
-
-    /**
-     * Holds the c++ object to be embedded inside a javascript object along with additional debugging information
-     *   when requested
-     */
-    template<class T>
-    struct WrappedData {
-        AnyBase * native_object;
-        std::string native_object_type = demangle<T>();
-        SetWeakCallbackData * weak_callback_data = nullptr;
-        T * original_pointer;
-
-        WrappedData(T * native_object,
-                    SetWeakCallbackData * weak_callback_data) :
-            native_object(new AnyPtr<T>(native_object)),
-            weak_callback_data(weak_callback_data),
-            original_pointer(native_object)
-        {}
-        ~WrappedData(){delete native_object;}
-    };
-
-
-
-
-
-
-
+    func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback;
+    v8::Global<v8::Object> global;
+    bool destructive;
+};
 
 
 
@@ -83,7 +54,6 @@ template<class T>
 struct remove_const_from_reference {
     using type = T;
 };
-
 
 template<class T>
 struct remove_const_from_reference<T const &>{
@@ -94,7 +64,6 @@ template<class T>
 struct remove_const_from_reference<T const>{
     using type = T;
 };
-
 
 template<class T>
 using remove_const_from_reference_t = typename remove_const_from_reference<T>::type;
@@ -230,7 +199,7 @@ void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Ob
 
     auto isolate = context->GetIsolate();
     auto function_template = make_function_template(isolate, callable, name);
-    auto function = function_template->GetFunction();
+    auto function = function_template->GetFunction(context).ToLocalChecked();
     (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
 }
 

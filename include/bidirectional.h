@@ -418,7 +418,7 @@ public:
 
         // It's wrong to create a new instance for the prototype of each bidirectional object - they should all have the
         //   same prototype (pretty sure)
-        auto new_js_object = js_base_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+        auto new_js_object = js_base_constructor_function.Get(isolate)->GetFunction(context).ToLocalChecked()->NewInstance();
         (void) this->js_prototype.Get(isolate)->SetPrototype(context, new_js_object->GetPrototype());
 
         // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
@@ -430,7 +430,7 @@ public:
             auto context = this->global_context.Get(this->isolate);
 
             // Create a new javascript object for Base but then set its prototype to the subclass's prototype
-            v8::Local<v8::Object> new_js_object = this->js_base_constructor_function.Get(isolate)->GetFunction()->NewInstance();
+            v8::Local<v8::Object> new_js_object = this->js_base_constructor_function.Get(isolate)->GetFunction(context).ToLocalChecked()->NewInstance();
 
             (void)new_js_object->SetPrototype(context, this->js_prototype.Get(isolate));
 
@@ -444,10 +444,10 @@ public:
 
             auto & wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
 
-            // I think thi sneeds to be leave_alone because the CPP object that this would otherwise delete is holding a v8::Global refernce
+            // I think thi sneeds to be leave_alone because the CPP object that this would otherwise delete is holding a v8::Global reference
             //   to the JavaScript object which prevents it from being GC'd before the CPP object has already been deleted.
             // Also, I was running into double-free errors with this set as _delete.
-            wrapper.template initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_leave_alone);
+            wrapper.initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_leave_alone);
 
             // call javascript "constructor" method (per-instance)
             v8toolkit::call_javascript_function_with_vars(context,

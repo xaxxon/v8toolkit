@@ -7,6 +7,19 @@
 
 #include "javascript.h"
 
+
+// eastl allocators
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
+
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return malloc(size);
+}
+
+
 using namespace std;
 using namespace v8toolkit;
 
@@ -512,10 +525,10 @@ void run_inheritance_test()
         
         (*c)([&]{
             auto json = c->json("[1,2,3]");
-            (void)get_value_as<v8::Array>(json);
+            (void)get_value_as<v8::Array>(*i, json);
             bool got_expected_exception = false;
             try{
-                (void)get_value_as<v8::Boolean>(json);
+                (void)get_value_as<v8::Boolean>(*i, json);
             } catch(...) {
                 got_expected_exception = true;
             }

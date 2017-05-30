@@ -143,7 +143,7 @@ ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::L
             throw v8toolkit::CastException(error);
         }
         auto context = isolate->GetCurrentContext();
-        auto array = get_value_as<v8::Array>(value);
+        auto array = get_value_as<v8::Array>(isolate, value);
         auto first = array->Get(context, 0).ToLocalChecked();
         auto second = array->Get(context, 1).ToLocalChecked();
         return std::pair<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
@@ -437,7 +437,7 @@ struct CastToNative<std::multimap<Key, Value, Args...>> {
 template<class ReturnT, class... Args>
 struct CastToNative<std::function<ReturnT(Args...)>> {
     std::function<ReturnT(Args...)> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        auto js_function = v8toolkit::get_value_as<v8::Function>(value);
+        auto js_function = v8toolkit::get_value_as<v8::Function>(isolate, value);
 
         // v8::Global's aren't copyable, but shared pointers to them are. std::functions need everything in them to be copyable
         auto context = isolate->GetCurrentContext();

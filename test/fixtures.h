@@ -33,6 +33,7 @@ public:
     v8toolkit::ContextPtr c;
     JavaScriptFixture() {
         i = v8toolkit::Platform::create_isolate();
+        i->add_print();
         i->add_assert();
     }
 
