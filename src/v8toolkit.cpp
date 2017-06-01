@@ -418,12 +418,13 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     v8::Local<v8::String> parameter_names[] = {
         "module"_v8, "exports"_v8
     };
+
     v8::TryCatch try_catch(isolate);
     auto maybe_module_function =
         v8::ScriptCompiler::CompileFunctionInContext(context, &source, 2, &parameter_names[0], 0, nullptr);
     if (try_catch.HasCaught()) {
         ReportException(isolate, &try_catch);
-        assert(false);
+        throw V8CompilationException(isolate, try_catch);
     }
 
 
@@ -445,7 +446,14 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     module_params[1] = exports_object;
     add_variable(context, module_params[0]->ToObject(), "exports", exports_object);
 
-    (void)compiled_function->Call(context, context->Global(), 2, &module_params[0]);
+    {
+        v8::TryCatch module_execution_try_catch(isolate);
+        (void) compiled_function->Call(context, context->Global(), 2, &module_params[0]);
+        if (module_execution_try_catch.HasCaught()) {
+            ReportException(isolate, &module_execution_try_catch);
+            throw V8ExecutionException(isolate, module_execution_try_catch);
+        }
+    }
 
     return exports_object;
 }
@@ -487,117 +495,120 @@ bool require(
 
     for (auto suffix : std::vector<std::string>{"", ".js", ".json", }) {
         for (auto path : paths) {
-            try {
 #ifdef _MSC_VER
-		auto complete_filename = path + "\\" + filename + suffix;
+            auto complete_filename = path + "\\" + filename + suffix;
 #else
-                auto complete_filename = path + "/" + filename + suffix;
+            auto complete_filename = path + "/" + filename + suffix;
 #endif
 
-                std::string resource_name = complete_filename;
-                if (resource_name_callback) {
-                    resource_name = resource_name_callback(complete_filename);
-                }
+            std::string resource_name = complete_filename;
+            if (resource_name_callback) {
+                resource_name = resource_name_callback(complete_filename);
+            }
 
-                std::string file_contents;
-                time_t file_modification_time = 0;
-                if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
-                    if (REQUIRE_DEBUG_PRINTS) printf("Module not found at %s\n", complete_filename.c_str());
-                    continue;
-                }
+            std::string file_contents;
+            time_t file_modification_time = 0;
+            if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
+                if (REQUIRE_DEBUG_PRINTS) printf("Module not found at %s\n", complete_filename.c_str());
+                continue;
+            }
 
-                // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
-                // This is read-only and per-isolate and the only way to add is to be in the isolate
+            // get the map of cached results for this isolate (guaranteed to exist because it was created before this lambda)
+            // This is read-only and per-isolate and the only way to add is to be in the isolate
+            if (use_cache) {
+                std::lock_guard<std::mutex> l(require_results_mutex);
+                auto & isolate_require_results = require_results[isolate];
+
+                auto cached_require_results = isolate_require_results.find(complete_filename);
+                if (cached_require_results != isolate_require_results.end()) {
+                    if (REQUIRE_DEBUG_PRINTS)
+                        printf("Found cached results, using cache instead of re-running module\n");
+
+                    // if we don't care about file modifications or the file modification time is the same as before,
+                    //   return the cached result
+                    if (!track_file_modification_times ||
+                        file_modification_time == cached_require_results->second.time) {
+                        if (REQUIRE_DEBUG_PRINTS) printf("Returning cached results\n");
+                        result = cached_require_results->second.result.Get(isolate);
+                        return true;
+                    } else {
+                        if (REQUIRE_DEBUG_PRINTS)
+                            printf("Not returning cached results because modification time was no good\n");
+                    }
+                } else {
+                    if (REQUIRE_DEBUG_PRINTS)
+                        printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
+                }
+            }
+
+            // CACHE WAS SEARCHED AND NO RESULT FOUND - DO THE WORK AND CACHE THE RESULT AFTERWARDS
+
+            // Compile the source code.
+
+            v8::Local<v8::Script> script;
+
+            if (std::regex_search(filename, std::regex(".json$"))) {
+
+                v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
+                                                                       resource_name.c_str()),
+                                               v8::Integer::New(isolate, 0), // line offset
+                                               v8::Integer::New(isolate, 0)  // column offset
+                );
+
+                v8::Local<v8::Value> error;
+                v8::TryCatch try_catch(isolate);
+                // TODO: make sure requiring a json file is being tested
+                if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents.c_str());
+                auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate, file_contents.c_str()));
+                if (try_catch.HasCaught()) {
+                    try_catch.ReThrow();
+                    if (REQUIRE_DEBUG_PRINTS)
+                        printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(),
+                               *v8::String::Utf8Value(try_catch.Exception()));
+                    return false;
+                }
+                result = maybe_result.ToLocalChecked();
+
+                // cache the result for subsequent requires of the same module in the same isolate
                 if (use_cache) {
                     std::lock_guard<std::mutex> l(require_results_mutex);
                     auto & isolate_require_results = require_results[isolate];
-        
-                    auto cached_require_results = isolate_require_results.find(complete_filename);
-                    if (cached_require_results != isolate_require_results.end()) {
-                        if (REQUIRE_DEBUG_PRINTS) printf("Found cached results, using cache instead of re-running module\n");
-                        
-                        // if we don't care about file modifications or the file modification time is the same as before,
-                        //   return the cached result
-                        if (!track_file_modification_times || file_modification_time == cached_require_results->second.time) {
-                            if (REQUIRE_DEBUG_PRINTS) printf("Returning cached results\n");
-                            result = cached_require_results->second.result.Get(isolate);
-                            return true;
-                        } else {
-                            if (REQUIRE_DEBUG_PRINTS) printf("Not returning cached results because modification time was no good\n");
-                        }
-                    } else {
-                        if (REQUIRE_DEBUG_PRINTS) printf("Didn't find cached version for isolate %p %s\n", isolate, complete_filename.c_str());
+                    auto i = isolate_require_results.find(complete_filename);
+                    if (i == isolate_require_results.end()) {
+                        isolate_require_results.emplace(complete_filename,
+                                                        RequireResult(isolate, context, v8::Local<v8::Function>(),
+                                                                      result, time(nullptr)));
                     }
                 }
 
-                // CACHE WAS SEARCHED AND NO RESULT FOUND - DO THE WORK AND CACHE THE RESULT AFTERWARDS
+            } else {
 
-                // Compile the source code.
+                v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, resource_name.c_str()),
+                                               0_v8, // line offset
+                                               26_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
+                                               v8::Local<v8::Boolean>());
 
-                v8::Local<v8::Script> script;
+                v8::Local<v8::Value> error;
+                v8::Local<v8::Function> module_function;
 
-                if (std::regex_search(filename, std::regex(".json$"))) {
+                result = execute_module(context, file_contents, script_origin, module_function);
 
-                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate,
-                                                                           resource_name.c_str()),
-                                                   v8::Integer::New(isolate, 0), // line offset
-                                                   v8::Integer::New(isolate, 0)  // column offset
-                    );
-
-                    v8::Local<v8::Value> error;
-                    v8::TryCatch try_catch(isolate);
-                    // TODO: make sure requiring a json file is being tested
-                    if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents.c_str());
-                    auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate,file_contents.c_str()));
-                    if (try_catch.HasCaught()) {
-                        try_catch.ReThrow();
-                        if (REQUIRE_DEBUG_PRINTS) printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(), *v8::String::Utf8Value(try_catch.Exception()));
-                        return false;
-                    }
-                    result = maybe_result.ToLocalChecked();
-
-                    // cache the result for subsequent requires of the same module in the same isolate
-                    if (use_cache) {
-                        std::lock_guard<std::mutex> l(require_results_mutex);
-                        auto & isolate_require_results = require_results[isolate];
-                        auto i = isolate_require_results.find(complete_filename);
-                        if (i == isolate_require_results.end()) {
-                            isolate_require_results.emplace(complete_filename, RequireResult(isolate, context, v8::Local<v8::Function>(), result, time(nullptr)));
-                        }
-                    }
-
-                } else {
-
-                    v8::ScriptOrigin script_origin(v8::String::NewFromUtf8(isolate, resource_name.c_str()),
-                                                   0_v8, // line offset
-                                                   26_v8,  // column offset - cranked up because v8 subtracts a bunch off but if it's negative then chrome ignores it
-                                                   v8::Local<v8::Boolean>());
-
-                    v8::Local<v8::Value> error;
-                    v8::Local<v8::Function> module_function;
-                    
-                    result = execute_module(context, file_contents, script_origin, module_function);
-
-                    std::lock_guard<std::mutex> l(require_results_mutex);
-                    auto & isolate_require_results = require_results[isolate];
-                    isolate_require_results.emplace(complete_filename,
-                                                    RequireResult(isolate, context, module_function, result,
-                                                                  file_modification_time));
-                    if (callback) {
-                        callback(isolate_require_results.find(complete_filename)->second);
-                    }
+                std::lock_guard<std::mutex> l(require_results_mutex);
+                auto & isolate_require_results = require_results[isolate];
+                isolate_require_results.emplace(complete_filename,
+                                                RequireResult(isolate, context, module_function, result,
+                                                              file_modification_time));
+                if (callback) {
+                    callback(isolate_require_results.find(complete_filename)->second);
+                }
+            }
 
 
 
-		        }
+            // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
+            // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
+            return true;
 
-
-                
-                // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
-                // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
-                return true;
-            }catch(...) {}
-            // if any failures, try the next path if it exists
         }
     }
     if (REQUIRE_DEBUG_PRINTS) printf("Couldn't find any matches for %s\n", filename.c_str());

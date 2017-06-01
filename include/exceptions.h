@@ -68,14 +68,9 @@ public:
 * Same as a V8 exception, except if this type is thrown it indicates the exception was generated
 *   during compilation, not at runtime.
 */
-class V8CompilationException : public V8Exception {
+class V8CompilationException : public V8ExecutionException {
 public:
-    V8CompilationException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
-        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-    V8CompilationException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-        V8Exception(isolate, value) {}
-    V8CompilationException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
-
+    using V8ExecutionException::V8ExecutionException;
 };
 
 

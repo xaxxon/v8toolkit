@@ -57,7 +57,7 @@ std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
     time_t modification_time = 0;
     if (!get_file_contents(filename, contents, modification_time)) {
         
-        throw V8CompilationException(*this, std::string("Could not load file: ") + filename);
+        throw V8Exception(*this, std::string("Could not load file: ") + filename);
     }
 
     return compile(contents, filename);
@@ -86,8 +86,8 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
 
 
     v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source,  &script_origin);
-    if (compiled_script.IsEmpty()) {
-        throw V8CompilationException(isolate, v8::Global<v8::Value>(isolate, try_catch.Exception()));
+    if (try_catch.HasCaught()) {
+        throw V8CompilationException(isolate, try_catch);
     }
     return std::shared_ptr<Script>(new Script(shared_from_this(),
                                        compiled_script.ToLocalChecked(), javascript_source));
