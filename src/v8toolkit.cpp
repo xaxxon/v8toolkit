@@ -22,6 +22,8 @@
 
 namespace v8toolkit {
 
+
+
 // used in v8_class_wrapper.h to store callbacks for cleaning up wrapper objects when an isolate is destroyed
 V8ClassWrapperInstanceRegistry wrapper_registery;
 
@@ -40,9 +42,13 @@ void expose_gc()
 }
 
 
-InvalidCallException::InvalidCallException(const std::string & message) :
-    message(message + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100)))
+InvalidCallException::InvalidCallException(const std::string & message)
 {
+    if (v8::Isolate::GetCurrent() != nullptr) {
+        this->message = message + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100));
+    } else {
+        this->message = message;
+    }
 }
 
 

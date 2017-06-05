@@ -34,6 +34,60 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 }
 
 
+namespace Log {
+    enum class Level {Info, Warn, Error};
+    enum class Subject {V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
+        RUNTIME_EXCEPTION
+    };
+
+    using LoggerCallback = std::function<void(Level, Subject, std::string const &)>;
+
+    extern LoggerCallback callback;
+
+    void set_logger_callback(LoggerCallback new_callback);
+
+    // can be used for any log level
+    template<class... Ts>
+    void log(Level level, Subject subject, std::string const & format_string, Ts&&... args) {
+        callback(level, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+    }
+
+    // does not interpolate string
+    void log(Level level, Subject subject, std::string const & string);
+
+
+    // easy to use specialization for info-level logging
+    template<class... Ts>
+    void info(Subject subject, std::string const & format_string, Ts&&... args) {
+        callback(Level::Info, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+    }
+
+    // does not interpolate string
+    void info(Subject subject, std::string const & string);
+
+
+    // easy to use specialization for warning-level logging
+    template<class... Ts>
+    void warn(Subject subject, std::string const & format_string, Ts&&... args) {
+        callback(Level::Warn, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+    }
+
+    // does not interpolate string
+    void warn(Subject subject, std::string const & string);
+
+
+    // easy to use specialization for error-level logging
+    template<class... Ts>
+    void error(Subject subject, std::string const & format_string, Ts&&... args) {
+        callback(Level::Error, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+    }
+
+    // does not interpolate string
+    void error(Subject subject, std::string const & string);
+
+} // end namespace Log
+
+
 /**
  * class used to signify the caller wants the this object of a function call.
  * Note: the `this` object may not have a wrapped C++ class containing it, even when calling a C++ function.  If a native
@@ -168,6 +222,7 @@ std::string & demangle(){
             std::string constness = std::is_const<T>::value ? "const " : "";
             std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
             cached_name = constness + volatility + demangled_name;
+            cache_set = true;
         }
     }
 
@@ -190,62 +245,26 @@ Destination * safe_dynamic_cast(Destination * source) {
     return source;
 }
 
-// non-trivial casts for non-polymorphic types always fail
-template<class Destination, class Source, std::enable_if_t<!std::is_polymorphic<Source>::value, int> = 0>
+
+// if casting to a base type, it doesn't matter if the type is polymorphic
+template<class Destination, class Source,
+    std::enable_if_t<
+        !std::is_polymorphic_v<Source> && std::is_base_of_v<Destination, Source>
+    > * = nullptr>
+Destination safe_dynamic_cast(Source * source) {
+    return static_cast<Destination>(source);
+}
+
+// casting to a derived type from a non-polymorphic type will always fail
+template<class Destination, class Source,
+    std::enable_if_t<
+        !std::is_polymorphic_v<Source> && !std::is_base_of_v<Destination, Source>
+    > * = nullptr>
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
 //    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
     return nullptr;
-};
-
-
-#define SAFE_MOVE_CONSTRUCTOR_SFINAE !std::is_const<T>::value && std::is_move_constructible<T>::value
-template<class T, std::enable_if_t<SAFE_MOVE_CONSTRUCTOR_SFINAE, int> = 0>
-std::unique_ptr<T> safe_move_constructor(T && original) {
-    return std::make_unique<T>(std::move(original));
-};
-template<class T, std::enable_if_t<!(SAFE_MOVE_CONSTRUCTOR_SFINAE), int> = 0>
-std::unique_ptr<T> safe_move_constructor(T && original) {
-    assert(false); // This shouldn't be called
-    return std::unique_ptr<T>();
-};
-
-
-
-    template<typename Test, template<typename...> class Ref>
-struct is_specialization : std::false_type {};
-
-template<template<typename...> class Ref, typename... Args>
-struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
-
-/**
- * Returns a func::function type compatible with the lambda passed in
- */
-template<class T>
-struct LTG {
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const)->func::function<R(Args...)>;
-
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...))->func::function<R(Args...)>;
-
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &)->func::function<R(Args...)>;
-
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &)->func::function<R(Args...)>;
-
-};
-
-template<class T>
-struct LTG<T &&> {
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...)const &&)->func::function<R(Args...)>;
-
-    template<class R, class... Args>
-    static auto go(R(T::*)(Args...) &&)->func::function<R(Args...)>;
-
 };
 
 
@@ -281,6 +300,8 @@ struct static_any<false, tail...> : static_any<tail...> {};
 template<>
 struct static_any<> : std::false_type {};
 
+template<bool... bools>
+constexpr bool static_any_v = static_any<bools...>::value;
 
 
 template <bool... b> struct static_all_of;
@@ -296,43 +317,56 @@ struct static_all_of<false, tail...> : std::false_type {};
 // If there are no parameters left, no false was found so return true
 template <> struct static_all_of<> : std::true_type {};
 
+template<bool... bools>
+constexpr bool static_all_of_v = static_all_of<bools...>::value;
+
+
+class Exception : public std::exception {
+protected:
+    std::string message;
+
+public:
+    template<class... Ts>
+    Exception(std::string const & format, Ts&&... args) : message(fmt::format(format, args...))
+    {}
+
+    Exception(){}
+
+    virtual const char * what() const noexcept override {return message.c_str();}
+
+};
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
 */
-class InvalidCallException : public std::exception {
-private:
-    std::string message;
+class InvalidCallException : public Exception {
 
 public:
     InvalidCallException(const std::string & message);
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 
+
 /**
  * Thrown when trying to register a function/method/member with the same name as
  * something else already registered
  */
-class DuplicateNameException : public std::exception {
-private:
-    std::string message;
+class DuplicateNameException : public Exception {
 
 public:
-    DuplicateNameException(const std::string & message) : message(message) {}
+    using Exception::Exception;
     virtual const char * what() const noexcept override {return message.c_str();}
 };
 
 
- class UndefinedPropertyException : public std::exception {
- private:
-     std::string message;
+class UndefinedPropertyException : public Exception {
 
- public:
- UndefinedPropertyException(const std::string & message) : message(message) {}
-     virtual const char * what() const noexcept override {return message.c_str();}
-     
+public:
+    using Exception::Exception;
+ virtual const char * what() const noexcept override {return message.c_str();}
 
- };
+
+};
 
 /**
 * prints out a ton of info about a v8::Value

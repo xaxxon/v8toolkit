@@ -8,6 +8,30 @@
 namespace v8toolkit {
 
 
+namespace Log {
+
+LoggerCallback callback = [](Log::Level, Log::Subject, std::string const &){};
+
+void set_logger_callback(LoggerCallback new_callback) {
+    callback = new_callback;
+}
+void log(Level level, Subject subject, std::string const & string) {
+    callback(level, subject, string);
+}
+void info(Subject subject, std::string const & string) {
+    callback(Level::Info, subject, string);
+}
+void warn(Subject subject, std::string const & string) {
+    callback(Level::Warn, subject, string);
+}
+void error(Subject subject, std::string const & string) {
+    callback(Level::Error, subject, string);
+}
+
+
+} // end namespace Log
+
+
 MethodAdderData::MethodAdderData() = default;
 MethodAdderData::MethodAdderData(std::string const & method_name,
                                  StdFunctionCallbackType const & callback) :
@@ -115,10 +139,11 @@ std::string get_type_string_for_value(v8::Local<v8::Value> value) {
         return "symbol";
     } else if (value->IsObject()) {
         return "object";
+    } else if (value->IsArray()) {
+        return "array";
     } else {
-        assert(false);
+        throw InvalidCallException("Unknown V8 object type to get type string from");
     }
-    return "UNKNOWN VALUE TYPE";
 }
 
 
@@ -311,6 +336,9 @@ v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
 
 // copied from shell_cc example
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
+
+    std::stringstream result;
+
     v8::HandleScope handle_scope(isolate);
     v8::String::Utf8Value exception(try_catch->Exception());
     const char* exception_string = *exception;
@@ -318,38 +346,39 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
     if (message.IsEmpty()) {
         // V8 didn't provide any extra information about this error; just
         // print the exception.
-        fprintf(stderr, "%s\n", exception_string);
+        result << exception_string;
     } else {
         // Print (filename):(line number): (message).
         v8::String::Utf8Value filename(message->GetScriptOrigin().ResourceName());
         v8::Local<v8::Context> context(isolate->GetCurrentContext());
         const char* filename_string = *filename;
         int linenum = message->GetLineNumber(context).FromJust();
-        fprintf(stderr, "%s:%i: %s\n", filename_string, linenum, exception_string);
+        result << fmt::format("{}:{}: {}", filename_string, linenum, exception_string) << std::endl;
         // Print line of source code.
         v8::String::Utf8Value sourceline(
                 message->GetSourceLine(context).ToLocalChecked());
         const char* sourceline_string = *sourceline;
-        fprintf(stderr, "%s\n", sourceline_string);
+        result << sourceline_string << std::endl;
         // Print wavy underline (GetUnderline is deprecated).
         int start = message->GetStartColumn(context).FromJust();
         for (int i = 0; i < start; i++) {
-            fprintf(stderr, " ");
+            result << " ";
         }
         int end = message->GetEndColumn(context).FromJust();
         for (int i = start; i < end; i++) {
-            fprintf(stderr, "^");
+            result << "^";
         }
-        fprintf(stderr, "\n");
+        result << std::endl;
         v8::Local<v8::Value> stack_trace_string;
         if (try_catch->StackTrace(context).ToLocal(&stack_trace_string) &&
             stack_trace_string->IsString() &&
             v8::Local<v8::String>::Cast(stack_trace_string)->Length() > 0) {
             v8::String::Utf8Value stack_trace(stack_trace_string);
             const char* stack_trace_string = *stack_trace;
-            fprintf(stderr, "%s\n", stack_trace_string);
+            result << stack_trace_string;
         }
     }
+    Log::error(Log::Subject::RUNTIME_EXCEPTION, result.str());
 }
 
 bool global_name_conflicts(const std::string & name) {

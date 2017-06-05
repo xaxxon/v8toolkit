@@ -37,11 +37,12 @@ bool returns_wrapped_class_lvalue_called = false;
 class WrappedClass : public WrappedClassBase {
 public:
     // class is not default constructible
-    WrappedClass(int) {};
-    WrappedClass(WrappedClass const &) = default;
+    WrappedClass(int i) : constructor_i(i) {};
+    WrappedClass(WrappedClass const &) = delete;
     WrappedClass(WrappedClass &&) = default;
     virtual ~WrappedClass(){}
 
+    int constructor_i;
     int i = 5;
     int ci = 5;
     std::unique_ptr<float> upf = std::make_unique<float>(3.5);
@@ -58,6 +59,10 @@ public:
         return x;
     }
 
+    WrappedClass returns_uncopyable_type_by_value() {
+        return WrappedClass{4};
+    }
+
     bool default_parameters_called = false;
     void default_parameters(int j = 1,
                             char const * s = "asdf",
@@ -72,7 +77,6 @@ public:
 
     WrappedClass & returns_wrapped_class_lvalue() {
         returns_wrapped_class_lvalue_called = true;
-        std::cerr << fmt::format("wrapped_class lvalue at {}", (void*)this) << std::endl;
         return *this;
     }
 
@@ -96,8 +100,6 @@ public:
     }
 
     void takes_this(v8::Isolate * isolate, v8toolkit::This this_object) {
-        std::cout << "inside takes_this: " << stringify_value(isolate, get_value_as<v8::Value>(isolate, v8::Local<v8::Object>(this_object))) << endl << endl;
-
         EXPECT_EQ(V8ClassWrapper<WrappedClass>::get_instance(isolate).get_cpp_object(this_object), nullptr);
         takes_this_called = true;
     }
@@ -143,6 +145,7 @@ public:
             w.add_method("takes_this", &WrappedClass::takes_this);
             w.add_method("returns_wrapped_class_lvalue", &WrappedClass::returns_wrapped_class_lvalue);
             w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
+            w.add_method("returns_uncopyable_type_by_value", &WrappedClass::returns_uncopyable_type_by_value);
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
                              int,
@@ -548,7 +551,6 @@ TEST_F(WrappedClassFixture, WrapDerivedTypeFromBaseWrapper) {
 
 
 TEST_F(WrappedClassFixture, FunctionTakesHolder) {
-    cerr << V8ClassWrapper<WrappedClass>::get_instance(*i).get_class_details_string() << endl;
     (*c)([&]() {
 
         takes_this_called = false;
@@ -558,18 +560,28 @@ TEST_F(WrappedClassFixture, FunctionTakesHolder) {
         auto base = c->run("wc2");
         auto derived = c->run("derived_wc2");
 
-        dump_prototypes(*i, get_value_as<v8::Object>(*i, base.Get(*i)));
-
-        dump_prototypes(*i, get_value_as<v8::Object>(*i, derived.Get(*i)));
 
 
-        c->run("println(`printing base:`);"
-                   "printobjall(wc2);"
-                   "println(`printing derived:`);"
-                   "printobjall(derived_wc2);"
-                   "println(`about to call derived.takes_this()`);"
-                   "derived_wc2.takes_this();");
+        c->run("derived_wc2.takes_this();");
         EXPECT_TRUE(takes_this_called);
     });
 }
+
+
+
+
+TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
+    auto isolate = c->isolate;
+    (*c)([&]() {
+        auto wrapped_class = c->run("new WrappedClass(40);");
+        EXPECT_EQ(CastToNative<WrappedClass>()(isolate, wrapped_class.Get(isolate)).constructor_i, 40);
+
+        // try again, but with a non-owning javascript object
+        auto wrapped_class2 = c->run("new WrappedClass(41);");
+        auto & wrapper = v8toolkit::V8ClassWrapper<WrappedClass>::get_instance(isolate);
+        wrapper.release_internal_field_memory(wrapped_class2.Get(isolate)->ToObject());
+        EXPECT_THROW(CastToNative<WrappedClass>()(c->isolate, wrapped_class2.Get(isolate)), CastException);
+    });
+}
+
 

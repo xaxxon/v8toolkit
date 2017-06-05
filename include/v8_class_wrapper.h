@@ -1377,7 +1377,7 @@ public:
 	template<class Callback, class DefaultArgs = std::tuple<>   >
 	void add_method(const std::string & method_name, Callback && callback,
                                    DefaultArgs const & default_args = DefaultArgs()) {
-		decltype(LTG<Callback>::go(&Callback::operator())) f(callback);
+		function_type_t<Callback> f(callback);
 		this->_add_fake_method(method_name, f, default_args);
 
 	}
@@ -1839,7 +1839,8 @@ struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value &&
 {
 	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-		static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
+		//static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
+		return T(CastToNative<T&&>()(isolate, value));
 	}
 	static constexpr bool callable(){return false;}
 
@@ -1866,7 +1867,9 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 		v8::Local<v8::Object> object = get_value_as<v8::Object>(isolate, value);
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object);
 		if (V8ClassWrapper<T>::does_object_own_memory(object)) {
-			return std::move(*cpp_object); // but do not release the memory
+			// do not release the memory because something still needs to call delete on the object (possibly moved out of)
+			//   pointed by the InternalField of the javascript object -- even if it has no "real" content.
+			return std::move(*cpp_object);
 		}
 		throw CastException("Could not cast object to {} && because it doesn't own it's memory", demangle<T>());
 	}

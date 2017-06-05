@@ -174,7 +174,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 */
 template<class T>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, T callable) {
-        decltype(LTG<T>::go(&T::operator())) f(callable);
+        function_type_t<T> f(callable);
     object_template->Set(isolate, name, make_function_template(isolate, f, name));
 }
 

@@ -555,8 +555,17 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
+		Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Creating isolate scopes");
 	    ISOLATE_SCOPED_RUN(isolate);
-	    return callable();
+		if constexpr(std::is_same_v<void, std::result_of_t<Callable()>>) {
+			callable();
+			Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
+			return;
+		} else {
+			auto && result = callable();
+			Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
+			return std::forward<decltype(result)>(result);
+		}
 	}
 
 	/**
@@ -564,7 +573,7 @@ public:
     * Passes the v8::Isolate * to the callable function
     */
 	template<class Callable>
-	auto operator()(Callable && callable) -> typename std::result_of<Callable(v8::Isolate*)>::type
+	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*)>
 	{
 	    ISOLATE_SCOPED_RUN(isolate);
 	    return callable(isolate);
@@ -576,11 +585,11 @@ public:
     * Throws v8toolkit::InvalidCallException if the isolate is not currently in a context
     */
 	template<class Callable>
-	auto operator()(Callable && callable) -> typename std::result_of_t<Callable(v8::Isolate*, v8::Local<v8::Context>)>
+	auto operator()(Callable && callable) -> std::result_of_t<Callable(v8::Isolate*, v8::Local<v8::Context>)>
 	{
 		return v8toolkit::scoped_run(isolate, std::forward<Callable>(callable));
 	}
-	
+
     /**
     * Adds the specified callable as <name> in javascript
     * This can be a standard C++ function, a lambda, or anything else that supports
@@ -655,12 +664,14 @@ using IsolatePtr = std::shared_ptr<Isolate>;
 */
 class Platform {
 
-	static std::unique_ptr<v8::Platform> platform;
-	static v8toolkit::ArrayBufferAllocator allocator;
-	static bool initialized;
-	static bool expose_gc_value;
-	static std::string expose_debug_name;
-	static int memory_size_in_mb; // used for Isolate::CreateParams::constraints::set_max_old_space_size()
+private:
+	inline static std::unique_ptr<v8::Platform> platform;
+	inline static v8toolkit::ArrayBufferAllocator allocator;
+	inline static bool initialized = false;
+	inline static bool expose_gc_value = false;
+	inline static int memory_size_in_mb = -1; // used for Isolate::CreateParams::constraints::set_max_old_space_size()
+
+
 public:
 
 	// how to increase max memory available to javascript
