@@ -20,7 +20,6 @@ Context::Context(std::shared_ptr<Isolate> isolate_helper,
 {}
 
 
-
 v8::Local<v8::Context> Context::get_context() const {
     return context.Get(isolate);
 }
@@ -144,7 +143,6 @@ v8::Global<v8::Value> Context::run(const std::string & source)
 }
 
 
-
 v8::Global<v8::Value> Context::run(const v8::Local<v8::Value> value)
 {
     return (*this)([this, value]{
@@ -194,17 +192,17 @@ std::thread Context::run_thread(const std::string & source)
 boost::uuids::uuid const & Context::get_uuid() const {
     return this->uuid;
 }
+
+
 std::string Context::get_uuid_string() const {
 
     return boost::uuids::to_string(this->uuid);
 }
 
+
 std::string Context::get_url(std::string const & name) const {
     return fmt::format("v8toolkit://{}/{}", this->get_uuid_string(), name);
 }
-
-
-
 
 
 v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<std::string> const & paths) {
@@ -223,6 +221,7 @@ void Context::require_directory(std::string const & directory_name) {
     });
 
 }
+
 
 Isolate::Isolate(v8::Isolate * isolate) : isolate(isolate)
 {
@@ -306,6 +305,7 @@ std::shared_ptr<Context> Isolate::create_context()
     return std::shared_ptr<Context>(context_helper);
 }
 
+
 std::shared_ptr<DebugContext> Isolate::create_debug_context(short port) {
     ISOLATE_SCOPED_RUN(this->isolate);
     v8::TryCatch tc(this->isolate);
@@ -340,6 +340,7 @@ ContextPtr Isolate::get_debug_context() {
     return v8toolkit::ContextPtr(new v8toolkit::Context(this->shared_from_this(), debug_context));
 }
 
+
 Isolate::~Isolate()
 {
 #ifdef V8TOOLKIT_JAVASCRIPT_DEBUG
@@ -348,11 +349,16 @@ Isolate::~Isolate()
 
     wrapper_registery.cleanup_isolate(this->isolate);
 
+    // clean up any modules loaded with `require`
+    delete_require_cache_for_isolate(this->isolate);
+
+
     // must explicitly Reset this because the isolate will be
     //   explicitly disposed of before the Global is destroyed
     this->global_object_template.Reset();
     this->isolate->Dispose();
 }
+
 
 void Isolate::add_assert()
 {
@@ -408,7 +414,6 @@ void Platform::set_max_memory(int new_memory_size_in_mb) {
 }
 
 
-
 void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
     if (Platform::initialized) {
@@ -441,6 +446,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
     initialized = true;
 }
 
+
 void Platform::cleanup()
 {
     Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::cleanup called, tearing down V8 - no V8 calls are valid past here");
@@ -451,6 +457,7 @@ void Platform::cleanup()
     
     platform.release();
 };
+
 
 std::shared_ptr<Isolate> Platform::create_isolate()
 {
@@ -482,8 +489,8 @@ Script::Script(std::shared_ptr<Context> context_helper,
     script(v8::Global<v8::Script>(isolate, script)),
     script_source_code(source_code)
 {
-//    std::cerr << "source code length: " << source_code.length() << std::endl;
 }
+
 
 std::thread Script::run_thread()
 {
@@ -503,9 +510,11 @@ void Script::run_detached(){
     run_thread().detach();
 }
 
+
 std::string const & Script::get_source_code() const {
     return this->script_source_code;
 }
+
 
 std::string Script::get_source_location() const {
 //    return *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetSourceURL()->ToString());

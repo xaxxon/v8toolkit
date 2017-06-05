@@ -8,7 +8,7 @@
 #include "stdfunctionreplacement.h"
 namespace v8toolkit {
 
-// always returns false, in a dependent fashionf
+// always returns false, in a dependent fashion
 template<class T>
 struct always_false : public std::false_type {
 };
@@ -158,13 +158,6 @@ template<class R, class... Args>
 auto get_index_sequence_for_func_function(func::function<R(Args...)>) {
     return std::index_sequence_for<Args...>{};
 };
-
-
-
-
-
-
-
 
 
 } // end namespace v8toolkit
