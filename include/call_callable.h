@@ -15,6 +15,10 @@
 namespace v8toolkit {
 
 
+/**
+ * @defgroup CallCallables Calls a given function with parameters provided from JavaScript
+ * @{
+ */
 
 /**
  * Calls a C++ function/callable object with the provided JavaScript objects and takes the value returned by
@@ -181,5 +185,7 @@ struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value
     }
 };
 
+
+/**@}*/
 
 } // v8toolkit

@@ -630,6 +630,8 @@ private:
 												  DefaultArgsTupleType(*default_args_tuple_ptr));
 
 		} catch(std::exception & e) {
+            Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running C++ constructor for {}: {}",
+                       demangle<T>(), e.what());
 			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 			return;
 		}
@@ -1074,7 +1076,6 @@ public:
 	}
 
 
-
 	// this form is required for selecting between different overloaded instances of the same function name
 	template<class R, class... Params, class DefaultArgs = std::tuple<>>
 	void add_static_method(const std::string & method_name, R(*function)(Params...), DefaultArgs const default_args_tuple = DefaultArgs{}) {
@@ -1083,10 +1084,18 @@ public:
 	};
 
 
-
-
+	/**
+	 * Exposes the given function as a method on the JavaScript constructor function.
+	 * @param method_name name of the property of the function on the JavaScript constructor function
+	 * @param callable function to be exposed to JavaScript
+	 * @param default_args_tuple any default arguments to the C++ function `callable` if insufficient arguments are
+	 * passed from javascript
+	 */
 	template<class Callable, class DefaultArgs = std::tuple<>>
-	void add_static_method(const std::string & method_name, Callable callable, DefaultArgs const default_args_tuple = DefaultArgs{}) {
+	void add_static_method(const std::string & method_name,
+						   Callable callable,
+						   DefaultArgs const default_args_tuple = DefaultArgs{}) {
+
 		static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
 														  "length", "name", "prototype"};
 
@@ -1108,14 +1117,21 @@ public:
 
 			// the function called is this capturing lambda, which calls the actual function being registered
 			auto static_method_function_template =
-				v8toolkit::make_function_template(this->isolate, [default_args_tuple, callable](const v8::FunctionCallbackInfo<v8::Value>& info) {
+				v8toolkit::make_function_template(this->isolate, [this, default_args_tuple, callable, method_name](const v8::FunctionCallbackInfo<v8::Value>& info) {
 
-					auto callable_func = function_type_t<Callable>(callable);
-					CallCallable<decltype(callable_func)>()(
-						callable_func,
-						info,
-						get_index_sequence_for_func_function(callable_func),
-						default_args_tuple);
+					try {
+						function_type_t<Callable> callable_func(callable);
+						CallCallable<decltype(callable_func)>()(
+							callable_func,
+							info,
+							get_index_sequence_for_func_function(callable_func),
+							default_args_tuple);
+					} catch (std::exception & e) {
+						Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running static method {}::{}: {}",
+								   demangle<T>(), method_name, e.what());
+						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+						return;
+					}
 
 				}, method_name);
 
@@ -1432,6 +1448,9 @@ public:
 				try {
                     CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
+					Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running 'fake method' {}::{}: {}",
+							   demangle<T>(), method_name, e.what());
+
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
 				}
@@ -1507,6 +1526,9 @@ public:
 															   std::tuple<DefaultArgTypes...>(
 																   default_args_tuple));
 					} catch (std::exception & e) {
+						Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running method {}::{}: {}",
+								   demangle<T>(), method_name, e.what());
+
 						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 						return;
 					}
