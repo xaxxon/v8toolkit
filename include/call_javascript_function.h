@@ -2,8 +2,11 @@
 
 #include <tuple>
 
+#include <v8.h>
+
 #include "cast_to_js_impl.h"
 #include "exceptions.h"
+#include "v8helpers.h"
 
 namespace v8toolkit {
 
@@ -51,9 +54,9 @@ v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Co
     v8::TryCatch tc(isolate);
     auto maybe_result = function->Call(context, receiver, parameter_count, &parameters[0]);
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
-        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        ReportException(isolate, &tc);
         if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
-            printf(
+            Log::info(Log::Subject::RUNTIME_EXCEPTION,
                 "Some of the types are const, make sure what you are using them for is available on the const type\n");
         }
 //        ReportException(isolate, &tc);
@@ -81,8 +84,7 @@ v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> con
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
-//        ReportException(isolate, &tc);
-//        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
+        ReportException(isolate, &tc);
         throw V8ExecutionException(isolate, tc);
     }
     return maybe_result.ToLocalChecked();

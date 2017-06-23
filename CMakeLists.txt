@@ -62,9 +62,8 @@ else()
 
 endif()
 
-# -DV8_BASE_SHARED_LIB_DIR:PATH=/path/to/v8/library/files
+
 set(V8_LIB_DIR CACHE PATH "full path containing V8 library files")
-#link_directories(${V8_BASE_SHARED_LIB_DIR})
 
 
 # -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
@@ -101,7 +100,7 @@ link_directories(${PROJECT_BINARY_DIR})
 
 add_custom_target(copy_snapshots)
 add_custom_command(TARGET copy_snapshots PRE_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy ${V8_BASE_SHARED_LIB_DIR}/*_blob.bin ${PROJECT_BINARY_DIR})
+		COMMAND ${CMAKE_COMMAND} -E copy ${V8_LIB_DIR}/*_blob.bin ${PROJECT_BINARY_DIR})
 
 
 add_subdirectory(test)

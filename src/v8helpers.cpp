@@ -10,26 +10,45 @@ namespace v8toolkit {
 
 namespace Log {
 
-LoggerCallback callback = [](Log::Level, Log::Subject, std::string const &){};
+LoggerCallback callback;
 
 void set_logger_callback(LoggerCallback new_callback) {
     callback = new_callback;
 }
 void log(Level level, Subject subject, std::string const & string) {
-    callback(level, subject, string);
+    if (callback) {
+        callback(level, subject, string);
+    }
 }
 void info(Subject subject, std::string const & string) {
-    callback(Level::Info, subject, string);
+    if (callback) {
+        callback(Level::Info, subject, string);
+    }
 }
 void warn(Subject subject, std::string const & string) {
-    callback(Level::Warn, subject, string);
+    if (callback) {
+        callback(Level::Warn, subject, string);
+    }
 }
 void error(Subject subject, std::string const & string) {
-    callback(Level::Error, subject, string);
+    if (callback) {
+        callback(Level::Error, subject, string);
+    }
 }
 
 
 } // end namespace Log
+
+
+std::ostream & operator<<(std::ostream & os, Log::Level const & level) {
+    std::cerr << fmt::format("{}", Log::level_names[static_cast<Log::LevelT>(level)]) << std::endl;
+    return os;
+}
+
+std::ostream & operator<<(std::ostream & os, Log::Subject const & subject) {
+    std::cerr << fmt::format("{}", Log::subject_names[static_cast<Log::SubjectT>(subject)]) << std::endl;
+    return os;
+}
 
 
 MethodAdderData::MethodAdderData() = default;
@@ -327,7 +346,6 @@ v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
     auto maybe_result = function->Call(context, context->Global(), 0, nullptr);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
-        printf("Error running javascript function: '%s'\n", *v8::String::Utf8Value(tc.Exception()));
         throw InvalidCallException(*v8::String::Utf8Value(tc.Exception()));
     }
     return maybe_result.ToLocalChecked();
