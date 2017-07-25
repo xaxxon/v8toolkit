@@ -158,7 +158,7 @@ ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::L
 
 
 template<class FirstT, class SecondT>
-struct v8toolkit::CastToNative<std::pair<FirstT, SecondT>>{
+struct CastToNative<std::pair<FirstT, SecondT>>{
 std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     return pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
 }

@@ -4,11 +4,13 @@
 
 #include "class_handler.h"
 
+namespace v8toolkit::class_parser {
+
 
 /**
  * Defines what will be matched and sent to
  */
-class MyASTConsumer : public ASTConsumer {
+class MyASTConsumer : public clang::ASTConsumer {
 private:
 
     // matcher that is parameterized in constructor
@@ -20,9 +22,9 @@ private:
     CompilerInstance & ci;
 
 public:
-    MyASTConsumer(CompilerInstance &CI);
+    MyASTConsumer(CompilerInstance & CI);
 
-    void HandleTranslationUnit(ASTContext &Context) override {
+    void HandleTranslationUnit(ASTContext & Context) override {
         // Run the matchers when we have the whole TU parsed.
         // matchers configured in constructor
         Matcher.matchAST(Context);
@@ -30,3 +32,5 @@ public:
 
 
 };
+
+}

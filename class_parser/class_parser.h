@@ -2,6 +2,9 @@
 #pragma once
 
 
+namespace v8toolkit::class_parser {
+
+
 // this only works on clang
 #ifndef __clang__
 #ifndef __attribute__
@@ -130,3 +133,5 @@
  * function will be called to extend the functionality of the constructor FunctionTemplate
  */
 #define V8TOOLKIT_CUSTOM_EXTENSION __attribute__((annotate(V8TOOLKIT_CUSTOM_EXTENSION_STRING)))
+
+}

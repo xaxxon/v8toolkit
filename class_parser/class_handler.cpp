@@ -1,9 +1,10 @@
 #include "wrapped_class.h"
 #include "class_handler.h"
 
+namespace v8toolkit::class_parser {
 
 
-void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
+void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     matched_classes_returned++;
 
@@ -13,10 +14,10 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 
     // if the current result is matched from the "not std:: class"-bound matcher
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
-                auto class_name = get_canonical_name_for_decl(klass);
+        auto class_name = get_canonical_name_for_decl(klass);
 
         std::cerr << fmt::format("Got a class that's not a std:: class {}", class_name) << std::endl;
-        
+
 
         if (klass->isDependentType()) {
             cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
@@ -32,7 +33,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
         }
 
         cerr << endl << "Got class definition: " << class_name << endl;
-        fprintf(stderr, "decl ptr: %p\n", (void *)klass);
+        fprintf(stderr, "decl ptr: %p\n", (void *) klass);
 
 
         if (!is_good_record_decl(klass)) {
@@ -45,7 +46,8 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
     }
 
     // Store any annotations on templates so the annotations can be merged later with types instantiated from the template
-    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("forward declaration with annotation")) {
+    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>(
+        "forward declaration with annotation")) {
 
         auto class_name = get_canonical_name_for_decl(klass);
         cerr << endl << "Got forward declaration with annotation: " << class_name << endl;
@@ -53,15 +55,19 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
         /* check to see if this has any annotations we should associate with its associated template */
         auto described_tmpl = klass->getDescribedClassTemplate();
         if (klass->isDependentType() && described_tmpl) {
-            fprintf(stderr, "described template %p, %s\n", (void *)described_tmpl, described_tmpl->getQualifiedNameAsString().c_str());
-            printf("Merging %d annotations with template %p\n", (int)Annotations(klass).get().size(), (void*)described_tmpl);
+            fprintf(stderr, "described template %p, %s\n", (void *) described_tmpl,
+                    described_tmpl->getQualifiedNameAsString().c_str());
+            printf("Merging %d annotations with template %p\n", (int) Annotations(klass).get().size(),
+                   (void *) described_tmpl);
             Annotations::annotations_for_class_templates[described_tmpl].merge(Annotations(klass));
         }
     }
 
 
-    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
-        cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass) << endl;
+    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>(
+        "class derived from WrappedClassBase")) {
+        cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass)
+             << endl;
         if (!is_good_record_decl(klass)) {
             cerr << "skipping 'bad' record decl" << endl;
             return;
@@ -119,13 +125,14 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 
         if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
             string name_alias = typedef_decl->getNameAsString();
-            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString()) << std::endl;
+            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(),
+                                     typedef_decl->getNameAsString()) << std::endl;
             Annotations::names_for_record_decls[record_decl] = name_alias;
 
             // if the class has already been parsed, update it now
-           if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
-               wrapped_class->name_alias = name_alias;
-           }
+            if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
+                wrapped_class->name_alias = name_alias;
+            }
 
         }
 
@@ -171,9 +178,9 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
             ClassTemplate::get_or_create(tmpl).instantiated();
 
 
-	    }
+        }
 
-	    if (const CXXMethodDecl * method = Result.Nodes.getNodeAs<clang::CXXMethodDecl>("method")) {
+        if (const CXXMethodDecl * method = Result.Nodes.getNodeAs<clang::CXXMethodDecl>("method")) {
             auto method_name = method->getQualifiedNameAsString();
             const FunctionDecl * pattern = nullptr;
 
@@ -233,22 +240,21 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult &Result) {
 
 #endif
 
-	    }
+        }
 #endif // end TEMPLATE_INFO_ONLY
 }
 
 
-void ClassHandler::onEndOfTranslationUnit () {
+void ClassHandler::onEndOfTranslationUnit() {
 
     for (auto & warning : data_warnings) {
         cerr << warning << endl;
     }
 
 
-
     if (!data_errors.empty()) {
         cerr << "Errors detected:" << endl;
-        for(auto & error : data_errors) {
+        for (auto & error : data_errors) {
             cerr << error << endl;
         }
         llvm::report_fatal_error("Errors detected in source data");
@@ -417,3 +423,5 @@ std::string ClassHandler::handle_data_member(WrappedClass & containing_class, Fi
     return result.str();
 }
 #endif
+
+}

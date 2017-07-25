@@ -42,6 +42,9 @@ cotire(api-gen-template)
 #include <map>
 using namespace std;
 
+namespace v8toolkit::class_parser {
+
+
 
 //////////////////////////////
 // CUSTOMIZE THESE VARIABLES
@@ -75,20 +78,19 @@ string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
 
-
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
 // http://usejsdoc.org/tags-type.html
-map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?vector", "Array.{$1}"},
-                                                  {"^(?:std::|eastl::)?(?:vector_)?(?:multi)?map", "Object.{$1, $2}"},
-                                                  //{"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
+map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?vector",                                                                                                   "Array.{$1}"},
+                                                  {"^(?:std::|eastl::)?(?:vector_)?(?:multi)?map",                                                                              "Object.{$1, $2}"},
+    //{"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
                                                   {"^(?:const)?\\s*(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
-                                                  {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Boolean"},
-                                                  {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$", "String"},
-                                                  {"^void$", "Undefined"},
-                                                  {"^(?:std::)?unique_ptr", "$1"},
-                                                  {"^(?:std::)?basic_string", "String"},
-                                                  {"^\\s*nullptr\\s*$", "null"}
+                                                  {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$",                                                                   "Boolean"},
+                                                  {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$",                                                "String"},
+                                                  {"^void$",                                                                                                                    "Undefined"},
+                                                  {"^(?:std::)?unique_ptr",                                                                                                     "$1"},
+                                                  {"^(?:std::)?basic_string",                                                                                                   "String"},
+                                                  {"^\\s*nullptr\\s*$",                                                                                                         "null"}
 };
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
@@ -157,7 +159,6 @@ function require(module_name){}
 #include "class_parser.h"
 
 
-
 int print_logging = 1;
 
 
@@ -172,7 +173,6 @@ int print_logging = 1;
 int matched_classes_returned = 0;
 
 vector<WrappedClass *> WrappedClass::wrapped_classes;
-
 
 
 /*
@@ -246,7 +246,8 @@ std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, 
 
     // If it's in the "root" file (file id 1), then there's no include for it
     if (include_source_location.isValid()) {
-        auto header_file = include_source_location.printToString(compiler_instance.getPreprocessor().getSourceManager());
+        auto header_file = include_source_location.printToString(
+            compiler_instance.getPreprocessor().getSourceManager());
 //            if (print_logging) cerr << "include source location: " << header_file << endl;
         //            wrapped_class.include_files.insert(header_file);
     } else {
@@ -256,9 +257,10 @@ std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, 
 
     bool invalid;
     // This gets EVERYTHING after the start of the filename in the include.  "asdf.h"..... or <asdf.h>.....
-    const char * text = compiler_instance.getPreprocessor().getSourceManager().getCharacterData(include_source_location, &invalid);
+    const char * text = compiler_instance.getPreprocessor().getSourceManager().getCharacterData(include_source_location,
+                                                                                                &invalid);
     const char * text_end = text + 1;
-    while(*text_end != '>' && *text_end != '"') {
+    while (*text_end != '>' && *text_end != '"') {
         text_end++;
     }
 
@@ -267,7 +269,8 @@ std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, 
 }
 
 
-std::string get_include_for_source_location(CompilerInstance & compiler_instance, const SourceLocation & source_location) {
+std::string
+get_include_for_source_location(CompilerInstance & compiler_instance, const SourceLocation & source_location) {
     auto full_source_loc = FullSourceLoc(source_location, compiler_instance.getPreprocessor().getSourceManager());
 
     auto file_id = full_source_loc.getFileID();
@@ -294,10 +297,11 @@ std::string get_include_for_type_decl(CompilerInstance & compiler_instance, cons
 
 std::string get_source_for_source_range(SourceManager & sm, SourceRange source_range) {
     std::string text = Lexer::getSourceText(CharSourceRange::getTokenRange(source_range), sm, LangOptions(), 0);
-    if (!text.empty() && text.at(text.size()-1) == ',')
+    if (!text.empty() && text.at(text.size() - 1) == ',')
         return Lexer::getSourceText(CharSourceRange::getCharRange(source_range), sm, LangOptions(), 0);
     return text;
 }
+
 #if 0
 
 vector<string> count_top_level_template_parameters(const std::string & source) {
@@ -347,10 +351,9 @@ vector<string> count_top_level_template_parameters(const std::string & source) {
 #endif
 
 
-
-
 struct ClassTemplate;
 vector<std::unique_ptr<ClassTemplate>> class_templates;
+
 struct ClassTemplate {
     std::string name;
     const ClassTemplateDecl * decl;
@@ -361,12 +364,11 @@ struct ClassTemplate {
         // cerr << fmt::format("Created class template for {}", name) << endl;
     }
 
-    void instantiated(){ instantiations++; }
-
+    void instantiated() { instantiations++; }
 
 
     static ClassTemplate & get_or_create(const ClassTemplateDecl * decl) {
-        for(auto & tmpl : class_templates) {
+        for (auto & tmpl : class_templates) {
             if (tmpl->decl == decl) {
                 return *tmpl;
             }
@@ -378,6 +380,7 @@ struct ClassTemplate {
 
 struct FunctionTemplate;
 vector<unique_ptr<FunctionTemplate>> function_templates;
+
 struct FunctionTemplate {
     std::string name;
     //const FunctionTemplateDecl * decl;
@@ -391,12 +394,12 @@ struct FunctionTemplate {
         //	    cerr << fmt::format("Created function template for {}", name) << endl;
     }
 
-    void instantiated(){ instantiations++; }
+    void instantiated() { instantiations++; }
 
 
     static FunctionTemplate & get_or_create(const FunctionDecl * decl) {
 
-        for(auto & tmpl : function_templates) {
+        for (auto & tmpl : function_templates) {
             if (tmpl->decl == decl) {
                 return *tmpl;
             }
@@ -439,9 +442,6 @@ bool has_wrapped_class(const CXXRecordDecl * decl) {
 }
 
 
-
-
-
 string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>> & wrapped_classes) {
     vector<string> sfinaes;
     string forward_declarations = "#define V8TOOLKIT_V8CLASSWRAPPER_FORWARD_DECLARATIONS ";
@@ -457,7 +457,7 @@ string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>
     }
 
 
-    for(int i = sfinaes.size() - 1; i >= 0; i--) {
+    for (int i = sfinaes.size() - 1; i >= 0; i--) {
         if (sfinaes[i] == "") {
             sfinaes.erase(sfinaes.begin() + i);
         }
@@ -467,9 +467,9 @@ string get_sfinae_matching_wrapped_classes(const vector<unique_ptr<WrappedClass>
     // too many forward declarations do bad things to compile time / ram usage, so try to catch any silly mistakes
     if (sfinaes.size() > 40 /* 40 is arbitrary */) {
         cerr << join(sfinaes, " || ") << endl;
-        llvm::report_fatal_error("more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
+        llvm::report_fatal_error(
+            "more 'sfinae's than arbitrary number used to catch likely errors - can be increased if needed");
     }
-
 
 
     std::string sfinae = "";
@@ -740,7 +740,8 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
         return original_type;
     }
 
-    std::cerr << fmt::format("in get_substitution_type_for_type for {}, have {} template_type options", original_type.getAsString(), template_types.size()) << std::endl;
+    std::cerr << fmt::format("in get_substitution_type_for_type for {}, have {} template_type options",
+                             original_type.getAsString(), template_types.size()) << std::endl;
 
     QualType current_type = original_type;
 
@@ -748,7 +749,7 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
     current_type = current_type.getNonReferenceType();
 
     bool changed = true;
-    while(changed) {
+    while (changed) {
         changed = false;
         if (current_type.isConstQualified()) {
             current_type.removeLocalConst();
@@ -852,7 +853,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
 
     // remove pointers
-    while(!qual_type->getPointeeType().isNull()) {
+    while (!qual_type->getPointeeType().isNull()) {
         qual_type = qual_type->getPointeeType();
     }
 
@@ -872,7 +873,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
             string result = fmt::format("{}(", substitute_type(function_prototype->getReturnType(), template_types));
 
             bool first_parameter = true;
-            for ( auto param : function_prototype->param_types()) {
+            for (auto param : function_prototype->param_types()) {
                 if (!first_parameter) {
                     result += ", ";
                 }
@@ -898,7 +899,9 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
     }
 
     if (auto template_specialization_type = dyn_cast<TemplateSpecializationType>(&*qual_type)) {
-        std::cerr << fmt::format("is template specialization type: {}", template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString()) << std::endl;
+        std::cerr << fmt::format("is template specialization type: {}",
+                                 template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString())
+                  << std::endl;
 
 
         auto template_decl = template_specialization_type->getTemplateName().getAsTemplateDecl();
@@ -908,7 +911,8 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         string result = fmt::format("{}<", templated_decl->getQualifiedNameAsString());
 
 
-        std::cerr << fmt::format("CANONICAL NAME FOR DECL: {}", templated_decl->getQualifiedNameAsString()) << std::endl;
+        std::cerr << fmt::format("CANONICAL NAME FOR DECL: {}", templated_decl->getQualifiedNameAsString())
+                  << std::endl;
 
         // go through the template args
         bool first_arg = true;
@@ -939,7 +943,8 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         std::cerr << fmt::format("returning substituted type: {}", result) << std::endl;
         return result;
     } else {
-        if (print_logging) cerr << "In substitute_types, not a template specialization type " << qual_type.getAsString() << endl;
+        if (print_logging)
+            cerr << "In substitute_types, not a template specialization type " << qual_type.getAsString() << endl;
     }
 
 //********************************************************************************
@@ -991,7 +996,8 @@ vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instanc
 
         Annotations annotations(param_decl);
         if (annotation != "" && !annotations.has(annotation)) {
-            if (print_logging) cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
+            if (print_logging)
+                cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
             continue;
         }
         auto param_qual_type = param_decl->getType();
@@ -1004,17 +1010,13 @@ vector<string> generate_variable_names(vector<QualType> qual_types, bool with_st
     vector<string> results;
     for (std::size_t i = 0; i < qual_types.size(); i++) {
         if (with_std_move && qual_types[i]->isRValueReferenceType()) {
-            results.push_back(fmt::format("std::move(var{})", i+1));
+            results.push_back(fmt::format("std::move(var{})", i + 1));
         } else {
-            results.push_back(fmt::format("var{}", i+1));
+            results.push_back(fmt::format("var{}", i + 1));
         }
     }
     return results;
 }
-
-
-
-
 
 
 void print_specialization_info(const CXXRecordDecl * decl) {
@@ -1024,11 +1026,12 @@ void print_specialization_info(const CXXRecordDecl * decl) {
         cerr << fmt::format("{} is a dependent type", name) << endl;
     }
     if (auto spec = dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
-        fprintf(stderr, "decl is a ClassTemplateSpecializationDecl: %p\n", (void *)decl);
+        fprintf(stderr, "decl is a ClassTemplateSpecializationDecl: %p\n", (void *) decl);
         cerr << name << endl;
 
         if (auto spec_tmpl = spec->getSpecializedTemplate()) {
-            fprintf(stderr, "Specialized template: %p, %s\n", (void *)spec_tmpl, spec_tmpl->getQualifiedNameAsString().c_str());
+            fprintf(stderr, "Specialized template: %p, %s\n", (void *) spec_tmpl,
+                    spec_tmpl->getQualifiedNameAsString().c_str());
             print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
         } else {
             cerr << "no spec tmpl" << endl;
@@ -1121,3 +1124,4 @@ map<string, int> template_instantiations;
 
 
 
+}

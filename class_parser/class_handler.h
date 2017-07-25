@@ -1,11 +1,13 @@
 #pragma once
 
-#include "bidirectional_bindings.h"
 
 #define PRINT_SKIPPED_EXPORT_REASONS false
 //#define PRINT_SKIPPED_EXPORT_REASONS false
 
 #include "helper_functions.h"
+
+namespace v8toolkit::class_parser {
+
 
 class ClassHandler : public ast_matchers::MatchFinder::MatchCallback {
 private:
@@ -21,17 +23,16 @@ public:
     /**
      * This runs per-match from MyASTConsumer, but always on the same ClassHandler (this) object
      */
-    virtual void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
+    virtual void run(const ast_matchers::MatchFinder::MatchResult & Result) override;
 
 
-    ClassHandler(CompilerInstance &CI) :
+    ClassHandler(CompilerInstance & CI) :
         ci(CI),
-        source_manager(CI.getSourceManager())
-    {}
+        source_manager(CI.getSourceManager()) {}
 
 
     // all matcher callbacks have been run, now do anything to process the entirety of the data
-    virtual  void onEndOfTranslationUnit () override;
+    virtual void onEndOfTranslationUnit() override;
 
 
     std::string handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation);
@@ -42,5 +43,6 @@ public:
                       const std::string & indentation = "");
 
 
-
 };
+
+}

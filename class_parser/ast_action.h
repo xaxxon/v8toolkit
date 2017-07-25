@@ -7,8 +7,11 @@
 
 #include "ast_consumer.h"
 
+namespace v8toolkit::class_parser {
+
+
 // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
-class PrintFunctionNamesAction : public PluginASTAction {
+class PrintFunctionNamesAction : public clang::PluginASTAction {
 public:
 
     // open up output files
@@ -22,13 +25,13 @@ public:
 
 protected:
     // The value returned here is used internally to run checks against
-    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
                                                    llvm::StringRef) {
         return llvm::make_unique<MyASTConsumer>(CI);
     }
 
-    bool ParseArgs(const CompilerInstance &CI,
-                   const std::vector<std::string> &args) {
+    bool ParseArgs(const CompilerInstance & CI,
+                   const std::vector<std::string> & args) {
         for (unsigned i = 0, e = args.size(); i < e; ++i) {
             llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
@@ -44,8 +47,12 @@ protected:
 
         return true;
     }
-    void PrintHelp(llvm::raw_ostream &ros) {
+
+    void PrintHelp(llvm::raw_ostream & ros) {
         ros << "Help for PrintFunctionNames plugin goes here\n";
     }
 
 };
+
+
+}

@@ -18,7 +18,7 @@ namespace v8toolkit {
 
 
 template<class FirstT, class SecondT>
-struct v8toolkit::CastToNative<eastl::pair<FirstT, SecondT>>{
+struct CastToNative<eastl::pair<FirstT, SecondT>>{
     eastl::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         HANDLE_FUNCTION_VALUES;
         pair_type_helper<eastl::pair, FirstT, SecondT>(isolate, value);

@@ -1,6 +1,9 @@
 #include "ast_action.h"
 
-static FrontendPluginRegistry::Add<PrintFunctionNamesAction>
+namespace v8toolkit::class_parser {
+
+
+static FrontendPluginRegistry::Add <PrintFunctionNamesAction>
     X("v8toolkit-generate-bindings", "generate v8toolkit bindings");
 
 // This is called when all parsing is done
@@ -11,9 +14,10 @@ void PrintFunctionNamesAction::EndSourceFileAction() {
 // takes a file number starting at 1 and incrementing 1 each time
 // a list of WrappedClasses to print
 // and whether or not this is the last file to be written
-void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_one) {
+void write_classes(int file_count, vector<WrappedClass *> & classes, bool last_one) {
 
-    cerr << fmt::format("writing classes, file_count: {}, classes.size: {}, last_one: {}", file_count, classes.size(), last_one) << endl;
+    cerr << fmt::format("writing classes, file_count: {}, classes.size: {}, last_one: {}", file_count, classes.size(),
+                        last_one) << endl;
     // Open file
     string class_wrapper_filename = fmt::format("v8toolkit_generated_class_wrapper_{}.cpp", file_count);
     ofstream class_wrapper_file;
@@ -57,7 +61,8 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
         }
 
 
-        if (print_logging) cerr << "Dumping " << wrapped_class->class_name << " to file " << class_wrapper_filename << endl;
+        if (print_logging)
+            cerr << "Dumping " << wrapped_class->class_name << " to file " << class_wrapper_filename << endl;
 
         //                printf("While dumping classes to file, %s has includes: ", wrapped_class->class_name.c_str());
 
@@ -76,7 +81,7 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
     } // end loop through all classes for this file
 
 
-     for(auto & include_file : includes_for_this_file) {
+    for (auto & include_file : includes_for_this_file) {
         if (include_file != "") {
             // skip "internal looking" includes - look at 1 because 0 is < or "
             if (include_file.find("__") == 1) {
@@ -100,7 +105,8 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
 
         // the const type will be used by the 'third party' extension function, so it needs to be instantiated
         if (!wrapped_class->wrapper_extension_methods.empty()) {
-            class_wrapper_file << fmt::format("template class v8toolkit::V8ClassWrapper<{} const>;\n", wrapped_class->class_name);
+            class_wrapper_file
+                << fmt::format("template class v8toolkit::V8ClassWrapper<{} const>;\n", wrapped_class->class_name);
         }
 
 
@@ -117,22 +123,27 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
             class_wrapper_file << "extern template " << extern_template->class_name << ";\n";
         }
         //std::cerr << fmt::format("aa11") << std::endl;
-        class_wrapper_file << fmt::format("extern template class v8toolkit::V8ClassWrapper<{}>;\n", extern_template->class_name);
+        class_wrapper_file
+            << fmt::format("extern template class v8toolkit::V8ClassWrapper<{}>;\n", extern_template->class_name);
     }
     //std::cerr << fmt::format("aa12") << std::endl;
 
 
 
     // Write function header
-    class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist -- that's ok\n", file_count+1);
+    class_wrapper_file << fmt::format(
+        "void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate &); // may not exist -- that's ok\n",
+        file_count + 1);
     //std::cerr << fmt::format("aa13") << std::endl;
 
     if (file_count == 1) {
-        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
+        class_wrapper_file
+            << fmt::format("void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {{\n");
 
     } else {
-        class_wrapper_file << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n",
-                                          file_count);
+        class_wrapper_file
+            << fmt::format("void v8toolkit_initialize_class_wrappers_{}(v8toolkit::Isolate & isolate) {{\n",
+                           file_count);
     }
 
 
@@ -153,5 +164,7 @@ void write_classes(int file_count, vector<WrappedClass*> & classes, bool last_on
     // Close function and file
     class_wrapper_file << "}\n";
     class_wrapper_file.close();
+
+}
 
 }

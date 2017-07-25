@@ -7,12 +7,18 @@
 #include "parsed_method.h"
 #include "annotations.h"
 
+
+namespace v8toolkit::class_parser {
+
+
 extern int MAX_DECLARATIONS_PER_FILE;
 
 // should be named "ParsedClass" or something, since both classes that will and will not be wrapped
 //   are put into this data structure
 class MemberFunction;
+
 class StaticFunction;
+
 struct WrappedClass {
 private:
 
@@ -39,23 +45,26 @@ public:
     void parse_all_methods();
 
 
-  // name of type that is guaranteed valid c++ (with appropriate included headers)
-  string class_name;
+    // name of type that is guaranteed valid c++ (with appropriate included headers)
+    string class_name;
 
     /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
     string name_alias;
-  
+
     set<string> include_files;
 
-     // value here is the "compilation cost" of creating the class itself even if it's empty.
+    // value here is the "compilation cost" of creating the class itself even if it's empty.
     // increase if too many empty classes end up in one file and make the compilation too big/take too long
     int declaration_count = 3;
 
     string my_header_filename = "";
 
     set<unique_ptr<MemberFunction>> const & get_member_functions();
+
     set<unique_ptr<StaticFunction>> const & get_static_functions();
+
     set<unique_ptr<DataMember>> & get_members();
+
     set<unique_ptr<ConstructorFunction>> const & get_constructors();
 
     set<string> used_member_names;
@@ -63,9 +72,9 @@ public:
     vector<string> data_errors;
     set<WrappedClass *> derived_types;
 
-  /// tracked base_types - if it's more than one, that's a data error because javascript only allows one
+    /// tracked base_types - if it's more than one, that's a data error because javascript only allows one
     set<WrappedClass *> base_types;
-  
+
     set<string> wrapper_extension_methods;
     set<string> wrapper_custom_extensions;
     CompilerInstance & compiler_instance;
@@ -87,21 +96,22 @@ public:
 
     std::string get_short_name() const {
         if (decl == nullptr) {
-            llvm::report_fatal_error(fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
+            llvm::report_fatal_error(
+                fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
         }
         return decl->getNameAsString();
     }
 
-    bool has_static_method(){return !this->static_functions.empty();}
+    bool has_static_method() { return !this->static_functions.empty(); }
 
-  /**
-   * @return whether this type is a specialization of a template
-   */
+    /**
+     * @return whether this type is a specialization of a template
+     */
     bool is_template_specialization();
 
-  /**
-   * @param callback called on each parameterized type for this template specialization
-   */
+    /**
+     * @param callback called on each parameterized type for this template specialization
+     */
     void foreach_inheritance_level(function<void(WrappedClass &)> callback);
 
 
@@ -152,6 +162,7 @@ public:
 
 
     WrappedClass(const WrappedClass &) = delete;
+
     WrappedClass & operator=(const WrappedClass &) = delete;
 
     // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
@@ -163,7 +174,7 @@ public:
 
     std::string generate_js_stub();
 
-    std::string get_derived_classes_string(int level = 0, const std::string indent = ""){
+    std::string get_derived_classes_string(int level = 0, const std::string indent = "") {
         vector<string> results;
         //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
         for (WrappedClass * derived_class : derived_types) {
@@ -175,9 +186,9 @@ public:
         return join(results);
     }
 
-    std::string get_base_class_string(){
+    std::string get_base_class_string() {
         auto i = base_types.begin();
-        while(i != base_types.end()) {
+        while (i != base_types.end()) {
             if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), (*i)->class_name) !=
                 base_types_to_ignore.end()) {
                 base_types.erase(i++); // move iterator before erasing
@@ -186,7 +197,9 @@ public:
             }
         };
         if (base_types.size() > 1) {
-            data_error(fmt::format("Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n", class_name));
+            data_error(fmt::format(
+                "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",
+                class_name));
 
         }
         return base_types.size() ? (*base_types.begin())->class_name : "";
@@ -216,8 +229,8 @@ public:
     }
 
     static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
-                                               CompilerInstance & compiler_instance,
-                                               FOUND_METHOD found_method) {
+                                                      CompilerInstance & compiler_instance,
+                                                      FOUND_METHOD found_method) {
 
         if (decl->isDependentType()) {
             llvm::report_fatal_error("unpexpected dependent type");
@@ -269,3 +282,6 @@ public:
 
 
 };
+
+
+}

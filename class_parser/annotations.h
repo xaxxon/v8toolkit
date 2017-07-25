@@ -6,15 +6,16 @@
 #include <iostream>
 #include <fmt/ostream.h>
 
+namespace v8toolkit::class_parser {
 
 
 class Annotations {
-    set <string> annotations;
+    set<string> annotations;
 
     void get_annotations_for_decl(const Decl * decl_to_check) {
         if (!decl_to_check) { return; }
         for (auto attr : decl_to_check->getAttrs()) {
-            AnnotateAttr *annotation = dyn_cast<AnnotateAttr>(attr);
+            AnnotateAttr * annotation = dyn_cast<AnnotateAttr>(attr);
             if (annotation) {
                 auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
                 auto annotation_string = attribute_attr->getAnnotation().str();
@@ -27,32 +28,32 @@ class Annotations {
 
 public:
 
-    Annotations(const Decl *decl_to_check) {
+    Annotations(const Decl * decl_to_check) {
         get_annotations_for_decl(decl_to_check);
     }
 
 
-    Annotations(const CXXMethodDecl *decl_to_check) {
+    Annotations(const CXXMethodDecl * decl_to_check) {
         get_annotations_for_decl(decl_to_check);
 
     }
 
     Annotations() = default;
 
-    const vector <string> get() const {
-        std::vector <string> results;
+    const vector<string> get() const {
+        std::vector<string> results;
 
-        for (auto &annotation : annotations) {
+        for (auto & annotation : annotations) {
             results.push_back(annotation);
         }
         return results;
     }
 
-    std::vector <string> get_regex(const string &regex_string) const {
+    std::vector<string> get_regex(const string & regex_string) const {
         auto re = regex(regex_string);
-        std::vector <string> results;
+        std::vector<string> results;
 
-        for (auto &annotation : annotations) {
+        for (auto & annotation : annotations) {
             std::smatch matches;
             if (std::regex_match(annotation, matches, re)) {
                 // printf("GOT %d MATCHES\n", (int)matches.size());
@@ -64,11 +65,11 @@ public:
         return results;
     }
 
-    bool has(const std::string &target) const {
+    bool has(const std::string & target) const {
         return std::find(annotations.begin(), annotations.end(), target) != annotations.end();
     }
 
-    void merge(const Annotations &other) {
+    void merge(const Annotations & other) {
         cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size())
              << endl;
         annotations.insert(other.annotations.begin(), other.annotations.end());
@@ -87,5 +88,7 @@ public:
     //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
     static map<const CXXRecordDecl *, string> names_for_record_decls;
 
-    Annotations(const CXXRecordDecl *decl_to_check);
+    Annotations(const CXXRecordDecl * decl_to_check);
 };
+
+}

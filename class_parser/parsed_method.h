@@ -7,8 +7,7 @@
 #include "helper_functions.h"
 
 
-
-
+namespace v8toolkit::class_parser {
 
 
 struct ClassFunction {
@@ -35,6 +34,7 @@ struct ClassFunction {
 
     private:
         static string convert_simple_typename_to_jsdoc(string simple_type_name);
+
         map<string, QualType> template_parameter_types;
 
         // the type cannot be gotten because after template substitution there may not be an actual
@@ -67,6 +67,7 @@ struct ClassFunction {
         TypeInfo plain_without_const() const;
 
         bool is_templated() const;
+
         void for_each_templated_type(std::function<void(QualType)>) const;
 
         bool is_void() const;
@@ -76,6 +77,7 @@ struct ClassFunction {
     /* PARAMETER INFO */
     class ParameterInfo {
         friend class ClassFunction;
+
     protected:
         ClassFunction & method;
         CompilerInstance & compiler_instance;
@@ -89,7 +91,9 @@ struct ClassFunction {
 
 
     public:
-        ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl, CompilerInstance & compiler_instance);
+        ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl,
+                      CompilerInstance & compiler_instance);
+
         string generate_js_stub();
 
         TypeInfo const type;
@@ -117,18 +121,20 @@ struct ClassFunction {
     string get_signature_string();
 
     ClassFunction(WrappedClass & wrapped_class,
-                 CXXMethodDecl const * method_decl,
+                  CXXMethodDecl const * method_decl,
                   std::map<string, QualType> const & template_parameter_types = {},
                   FunctionTemplateDecl const * function_template_decl = nullptr);
-
 
 
     // returns true if the methods have the same name and input parameters
     bool compare_signatures(ClassFunction const & other);
 
     string get_parameter_types_string() const;
+
     string get_return_and_class_and_parameter_types_string() const;
+
     string get_return_and_parameter_types_string() const;
+
     string get_js_input_parameter_string() const;
 
 
@@ -138,17 +144,24 @@ struct ClassFunction {
 class MemberFunction : public ClassFunction {
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {}, FunctionTemplateDecl const * function_template_decl = nullptr);
+                   map<string, QualType> const & map = {},
+                   FunctionTemplateDecl const * function_template_decl = nullptr);
+
     string generate_js_bindings();
+
     string generate_js_stub();
+
     string generate_bidirectional();
 };
 
 class StaticFunction : public ClassFunction {
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {}, FunctionTemplateDecl const * function_template_decl = nullptr);
+                   map<string, QualType> const & map = {},
+                   FunctionTemplateDecl const * function_template_decl = nullptr);
+
     string generate_js_bindings();
+
     string generate_js_stub();
 };
 
@@ -158,6 +171,7 @@ public:
     ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl);
 
     string generate_js_bindings();
+
     string generate_js_stub();
 
     CXXConstructorDecl const * const constructor_decl;
@@ -165,6 +179,7 @@ public:
 };
 
 struct WrappedClass;
+
 struct DataMember {
     WrappedClass & wrapped_class;
     WrappedClass & declared_in; // level in the hierarchy the member is actually declared at - may match wrapped_class
@@ -180,6 +195,9 @@ struct DataMember {
     DataMember(WrappedClass & wrapped_class, WrappedClass & declared_in, FieldDecl * field_decl);
 
     string get_js_stub();
+
     string get_bindings();
 
 };
+
+}

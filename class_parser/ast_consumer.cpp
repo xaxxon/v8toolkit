@@ -3,6 +3,7 @@
 
 using namespace clang::ast_matchers;
 
+namespace v8toolkit::class_parser {
 
 MyASTConsumer::MyASTConsumer(CompilerInstance & ci) :
     HandlerForClass(ci), ci(ci) {
@@ -53,3 +54,5 @@ Matcher.addMatcher(decl(anyOf(
 #endif
 
 }
+
+namespace v8toolkit::class_parser {
