@@ -48,27 +48,10 @@ namespace v8toolkit {
 #else
 #define V8TOOLKIT_DEBUG(format_string, ...)
 #endif
-/**
-* Design Questions:
-* - When a c++ object returns a new object represted by one of its members, should it
-*   return the same javascript object each time as well?  
-*     class Thing {
-*       OtherClass other_class;
-*       OtherClass & get_other_class(){return this->other_class;} <== should this return the same javascript object on each call for the same Thing object
-*     }
-*   - that's currently what the existing_wrapped_objects map is for, but if a new object
-*     of the same time is created at the same address as an old one, the old javascript 
-*     object will be returned.
-*     - how would you track if the c++ object source object for an object went away?
-*     - how would you actually GC the old object when containing object went away?
-*   - Maybe allow some type of optional class customization to help give hints to V8ClassWrapper to have better behavior
-*
-*/
 
 
 /***
-* set of classes for determining what to do do the underlying c++
-*   object when the javascript object is garbage collected
+* set of classes for determining what to do do the underlying c++ object when the javascript object is garbage collected
 */
 struct DestructorBehavior
 {
@@ -128,8 +111,9 @@ struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 };
 
 
-// Helper struct which can determine if an embedded CPP object is compatible with
-//   type T as well as casting an object of type T to its most derived type
+/**
+ * Takes an AnyBase object and determines if it contains an object of type T
+ */
 template<class T>
 struct TypeCheckerBase {
 protected:
@@ -144,6 +128,11 @@ protected:
 			) const = 0;
 };
 
+
+/**
+ * Takes a C++ object and returns the most derived (specific) type it is based on an explicit list
+ * of known derived types
+ */
 template<class T>
 struct WrapAsMostDerivedBase {
 protected:
@@ -186,20 +175,28 @@ struct WrapAsMostDerived<T, TypeList<Head, Tail...>, std::enable_if_t<std::is_co
 
 
 
-// type to convert to, typelist of all types to check, sfinae helper type
-template<class, class, class = void>
+/**
+ * Checks to see if an object of type AnyBase contains an object of type BaseType by seeing if
+ * it can be dynamic_cast'd to any of the types in TypeListDerivedTypes
+ *
+ * Example: class A; class B : public A; class C : public A;
+ * TypeChecker<A, TypeList<A, B, C>> checks to see if the AnyBase contains an A, B, or C object
+ * and returns that object as an A if it does.
+ */
+template<class BaseType, class TypeListDerivedTypes, class = void>
 struct TypeChecker;
 
 
-// Fallback when everything in the typelist has been tried
+/**
+ * TypeChecker specialization when there are no types to check against
+ */
 template<class T>
-    struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
+struct TypeChecker<T, TypeList<>> : public TypeCheckerBase<T>
 {
-
-		TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
-    virtual T * check(AnyBase * any_base, bool first_call = true
-		      ) const override {
-//       ANYBASE_PRINT("Failed to find match for anybase ({}) with type string: {}", demangle<T>(), any_base->type_name);
+	TypeChecker(v8::Isolate * isolate) : TypeCheckerBase<T>(isolate) {}
+	virtual T * check(AnyBase * any_base, bool first_call = true) const override {
+		// No types left to try, so return nullptr to signal that no matching type
+		//   was found
         return nullptr;
     }
 };
