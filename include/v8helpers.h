@@ -85,7 +85,7 @@ namespace Log {
     }
 
     // does not interpolate string
-    void info(Subject subject, std::string const & string);
+    void info(Subject subject, std::stringdevel const & string);
 
 
     // easy to use specialization for warning-level logging

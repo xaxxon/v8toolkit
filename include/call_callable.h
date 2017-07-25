@@ -16,7 +16,8 @@ namespace v8toolkit {
 
 
 /**
- * @defgroup CallCallables Calls a given function with parameters provided from JavaScript
+ * @defgroup CallCallables CallCallable
+ * Calls a given function with parameters provided from JavaScript.
  * @{
  */
 
@@ -40,54 +41,65 @@ struct CallCallable {
  */
 template<class ReturnType, class InitialArg, class... Args>
 struct CallCallable<func::function<ReturnType(InitialArg, Args...)>, InitialArg> {
-using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
-void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
-                const v8::FunctionCallbackInfo<v8::Value> & info,
-                InitialArg initial_arg,
-                std::index_sequence<ArgIndexes...>,
-                DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+private:
+    using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-    int i = 0;
+public:
 
-    constexpr int user_parameter_count = sizeof...(Args);
+    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    InitialArg initial_arg,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
-    constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+        int i = 0;
 
-    // while this is negative, no default argument is available
-    constexpr int default_parameter_position = default_arg_count - user_parameter_count - 1;
+        constexpr int user_parameter_count = sizeof...(Args);
 
-    std::vector<std::unique_ptr<StuffBase>> stuff;
-    info.GetReturnValue().
-        Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                              run_function(function, info, std::forward<InitialArg>(initial_arg),
-                                                           std::forward<Args>(
-                                                               ParameterBuilder<
-                                                                   Args>().template operator()<ArgIndexes - default_arg_count>(info, i, stuff, default_args_tuple))...)));
-}
+        constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+
+        // while this is negative, no default argument is available
+        constexpr int default_parameter_position = default_arg_count - user_parameter_count - 1;
+
+        std::vector<std::unique_ptr<StuffBase>> stuff;
+        info.GetReturnValue().
+            Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+                                                  run_function(function, info, std::forward<InitialArg>(initial_arg),
+                                                               std::forward<Args>(
+                                                                   ParameterBuilder<
+                                                                       Args>().template operator()<
+                                                                       ArgIndexes - default_arg_count>(info, i, stuff,
+                                                                                                       default_args_tuple))...)));
+    }
 };
 
 
+/**
+ * CallCallable for a "Fake method" call with void return type
+ */
 template<class InitialArg, class... Args>
 struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
-template<int default_arg_position, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
-void operator()(func::function<void(InitialArg, Args...)> & function,
-                const v8::FunctionCallbackInfo<v8::Value> & info,
-                InitialArg initial_arg,
-                std::index_sequence<ArgIndexes...>,
-                DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
+    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    void operator()(func::function<void(InitialArg, Args...)> & function,
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    InitialArg initial_arg,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
-    int i = 0;
-    constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+        int i = 0;
+        constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
 
-    std::vector<std::unique_ptr<StuffBase>> stuff;
-    run_function(function, info, std::forward<InitialArg>(initial_arg),
-                 std::forward<Args>(ParameterBuilder<Args>().template operator()<ArgIndexes - default_arg_count - 1>(info, i, stuff,
-                                                                                                                     default_args_tuple))...);
+        std::vector<std::unique_ptr<StuffBase>> stuff;
+        run_function(function, info, std::forward<InitialArg>(initial_arg),
+                     std::forward<Args>(
+                         ParameterBuilder<Args>().template operator()<ArgIndexes - default_arg_count - 1>(info, i,
+                                                                                                          stuff,
+                                                                                                          default_args_tuple))...);
 
-}
+    }
 };
 
 
@@ -96,44 +108,47 @@ void operator()(func::function<void(InitialArg, Args...)> & function,
  */
 template<class ReturnType, class... Args>
 struct CallCallable<func::function<ReturnType(Args...)>> {
-using NonConstReturnType = std::remove_const_t<ReturnType>;
+private:
+    using NonConstReturnType = std::remove_const_t<ReturnType>;
 
-template<class... Ts, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
-void operator()(func::function<ReturnType(Args...)> & function,
-                const v8::FunctionCallbackInfo<v8::Value> & info,
-                std::index_sequence<ArgIndexes...>,
-                DefaultArgsTuple && default_args_tuple = DefaultArgsTuple(),
-                bool return_most_derived = false) {
+public:
+    template<class... Ts, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    void operator()(func::function<ReturnType(Args...)> & function,
+                    const v8::FunctionCallbackInfo<v8::Value> & info,
+                    std::index_sequence<ArgIndexes...>,
+                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple(),
+                    bool return_most_derived = false) {
 
-    int i = 0;
+        int i = 0;
 
-    constexpr int user_parameter_count = sizeof...(Args);
-    constexpr int default_arg_count = std::tuple_size<std::remove_reference_t<DefaultArgsTuple>>::value;
+        constexpr int user_parameter_count = sizeof...(Args);
+        constexpr int default_arg_count = std::tuple_size<std::remove_reference_t<DefaultArgsTuple>>::value;
 
-    // while this is negative, no default argument is available
+        // while this is negative, no default argument is available
 
-    // if there are 3 parameters, 1 default parameter (3-1=2), calls to ParameterBuilder will have positions:
-    // 0 - 2 = -2 (no default available)
-    // 1 - 2 = -1 (no default available)
-    // 2 - 2 = 0 (lookup at std::get<0>(default_args_tuple)
-    constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
+        // if there are 3 parameters, 1 default parameter (3-1=2), calls to ParameterBuilder will have positions:
+        // 0 - 2 = -2 (no default available)
+        // 1 - 2 = -1 (no default available)
+        // 2 - 2 = 0 (lookup at std::get<0>(default_args_tuple)
+        constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
 
 
+        std::vector<std::unique_ptr<StuffBase>> stuff;
 
-    std::vector<std::unique_ptr<StuffBase>> stuff;
-
-    info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                                         run_function(function, info, std::forward<Args>(
-                                                                                             ParameterBuilder<Args>().template operator()
-                                                                                                 <(((int)ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple> (info, i,
-                                                                                                                                                                             stuff, std::move(default_args_tuple)
-                                                                                             ))...)));
-}
+        info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
+                                                                    run_function(function, info, std::forward<Args>(
+                                                                        ParameterBuilder<Args>().template operator()
+                                                                            <(((int) ArgIndexes) -
+                                                                              minimum_user_parameters_required), DefaultArgsTuple>(
+                                                                            info, i,
+                                                                            stuff, std::move(default_args_tuple)
+                                                                        ))...)));
+    }
 };
 
 
 /**
- * call callable for a normal function with a void return
+ * CallCallable for a normal function with a void return
  */
 template<class... Args>
 struct CallCallable<func::function<void(Args...)>> {
@@ -169,7 +184,9 @@ struct CallCallable<func::function<void(Args...)>> {
 
 /**
  * CallCallable for a function directly taking a v8::FunctionCallbackInfo
- * This requires the function to do everything itself in terms of parsing parameters
+ * Delegates all responsibility for interacting with JavaScript to the function being called.  Does not handle
+ * input parameters or return values automatically.  Called function must use the v8::FunctionCallbackInfo object
+ * directly.
  */
 template<>
 struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
@@ -188,4 +205,4 @@ struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value
 
 /**@}*/
 
-} // v8toolkit
+} // end v8toolkit namespace
