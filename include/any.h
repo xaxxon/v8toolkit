@@ -28,20 +28,32 @@ struct AnyBase {
  */
 template<class T>
 struct AnyPtr : public AnyBase {
+private:
     static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value, "AnyPtr must be specified with a non-pointer/reference type");
 
+    T * data;
+
+public:
     AnyPtr(T * data) :
         AnyBase(demangle<T>()),
         data(data) {}
 
-    T * data;
 
+    /**
+     * Returns the stored pointer to the object of type T
+     * @return
+     */
     T * get() {
         return this->data;
     }
 
+    /**
+     * Returns the object of type T if it is compatible with T or nullptr otherwise
+     * @param any_base AnyBase object to test to see if it contains an object of type T
+     * @return Type T object if contained object is compatible or nullptr if not
+     */
     static T * check(AnyBase * any_base) {
-        return dynamic_cast<T *>(any_base) != nullptr;
+         return dynamic_cast<T *>(any_base);
     }
 };
 
