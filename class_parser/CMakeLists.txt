@@ -25,7 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic" )
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 
 add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
-        annotations.cpp class_handler.cpp bidirectional_bindings.cpp ast_consumer.cpp wrapped_class.cpp
+        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp
         )
 
 cotire(class_parser_plugin)
