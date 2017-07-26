@@ -38,7 +38,7 @@ void process_v8_flags(int & argc, char ** argv)
 void expose_gc()
 {
     static const char * EXPOSE_GC = "--expose-gc";
-    v8::V8::SetFlagsFromString(EXPOSE_GC, strlen(EXPOSE_GC));   
+    v8::V8::SetFlagsFromString(EXPOSE_GC, strlen(EXPOSE_GC));
 }
 
 

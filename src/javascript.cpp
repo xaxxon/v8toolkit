@@ -4,6 +4,8 @@
 
 #include "debugger.h"
 
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 namespace v8toolkit {
 
@@ -418,21 +420,52 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
 
     Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::init called, initializing V8 for use");
 
+
+    // Verify snapshot data is available before initializing any parts of V8
+
+    // startup data is in the current directory
+    std::string actual_snapshot_directory = snapshot_directory;
+    if (actual_snapshot_directory == "") {
+        actual_snapshot_directory = ".";
+    }
+
+
+    fs::path snapshot_path(actual_snapshot_directory);
+
+
+    if (!fs::is_directory(snapshot_path)) {
+        std::cerr << fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)) << std::endl;
+        throw Exception(fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)));
+    } else {
+        std::cerr << fmt::format("{} is a directory", snapshot_path) << std::endl;
+    }
+    snapshot_path = fs::canonical(snapshot_path);
+
+    std::string snapshot_blob_filename = "snapshot_blob.bin";
+    fs::path snapshot_blob_path = snapshot_path / snapshot_blob_filename;
+    if (!fs::exists(snapshot_blob_path)) {
+        std::cerr << fmt::format("snapshot blob not found at {}", snapshot_blob_path) << std::endl;
+        throw Exception(fmt::format("snapshot blob not found at {}", snapshot_blob_path));
+    }
+    std::string natives_blob_filename = "natives_blob.bin";
+    fs::path natives_blob_path = snapshot_path / natives_blob_filename;
+    if (!fs::exists(natives_blob_path)) {
+        std::cerr << fmt::format("natives blob not found at {}", natives_blob_path) << std::endl;
+        throw Exception(fmt::format("natives blob not found at {}", natives_blob_path));
+    }
+
+    std::cerr << fmt::format("blob/snapshot file verification done, starting v8") << std::endl;
+
     process_v8_flags(argc, argv);
 
     if (expose_gc_value) {
-	    v8toolkit::expose_gc();
+        v8toolkit::expose_gc();
     }
 
-    
-    // Initialize V8.
+
     v8::V8::InitializeICU();
-    
-    // startup data is in the current directory
 
-    if (snapshot_directory != "") {
-        v8::V8::InitializeExternalStartupData(snapshot_directory.c_str());
-    }
+    v8::V8::InitializeExternalStartupData(std::string(natives_blob_path).c_str(), std::string(snapshot_blob_path).c_str());
 
     Platform::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());

@@ -78,8 +78,9 @@ add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 # even when v8 is build shared, still needs some statically linked libs
 target_link_libraries(v8toolkit_shared ${V8_LIBS})
 
-# Linux doesn't need to link to this to make a shared object
-target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES})
+# make sure that libc++experimental.a from clang can be found.  May need to move it from clang distribution into /usr/lib
+target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES} c++experimental)
+
 
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})
 set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
