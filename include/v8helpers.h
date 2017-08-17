@@ -35,6 +35,30 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 }
 
 
+/**
+ * string_view that is guaranteed to be null terminated.
+ * adds c_str() as a synonym for std::string_view::data to make it clear that it is null terminated like it is
+ *   in std::string::c_str()
+ */
+class zstring_view : public std::string_view {
+
+public:
+    zstring_view();
+    zstring_view(char const * const source);
+    zstring_view(char const * const source, std::size_t length);
+    zstring_view(std::string const & source);
+
+    zstring_view(zstring_view const &) = default;
+    zstring_view(zstring_view &&) = default;
+    zstring_view & operator=(zstring_view const &) = default;
+    zstring_view & operator=(zstring_view &&) = default;
+
+    char const * c_str() const;
+
+    operator std::string() const;
+};
+
+
 namespace Log {
     enum class Level {Info, Warn, Error};
     using LevelT = std::underlying_type_t<Level>;
@@ -73,43 +97,43 @@ namespace Log {
     }
 
     // does not interpolate string
-    void log(Level level, Subject subject, std::string const & string);
+    void log(Level level, Subject subject, zstring_view const & string);
 
 
     // easy to use specialization for info-level logging
     template<class... Ts>
-    void info(Subject subject, std::string const & format_string, Ts&&... args) {
+    void info(Subject subject, zstring_view const & format_string, Ts&&... args) {
         if (callback) {
-            callback(Level::Info, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+            callback(Level::Info, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
         }
     }
 
     // does not interpolate string
-    void info(Subject subject, std::string const & string);
+    void info(Subject subject, zstring_view const & string);
 
 
     // easy to use specialization for warning-level logging
     template<class... Ts>
-    void warn(Subject subject, std::string const & format_string, Ts&&... args) {
+    void warn(Subject subject, zstring_view const & format_string, Ts&&... args) {
         if (callback) {
-            callback(Level::Warn, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+            callback(Level::Warn, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
         }
     }
 
     // does not interpolate string
-    void warn(Subject subject, std::string const & string);
+    void warn(Subject subject, zstring_view const & string);
 
 
     // easy to use specialization for error-level logging
     template<class... Ts>
-    void error(Subject subject, std::string const & format_string, Ts&&... args) {
+    void error(Subject subject, zstring_view const & format_string, Ts&&... args) {
         if (callback) {
-            callback(Level::Error, subject, fmt::format(format_string, std::forward<Ts>(args)...));
+            callback(Level::Error, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
         }
     }
 
     // does not interpolate string
-    void error(Subject subject, std::string const & string);
+    void error(Subject subject, zstring_view const & string);
 
 } // end namespace Log
 
@@ -873,6 +897,7 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
     auto local_context = context.Get(isolate);
     return scoped_run(isolate, local_context, callable);
 }
+
 
 
 

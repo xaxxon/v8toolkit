@@ -15,22 +15,22 @@ LoggerCallback callback;
 void set_logger_callback(LoggerCallback new_callback) {
     callback = new_callback;
 }
-void log(Level level, Subject subject, std::string const & string) {
+void log(Level level, Subject subject, zstring_view const & string) {
     if (callback) {
         callback(level, subject, string);
     }
 }
-void info(Subject subject, std::string const & string) {
+void info(Subject subject, zstring_view const & string) {
     if (callback) {
         callback(Level::Info, subject, string);
     }
 }
-void warn(Subject subject, std::string const & string) {
+void warn(Subject subject, zstring_view const & string) {
     if (callback) {
         callback(Level::Warn, subject, string);
     }
 }
-void error(Subject subject, std::string const & string) {
+void error(Subject subject, zstring_view const & string) {
     if (callback) {
         callback(Level::Error, subject, string);
     }
@@ -414,7 +414,17 @@ std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined"
     "Map", "WeakMap", "JSON"};
 
 
+zstring_view::zstring_view() : std::string_view() {}
+zstring_view::zstring_view(char const * const source) : zstring_view(source, strlen(source)) {}
+zstring_view::zstring_view(char const * const source, std::size_t length) : std::string_view(source, length) {}
+zstring_view::zstring_view(std::string const & source) : std::string_view(source.c_str(), source.length()) {}
 
+char const* zstring_view::c_str() const {
+    return this->data();
+}
 
+zstring_view::operator std::string() const {
+    return std::string(this->data(), this->length());
+}
 
 }
