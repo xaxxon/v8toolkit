@@ -366,6 +366,7 @@ private:
 
     // Callback type to add members to an ObjectTemplate
 	using AttributeAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
+	using EnumAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
 
     // Callback type to add a static method to an ObjectTemplate
 	using StaticMethodAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
@@ -388,6 +389,7 @@ private:
 
     // Callbacks for adding members to an ObjectTemplate
 	std::vector<AttributeAdder> member_adders;
+	std::vector<EnumAdder> enum_adders;
 
     // Callbacks for adding static methods to an ObjectTemplate
 	std::vector<StaticMethodAdder> static_method_adders;
@@ -603,7 +605,6 @@ private:
 	    // call any registered change callbacks
 	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(property), value);
 	}
-
 
 
 	// Helper for creating objects when "new MyClass" is called from javascript
@@ -1053,6 +1054,7 @@ public:
             } else {
                 v8::TryCatch tc;
 				javascript_object = get_function_template()->GetFunction(context).ToLocalChecked()->NewInstance();
+
 
 				// this shouldn't be able to fire because the FunctionTemplate being used shouldn't have a constructor
 				//   call with any content...
@@ -1539,6 +1541,26 @@ public:
 		} else {
 			method_adders.push_back(method_adder_data);
 		}
+	}
+
+
+	void add_enum(zstring_view const & name, std::map<std::string, double> const & value_map) {
+		this->enum_adders.emplace_back([value_map](v8::Local<v8::ObjectTemplate> object_template) {
+
+			object_template->SetHandler(
+				v8::NamedPropertyHandlerConfiguration(
+					[](v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value> & info) {
+
+					}, // getter
+					{}, // setter
+					{}, // query
+					{}, // deleter
+					{}, // enumerator
+					{}, // data
+					{} // PropertyHandlerFlags
+				)
+			);
+		});
 	}
 
 	/**
