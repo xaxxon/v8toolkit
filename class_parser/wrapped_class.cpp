@@ -75,9 +75,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     cerr << "Final wrapped class annotations: " << endl;
     print_vector(annotations.get());
 
-
-
-    // START NEW CODE
     bool must_have_base_type = false;
     auto annotation_base_types_to_ignore = this->annotations.get_regex(
         "^" V8TOOLKIT_IGNORE_BASE_TYPE_PREFIX "(.*)$");
@@ -528,6 +525,24 @@ void WrappedClass::foreach_inheritance_level(function<void(WrappedClass &)> call
 
 }
 
+map<string, map<string, int>> const & WrappedClass::get_enums() {
+    if (this->enums_parsed) {
+        return this->enums;
+    }
+
+    for(auto decl : this->decl->decls()) {
+        if (auto enum_decl = dyn_cast<EnumDecl>(decl)) {
+            std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
+            for(EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
+                std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
+            }
+        }
+    }
+
+    return this->enums;
+};
+
+
 set<unique_ptr<DataMember>> & WrappedClass::get_members() {
     if (this->members_parsed) {
         return this->members;
@@ -581,6 +596,7 @@ std::string WrappedClass::generate_js_stub() {
     result << "/**\n";
     result << fmt::format(" * @class {}\n", this->name_alias);
 
+    this->get_enums();
     //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
     for (auto & member : this->get_members()) {
         result << member->get_js_stub();

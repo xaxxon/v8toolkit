@@ -10,11 +10,11 @@ MyASTConsumer::MyASTConsumer(CompilerInstance & ci) :
 
 #ifdef TEMPLATE_INFO_ONLY
 
-Matcher.addMatcher(decl(anyOf(
-					  classTemplateSpecializationDecl().bind("class"),
-					  cxxMethodDecl().bind("method")
-					  )),
-			       &HandlerForClass);
+    Matcher.addMatcher(decl(anyOf(
+                          classTemplateSpecializationDecl().bind("class"),
+                          cxxMethodDecl().bind("method")
+                          )),
+                       &HandlerForClass);
 
 #else
     Matcher.addMatcher(cxxRecordDecl(
@@ -28,7 +28,8 @@ Matcher.addMatcher(decl(anyOf(
 
 
                 allOf(isDefinition(),
-                      cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind("class derived from WrappedClassBase")),
+                      cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind(
+                          "class derived from WrappedClassBase")),
 
                 // mark a type you control with the wrapped class attribute
                 allOf(isDefinition(),
@@ -43,16 +44,17 @@ Matcher.addMatcher(decl(anyOf(
         )), &HandlerForClass);
 
     Matcher.addMatcher(
-    namedDecl(
-    allOf(
-    hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
-    unless(matchesName("^::std::")),
-    unless(matchesName("^::__")
-    )
-    )
-    ).bind("named decl"), &HandlerForClass);
+        namedDecl(
+            allOf(
+                hasAttr(attr::Annotate), // must have V8TOOLKIT_NAME_ALIAS set
+                unless(matchesName("^::std::")),
+                unless(matchesName("^::__")
+                )
+            )
+        ).bind("named decl"), &HandlerForClass);
 #endif
 
 }
 
-namespace v8toolkit::class_parser {
+}
+

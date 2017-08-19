@@ -28,11 +28,15 @@ private:
 
     bool members_parsed = false;
     set<unique_ptr<DataMember>> members;
+
+    bool enums_parsed = false;
+    map<string, map<string, int>> enums;
+
     set<unique_ptr<ConstructorFunction>> constructors;
 
 
 public:
-    static vector<WrappedClass *> wrapped_classes;
+    static inline vector<WrappedClass *> wrapped_classes;
 
     CXXRecordDecl const * decl = nullptr;
 
@@ -64,6 +68,7 @@ public:
     set<unique_ptr<StaticFunction>> const & get_static_functions();
 
     set<unique_ptr<DataMember>> & get_members();
+    map<string, map<string, int>> const & get_enums();
 
     set<unique_ptr<ConstructorFunction>> const & get_constructors();
 

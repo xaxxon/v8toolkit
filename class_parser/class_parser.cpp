@@ -42,9 +42,32 @@ cotire(api-gen-template)
 #include <map>
 using namespace std;
 
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <set>
+#include <regex>
+
+#include <fmt/ostream.h>
+
+#include "clang.h"
+
+#include "class_parser.h"
+
+
+
+
+#include "wrapped_class.h"
+#include "ast_action.h"
+#include "ast_consumer.h"
+#include "annotations.h"
+#include "class_handler.h"
+#include "parsed_method.h"
+
 namespace v8toolkit::class_parser {
 
-
+int print_logging = 1;
 
 //////////////////////////////
 // CUSTOMIZE THESE VARIABLES
@@ -146,33 +169,10 @@ function require(module_name){}
 
 )JS_API_HEADER";
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <set>
-#include <regex>
-
-#include <fmt/ostream.h>
-
-#include "clang.h"
-
-#include "class_parser.h"
-
-
-int print_logging = 1;
-
-
-#include "wrapped_class.h"
-#include "ast_action.h"
-#include "ast_consumer.h"
-#include "annotations.h"
-#include "class_handler.h"
-#include "parsed_method.h"
-
 
 int matched_classes_returned = 0;
 
-vector<WrappedClass *> WrappedClass::wrapped_classes;
+//vector<WrappedClass *> WrappedClass::wrapped_classes;
 
 
 /*
