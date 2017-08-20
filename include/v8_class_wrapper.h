@@ -1547,14 +1547,23 @@ public:
 	void add_enum(zstring_view const & name, EnumValueMap const & value_map) {
 
 		this->enum_adders.emplace_back([this, name, value_map](v8::Local<v8::ObjectTemplate> object_template) {
+			auto data = v8::External::New(this->isolate, (void *)&value_map);
 			object_template->SetAccessor(
 				v8::String::NewFromUtf8(this->isolate, name.c_str()), [](v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value> &info){
-					std::cerr << fmt::format("IN ENUM GETTER************") << std::endl;
+
+					// Sloppy impl - creates a new object every time when it should be the same frozen object
+					auto external = v8::Local<v8::External>::Cast(info.Data());
+					auto & value_map = *static_cast<EnumValueMap *>(external->Value());
 					auto isolate = info.GetIsolate();
 					auto object = v8::Object::New(isolate);
-					object->Set("test"_v8, 8_v8);
+					for (auto const & pair : value_map) {
+						object->Set(
+							v8::String::NewFromUtf8(isolate, pair.first.c_str()),
+							v8::Number::New(isolate, pair.second)
+						);
+					}
 					info.GetReturnValue().Set(object);
-				});
+				}, nullptr, data);
 		});
 	}
 

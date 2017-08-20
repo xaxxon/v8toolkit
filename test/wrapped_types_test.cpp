@@ -244,7 +244,9 @@ TEST_F(WrappedClassFixture, SimpleFunctions) {
 TEST_F(WrappedClassFixture, Enumerations) {
     (*c)([&] {
         {
-            c->run("EXPECT_TRUE(new WrappedClass(5).enum_test.test == 8)");
+            c->run("EXPECT_TRUE(new WrappedClass(5).enum_test.A == 1)");
+            c->run("EXPECT_TRUE(new WrappedClass(5).enum_test.B == 2)");
+            c->run("EXPECT_TRUE(new WrappedClass(5).enum_test.C == 3)");
         }
     });
 
