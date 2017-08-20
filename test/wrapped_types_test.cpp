@@ -158,6 +158,7 @@ public:
             w.add_static_method("inline_static_method", [](int i){
                 EXPECT_EQ(i, 7);
             }, std::tuple<int>(7));
+            w.add_enum("enum_test", {{"A", 1}, {"B", 2}, {"C", 3}});
             w.set_compatible_types<WrappedClassChild>();
             w.finalize(true);
             w.add_constructor<int>("WrappedClass", *i);
@@ -238,6 +239,15 @@ TEST_F(WrappedClassFixture, SimpleFunctions) {
             c->run("EXPECT_TRUE(WrappedClass.static_method() == `static_method`)");
         }
     });
+}
+
+TEST_F(WrappedClassFixture, Enumerations) {
+    (*c)([&] {
+        {
+            c->run("EXPECT_TRUE(new WrappedClass(5).enum_test.test == 8)");
+        }
+    });
+
 }
 
 

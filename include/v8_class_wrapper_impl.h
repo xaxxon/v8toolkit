@@ -248,7 +248,11 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 			// methods are put into the protype of the newly created javascript object
 			object_template->Set(v8::String::NewFromUtf8(isolate, adder.method_name.c_str()), function_template);
 		}
-		for (auto &adder : this->fake_method_adders) {
+		for (auto & adder : this->fake_method_adders) {
+			adder(object_template);
+		}
+
+		for (auto & adder : this->enum_adders) {
 			adder(object_template);
 		}
 

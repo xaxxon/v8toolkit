@@ -444,7 +444,7 @@ private:
 	TypeCheckerBase<T> * type_checker = new TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>(this->isolate); // std::unique_ptr adds too much compilation time
 	WrapAsMostDerivedBase<T> * wrap_as_most_derived_object = new WrapAsMostDerived<T, TypeList<>>(this->isolate); // std::unique_ptr adds too much compilation time
 
-
+	std::map<std::string, std::map<std::string, double>> enums;
 
     /****** METHODS *******/
 
@@ -1543,23 +1543,18 @@ public:
 		}
 	}
 
+	using EnumValueMap = std::map<std::string, double>;
+	void add_enum(zstring_view const & name, EnumValueMap const & value_map) {
 
-	void add_enum(zstring_view const & name, std::map<std::string, double> const & value_map) {
-		this->enum_adders.emplace_back([value_map](v8::Local<v8::ObjectTemplate> object_template) {
-
-			object_template->SetHandler(
-				v8::NamedPropertyHandlerConfiguration(
-					[](v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value> & info) {
-
-					}, // getter
-					{}, // setter
-					{}, // query
-					{}, // deleter
-					{}, // enumerator
-					{}, // data
-					{} // PropertyHandlerFlags
-				)
-			);
+		this->enum_adders.emplace_back([this, name, value_map](v8::Local<v8::ObjectTemplate> object_template) {
+			object_template->SetAccessor(
+				v8::String::NewFromUtf8(this->isolate, name.c_str()), [](v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value> &info){
+					std::cerr << fmt::format("IN ENUM GETTER************") << std::endl;
+					auto isolate = info.GetIsolate();
+					auto object = v8::Object::New(isolate);
+					object->Set("test"_v8, 8_v8);
+					info.GetReturnValue().Set(object);
+				});
 		});
 	}
 
