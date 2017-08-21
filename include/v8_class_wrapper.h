@@ -1543,27 +1543,57 @@ public:
 		}
 	}
 
-	using EnumValueMap = std::map<std::string, double>;
-	void add_enum(zstring_view const & name, EnumValueMap const & value_map) {
 
-		this->enum_adders.emplace_back([this, name, value_map](v8::Local<v8::ObjectTemplate> object_template) {
-			auto data = v8::External::New(this->isolate, (void *)&value_map);
+	using EnumValueMap = std::map<std::string, double>;
+	struct EnumData {
+		EnumValueMap enum_value_map;
+
+		// the frozen javascript object containing the enum property names and values
+		// lazily created because no context exists to create it in when add_enum is called
+		v8::Global<v8::Object> js_enum_object;
+
+		EnumData(EnumValueMap && enum_value_map) : enum_value_map(std::move(enum_value_map)) {}
+	};
+
+	void add_enum(zstring_view const & name, EnumValueMap && value_map) {
+
+		auto enum_data = new EnumData(std::move(value_map));
+
+		this->enum_adders.emplace_back([this, name, enum_data](v8::Local<v8::ObjectTemplate> object_template) {
+
+			// Accessor callback
 			object_template->SetAccessor(
 				v8::String::NewFromUtf8(this->isolate, name.c_str()), [](v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value> &info){
-
-					// Sloppy impl - creates a new object every time when it should be the same frozen object
-					auto external = v8::Local<v8::External>::Cast(info.Data());
-					auto & value_map = *static_cast<EnumValueMap *>(external->Value());
 					auto isolate = info.GetIsolate();
-					auto object = v8::Object::New(isolate);
-					for (auto const & pair : value_map) {
-						object->Set(
-							v8::String::NewFromUtf8(isolate, pair.first.c_str()),
-							v8::Number::New(isolate, pair.second)
-						);
+					// get EnumData object from info.Data()'s v8::External
+					auto external = v8::Local<v8::External>::Cast(info.Data());
+					auto enum_data = static_cast<EnumData *>(external->Value());
+
+					// check to see if a JS object has been created
+					if (enum_data->js_enum_object.IsEmpty()) {
+//						std::cerr << fmt::format("Creating one-time enum object") << std::endl;
+						auto object = v8::Object::New(isolate);
+						enum_data->js_enum_object.Reset(isolate, object);
+
+						// initialize object with actual properties and values from enum
+						for (auto const & pair : enum_data->enum_value_map) {
+							object->Set(
+								v8::String::NewFromUtf8(isolate, pair.first.c_str()),
+								v8::Number::New(isolate, pair.second)
+							);
+						}
+
+						// freeze the JS object so it can never be changed later
+						//object->SetIntegrityLevel(isolate->GetCurrentContext(), v8::IntegrityLevel::kFrozen);
+
+					} else {
+//						std::cerr << fmt::format("using existing enum object") << std::endl;
 					}
-					info.GetReturnValue().Set(object);
-				}, nullptr, data);
+
+
+					// return the JS object
+					info.GetReturnValue().Set(enum_data->js_enum_object.Get(isolate));
+				}, nullptr, v8::External::New(this->isolate, enum_data));
 		});
 	}
 
