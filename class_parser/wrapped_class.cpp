@@ -529,13 +529,28 @@ map<string, map<string, int>> const & WrappedClass::get_enums() {
     if (this->enums_parsed) {
         return this->enums;
     }
+    enums_parsed = true;
+
+    if (this->decl == nullptr) {
+        std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
+        return {};
+    }
+
+    std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
+
 
     for(auto decl : this->decl->decls()) {
         if (auto enum_decl = dyn_cast<EnumDecl>(decl)) {
+            if (enum_decl == nullptr) {
+                std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
+            }
+            std::map<std::string, int> enum_class;
             std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
             for(EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
                 std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
+                enum_class[constant_decl->getNameAsString()] = constant_decl->getInitVal().getExtValue();
             }
+            this->enums[enum_decl->getNameAsString()] = enum_class;
         }
     }
 
@@ -790,6 +805,27 @@ std::string WrappedClass::get_bindings() {
     for (auto & member : members) {
         result << member->get_bindings();
     }
+
+    // go through each enum
+    for (auto & enumeration : this->get_enums()) {
+        std::cerr << fmt::format("writing enum to output file: {}", enumeration.first) << std::endl;
+        std::stringstream values;
+        values << "{";
+        auto first_element = true;
+
+        // go through each value in the enum
+        for (auto const & pair : enumeration.second) {
+            if (!first_element) {
+                values << ", ";
+            }
+            first_element = false;
+            values << "{" << pair.first << ", " << pair.second << "}";
+        }
+        values << "}";
+
+        result << fmt::format("{}  class_wrapper.add_enum(\"{}\", {});\n", indentation, enumeration.first, values.str());
+    };
+
     for (auto & wrapper_extension_method : wrapper_extension_methods) {
         result << fmt::format("{}  {}\n", indentation, wrapper_extension_method);
     }
