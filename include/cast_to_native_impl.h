@@ -29,6 +29,13 @@ struct CastToNative {
 };
 
 
+template<typename T>
+struct CastToNative<T, std::enable_if_t<std::is_enum_v<T>>> {
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return T(static_cast<T>(value->ToNumber()->Value()));
+    }
+};
+
 //template<class T>
 //struct is_wrapped_type<T, std::enable_if_t<std::is_reference<
 //    typename std::result_of_t<

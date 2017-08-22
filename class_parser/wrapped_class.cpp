@@ -819,7 +819,7 @@ std::string WrappedClass::get_bindings() {
                 values << ", ";
             }
             first_element = false;
-            values << "{" << pair.first << ", " << pair.second << "}";
+            values << "{\"" << pair.first << "\", " << pair.second << "}";
         }
         values << "}";
 

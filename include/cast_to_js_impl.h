@@ -18,22 +18,29 @@ namespace v8toolkit {
 
 template<class T>
 struct CastToJS<T &, std::enable_if_t<!is_wrapped_type_v < T>>> {
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
-    return CastToJS<T>()(isolate, value);
-}
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
+        return CastToJS<T>()(isolate, value);
+    }
 };
 
 
 template<class T>
-struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v < T>>> {
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const value) const {
-    if (value == nullptr) {
-        return v8::Undefined(isolate);
-    } else {
-        return CastToJS<T>()(isolate, *value);
+struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v<T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const value) const {
+        if (value == nullptr) {
+         return v8::Undefined(isolate);
+        } else {
+            return CastToJS<T>()(isolate, *value);
+        }
     }
-}
+};
 
+
+template<class T>
+struct CastToJS<T, std::enable_if_t<std::is_enum_v<T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const value) const {
+        return v8::Number::New(isolate, static_cast<std::underlying_type_t<T>>(value));
+    }
 };
 
 
@@ -43,13 +50,10 @@ v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const value) const {
  * @tparam T
  */
 template<class T>
-struct CastToJS<T const,
-    std::enable_if_t<!is_wrapped_type_v < T>> // enable_if
-> {
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
-    return v8toolkit::CastToJS<T>()(isolate, value);
-}
-
+struct CastToJS<T const, std::enable_if_t<!is_wrapped_type_v<T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
+        return v8toolkit::CastToJS<T>()(isolate, value);
+    }
 };
 
 

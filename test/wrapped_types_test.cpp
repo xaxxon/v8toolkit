@@ -32,8 +32,12 @@ public:
 
 bool takes_holder_called = false;
 bool takes_this_called = false;
+bool takes_and_returns_enum_called = false;
 bool takes_isolate_and_int_called = false;
 bool returns_wrapped_class_lvalue_called = false;
+
+enum class TestEnum {TEST_ENUM_A, TEST_ENUM_B, TEST_ENUM_C};
+
 class WrappedClass : public WrappedClassBase {
 public:
     // class is not default constructible
@@ -80,7 +84,7 @@ public:
         return *this;
     }
 
-    static std::string static_method(int i = 5, char const * str = "asdf"){
+    static std::string static_method(int i = 5, char const * str = "asdf") {
         EXPECT_EQ(i, 5);
         EXPECT_STREQ(str, "asdf");
         return "static_method";}
@@ -102,6 +106,12 @@ public:
     void takes_this(v8::Isolate * isolate, v8toolkit::This this_object) {
         EXPECT_EQ(V8ClassWrapper<WrappedClass>::get_instance(isolate).get_cpp_object(this_object), nullptr);
         takes_this_called = true;
+    }
+
+    TestEnum takes_and_returns_enum(TestEnum test_enum) {
+        EXPECT_EQ(test_enum, TestEnum::TEST_ENUM_C);
+        takes_and_returns_enum_called = true;
+        return TestEnum::TEST_ENUM_B;
     }
 };
 
@@ -154,6 +164,7 @@ public:
                              CopyableWrappedClass,
                              CopyableWrappedClass,
                              CopyableWrappedClass*>(1, "asdf", {}, {}, {}, nullptr));
+            w.add_method("takes_and_returns_enum", &WrappedClass::takes_and_returns_enum);
             w.add_static_method("static_method", &WrappedClass::static_method, std::make_tuple(5, "asdf"));
             w.add_static_method("inline_static_method", [](int i){
                 EXPECT_EQ(i, 7);
@@ -237,6 +248,10 @@ TEST_F(WrappedClassFixture, SimpleFunctions) {
             c->run("EXPECT_TRUE(new WrappedClass(6).takes_const_int_6(6) == 6)");
 
             c->run("EXPECT_TRUE(WrappedClass.static_method() == `static_method`)");
+
+            c->run("EXPECT_TRUE(new WrappedClass(7).takes_and_returns_enum(2) == 1)");
+            EXPECT_TRUE(takes_and_returns_enum_called);
+            takes_and_returns_enum_called = false; // reset for any future use
         }
     });
 }
