@@ -5,24 +5,25 @@ your C++ code inline and use the included clang plugin to scan your code and gen
 automatically.
 
 ## Features
-* Bindings for C++ fundamental types, and many STL containers.
-* Straight-forward support for adding custom C++ to JavaScript serializer/deserializers for user-defined types.
-* Simple syntax to expose your class to JavaScript including member functions, static functions, and data members.
+* Default bindings for C++ fundamental types, and most STL containers.
+* User-defined type support easy to add.
+* Support for simple variables and functions as well as class member functions, static functions, and data members, and enums.
 * JavaScript debugging support.  Point Chrome ([or many other debuggers](https://developer.chrome.com/devtools/docs/debugging-clients)) at your application and see your JavaScript source, set breakpoints, inspect and set variables.   
-* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for the clang compiler using the actual AST generated during compilation.  A stubbed out .js file is also generated with JSDoc comments and type information, directly from your C++ source, for autocompletion in compatible editors while using your C++ types from JavaScript. 
+* Automatic generation of JavaScript bindings directly from your C++ source code using a provided plugin for the clang compiler. A stubbed out .js file is also generated with JSDoc comments and type information, directly from your C++ source, for autocompletion in compatible editors while using your C++ types from JavaScript. 
 * Understands memory ownership and C++11 `std::unique_ptr` and rvalues.   C++ functions taking/returning rvalue references or `std::unique_ptr` will transfer ownership of the underlying C++ object back and forth between C++ and the JavaScript garbage collector.
 * Default parameters for calling C++ functions from JavaScript and not providing enough parameters.  Experimental support in the clang plugin for generating the defaults from the default values in your C++ source.
 
 ## Requirements
 * Recent version of V8.  The V8 API is constantly evolving and this library tracks recent versions.
-* C++17.  C++17 adds features drastically simplifying v8toolkit's implementation.  Fortunately, clang
+* C++17. New language features drastically simplifying v8toolkit's implementation.  Fortunately, clang
 supports all major platforms.  
 
 #### Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/doxygen/html/index.html
 
    
+## Examples
 
-## Your First v8toolkit program
+### Your first v8toolkit program
 
 ```language-c++
     #include "javascript.h"
@@ -44,7 +45,7 @@ supports all major platforms.
     }
 ```
 
-## Exposing a C++ class to JavaScript
+### Exposing a C++ class to JavaScript manually
 
 Here is an example class and the code required to make the class useable from JavaScript:
 
@@ -74,7 +75,7 @@ Here is an example class and the code required to make the class useable from Ja
 
 ```
 
-### Autogenerating JavaScript bindings for a C++ class
+### Automatic generation of JavaScript bindings for a C++ class
 
 By annotating your C++ class (note the `V8TOOLKIT_SKIP` in the code below), you can generate the exact same bindings 
 as above automatically using the clang plugin.  
