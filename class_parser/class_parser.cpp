@@ -104,12 +104,12 @@ vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 map<string, string> static_method_renames = {{"name", "get_name"}};
 
 // http://usejsdoc.org/tags-type.html
-map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?vector",                                                                                                   "Array.{$1}"},
+map<string, string> cpp_to_js_type_conversions = {{"^(?:std::|eastl)?(?:vector|set|multiset|vector_set)",                                                                       "Array.{$1}"},
                                                   {"^(?:std::|eastl::)?(?:vector_)?(?:multi)?map",                                                                              "Object.{$1, $2}"},
     //{"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
-                                                  {"^(?:const)?\\s*(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
-                                                  {"^(?:const)?\\s*_?[Bb]ool\\s*(?:const)?\\s*[*]?\\s*[&]?$",                                                                   "Boolean"},
-                                                  {"^(?:const)?\\s*(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$",                                                "String"},
+                                                  {"^(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},
+                                                  {"^bool\\s*(?:const)?\\s*[*]?\\s*[&]?$",                                                                   "Boolean"},
+                                                  {"^(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$",                                                "String"},
                                                   {"^void$",                                                                                                                    "Undefined"},
                                                   {"^(?:std::)?unique_ptr",                                                                                                     "$1"},
                                                   {"^(?:std::)?basic_string",                                                                                                   "String"},

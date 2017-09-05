@@ -639,17 +639,8 @@ std::string WrappedClass::generate_js_stub() {
     }
 
     std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
-    first_method = true;
     for (auto & method : this->get_member_functions()) {
-
-        if (!first_method) {
-            result << ",";
-        }
-        first_method = false;
-
-        result << endl << endl;
-
-        result << method->generate_js_stub();
+        result << method->generate_js_stub() << std::endl;
     }
 
 

@@ -169,7 +169,7 @@ public:
         return nullptr;
     }
 
-    using Using=int;
+    using Using = int;
     using Using2 = Using;
     V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR Foo(int, char, short &&);
 
@@ -220,10 +220,10 @@ public:
    static int foo_static_method(const int *){return 8;}
    const Using2 & using_return_type_test();
    std::string take_and_return_string(std::string);
-   const std::string take_and_return_const_string(const std::string);
-   volatile const std::string & take_and_return_const_volatile_string(const volatile std::string *&);
-    const volatile std::map<const volatile int*&,const volatile Using2*&>*& map_test(const volatile std::map<const volatile Using2 *&,
-            const volatile std::set<const volatile int*&>*&>*&);
+    const std::string take_and_return_const_string(const std::string);
+    volatile const std::string & take_and_return_const_volatile_string(const volatile std::string *&);
+    const volatile std::map<const volatile int*&,const volatile Using2*&>*& map_test(
+        const volatile std::map<const volatile Using2 *&, const volatile std::set<const volatile int*&>*&>*&);
 
    void nested_foo_struct_test(const NestedFooStruct *&);
    void call_helper_callback(HelperClass::Callback);

@@ -76,6 +76,8 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
     // clang generates type names with class/struct prefixes, remove them
     simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)\\s*"), "");
 
+    // remove const/volatile
+    simple_type_name = regex_replace(simple_type_name, regex("^(const\\s*|volatile\\s*)*\\s*"), "");
 
     std::smatch matches;
 
