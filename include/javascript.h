@@ -666,7 +666,7 @@ class Platform {
 
 private:
 	inline static std::unique_ptr<v8::Platform> platform;
-	inline static v8toolkit::ArrayBufferAllocator allocator;
+	static v8toolkit::ArrayBufferAllocator allocator;
 	inline static bool initialized = false;
 	inline static bool expose_gc_value = false;
 	inline static int memory_size_in_mb = -1; // used for Isolate::CreateParams::constraints::set_max_old_space_size()

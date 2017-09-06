@@ -538,6 +538,7 @@ func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...
 }
 
 
+
 /**
 * Example allocator code from V8 Docs
 */

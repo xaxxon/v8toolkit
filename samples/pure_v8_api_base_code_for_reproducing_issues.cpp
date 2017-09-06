@@ -97,7 +97,7 @@ int main(int argc, char ** argv)
 	v8::V8::Initialize();
 
 	v8::Isolate::CreateParams create_params;
-	create_params.array_buffer_allocator = (v8::ArrayBuffer::Allocator *) new ArrayBufferAllocator();
+	create_params.array_buffer_allocator = static_cast<v8::ArrayBuffer::Allocator *>(new ArrayBufferAllocator());
 
 	auto i = v8::Isolate::New(create_params);
 
