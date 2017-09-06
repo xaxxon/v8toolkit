@@ -538,21 +538,6 @@ func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...
 }
 
 
-
-/**
-* Example allocator code from V8 Docs
-*/
-class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
- public:
-  inline virtual void* Allocate(size_t length) override {
-    void* data = AllocateUninitialized(length);
-    return data == NULL ? data : memset(data, 0, length);
-  }
-  inline virtual void* AllocateUninitialized(size_t length) override { return malloc(length); }
-  inline virtual void Free(void* data, size_t) override { free(data); }
-};
-
-
 /**
 * If the filename `filename` exists, reeturns true and sets the last modificaiton time and contents
 *   otherwise returns false

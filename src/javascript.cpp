@@ -9,9 +9,6 @@ namespace fs = std::experimental::filesystem;
 
 namespace v8toolkit {
 
-
-v8toolkit::ArrayBufferAllocator Platform::allocator;
-
 boost::uuids::random_generator uuid_generator;
 
 std::atomic<int> script_id_counter(0);
@@ -501,7 +498,7 @@ std::shared_ptr<Isolate> Platform::create_isolate()
     if (Platform::memory_size_in_mb > 0) {
         create_params.constraints.set_max_old_space_size(Platform::memory_size_in_mb);
     }
-    create_params.array_buffer_allocator = static_cast<v8::ArrayBuffer::Allocator *>(&Platform::allocator);
+    create_params.array_buffer_allocator = Platform::allocator.get();
 
     // can't use make_shared since the constructor is private
     auto isolate_helper = new Isolate(v8::Isolate::New(create_params));
