@@ -757,7 +757,7 @@ string ConstructorFunction::generate_js_stub() {
     }
     result << fmt::format("     */") << endl;
 
-    result << fmt::format("    constructor({}){{}}", this->get_js_input_parameter_string());
+    result << fmt::format("    constructor({}){{}}\n\n", this->get_js_input_parameter_string());
 
     return result.str();
 

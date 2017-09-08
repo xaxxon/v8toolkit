@@ -602,8 +602,20 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
 
 
 std::string WrappedClass::generate_js_stub() {
+    if (this->name_alias.find("<") != std::string::npos) {
+        std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
+                                 this->name_alias) << std::endl;
+        return std::string();
+    } else if (this->base_types.size() > 0 && (*this->base_types.begin())->name_alias.find("<") != std::string::npos) {
+        std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
+                                 this->name_alias,
+                                 (*this->base_types.begin())->name_alias) << std::endl;
+        return std::string();
+    } else {
+        cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
+    }
 
-    cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
+
 
     stringstream result;
     string indentation = "    ";
@@ -624,7 +636,7 @@ std::string WrappedClass::generate_js_stub() {
     if (this->base_types.size() == 1) {
         result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
     }
-    result << " {";
+    result << " {\n\n";
 
     // not sure what to do if there are multiple constructors...
     bool first_method = true;
@@ -640,7 +652,7 @@ std::string WrappedClass::generate_js_stub() {
 
     std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
     for (auto & method : this->get_member_functions()) {
-        result << method->generate_js_stub() << std::endl;
+        result << method->generate_js_stub() << std::endl << std::endl;
     }
 
 
