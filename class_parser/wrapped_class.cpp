@@ -11,15 +11,15 @@ namespace v8toolkit::class_parser {
 // Single classes (+base classes) with more than this number of declarations will still be in one file.
 int MAX_DECLARATIONS_PER_FILE = 50;
 
-WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method)
-    :
+WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
     decl(decl),
     class_name(get_canonical_name_for_decl(decl)),
     name_alias(decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()),
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
-    found_method(found_method) {
+    found_method(found_method)
+{
     cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method)
          << endl;
     fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
@@ -656,20 +656,14 @@ std::string WrappedClass::generate_js_stub() {
     }
 
 
-    first_method = true;
     std::cerr << fmt::format("generating stub for {} methods", this->get_static_functions().size()) << std::endl;
     for (auto & method : this->get_static_functions()) {
-        if (!first_method) {
-            result << ",";
-        }
-        first_method = false;
-
         result << endl << endl;
         result << method->generate_js_stub();
     }
 
 
-    result << fmt::format("}}\n\n\n");
+    result << fmt::format("\n}}\n\n\n");
 //    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
     return result.str();
 }
