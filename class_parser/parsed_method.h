@@ -33,7 +33,7 @@ struct ClassFunction {
     struct TypeInfo {
 
     private:
-        static string convert_simple_typename_to_jsdoc(string simple_type_name);
+        static string convert_simple_typename_to_jsdoc(string simple_type_name, std::string const & = "");
 
         map<string, QualType> template_parameter_types;
 
@@ -56,7 +56,7 @@ struct ClassFunction {
         string get_plain_name() const;
 
         /// corresponding javascript type
-        string get_jsdoc_type_name() const;
+        string get_jsdoc_type_name(std::string const & = "") const;
 
 
         // return if the type (or the type being pointed/referred to) is const (not is the pointer const)

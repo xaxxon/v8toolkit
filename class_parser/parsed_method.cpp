@@ -13,8 +13,8 @@ ClassFunction::TypeInfo::TypeInfo(QualType const & type, map<string, QualType> t
 //    plain_name(get_type_string(this->plain_type))
 {
 //    name = regex_replace(name, std::regex("^(struct|class) "), "");
-    std::cerr << fmt::format("TypeInfo for {} stored {} template parameter types", this->type.getAsString(),
-                             this->template_parameter_types.size()) << std::endl;
+//    std::cerr << fmt::format("TypeInfo for {} stored {} template parameter types", this->type.getAsString(),
+//                             this->template_parameter_types.size()) << std::endl;
 }
 
 
@@ -67,7 +67,8 @@ string ClassFunction::TypeInfo::get_plain_name() const {
 }
 
 
-string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_type_name) {
+string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_type_name,
+                                                                 std::string const & indentation) {
 
     // picks off the middle namespace of things like:
     //   std::__cxx11::string as well as std::__1::vector so type names are more predictable
@@ -84,20 +85,25 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
     for (auto & conversion_pattern : cpp_to_js_type_conversions) {
         for (auto & pair : cpp_to_js_type_conversions) {
             if (regex_match(simple_type_name, matches, std::regex(pair.first))) {
-                std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
+                std::cerr << fmt::format("{}'{}' matched {}, converting to {}",
+                                         indentation,
+                                         simple_type_name,
+                                         pair.first,
+                                         pair.second) << std::endl;
                 return pair.second;
             }
         }
     }
 
     // no match, return unchanged
-    std::cerr << fmt::format("returning simple type name unchanged {}", simple_type_name) << std::endl;
+    std::cerr << fmt::format("{}returning simple type name unchanged {}",
+                             indentation, simple_type_name) << std::endl;
     return simple_type_name;
 }
 
 
-string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
-    std::cerr << fmt::format("converting {}", this->get_name()) << std::endl;
+string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentation) const {
+    std::cerr << fmt::format("{}converting {}", indentation, this->get_name()) << std::endl;
 
     vector<string> template_type_jsdoc_conversions;
     if (this->is_templated()) {
@@ -105,8 +111,8 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
         // convert each templated type
         this->for_each_templated_type([&](QualType qualtype) {
             auto typeinfo = TypeInfo(qualtype);
-            std::cerr << fmt::format("converting templated type {}", typeinfo.get_plain_name()) << std::endl;
-            template_type_jsdoc_conversions.push_back(typeinfo.get_jsdoc_type_name());
+            std::cerr << fmt::format("{}converting templated type {}", indentation, typeinfo.get_plain_name()) << std::endl;
+            template_type_jsdoc_conversions.push_back(typeinfo.get_jsdoc_type_name(indentation + "  "));
         });
 
         // convert the specialized template name
@@ -114,7 +120,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
         if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->get_plain_type_decl())) {
             if (auto spec_tmpl = specialization->getSpecializedTemplate()) {
                 specialized_template_name = spec_tmpl->getQualifiedNameAsString();
-                fprintf(stderr, "Specialized template: %p, %s\n", (void *) spec_tmpl,
+                fprintf(stderr, "%sSpecialized template: %p, %s\n", indentation.c_str(), (void *) spec_tmpl,
                         specialized_template_name.c_str());
                 print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
             } else {
@@ -125,7 +131,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
                 "Template being specialized couldn't be cast to class template spec decl (shouldn't happen)");
         }
 
-        specialized_template_name = this->convert_simple_typename_to_jsdoc(specialized_template_name);
+        specialized_template_name = this->convert_simple_typename_to_jsdoc(specialized_template_name, indentation);
 
 
         // go through each capturing match and...
@@ -135,13 +141,14 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name() const {
                                                            std::regex(fmt::format("\\${}", i + 1)),
                                                            template_type_jsdoc_conversions[i]);
         }
-        std::cerr << fmt::format("final jsdoc conversion: {} =? {}", this->get_plain_name(), specialized_template_name)
+        std::cerr << fmt::format("{}final jsdoc conversion: {} =? {}",
+                                 indentation, this->get_plain_name(), specialized_template_name)
                   << std::endl;
         return specialized_template_name;
     }
         // Handle non-templated types
     else {
-        return this->convert_simple_typename_to_jsdoc(this->plain_without_const().get_name());
+        return this->convert_simple_typename_to_jsdoc(this->plain_without_const().get_name(), indentation);
     }
 }
 

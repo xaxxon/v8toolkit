@@ -182,6 +182,8 @@ public:
     DerivedFromWrappedClassBase<char*> derived_my_template_charp;
 
     std::vector<int> returns_vector_of_ints();
+    std::vector<std::vector<std::vector<std::string>>> returns_vector_of_vector_of_vector_of_strings();
+    std::vector<std::pair<int, char*>> returns_vector_of_pairs();
     std::map<std::string, int> returns_map_of_string_to_int();
 
     void takes_const_wrapped_ref(Foo const &);
