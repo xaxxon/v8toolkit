@@ -45,6 +45,7 @@ std::ostream & operator<<(std::ostream & os, Log::Level const & level) {
     return os;
 }
 
+
 std::ostream & operator<<(std::ostream & os, Log::Subject const & subject) {
     std::cerr << fmt::format("{}", Log::subject_names[static_cast<Log::SubjectT>(subject)]) << std::endl;
     return os;
@@ -57,7 +58,6 @@ MethodAdderData::MethodAdderData(std::string const & method_name,
     method_name(method_name),
     callback(callback)
 {}
-
 
 
 /**
@@ -78,8 +78,6 @@ std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace) {
     }
     return result.str();
 }
-
-
 
 
 std::string demangle_typeid_name(const std::string & mangled_name) {
@@ -166,7 +164,6 @@ std::string get_type_string_for_value(v8::Local<v8::Value> value) {
 }
 
 
-
 void print_v8_value_details(v8::Local<v8::Value> local_value) {
 
     auto value = *local_value;
@@ -198,7 +195,8 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
     std::cout << "generator object: " << value->IsGeneratorObject() << std::endl;
 }
 
-std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
+
+std::vector<std::string> get_object_keys(v8::Isolate * isolate,
                                                 v8::Local<v8::Object> & object,
                                                 bool own_properties_only)
 {
@@ -211,18 +209,17 @@ std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
     }
     auto array_length = get_array_length(isolate, properties);
 
-    std::set<std::string> keys;
+    std::vector<std::string> keys(array_length);
 
     for (int i = 0; i < array_length; i++) {
-        keys.insert(*v8::String::Utf8Value(properties->Get(context, i).ToLocalChecked()));
+        keys.push_back(*v8::String::Utf8Value(properties->Get(context, i).ToLocalChecked()));
     }
 
     return keys;
 }
 
 
-
-
+// set to enable debug prints on calls to stringify
 #define STRINGIFY_VALUE_DEBUG false
 
 std::string stringify_value(v8::Isolate * isolate,
@@ -307,7 +304,7 @@ std::string stringify_value(v8::Isolate * isolate,
         if(value->IsObject() && !object.IsEmpty()) {
             if (STRINGIFY_VALUE_DEBUG) printf("Stringifying object\n");
             output << "{";
-            auto keys = make_set_from_object_keys(isolate, object, !show_all_properties);
+            auto keys = get_object_keys(isolate, object, !show_all_properties);
             auto first_key = true;
             for(auto key : keys) {
                 if (STRINGIFY_VALUE_DEBUG) printf("Stringify: object key %s\n", key.c_str());
@@ -400,17 +397,13 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
 }
 
 bool global_name_conflicts(const std::string & name) {
-    // for some reason the real code here is crashing
+    if (std::find(reserved_global_names.begin(), reserved_global_names.end(), name) !=
+        reserved_global_names.end()) {
+        std::cerr << fmt::format("{} is a reserved js global name", name) << std::endl;
+        return true;
+    }
     return false;
-//    if (std::find(reserved_global_names.begin(), reserved_global_names.end(), name) !=
-//        reserved_global_names.end()) {
-//        std::cerr << fmt::format("{} is a reserved js global name", name) << std::endl;
-//        return true;
-//    }
 }
 
-std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined", "Number", "String",
-    "Object", "Symbol", "Date", "Array", "Set", "WeakSet",
-    "Map", "WeakMap", "JSON"};
 
 }

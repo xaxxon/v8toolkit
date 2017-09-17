@@ -160,9 +160,6 @@ template<class MemberT, class ClassT>
     std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
 
 
-
-
-
     namespace literals {
 
         // put the following in your code to use these:
@@ -413,9 +410,9 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value);
 
 
-std::set<std::string> make_set_from_object_keys(v8::Isolate * isolate,
-                                                v8::Local<v8::Object> & object,
-                                                bool own_properties_only = true);
+std::vector<std::string> get_object_keys(v8::Isolate * isolate,
+                                         v8::Local<v8::Object> & object,
+                                         bool own_properties_only = true);
 
 
 /**d
@@ -708,14 +705,9 @@ std::string stringify_value(v8::Isolate * isolate,
  * @return true if there is a conflict
  */
 bool global_name_conflicts(const std::string & name);
-extern std::vector<std::string> reserved_global_names;
-
-
-
-
-
-
-
+inline std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined", "Number", "String",
+                                                  "Object", "Symbol", "Date", "Array", "Set", "WeakSet",
+                                                  "Map", "WeakMap", "JSON"};
 
 
 /* Use these to try to decrease the amount of template instantiations */

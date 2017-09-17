@@ -511,7 +511,6 @@ func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...
 }
 
 
-
 /**
  * Const qualified
  * @param object

@@ -11,7 +11,6 @@
 #include <sstream>
 #include <regex>
 #include <mutex>
-#include <set>
 #include <map>
 #include <fmt/format.h>
 #include <boost/format.hpp>
@@ -799,8 +798,8 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
             // printf("right value not object\n");
             return false;
         }
-        auto left_keys = make_set_from_object_keys(isolate, object_left);
-        auto right_keys = make_set_from_object_keys(isolate, object_right);
+        auto left_keys = get_object_keys(isolate, object_left);
+        auto right_keys = get_object_keys(isolate, object_right);
         if (left_keys.size() != right_keys.size()) {
             // printf("key count mismatch: %d %d\n", (int)left_keys.size(), (int)right_keys.size());
             return false;

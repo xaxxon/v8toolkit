@@ -67,7 +67,6 @@ using namespace std;
 
 namespace v8toolkit::class_parser {
 
-int print_logging = 1;
 
 //////////////////////////////
 // CUSTOMIZE THESE VARIABLES
