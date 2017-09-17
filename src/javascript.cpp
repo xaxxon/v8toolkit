@@ -437,7 +437,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
         std::cerr << fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)) << std::endl;
         throw Exception(fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)));
     } else {
-        std::cerr << fmt::format("{} is a directory", snapshot_path) << std::endl;
+//        std::cerr << fmt::format("{} is a directory", snapshot_path) << std::endl;
     }
     snapshot_path = fs::canonical(snapshot_path);
 
@@ -454,7 +454,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
         throw Exception(fmt::format("natives blob not found at {}", natives_blob_path));
     }
 
-    std::cerr << fmt::format("blob/snapshot file verification done, starting v8") << std::endl;
+//    std::cerr << fmt::format("blob/snapshot file verification done, starting v8") << std::endl;
 
     process_v8_flags(argc, argv);
 
