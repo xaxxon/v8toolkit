@@ -38,13 +38,13 @@ std::shared_ptr<Isolate> Context::get_isolate_helper() const
     return this->isolate_helper;
 }
 
+
 v8::Local<v8::Value> Context::json(const std::string & json) {
     return this->isolate_helper->json(json);
 }
 
 
-    v8::Local<v8::Context> get_debug_context();
-
+v8::Local<v8::Context> get_debug_context();
 
 
 Context::~Context() {
