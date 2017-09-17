@@ -652,18 +652,17 @@ std::string WrappedClass::generate_js_stub() {
 
     std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
     for (auto & method : this->get_member_functions()) {
-        result << method->generate_js_stub() << std::endl << std::endl;
+        result << std::endl << method->generate_js_stub() << std::endl;
     }
 
 
-    std::cerr << fmt::format("generating stub for {} methods", this->get_static_functions().size()) << std::endl;
+    std::cerr << fmt::format("generating stub for {} static methods", this->get_static_functions().size()) << std::endl;
     for (auto & method : this->get_static_functions()) {
-        result << endl << endl;
-        result << method->generate_js_stub();
+        result << std::endl << method->generate_js_stub() << std::endl;
     }
 
 
-    result << fmt::format("\n}}\n\n\n");
+    result << fmt::format("\n}}\n");
 //    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
     return result.str();
 }

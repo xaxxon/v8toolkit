@@ -5,6 +5,7 @@
 #include <regex>
 #include <iostream>
 #include <fmt/ostream.h>
+#include <set>
 
 namespace v8toolkit::class_parser {
 

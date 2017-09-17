@@ -28,6 +28,7 @@ using MapT=std::map<ArgTs...>;
 #include "v8toolkit.h"
 #include "casts.h"
 #include "any.h"
+#include "type_traits.h"
 
 // allow _v8 suffix for making v8::String objects
 using namespace v8toolkit::literals;
@@ -267,42 +268,14 @@ public:
 extern V8ClassWrapperInstanceRegistry wrapper_registery;
 
 
-
-
-
- // Cannot make class wrappers for pointer or reference types
-#define V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE !std::is_pointer<T>::value && !std::is_reference<T>::value
-
-#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX std::is_base_of<WrappedClassBase, T>::value
-/**
- * Allows user to specify a list of types to instantiate real V8ClassWrapper template for -- CastToNative/CastToJS will otherwise
- *   try to instantiate it for a very large number of types which can drastically slow down compilation.
- * Setting an explicit value for this is NOT required - it is just a compile-time, compile-RAM (and maybe binary size) optimizatioan
- */
-
-
- // uncomment this to see the effects of generating the wrapper class on compile time (but won't actually run correctly)
-// #define TEST_NO_REAL_WRAPPERS
- 
-
-#ifdef TEST_NO_REAL_WRAPPERS
-
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<std::is_same<T, void>::value>
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<!std::is_same<T, void>::value>
-
- #else
-// Use the real V8ClassWrapper specialization if the class inherits from WrappedClassBase or is in the user-provided sfinae
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    (V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX)>
-
-// otherwise use the 'cheap' specialization
-#define V8TOOLKIT_V8CLASSWRAPPER_USE_FAKE_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_NO_POINTER_NO_REFERENCE_SFINAE) && \
-    !(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX)>
+// By default, is_wrapped_type type trait defines which classes are wrapped, but user may redefine criteria
+//   it is normally preferred to specialize is_wrapped_type for additional types rather than override this #define
+#ifndef V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX
+#define V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX v8toolkit::is_wrapped_type_v<T>
 #endif
 
 
-
-
+#define V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE std::enable_if_t<(V8TOOLKIT_V8CLASSWRAPPER_FULL_TEMPLATE_SFINAE_PREFIX)>
 
 /**
  * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
@@ -353,7 +326,7 @@ template<class T, class = void>
 class V8ClassWrapper;
 
 template<class T>
-class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>
+class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>
 {
 	using ConstT = std::add_const_t<T>;
 
@@ -1555,7 +1528,7 @@ public:
 		EnumData(EnumValueMap && enum_value_map) : enum_value_map(std::move(enum_value_map)) {}
 	};
 
-	void add_enum(zstring_view const & name, EnumValueMap && value_map) {
+	void add_enum(xl::zstring_view const & name, EnumValueMap && value_map) {
 
 		auto enum_data = new EnumData(std::move(value_map));
 
@@ -1786,7 +1759,7 @@ namespace v8toolkit {
 * Stores the "singleton" per isolate
 */
 template <class T>
-    MapT<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::isolate_to_wrapper_map;
+    MapT<v8::Isolate *, V8ClassWrapper<T> *> V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::isolate_to_wrapper_map;
 
 template<class T>
 class JSWrapper;

@@ -23,10 +23,8 @@ template<class T> constexpr bool always_false_v = always_false<T>::value;
  * if additional ways of specifying a wrapped type are added
  */
 template<class T, class = void>
-struct is_wrapped_type : public std::false_type {};
+struct is_wrapped_type : public std::is_base_of<v8toolkit::WrappedClassBase, T> {};
 
-template<class T>
-struct is_wrapped_type<T, std::enable_if_t<std::is_base_of<v8toolkit::WrappedClassBase, T>::value>> : public std::true_type {};
 
 template<class T>
 constexpr bool is_wrapped_type_v = is_wrapped_type<T>::value;

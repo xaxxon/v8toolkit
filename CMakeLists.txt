@@ -11,6 +11,8 @@ ucm_set_runtime(STATIC)
 
 
 include(v8)
+link_directories(. ${CLANG_HOME}/lib)
+
 
 #message(looking for v8 libs in ${V8_LIB_DIR})
 #FOREACH(LIB_NAME ${V8_LIB_NAMES})

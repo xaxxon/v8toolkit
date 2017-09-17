@@ -108,6 +108,9 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
     vector<string> template_type_jsdoc_conversions;
     if (this->is_templated()) {
 
+        std::cerr << fmt::format("{} is a templated type", this->plain_without_const().get_name()) << std::endl;
+
+
         // convert each templated type
         this->for_each_templated_type([&](QualType qualtype) {
             auto typeinfo = TypeInfo(qualtype);
@@ -148,6 +151,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
     }
         // Handle non-templated types
     else {
+        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
         return this->convert_simple_typename_to_jsdoc(this->plain_without_const().get_name(), indentation);
     }
 }
@@ -703,6 +707,7 @@ string MemberFunction::generate_js_bindings() {
 }
 
 
+// returns JSDoc and stubbed function for a member function - no trailing newline
 string MemberFunction::generate_js_stub() {
     stringstream result;
     result << fmt::format("    /**") << endl;
@@ -737,6 +742,8 @@ string StaticFunction::generate_js_bindings() {
 
 }
 
+
+// returns JSDoc and stubbed function for a static function - no trailing newline
 string StaticFunction::generate_js_stub() {
     stringstream result;
     result << fmt::format("    /**") << endl;
@@ -749,7 +756,6 @@ string StaticFunction::generate_js_stub() {
     result << fmt::format("     */") << endl;
 
     result << fmt::format("    static {}({}){{}}", this->js_name, this->get_js_input_parameter_string()) << endl;
-    result << endl;
 
     return result.str();
 

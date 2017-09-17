@@ -15,22 +15,22 @@ LoggerCallback callback;
 void set_logger_callback(LoggerCallback new_callback) {
     callback = new_callback;
 }
-void log(Level level, Subject subject, zstring_view const & string) {
+void log(Level level, Subject subject, xl::zstring_view const & string) {
     if (callback) {
         callback(level, subject, string);
     }
 }
-void info(Subject subject, zstring_view const & string) {
+void info(Subject subject, xl::zstring_view const & string) {
     if (callback) {
         callback(Level::Info, subject, string);
     }
 }
-void warn(Subject subject, zstring_view const & string) {
+void warn(Subject subject, xl::zstring_view const & string) {
     if (callback) {
         callback(Level::Warn, subject, string);
     }
 }
-void error(Subject subject, zstring_view const & string) {
+void error(Subject subject, xl::zstring_view const & string) {
     if (callback) {
         callback(Level::Error, subject, string);
     }
@@ -94,7 +94,7 @@ std::string demangle_typeid_name(const std::string & mangled_name) {
     if (demangled_name_needs_to_be_freed == nullptr) {
 	return mangled_name;
     }
-    
+
     if (status == 0) {
         result = demangled_name_needs_to_be_freed;
     } else {
@@ -137,7 +137,7 @@ void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context>
 {
     auto global_object = context->Global();
     (void)global_object->Set(context, v8::String::NewFromUtf8(isolate, alias_name.c_str()), global_object);
-    
+
 }
 
 
@@ -168,9 +168,9 @@ std::string get_type_string_for_value(v8::Local<v8::Value> value) {
 
 
 void print_v8_value_details(v8::Local<v8::Value> local_value) {
-    
+
     auto value = *local_value;
-    
+
     std::cout << "undefined: " << value->IsUndefined() << std::endl;
     std::cout << "null: " << value->IsNull() << std::endl;
     std::cout << "true: " << value->IsTrue() << std::endl;
@@ -412,19 +412,5 @@ bool global_name_conflicts(const std::string & name) {
 std::vector<std::string> reserved_global_names = {"Boolean", "Null", "Undefined", "Number", "String",
     "Object", "Symbol", "Date", "Array", "Set", "WeakSet",
     "Map", "WeakMap", "JSON"};
-
-
-zstring_view::zstring_view() : std::string_view() {}
-zstring_view::zstring_view(char const * const source) : zstring_view(source, strlen(source)) {}
-zstring_view::zstring_view(char const * const source, std::size_t length) : std::string_view(source, length) {}
-zstring_view::zstring_view(std::string const & source) : std::string_view(source.c_str(), source.length()) {}
-
-char const* zstring_view::c_str() const {
-    return this->data();
-}
-
-zstring_view::operator std::string() const {
-    return std::string(this->data(), this->length());
-}
 
 }

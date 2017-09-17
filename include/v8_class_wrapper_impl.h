@@ -11,7 +11,7 @@
 namespace v8toolkit {
 
 template<class T> WrappedData<T> &
-V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrapped_data(v8::Local<v8::Object> object) {
+V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::get_wrapped_data(v8::Local<v8::Object> object) {
 
     if (object->InternalFieldCount() == 0) {
         throw InvalidCallException("JavaScript object for making native call has no InternalField.  Pure JavaScript object specified where wrapped native object required?");
@@ -24,7 +24,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 }
 
     template<class T>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) :
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::V8ClassWrapper(v8::Isolate * isolate) :
             isolate(isolate)
     {
         wrapper_registery.add_callback(isolate, [this](){
@@ -34,7 +34,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 	}
 
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object,
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::call_callbacks(v8::Local<v8::Object> object,
 																						 const std::string & property_name,
 																						 v8::Local<v8::Value> & value) {
 		for (auto &callback : property_changed_callbacks) {
@@ -44,7 +44,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 
 
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_name_used(const std::string & name) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::check_if_name_used(const std::string & name) {
 
 		if (std::find(used_attribute_name_list.begin(),
 			used_attribute_name_list.end(),
@@ -59,7 +59,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
     }
 
 	template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_static_name_used(const std::string & name) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::check_if_static_name_used(const std::string & name) {
 		if (std::find(used_static_attribute_name_list.begin(),
 					  used_static_attribute_name_list.end(),
 					  name) != used_static_attribute_name_list.end()) {
@@ -70,7 +70,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 	}
 
     template<class T> void
-    V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::check_if_constructor_name_used(const std::string & name) {
+    V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::check_if_constructor_name_used(const std::string & name) {
         auto used_constructor_name_list_pair = used_constructor_name_list_map.find(this->isolate);
         if (used_constructor_name_list_pair == used_constructor_name_list_map.end()) {
             used_constructor_name_list_map.emplace(this->isolate, reserved_global_names);
@@ -91,14 +91,14 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
     // takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
     //   Useful because capturing lambdas don't have a traditional function pointer type
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	    StdFunctionCallbackType * callback_lambda = (StdFunctionCallbackType *)v8::External::Cast(*(args.Data()))->Value();		
 	    (*callback_lambda)(args);
     }
     
     
     template<class T> void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::register_callback(PropertyChangedCallback callback) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::register_callback(PropertyChangedCallback callback) {
 	    property_changed_callbacks.push_back(callback);
     }
   
@@ -109,7 +109,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      */
     template<class T>
 	v8::Local<v8::FunctionTemplate>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::make_wrapping_function_template(v8::FunctionCallback callback,
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::make_wrapping_function_template(v8::FunctionCallback callback,
 												     const v8::Local<v8::Value> & data) {
 
 		assert(this->finalized == true);
@@ -150,7 +150,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      *   which one created an object takes linear time based on the number that exist
      */
     template<class T> v8::Local<v8::FunctionTemplate>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_function_template()
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::get_function_template()
 	{
 	    if (this_class_function_templates.empty()){
 //		fprintf(stderr, "Making function template because there isn't one %s\n", demangle<T>().c_str());
@@ -169,7 +169,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      * correct type
      */
     template<class T>
-	T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
+	T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::get_cpp_object(v8::Local<v8::Object> object) {
         if (object->InternalFieldCount() == 0) {
             return nullptr;
         } else if (object->InternalFieldCount() > 1) {
@@ -192,7 +192,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      * Check to see if an object can be converted to type T, else return nullptr
      */
     template<class T>   T *
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::cast(AnyBase * any_base)
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::cast(AnyBase * any_base)
 	{
 	    V8TOOLKIT_DEBUG("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
 	    if (type_checker != nullptr) {
@@ -215,7 +215,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 
 
     template<class T>  void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 		object_template->SetInternalFieldCount(1);
 //	fprintf(stderr, "Adding %d members\n", (int)this->member_adders.size());
 		for (auto &adder : this->member_adders) {
@@ -231,7 +231,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 
 
     template<class T>
-	void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::
+	void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::
 	init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 
 		for (auto &adder : this->method_adders) {
@@ -268,7 +268,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      *   even though V8 will still present the ability to your javascript (I think)
      */
     template<class T>
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::~V8ClassWrapper()
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::~V8ClassWrapper()
 	{
 	    // this was happening when it wasn't supposed to, like when making temp copies.   need to disable copying or something
 	    //   if this line is to be added back
@@ -277,7 +277,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
 
 
     template<class T>  void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::set_class_name(const std::string & name){
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::set_class_name(const std::string & name){
 		assert(!this->finalized);
 		this->class_name = name;
     }
@@ -290,7 +290,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::get_wrappe
      * Must be called before adding any constructors or using wrap_existing_object()
      */
     template<class T>  void
-	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_USE_REAL_TEMPLATE_SFINAE>::finalize(bool wrap_as_most_derived_flag) {
+	V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::finalize(bool wrap_as_most_derived_flag) {
         if (this->finalized) {
             throw V8Exception(this->isolate, fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
         }
