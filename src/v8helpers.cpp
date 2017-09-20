@@ -8,49 +8,6 @@
 namespace v8toolkit {
 
 
-namespace Log {
-
-LoggerCallback callback;
-
-void set_logger_callback(LoggerCallback new_callback) {
-    callback = new_callback;
-}
-void log(Level level, Subject subject, xl::zstring_view const & string) {
-    if (callback) {
-        callback(level, subject, string);
-    }
-}
-void info(Subject subject, xl::zstring_view const & string) {
-    if (callback) {
-        callback(Level::Info, subject, string);
-    }
-}
-void warn(Subject subject, xl::zstring_view const & string) {
-    if (callback) {
-        callback(Level::Warn, subject, string);
-    }
-}
-void error(Subject subject, xl::zstring_view const & string) {
-    if (callback) {
-        callback(Level::Error, subject, string);
-    }
-}
-
-
-} // end namespace Log
-
-
-std::ostream & operator<<(std::ostream & os, Log::Level const & level) {
-    std::cerr << fmt::format("{}", Log::level_names[static_cast<Log::LevelT>(level)]) << std::endl;
-    return os;
-}
-
-
-std::ostream & operator<<(std::ostream & os, Log::Subject const & subject) {
-    std::cerr << fmt::format("{}", Log::subject_names[static_cast<Log::SubjectT>(subject)]) << std::endl;
-    return os;
-}
-
 
 MethodAdderData::MethodAdderData() = default;
 MethodAdderData::MethodAdderData(std::string const & method_name,
@@ -393,7 +350,7 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
             result << stack_trace_string;
         }
     }
-    Log::error(Log::Subject::RUNTIME_EXCEPTION, result.str());
+    log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, result.str());
 }
 
 bool global_name_conflicts(const std::string & name) {

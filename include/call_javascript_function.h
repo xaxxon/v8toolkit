@@ -56,7 +56,7 @@ v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Co
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
         if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
-            Log::info(Log::Subject::RUNTIME_EXCEPTION,
+            log.info(LoggingSubjects::Subjects::RUNTIME_EXCEPTION,
                 "Some of the types are const, make sure what you are using them for is available on the const type\n");
         }
 //        ReportException(isolate, &tc);

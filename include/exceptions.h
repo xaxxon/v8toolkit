@@ -1,11 +1,7 @@
 #pragma once
 
 
-
-
-
 namespace v8toolkit {
-
 
 /**
 * When the V8 engine itself generates an error (or a user calls isolate->ThrowException manually with a v8::Value for some reason)
@@ -44,6 +40,7 @@ public:
     V8AssertionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
 };
 
+
 class V8ExecutionException : public V8Exception {
     std::string stacktrace;
 public:
@@ -61,9 +58,6 @@ public:
 };
 
 
-
-
-
 /**
 * Same as a V8 exception, except if this type is thrown it indicates the exception was generated
 *   during compilation, not at runtime.
@@ -72,11 +66,6 @@ class V8CompilationException : public V8ExecutionException {
 public:
     using V8ExecutionException::V8ExecutionException;
 };
-
-
-
-
-
 
 
 }

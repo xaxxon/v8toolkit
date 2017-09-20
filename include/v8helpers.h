@@ -14,6 +14,7 @@
 #include <v8.h>
 
 #include <xl/zstring_view.h>
+#include <xl/log.h>
 
 #include "type_traits.h"
 #include "stdfunctionreplacement.h"
@@ -37,88 +38,27 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 
 
 
+class LoggingSubjects {
+private:
+    inline static std::string subject_names[] = {"Object Management", "Runtime Exception", "Compilation Exception"};
 
-namespace Log {
-    enum class Level {Info, Warn, Error};
-    using LevelT = std::underlying_type_t<Level>;
+public:
 
-    enum class Subject {V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
+    enum class Subjects {
+        V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
         RUNTIME_EXCEPTION,
         COMPILATION_EXCEPTION
     };
-    using SubjectT = std::underlying_type_t<Subject>;
 
 
-    inline static char const * subject_names[] = {"Object Management", "Runtime Exception", "Compilation Exception"};
-    inline static char const * level_names[] = {"INFO", "WARN", "ERROR"};
-
-    inline char const * to_string(Subject subject) {
-        return Log::subject_names[(int)subject];
+    std::string const & get_subject_name(Subjects subject) {
+        return subject_names[static_cast<std::underlying_type_t<Subjects>>(subject)];
     }
-
-    inline char const * to_string(Level level) {
-        return Log::subject_names[(int)level];
-    }
+};
 
 
-    using LoggerCallback = std::function<void(Level, Subject, std::string const &)>;
 
-    extern LoggerCallback callback;
-
-    void set_logger_callback(LoggerCallback new_callback);
-
-    // can be used for any log level
-    template<class... Ts>
-    void log(Level level, Subject subject, std::string const & format_string, Ts&&... args) {
-        if (callback) {
-            callback(level, subject, fmt::format(format_string, std::forward<Ts>(args)...));
-        }
-    }
-
-    // does not interpolate string
-    void log(Level level, Subject subject, xl::zstring_view const & string);
-
-
-    // easy to use specialization for info-level logging
-    template<class... Ts>
-    void info(Subject subject, xl::zstring_view const & format_string, Ts&&... args) {
-        if (callback) {
-            callback(Level::Info, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
-        }
-    }
-
-    // does not interpolate string
-    void info(Subject subject, xl::zstring_view const & string);
-
-
-    // easy to use specialization for warning-level logging
-    template<class... Ts>
-    void warn(Subject subject, xl::zstring_view const & format_string, Ts&&... args) {
-        if (callback) {
-            callback(Level::Warn, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
-        }
-    }
-
-    // does not interpolate string
-    void warn(Subject subject, xl::zstring_view const & string);
-
-
-    // easy to use specialization for error-level logging
-    template<class... Ts>
-    void error(Subject subject, xl::zstring_view const & format_string, Ts&&... args) {
-        if (callback) {
-            callback(Level::Error, subject, fmt::format(format_string.c_str(), std::forward<Ts>(args)...));
-        }
-    }
-
-    // does not interpolate string
-    void error(Subject subject, xl::zstring_view const & string);
-
-} // end namespace Log
-
-std::ostream & operator<<(std::ostream & os, Log::Level const & level);
-std::ostream & operator<<(std::ostream & os, Log::Subject const & subject);
-
+inline xl::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects> log;
 
 
 /**

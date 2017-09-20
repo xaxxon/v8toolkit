@@ -49,7 +49,7 @@ v8::Local<v8::Context> get_debug_context();
 
 Context::~Context() {
 //    std::cerr << fmt::format("v8toolkit::Context being destroyed (isolate: {})", (void *)this->isolate) << std::endl;
-    Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "V8 context object destroyed");
+    log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "V8 context object destroyed");
 
 }
 
@@ -122,7 +122,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
 //            // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
 //            std::rethrow_exception(anyptr_exception_ptr->get());
         } else {
-            Log::error(Log::Subject::RUNTIME_EXCEPTION, "v8 internal exception thrown: {}\n", *v8::String::Utf8Value(e));
+            log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "v8 internal exception thrown: {}\n", *v8::String::Utf8Value(e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -297,7 +297,7 @@ std::shared_ptr<Context> Isolate::create_context()
     // can't use make_shared since the constructor is private
     auto context_helper = new Context(shared_from_this(), context);
 
-    Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "V8 context object created");
+    log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "V8 context object created");
 
     return std::shared_ptr<Context>(context_helper);
 }
@@ -414,11 +414,11 @@ void Platform::set_max_memory(int new_memory_size_in_mb) {
 void Platform::init(int argc, char ** argv, std::string const & snapshot_directory)
 {
     if (Platform::initialized) {
-        Log::error(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::init called a second time");
+        log.error(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Platform::init called a second time");
         throw InvalidCallException("Cannot call Platform::init more than once");
     }
 
-    Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::init called, initializing V8 for use");
+    log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Platform::init called, initializing V8 for use");
 
 
     // Verify snapshot data is available before initializing any parts of V8
@@ -477,7 +477,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
 
 void Platform::cleanup()
 {
-    Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::cleanup called, tearing down V8 - no V8 calls are valid past here");
+    log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Platform::cleanup called, tearing down V8 - no V8 calls are valid past here");
 
     // Dispose the isolate and tear down V8.
     v8::V8::Dispose();
@@ -490,7 +490,7 @@ void Platform::cleanup()
 std::shared_ptr<Isolate> Platform::create_isolate()
 {
     if (!Platform::initialized) {
-        Log::error(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::create_isolate called without calling Platform::init first");
+        log.error(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Platform::create_isolate called without calling Platform::init first");
         throw Exception("Cannot call Platform::create_isolate without calling Platform::init first");
     }
 
@@ -503,7 +503,7 @@ std::shared_ptr<Isolate> Platform::create_isolate()
     // can't use make_shared since the constructor is private
     auto isolate_helper = new Isolate(v8::Isolate::New(create_params));
 
-    Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Platform::create_isolate called, creating V8 isolate at {}", (void*)isolate_helper->get_isolate());
+    log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Platform::create_isolate called, creating V8 isolate at {}", (void*)isolate_helper->get_isolate());
 
     return std::shared_ptr<Isolate>(isolate_helper);
 }

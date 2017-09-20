@@ -332,9 +332,6 @@ class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>
 
 private:
 
-
-
-
 	/*** TYPEDEFS ***/
 
     // Callback type to add members to an ObjectTemplate
@@ -601,7 +598,7 @@ private:
 												  DefaultArgsTupleType(*default_args_tuple_ptr));
 
 		} catch(std::exception & e) {
-            Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running C++ constructor for {}: {}",
+            log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running C++ constructor for {}: {}",
                        demangle<T>(), e.what());
 			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 			return;
@@ -1099,7 +1096,7 @@ public:
 							get_index_sequence_for_func_function(callable_func),
 							default_args_tuple);
 					} catch (std::exception & e) {
-						Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running static method {}::{}: {}",
+						log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running static method {}::{}: {}",
 								   demangle<T>(), method_name, e.what());
 						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 						return;
@@ -1420,7 +1417,7 @@ public:
 				try {
                     CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
-					Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running 'fake method' {}::{}: {}",
+					log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running 'fake method' {}::{}: {}",
 							   demangle<T>(), method_name, e.what());
 
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
@@ -1498,7 +1495,7 @@ public:
 															   std::tuple<DefaultArgTypes...>(
 																   default_args_tuple));
 					} catch (std::exception & e) {
-						Log::error(Log::Subject::RUNTIME_EXCEPTION, "Exception while running method {}::{}: {}",
+						log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running method {}::{}: {}",
 								   demangle<T>(), method_name, e.what());
 
 						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));

@@ -555,15 +555,15 @@ public:
 	template<class Callable>
 	auto operator()(Callable && callable) -> std::result_of_t<Callable()>
 	{
-		Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Creating isolate scopes");
+		log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Creating isolate scopes");
 	    ISOLATE_SCOPED_RUN(isolate);
 		if constexpr(std::is_same_v<void, std::result_of_t<Callable()>>) {
 			callable();
-			Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
+			log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
 			return;
 		} else {
 			auto && result = callable();
-			Log::info(Log::Subject::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
+			log.info(LoggingSubjects::Subjects::V8_OBJECT_MANAGEMENT, "Deleting isolate scopes");
 			return std::forward<decltype(result)>(result);
 		}
 	}

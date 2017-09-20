@@ -27,8 +27,6 @@ file(GLOB SOURCE_FILES
         )
 
 
-
-
 # https://github.com/fmtlib/fmt
 #find_package(fmt REQUIRED)
 include_directories(${fmt_INCLUDE_DIRS})
@@ -39,6 +37,11 @@ include_directories(${websocketpp_INCLUDE_DIRS})
 
 # http://www.boost.org/
 find_package(Boost REQUIRED COMPONENTS system)
+
+# bring in libxl and make require that it have access to libfmt for additional logging functionality
+set(xl::USE_LIB_FMT REQUIRED)
+find_package(xl REQUIRED)
+
 include_directories(${Boost_INCLUDE_DIR})
 
 
@@ -63,7 +66,7 @@ include_directories(./include ${V8_INCLUDE_DIR})
 add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 
 # even when v8 is build shared, still needs some statically linked libs
-target_link_libraries(v8toolkit_shared ${V8_LIBS})
+target_link_libraries(v8toolkit_shared xl::xl ${V8_LIBS})
 
 # make sure that libc++experimental.a from clang can be found.  May need to move it from clang distribution into /usr/lib
 target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES} c++experimental)

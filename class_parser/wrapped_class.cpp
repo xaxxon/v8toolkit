@@ -533,7 +533,7 @@ map<string, map<string, int>> const & WrappedClass::get_enums() {
 
     if (this->decl == nullptr) {
         std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
-        return {};
+        return this->enums;
     }
 
     std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
