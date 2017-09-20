@@ -9,6 +9,11 @@ class NotWrappedBase {};
 class NotWrapped : public NotWrappedBase {};
 class WrappedButParentNot : public NotWrapped, public v8toolkit::WrappedClassBase {};
 
+class NotWrappedBaseSkip {};
+class NotWrappedSkip : public NotWrappedBaseSkip {};
+class V8TOOLKIT_IGNORE_BASE_TYPE(NotWrapped) WrappedButParentNot_NOSKIP : public NotWrappedSkip, public v8toolkit::WrappedClassBase {};
+
+
 class A : public v8toolkit::WrappedClassBase {
 public:
     V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension();

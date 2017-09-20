@@ -633,7 +633,11 @@ public:
 	*/
 	template<class T>
 	auto & wrap_class() {
-	    v8toolkit::V8ClassWrapper<std::add_const_t<T>>::get_instance(this->isolate);
+		using ConstT = std::add_const_t<T>;
+
+		if constexpr(is_wrapped_type_v<ConstT> && !std::is_const_v<T>) {
+			v8toolkit::V8ClassWrapper<ConstT>::get_instance(this->isolate);
+		}
 	    return v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
 		
 	}	

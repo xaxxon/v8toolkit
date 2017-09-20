@@ -6,11 +6,6 @@
 
 #include "v8toolkit.h"
 
-
-
-
-
-
 /**
 * This file contains things needed to create "types" and objects in both C++ and javascript
 *   and use them in either environment regardless of where they were created.  Since C++ 
@@ -122,11 +117,11 @@ struct CastToJS<JSWrapper<T>> {
 
 namespace v8toolkit {
 
-    /** 
-     * Class for Factory to inherit from when no other parent is specified
-     * Must be empty
-     */
- class EmptyFactoryBase {};
+/**
+ * Class for Factory to inherit from when no other parent is specified
+ * Must be empty
+ */
+class EmptyFactoryBase {};
 
 
 

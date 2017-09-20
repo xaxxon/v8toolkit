@@ -301,9 +301,12 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::finalize(bool wrap
 		throw V8Exception(this->isolate,
 						  fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
 	}
-	if (!std::is_const<T>::value) {
+
+    if constexpr(is_wrapped_type_v<std::add_const_t<T>> && !std::is_const_v<T>)
+    {
 		V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate).finalize(wrap_as_most_derived_flag);
-	}
+    }
+
 	this->wrap_as_most_derived_flag = wrap_as_most_derived_flag;
 	this->finalized = true;
 

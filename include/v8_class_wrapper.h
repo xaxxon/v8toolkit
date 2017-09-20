@@ -684,11 +684,11 @@ public:
 
 		// if the type doesn't have a virtual destructor, the object can't be released as a type T unless that's the most derived type, since
 		//   the wrong destructor would run
-		if (!std::has_virtual_destructor_v<T> &&
-					 dynamic_cast<AnyPtr<T> *>(wrapped_data.native_object) == nullptr)
-		{
-			CastException(
-				"Tried to release internal field memory on the wrong type for a non-virtual-destructor type");
+		if constexpr(!std::has_virtual_destructor_v<T>) {
+			if (dynamic_cast<AnyPtr<T> *>(wrapped_data.native_object) == nullptr) {
+				CastException(
+					"Tried to release internal field memory on the wrong type for a non-virtual-destructor type");
+			}
 		}
 
 		wrapped_data.weak_callback_data->global.ClearWeak();
@@ -852,9 +852,9 @@ public:
     {
 
         assert(!is_finalized());
+		using ConstT = std::add_const_t<T>;
 
-        if (!std::is_const<T>::value) {
-            using ConstT = std::add_const_t<T>;
+        if constexpr(!std::is_const<T>::value && is_wrapped_type_v<ConstT>) {
             V8ClassWrapper<ConstT>::get_instance(isolate).template set_compatible_types<std::add_const_t<CompatibleTypes>...>();
         }
 
@@ -877,7 +877,7 @@ public:
 	void set_deleter() {
 		assert(!this->finalized);
 		using ConstT = std::add_const_t<T>;
-		if (!std::is_const<T>::value) {
+		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<ConstT>) {
 			V8ClassWrapper<ConstT>::get_instance(this->isolate).template set_deleter<Deleter>();
 		}
 		this->destructor_behavior_delete = std::make_unique<Deleter<T>>();
@@ -894,10 +894,12 @@ public:
     std::enable_if_t<std::is_base_of<ParentType, T>::value>
     set_parent_type() {
 		assert(!is_finalized());
-		if (!std::is_const<T>::value) {
-			using ConstT = std::add_const_t<T>;
-			using ConstParent = std::add_const_t<ParentType>;
-			V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParent>();
+
+		using ConstT = std::add_const_t<T>;
+		using ConstParentT = std::add_const_t<ParentType>;
+
+		if constexpr(!std::is_const<T>::value && is_wrapped_type_v<ConstT> && is_wrapped_type_v<ConstParentT>) {
+			V8ClassWrapper<ConstT>::get_instance(isolate).template set_parent_type<ConstParentT>();
 		}
 
 
@@ -1046,9 +1048,9 @@ public:
 
 
 	// this form is required for selecting between different overloaded instances of the same function name
+	// NOTE: If this doesn't match something, make sure it's not a function TEMPLATE instead of a function -- i.e. missing template parameters
 	template<class R, class... Params, class DefaultArgs = std::tuple<>>
 	void add_static_method(const std::string & method_name, R(*function)(Params...), DefaultArgs const default_args_tuple = DefaultArgs{}) {
-
 		return add_static_method(method_name, function_type_t<decltype(function)>(function), default_args_tuple);
 	};
 
@@ -1072,7 +1074,7 @@ public:
 			throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
 		}
 
-		if (!std::is_const_v<T>) {
+		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
 			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
 		}
 
@@ -1120,7 +1122,7 @@ public:
     
     /**
     * Function to force API user to declare that all members/methods have been added before any
-    *   objects of the wrapped type can be created to make sure everything stays consistent
+    *   objects of the wrapped type can be createL10d to make sure everything stays consistent
     * Must be called before adding any constructors or using wrap_existing_object()
     */
 	void finalize(bool wrap_as_most_derived = false);
@@ -1156,7 +1158,7 @@ public:
         //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
         static_assert(!is_pointer_to_const_data_member_v<member>, "Cannot V8ClassWrapper::add_member a const data member.  Use add_member_readonly instead");
 
-	    if constexpr(!std::is_const_v<T>) {
+	    if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
 			V8ClassWrapper<ConstT>::get_instance(isolate).
 				template add_member_readonly<member>(member_name);
 	    }
@@ -1186,7 +1188,7 @@ public:
 	void add_member_readonly(std::string const & member_name) {
 
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
-	    if (!std::is_const<T>::value) {
+	    if constexpr(!std::is_const<T>::value && is_wrapped_type_v<std::add_const_t<T>>) {
 		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<member>(member_name);
 	    }
 
@@ -1214,9 +1216,21 @@ public:
 	    _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}
 
+    /**
+ * The specified function will be called when the JavaScript object is called like a function
+ * @param method function to call
+ */
+    template<class R, class TBase, class... Args,
+        std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    void make_callable(R(TBase::*method)(Args...) const)
+    {
+        _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
+    }
 
 
-	/**
+
+
+    /**
 	 * Adds const-qualified member instance functions
 	 * @param method_name JavaScript property name to use
 	 * @param method member instance function pointer
@@ -1225,7 +1239,7 @@ public:
 	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
       void add_method(const std::string & method_name, R(TBase::*method)(Args...) const, DefaultArgs const & default_args = DefaultArgs()) {
-        if (!std::is_const<T>::value) {
+        if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
         }
         _add_method(method_name, method, TypeList<Args...>(), default_args);
@@ -1240,7 +1254,7 @@ public:
     template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
             std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
       void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
-     if (!std::is_const<T>::value) {
+     	if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
         }
         _add_method(method_name, method, TypeList<Args...>(), default_args);
@@ -2018,7 +2032,7 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 //	ANYBASE_PRINT("didn't find match, testing const type now...");
 
 	// if goal type is const and the type to check isn't const, try checking for the const type now
-	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+	if constexpr(!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
         if (auto derived_result = V8ClassWrapper<Head>::get_instance(this->isolate).cast(any_base)) {
             return derived_result;
         }
@@ -2039,7 +2053,7 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 ::operator()(T * cpp_object, DestructorBehavior & destructor_behavior) const {
 
 	// if they're the same, let it fall through to the empty typechecker TypeList base case
-	if (!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
+	if constexpr(!std::is_same<std::remove_const_t<T>, std::remove_const_t<Head>>::value) {
 		using MatchingConstT = std::conditional_t<std::is_const<Head>::value, std::add_const_t<T>, std::remove_const_t<T>>;
 
 		if constexpr(std::is_const<T>::value == std::is_const<Head>::value) {
