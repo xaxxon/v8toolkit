@@ -16,7 +16,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
         auto class_name = get_canonical_name_for_decl(klass);
 
-        std::cerr << fmt::format("Got a class that's not a std:: class {}", class_name) << std::endl;
+        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;
 
 
         if (klass->isDependentType()) {
@@ -50,7 +50,8 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
         "forward declaration with annotation")) {
 
         auto class_name = get_canonical_name_for_decl(klass);
-        cerr << endl << "Got forward declaration with annotation: " << class_name << endl;
+        std::cerr << fmt::format("Looking at: {} - forward declaration with annotation", class_name) << std::endl;
+
 
         /* check to see if this has any annotations we should associate with its associated template */
         auto described_tmpl = klass->getDescribedClassTemplate();
@@ -64,10 +65,10 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
     }
 
 
-    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>(
-        "class derived from WrappedClassBase")) {
-        cerr << endl << "Got class derived from v8toolkit::WrappedClassBase: " << get_canonical_name_for_decl(klass)
-             << endl;
+    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
+
+        std::cerr << fmt::format("Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass)) << std::endl;
+
         if (!is_good_record_decl(klass)) {
             cerr << "skipping 'bad' record decl" << endl;
             return;

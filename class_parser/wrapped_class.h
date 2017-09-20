@@ -248,7 +248,6 @@ public:
 
             cerr << class_name << " is not a definition - getting definition..." << endl;
             if (!decl->hasDefinition()) {
-
                 llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
             }
 
@@ -256,8 +255,6 @@ public:
         }
 
 
-        //fprintf(stderr, "get or insert wrapped class %p\n", (void*)decl);
-        //fprintf(stderr, " -- class name %s\n", class_name.c_str());
         for (auto & wrapped_class : wrapped_classes) {
 
             if (wrapped_class->class_name == class_name) {
@@ -271,6 +268,11 @@ public:
                         wrapped_class->force_no_constructors = true;
                     }
                     wrapped_class->found_method = FOUND_BASE_CLASS;
+
+                    // if a type was adjusted, make sure to adjust it's base types as well
+                    for(auto & base : wrapped_class->base_types) {
+                        get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
+                    }
                 }
                 //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
                 return *wrapped_class;

@@ -282,12 +282,12 @@ void generate_bindings() {
         // go through the list to see if there is anything left to write out
         for (auto wrapped_class : WrappedClass::wrapped_classes) {
 
+            cerr << fmt::format("considering dumping class: {}", wrapped_class->class_name) << endl;
+
             if (!wrapped_class->should_be_wrapped()) {
+                cerr << "should_be_wrapped returned false, not dumping" << endl;
                 continue;
             }
-
-
-            cerr << fmt::format("considering dumping class: {}", wrapped_class->class_name) << endl;
 
             // if it has unmet dependencies or has already been mapped, skip it
             if (!wrapped_class->ready_for_wrapping(already_wrapped_classes)) {

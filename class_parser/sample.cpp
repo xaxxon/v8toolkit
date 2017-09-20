@@ -5,6 +5,9 @@
 #include <string>
 #include "sample2.h"
 
+class NotWrappedBase {};
+class NotWrapped : public NotWrappedBase {};
+class WrappedButParentNot : public NotWrapped, public v8toolkit::WrappedClassBase {};
 
 class A : public v8toolkit::WrappedClassBase {
 public:

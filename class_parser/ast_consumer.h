@@ -17,7 +17,7 @@ private:
     ast_matchers::MatchFinder Matcher;
 
     // MatchCallback object called for each element matched by matcher
-    ClassHandler HandlerForClass;
+    ClassHandler class_handler;
 
     CompilerInstance & ci;
 
