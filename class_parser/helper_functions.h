@@ -30,7 +30,6 @@ extern std::vector<std::string> used_constructor_names;
 extern int matched_classes_returned;
 extern vector<string> data_warnings;
 extern vector<string> data_errors;
-extern std::string js_api_header;
 extern vector<string> never_include_for_any_file;
 extern string header_for_every_class_wrapper_file;
 extern vector<string> includes_for_every_class_wrapper_file;

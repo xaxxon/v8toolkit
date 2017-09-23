@@ -65,6 +65,8 @@ using namespace std;
 #include "class_handler.h"
 #include "parsed_method.h"
 
+#include "output_modules/javascript_stub_output.h"
+
 namespace v8toolkit::class_parser {
 
 
@@ -119,83 +121,10 @@ map<string, string> cpp_to_js_type_conversions = {
 
 // regex for @callback instead of @param: ^(const)?\s*(std::)?function[<][^>]*[>]\s*(const)?\s*\s*[&]?$
 
-std::string js_api_header = R"JS_API_HEADER(
-
-/**
- * @type World
- */
-var world;
-
-/**
- * @type Map
- */
-var map;
-
-/**
- * @type Game
- */
-var game;
-
-/**
- * Prints a string and appends a newline
- * @param {String} s the string to be printed
- */
-function println(s){}
-
-/**
- * Prints a string without adding a newline to the end
- * @param {String} s the string to be printed
- */
-function print(s){}
-
-/**
- * Dumps the contents of the given variable - only 'own' properties
- * @param o {Object} the variable to be dumped
- */
-function printobj(o){}
-
-/**
- * Dumps the contents of the given variable - all properties including those of prototype chain
- * @param o {Object} the variable to be dumped
- */
-function printobjall(o){}
-
-/**
- * Attempts to load the given module and returns the exported data.  Requiring the same module
- *   more than once will return the cached result, not re-execute the source.
- * @param {String} module_name name of the module to require
- */
-function require(module_name){}
-
-
-)JS_API_HEADER";
-
 
 int matched_classes_returned = 0;
 
-//vector<WrappedClass *> WrappedClass::wrapped_classes;
-
-
-/*
-std::string handle_std(const std::string & input) {
-    smatch matches;
-string result = input;
-// EricWF said to remove __[0-9] just to be safe for future updates
-    if (regex_match(input, matches, regex("^((?:const\\s+|volatile\\s+)*)(?:class |struct )?(?:std::(?:__[0-9]::)?)?(.*)"))) {
-    // space before std:: is handled from const/volatile if needed
-    result = matches[1].str() + "std::" + matches[2].str();
-
-}
-
-if (print_logging) cerr << "Stripping std from " << input << " results in " << result << endl;
-    return result;
-}
-
-
-bool has_std(const std::string & input) {
-    return std::regex_match(input, regex("^(const\\s+|volatile\\s+)*(class |struct )?\\s*std::.*$"));
-}
-*/
+vector<WrappedClass> WrappedClass::wrapped_classes;
 
 
 void print_vector(const vector<string> & vec, const string & header, const string & indentation, bool ignore_empty) {
@@ -435,7 +364,7 @@ bool has_wrapped_class(const CXXRecordDecl * decl) {
 
     for (auto & wrapped_class : WrappedClass::wrapped_classes) {
 
-        if (wrapped_class->class_name == class_name) {
+        if (wrapped_class.class_name == class_name) {
             return true;
         }
     }

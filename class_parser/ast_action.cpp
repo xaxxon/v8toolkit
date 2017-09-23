@@ -1,5 +1,7 @@
 #include "ast_action.h"
 
+#include <fstream>
+
 namespace v8toolkit::class_parser {
 
 

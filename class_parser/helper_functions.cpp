@@ -280,29 +280,29 @@ void generate_bindings() {
         found_match = false;
 
         // go through the list to see if there is anything left to write out
-        for (auto wrapped_class : WrappedClass::wrapped_classes) {
+        for (auto & wrapped_class : WrappedClass::wrapped_classes) {
 
-            cerr << fmt::format("considering dumping class: {}", wrapped_class->class_name) << endl;
+            cerr << fmt::format("considering dumping class: {}", wrapped_class.class_name) << endl;
 
-            if (!wrapped_class->should_be_wrapped()) {
+            if (!wrapped_class.should_be_wrapped()) {
                 cerr << "should_be_wrapped returned false, not dumping" << endl;
                 continue;
             }
 
             // if it has unmet dependencies or has already been mapped, skip it
-            if (!wrapped_class->ready_for_wrapping(already_wrapped_classes)) {
-                std::cerr << fmt::format("Skipping {}", wrapped_class->class_name) << std::endl;
+            if (!wrapped_class.ready_for_wrapping(already_wrapped_classes)) {
+                std::cerr << fmt::format("Skipping {}", wrapped_class.class_name) << std::endl;
                 continue;
             }
-            already_wrapped_classes.insert(wrapped_class);
+            already_wrapped_classes.insert(&wrapped_class);
             found_match = true;
 
-            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->name_alias,
-                                     wrapped_class->declaration_count) << std::endl;
+            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class.name_alias,
+                                     wrapped_class.declaration_count) << std::endl;
 
             // if there's room in the current file, add this class
             auto space_available = declaration_count_this_file == 0 ||
-                                   declaration_count_this_file + wrapped_class->declaration_count <
+                                   declaration_count_this_file + wrapped_class.declaration_count <
                                    MAX_DECLARATIONS_PER_FILE;
 
             if (!space_available) {
@@ -317,9 +317,11 @@ void generate_bindings() {
                 file_count++;
             }
 
-            classes_for_this_file.push_back(wrapped_class);
-            wrapped_class->dumped = true;
-            declaration_count_this_file += wrapped_class->declaration_count;
+            classes_for_this_file.push_back(&wrapped_class);
+
+            // assert false - this shouldn't alter it
+            wrapped_class.dumped = true;
+            declaration_count_this_file += wrapped_class.declaration_count;
         }
     }
 
@@ -362,18 +364,17 @@ void generate_bindings() {
 
     cerr << "Classes used that were not wrapped:" << endl;
     for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-        if (!wrapped_class->dumped) { continue; }
-        for (auto used_class : wrapped_class->used_classes) {
+        assert(false); // dumped needs to go away
+        if (!wrapped_class.dumped) { continue; }
+        for (auto used_class : wrapped_class.used_classes) {
             if (!used_class->dumped) {
-                cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->name_alias, used_class->name_alias)
+                cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class.name_alias, used_class->name_alias)
                      << endl;
             }
         }
-
     }
-
-
 }
+
 
 void generate_javascript_stub(std::string const & filename) {
     ofstream js_stub;
@@ -384,18 +385,17 @@ void generate_javascript_stub(std::string const & filename) {
     }
 
     // write hard-coded text to top of apb api file
-    js_stub << js_api_header << std::endl;
+//    js_stub << js_api_header << std::endl;
 
-    for (auto * wrapped_class : WrappedClass::wrapped_classes) {
+    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
         // bidirectional types don't have
-        if (wrapped_class->should_be_wrapped() && !wrapped_class->bidirectional) {
-            js_stub << wrapped_class->generate_js_stub();
+        if (wrapped_class.should_be_wrapped() && !wrapped_class.bidirectional) {
+            js_stub << wrapped_class.generate_js_stub();
         }
     }
     js_stub.close();
-
-
 }
+
 
 void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
     cerr << "Generating bidirectional classes..." << endl;
@@ -404,39 +404,39 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
     for (auto wrapped_class_iterator = WrappedClass::wrapped_classes.begin();
          wrapped_class_iterator != WrappedClass::wrapped_classes.end();
          wrapped_class_iterator++) {
-        auto wrapped_class = *wrapped_class_iterator;
+        auto & wrapped_class = *wrapped_class_iterator;
 
         // this code wants the actual bidirecitonal class, not the base class it wraps  (e.g. JSFoo, not Foo)
-        if (!wrapped_class->bidirectional) {
+        if (!wrapped_class.bidirectional) {
             continue;
         }
 
 
-        cerr << fmt::format("Building bidirectional class {}", wrapped_class->name_alias) << endl;
+        cerr << fmt::format("Building bidirectional class {}", wrapped_class.name_alias) << endl;
 
-        assert(wrapped_class->base_types.size() == 1);
-        auto base_type = *wrapped_class->base_types.begin();
+        assert(wrapped_class.base_types.size() == 1);
+        auto base_type = *wrapped_class.base_types.begin();
 
         // create the file for the include, stripping off any "" or <> (should only be "'s)
-        ofstream bidirectional_file(regex_replace(wrapped_class->my_include, std::regex("[<>\"]"), ""));
+        ofstream bidirectional_file(regex_replace(wrapped_class.my_include, std::regex("[<>\"]"), ""));
 
         bidirectional_file << endl << "#pragma once\n\n";
 
 
         // need to include all the includes from the parent types because the implementation of this bidirectional
         //   type may need the types for things the parent type .h files don't need (like unique_ptr contained types)
-        for (auto & include : wrapped_class->get_base_type_includes()) {
+        for (auto & include : wrapped_class.get_base_type_includes()) {
             if (include == "") {
                 continue;
             }
             std::cerr
-                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->name_alias, include)
+                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class.name_alias, include)
                 << std::endl;
             bidirectional_file << "#include " << include << "\n";
         }
 
         // std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
-        for (auto & include : wrapped_class->include_files) {
+        for (auto & include : wrapped_class.include_files) {
             if (include == "") {
                 continue;
             }
@@ -493,7 +493,7 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
         auto * current_inheritance_class = base_type;
         set<string> js_access_virtual_methods_added;
 
-        cerr << fmt::format("building virtual method list for {}", wrapped_class->name_alias);
+        cerr << fmt::format("building virtual method list for {}", wrapped_class.name_alias);
         while (current_inheritance_class) {
             cerr << fmt::format(" ** Inheritance hierarchy class: {} with {} base types",
                                 current_inheritance_class->name_alias, current_inheritance_class->base_types.size())
@@ -539,7 +539,7 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
 
                 if (num_params > 0) {
                     //std::cerr << fmt::format("12") << std::endl;
-                    auto types = get_method_param_qual_types(wrapped_class->compiler_instance,
+                    auto types = get_method_param_qual_types(wrapped_class.compiler_instance,
                                                              bidirectional_virtual_method);
                     vector<string> type_names;
                     for (auto & type : types) {

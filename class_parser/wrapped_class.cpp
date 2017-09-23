@@ -177,7 +177,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         //printf("%s now has %d derived classes\n", current_base->class_name.c_str(), (int)current_base->derived_types.size());
 
 
-    }
+    } // end processing base classes
 
     if (print_logging) cerr << "done with base classes" << endl;
     if (must_have_base_type && !found_base_type) {
@@ -213,25 +213,25 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
 
         // created a WrappedClass for the non-AST JSWrapper class
-        WrappedClass * js_wrapped_class = new WrappedClass(bidirectional_class_name,
-                                                           this->compiler_instance);
-        js_wrapped_class->bidirectional = true;
-        js_wrapped_class->my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class->my_include) << endl;
+        WrappedClass & js_wrapped_class = WrappedClass::wrapped_classes.emplace_back(bidirectional_class_name,
+                                                                                     this->compiler_instance);
 
-        WrappedClass::insert_wrapped_class(js_wrapped_class);
+        js_wrapped_class.bidirectional = true;
+        js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
+        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
-        js_wrapped_class->base_types.insert(this);
+
+        js_wrapped_class.base_types.insert(this);
 
         cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-                            js_wrapped_class->class_name, this->name_alias) << endl;
+                            js_wrapped_class.class_name, this->name_alias) << endl;
 
         // set the bidirectional class as being a subclass of the non-bidirectional type
-        this->derived_types.insert(js_wrapped_class);
+        this->derived_types.insert(&js_wrapped_class);
 
-        js_wrapped_class->include_files.insert("<v8toolkit/bidirectional.h>");
-        js_wrapped_class->include_files.insert(js_wrapped_class->my_include);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class->my_include) << endl;
+        js_wrapped_class.include_files.insert("<v8toolkit/bidirectional.h>");
+        js_wrapped_class.include_files.insert(js_wrapped_class.my_include);
+        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
     }
 
     std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
@@ -596,8 +596,8 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
     name_alias(class_name),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid
-    found_method(FOUND_GENERATED) {
-    WrappedClass::wrapped_classes.push_back(this);
+    found_method(FOUND_GENERATED)
+{
 }
 
 

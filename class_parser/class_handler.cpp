@@ -1,6 +1,8 @@
 #include "wrapped_class.h"
 #include "class_handler.h"
 
+
+
 namespace v8toolkit::class_parser {
 
 
@@ -252,7 +254,6 @@ void ClassHandler::onEndOfTranslationUnit() {
         cerr << warning << endl;
     }
 
-
     if (!data_errors.empty()) {
         cerr << "Errors detected:" << endl;
         for (auto & error : data_errors) {
@@ -262,12 +263,27 @@ void ClassHandler::onEndOfTranslationUnit() {
         exit(1);
     }
 
+    cerr << (void*)&WrappedClass::wrapped_classes << endl;
+    cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
+    cerr << WrappedClass::wrapped_classes.size() << endl;
+    {
+        auto v = std::move(WrappedClass::wrapped_classes);
+    }
+    cerr << WrappedClass::wrapped_classes.size() << endl;
+    cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
 
     cerr << "*************" << endl << "ABOUT TO GENERATE OUTPUT FILES" << endl << "*****************" << endl;
 
-    generate_javascript_stub("js-api.js");
-    generate_bidirectional_classes(this->ci);
-    generate_bindings();
+    auto & all_wrapped_classes = WrappedClass::wrapped_classes;
+
+
+    for (auto & output_module : this->output_modules) {
+        output_module->process(WrappedClass::wrapped_classes);
+
+//        generate_javascript_stub("js-api.js");
+//        generate_bidirectional_classes(this->ci);
+//        generate_bindings();
+    }
 }
 
 

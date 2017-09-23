@@ -15,6 +15,8 @@ execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
+
+
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
 if(UNIX AND NOT APPLE)
@@ -22,14 +24,29 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libstdc++")
 else()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -stdlib=libc++")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 
-add_library(class_parser_plugin SHARED parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
+set(CLASS_PARSER_SOURCES parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
         annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp)
+
+add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
+
+add_executable(test-class-parser ${CLASS_PARSER_SOURCES} test/test.cpp)
+
+# clang libs
+target_link_libraries(test-class-parser clangFrontend clangSerialization clangASTMatchers clangSema
+        clangAnalysis clangRewriteFrontend clangEdit clangDriver clangLex
+        LLVMSymbolize LLVMDebugInfoPDB LLVMScalarOpts LLVMInstCombine LLVMInstrumentation LLVMBitWriter
+        LLVMTransformUtils LLVMExecutionEngine LLVMTarget LLVMAnalysis LLVMRuntimeDyld
+        LLVMObject LLVMBitReader LLVMCore clangParse clangAST
+        clangBasic clangParse clangTooling)
+
+target_link_libraries(test-class-parser fmt)
 
 cotire(class_parser_plugin)
 

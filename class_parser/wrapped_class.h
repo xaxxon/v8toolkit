@@ -36,7 +36,7 @@ private:
 
 
 public:
-    static inline vector<WrappedClass *> wrapped_classes;
+    static vector<WrappedClass> wrapped_classes;
 
     CXXRecordDecl const * decl = nullptr;
 
@@ -167,6 +167,7 @@ public:
 
 
     WrappedClass(const WrappedClass &) = delete;
+    WrappedClass(WrappedClass &&) = default;
 
     WrappedClass & operator=(const WrappedClass &) = delete;
 
@@ -212,10 +213,6 @@ public:
 
     std::string get_bindings();
 
-    static void insert_wrapped_class(WrappedClass * wrapped_class) {
-        WrappedClass::wrapped_classes.push_back(wrapped_class);
-    }
-
     /**
      * Returns the wrapped class corresponding to the decl if it exists
      * @param decl the decl to search for in existing wrapped classes
@@ -225,9 +222,9 @@ public:
         if (decl == nullptr) {
             return nullptr;
         }
-        for (auto * wrapped_class : WrappedClass::wrapped_classes) {
-            if (wrapped_class->decl == decl) {
-                return wrapped_class;
+        for (auto & wrapped_class : WrappedClass::wrapped_classes) {
+            if (wrapped_class.decl == decl) {
+                return &wrapped_class;
             }
         }
         return nullptr;
@@ -257,37 +254,33 @@ public:
 
         for (auto & wrapped_class : wrapped_classes) {
 
-            if (wrapped_class->class_name == class_name) {
+            if (wrapped_class.class_name == class_name) {
 
                 // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
                 //   if it is the base of a wrapped type
                 if (found_method == FOUND_BASE_CLASS) {
 
                     // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
-                    if (!wrapped_class->should_be_wrapped()) {
-                        wrapped_class->force_no_constructors = true;
+                    if (!wrapped_class.should_be_wrapped()) {
+                        wrapped_class.force_no_constructors = true;
                     }
-                    wrapped_class->found_method = FOUND_BASE_CLASS;
+                    wrapped_class.found_method = FOUND_BASE_CLASS;
 
                     // if a type was adjusted, make sure to adjust it's base types as well
-                    for(auto & base : wrapped_class->base_types) {
+                    for(auto & base : wrapped_class.base_types) {
                         get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
                     }
                 }
                 //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
-                return *wrapped_class;
+                return wrapped_class;
             }
         }
-        auto new_wrapped_class = new WrappedClass(decl, compiler_instance, found_method);
-        WrappedClass::wrapped_classes.push_back(new_wrapped_class);
-        return *new_wrapped_class;
+        return WrappedClass::wrapped_classes.emplace_back(decl, compiler_instance, found_method);
 
     }
 
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();
-
-
 };
 
 

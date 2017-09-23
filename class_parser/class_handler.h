@@ -5,6 +5,7 @@
 //#define PRINT_SKIPPED_EXPORT_REASONS false
 
 #include "helper_functions.h"
+#include "output_modules.h"
 
 namespace v8toolkit::class_parser {
 
@@ -15,8 +16,10 @@ private:
 
     WrappedClass * top_level_class; // the class currently being wrapped
     std::set<std::string> names_used;
+    vector<unique_ptr<ClassCollectionHandler>> output_modules;
 
 public:
+
 
     CompilerInstance & ci;
 
@@ -26,8 +29,9 @@ public:
     virtual void run(const ast_matchers::MatchFinder::MatchResult & Result) override;
 
 
-    ClassHandler(CompilerInstance & CI) :
+    ClassHandler(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> output_modules = {}) :
         ci(CI),
+        output_modules(std::move(output_modules)),
         source_manager(CI.getSourceManager()) {}
 
 
@@ -35,12 +39,8 @@ public:
     virtual void onEndOfTranslationUnit() override;
 
 
-    std::string handle_data_member(WrappedClass & containing_class, FieldDecl * field, const std::string & indentation);
 
 
-    void handle_class(WrappedClass & wrapped_class, // class currently being handled (not necessarily top level)
-                      bool top_level = true,
-                      const std::string & indentation = "");
 
 
 };
