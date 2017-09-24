@@ -273,17 +273,17 @@ void ClassHandler::onEndOfTranslationUnit() {
     cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
 
     cerr << "*************" << endl << "ABOUT TO GENERATE OUTPUT FILES" << endl << "*****************" << endl;
-
-    auto & all_wrapped_classes = WrappedClass::wrapped_classes;
-
-
-    for (auto & output_module : this->output_modules) {
-        output_module->process(WrappedClass::wrapped_classes);
-
-//        generate_javascript_stub("js-api.js");
-//        generate_bidirectional_classes(this->ci);
-//        generate_bindings();
-    }
+//
+//    auto & all_wrapped_classes = WrappedClass::wrapped_classes;
+//
+//
+//    for (auto & output_module : this->output_modules) {
+//        output_module->process(WrappedClass::wrapped_classes);
+//
+////        generate_javascript_stub("js-api.js");
+////        generate_bidirectional_classes(this->ci);
+////        generate_bindings();
+//    }
 }
 
 

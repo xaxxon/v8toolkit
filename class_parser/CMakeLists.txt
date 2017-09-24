@@ -15,7 +15,7 @@ execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-
+find_package(gtest REQUIRED)
 
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
@@ -35,7 +35,8 @@ set(CLASS_PARSER_SOURCES parsed_method.cpp class_parser.cpp ast_action.cpp annot
         annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
-
+add_definitions(-DCLANG_HOME="${CLANG_HOME}")
+include_directories(${gtest_SOURCE_DIR}/include)
 add_executable(test-class-parser ${CLASS_PARSER_SOURCES} test/test.cpp)
 
 # clang libs
@@ -46,7 +47,7 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
         LLVMObject LLVMBitReader LLVMCore clangParse clangAST
         clangBasic clangParse clangTooling)
 
-target_link_libraries(test-class-parser fmt)
+target_link_libraries(test-class-parser fmt ${GTEST_LIBRARIES})
 
 cotire(class_parser_plugin)
 

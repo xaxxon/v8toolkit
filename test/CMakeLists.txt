@@ -14,7 +14,7 @@ file(GLOB TEST_SRC
         *.cpp
         )
 
-add_definitions(-DGOOGLE_TEST )
+add_definitions(-DGOOGLE_TEST)
 
 #add_subdirectory(googletest)
 
