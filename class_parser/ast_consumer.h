@@ -10,7 +10,7 @@ namespace v8toolkit::class_parser {
 /**
  * Defines what will be matched and sent to
  */
-class MyASTConsumer : public clang::ASTConsumer {
+class ClassHandlerASTConsumer : public clang::ASTConsumer {
 private:
 
     // matcher that is parameterized in constructor
@@ -22,7 +22,7 @@ private:
     CompilerInstance & ci;
 
 public:
-    MyASTConsumer(CompilerInstance & CI);
+    ClassHandlerASTConsumer(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> const & output_modules);
 
     void HandleTranslationUnit(ASTContext & Context) override {
         // Run the matchers when we have the whole TU parsed.

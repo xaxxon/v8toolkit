@@ -124,7 +124,6 @@ map<string, string> cpp_to_js_type_conversions = {
 
 int matched_classes_returned = 0;
 
-vector<WrappedClass> WrappedClass::wrapped_classes;
 
 
 void print_vector(const vector<string> & vec, const string & header, const string & indentation, bool ignore_empty) {

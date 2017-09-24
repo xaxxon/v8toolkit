@@ -18,7 +18,8 @@ TEST(ClassParser, ClassParser) {
     std::string sample_source_contents((std::istreambuf_iterator<char>(sample_source)),
                                        std::istreambuf_iterator<char>());
 
-    std::vector<std::string> args = {
+    // vector crashes on cleanup for unknown reason so just leak it
+    std::vector<std::string> args{
         "-std=c++17",
         "-I" CLANG_HOME "/include/c++/v1/",
         "-I" CLANG_HOME "/lib/clang/5.0.0/include/"
@@ -31,9 +32,13 @@ TEST(ClassParser, ClassParser) {
     std::cout << "Done printing args" << std::endl;
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
-    clang::tooling::runToolOnCodeWithArgs(new v8toolkit::class_parser::PrintFunctionNamesAction,
-                                  sample_source_contents,
-                                  args);
+    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
+
+
+
+    clang::tooling::runToolOnCodeWithArgs(action,
+                                          sample_source_contents,
+                                          args);
 }
 
 

@@ -266,9 +266,6 @@ void ClassHandler::onEndOfTranslationUnit() {
     cerr << (void*)&WrappedClass::wrapped_classes << endl;
     cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
     cerr << WrappedClass::wrapped_classes.size() << endl;
-    {
-        auto v = std::move(WrappedClass::wrapped_classes);
-    }
     cerr << WrappedClass::wrapped_classes.size() << endl;
     cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
 

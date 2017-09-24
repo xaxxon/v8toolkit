@@ -5,8 +5,9 @@ using namespace clang::ast_matchers;
 
 namespace v8toolkit::class_parser {
 
-MyASTConsumer::MyASTConsumer(CompilerInstance & ci) :
-    class_handler(ci), ci(ci) {
+ClassHandlerASTConsumer::ClassHandlerASTConsumer(CompilerInstance & ci,
+                                                 vector<unique_ptr<ClassCollectionHandler>> const & output_modules) :
+    class_handler(ci, output_modules), ci(ci) {
 
 #ifdef TEMPLATE_INFO_ONLY
 

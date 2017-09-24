@@ -16,7 +16,7 @@ private:
 
     WrappedClass * top_level_class; // the class currently being wrapped
     std::set<std::string> names_used;
-    vector<unique_ptr<ClassCollectionHandler>> output_modules;
+    vector<unique_ptr<ClassCollectionHandler>> const & output_modules;
 
 public:
 
@@ -24,14 +24,14 @@ public:
     CompilerInstance & ci;
 
     /**
-     * This runs per-match from MyASTConsumer, but always on the same ClassHandler (this) object
+     * This runs per-match from ClassHandlerASTConsumer, but always on the same ClassHandler (this) object
      */
     virtual void run(const ast_matchers::MatchFinder::MatchResult & Result) override;
 
 
-    ClassHandler(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> output_modules = {}) :
+    ClassHandler(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> const & output_modules) :
         ci(CI),
-        output_modules(std::move(output_modules)),
+        output_modules(output_modules),
         source_manager(CI.getSourceManager()) {}
 
 

@@ -15,19 +15,19 @@ class PrintFunctionNamesAction : public clang::PluginASTAction {
 public:
 
     // open up output files
-    PrintFunctionNamesAction() {
-
-    }
+    PrintFunctionNamesAction() {}
 
     // This is called when all parsing is done
     void EndSourceFileAction();
+
+    vector<unique_ptr<ClassCollectionHandler>> output_modules;
 
 
 protected:
     // The value returned here is used internally to run checks against
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
                                                    llvm::StringRef) {
-        return llvm::make_unique<MyASTConsumer>(CI);
+        return llvm::make_unique<ClassHandlerASTConsumer>(CI, this->output_modules);
     }
 
     bool ParseArgs(const CompilerInstance & CI,
@@ -52,7 +52,15 @@ protected:
         ros << "Help for PrintFunctionNames plugin goes here\n";
     }
 
+public:
+
+    void add_output_module(std::unique_ptr<ClassCollectionHandler> output_module) {
+        this->output_modules.push_back(std::move(output_module));
+    }
+
 };
+
+
 
 
 }
