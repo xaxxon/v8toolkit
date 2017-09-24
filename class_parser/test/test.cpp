@@ -39,6 +39,7 @@ TEST(ClassParser, ClassParser) {
     clang::tooling::runToolOnCodeWithArgs(action,
                                           sample_source_contents,
                                           args);
+
 }
 
 

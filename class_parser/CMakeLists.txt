@@ -38,6 +38,7 @@ add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
 add_definitions(-DCLANG_HOME="${CLANG_HOME}")
 include_directories(${gtest_SOURCE_DIR}/include)
 add_executable(test-class-parser ${CLASS_PARSER_SOURCES} test/test.cpp)
+cotire(test-class-parser)
 
 # clang libs
 target_link_libraries(test-class-parser clangFrontend clangSerialization clangASTMatchers clangSema
