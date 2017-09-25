@@ -28,6 +28,8 @@ public:
 // returns whether a WrappedClass object should be part of the JavaScript stub
 class JavascriptStubClassCriteria : public ClassCriteria {
     bool operator()(WrappedClass const & c) {
+        cerr << "Checking class criteria" << endl;
+
         if (c.name_alias.find("<") != std::string::npos) {
             std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
                                      c.name_alias) << std::endl;
@@ -36,6 +38,9 @@ class JavascriptStubClassCriteria : public ClassCriteria {
             std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
                                      c.name_alias,
                                      (*c.base_types.begin())->name_alias) << std::endl;
+            return false;
+        } else if (c.bidirectional) {
+            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.name_alias) << std::endl;
             return false;
         }
 
@@ -67,10 +72,10 @@ protected:
     std::unique_ptr<ClassCriteria> criteria;
     std::ostream & os;
 public:
-    using StreamCreatorCallback = std::function<std::unique_ptr<std::ostream>()>;
 
-    ClassCollectionHandler(StreamCreatorCallback callback, std::unique_ptr<ClassCriteria> criteria) :
-        os_pointer(callback()),
+    ClassCollectionHandler(std::unique_ptr<ostream> os_pointer,
+                           std::unique_ptr<ClassCriteria> criteria) :
+        os_pointer(std::move(os_pointer)),
         criteria(std::move(criteria)),
         os(*os_pointer) {}
 
@@ -80,7 +85,7 @@ public:
 
     virtual void process(std::vector<WrappedClass> const & wrapped_classes) {
         for (auto const & wrapped_class : wrapped_classes) {
-            if (this->criteria->operator()(wrapped_class)) {
+            if (wrapped_class.should_be_wrapped() && this->criteria->operator()(wrapped_class)) {
                 auto class_output_module = this->make_class_output_module();
                 class_output_module->process(wrapped_class);
             }

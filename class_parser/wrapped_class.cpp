@@ -894,7 +894,7 @@ std::set<string> WrappedClass::get_base_type_includes() const {
     results.insert(this->include_files.begin(), this->include_files.end());
     //std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
 
-    //cerr << "Includes at this level: " << endl;   
+    //cerr << "Includes at this level: " << endl;
 //    for (auto include : results) {
 //        cerr << include << endl;
 //    }

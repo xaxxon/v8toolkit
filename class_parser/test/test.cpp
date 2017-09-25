@@ -10,6 +10,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include "../output_modules/javascript_stub_output.h"
+
 using ::testing::_;
 using ::testing::Return;
 
@@ -34,7 +36,7 @@ TEST(ClassParser, ClassParser) {
     // there's a bug during cleanup if this object is destroyed, so just leak it
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
 
-
+    action->add_output_module(std::make_unique<v8toolkit::class_parser::JavascriptStubOutput>(std::make_unique<std::ofstream>("js-api.js")));
 
     clang::tooling::runToolOnCodeWithArgs(action,
                                           sample_source_contents,

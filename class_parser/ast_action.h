@@ -6,6 +6,7 @@
 #include "wrapped_class.h"
 
 #include "ast_consumer.h"
+#include "output_modules/javascript_stub_output.h"
 
 namespace v8toolkit::class_parser {
 
@@ -40,6 +41,12 @@ protected:
             if (std::regex_match(args[i], match_results, declaration_count_regex)) {
                 auto count = std::stoi(match_results[1].str());
                 MAX_DECLARATIONS_PER_FILE = count;
+            }
+            // for "normal" use, the default output modules should be used, instead of others specified
+            //   in code from something such as a test harness
+            else if (args[i] == "--use-default-output-modules") {
+                output_modules.push_back(std::make_unique<JavascriptStubOutput>(std::make_unique<std::ofstream>("js_api.js")));
+
             }
         }
         if (args.size() && args[0] == "help")
