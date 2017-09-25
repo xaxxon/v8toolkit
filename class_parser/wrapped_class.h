@@ -4,6 +4,8 @@
 #include <sstream>
 #include <set>
 
+#include <xl/library_extensions.h>
+
 #include "parsed_method.h"
 #include "annotations.h"
 
@@ -70,14 +72,17 @@ public:
 
     string my_header_filename = "";
 
-    set<unique_ptr<MemberFunction>> const & get_member_functions();
+    set<unique_ptr<MemberFunction>> const & get_member_functions() const;
 
-    set<unique_ptr<StaticFunction>> const & get_static_functions();
+    set<unique_ptr<StaticFunction>> const & get_static_functions() const;
 
-    set<unique_ptr<DataMember>> & get_members();
-    map<string, map<string, int>> const & get_enums();
+    set<unique_ptr<DataMember>> const & get_members() const;
+    void parse_members();
 
-    set<unique_ptr<ConstructorFunction>> const & get_constructors();
+    void parse_enums();
+    map<string, map<string, int>> const & get_enums() const;
+
+    set<unique_ptr<ConstructorFunction>> const & get_constructors() const;
 
     set<string> used_member_names;
     set<string> used_static_names;
@@ -168,9 +173,9 @@ public:
     bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const;
 
     // return all the header files for all the types used by all the base types of the specified type
-    std::set<string> get_base_type_includes();
+    std::set<string> get_base_type_includes() const;
 
-    std::set<string> get_derived_type_includes();
+    std::set<string> get_derived_type_includes() const;
 
 
     WrappedClass(const WrappedClass &) = delete;
@@ -187,7 +192,7 @@ public:
 
     std::string generate_js_stub();
 
-    std::string get_derived_classes_string(int level = 0, const std::string indent = "") {
+    std::string get_derived_classes_string(int level = 0, const std::string indent = "") const {
         vector<string> results;
         //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
         for (WrappedClass * derived_class : derived_types) {
@@ -199,16 +204,17 @@ public:
         return join(results);
     }
 
-    std::string get_base_class_string() {
-        auto i = base_types.begin();
-        while (i != base_types.end()) {
-            if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), (*i)->class_name) !=
-                base_types_to_ignore.end()) {
-                base_types.erase(i++); // move iterator before erasing
-            } else {
-                i++;
-            }
-        };
+    void add_base_type(WrappedClass & base_type) {
+        if (xl::contains(base_types_to_ignore, base_type.class_name)) {
+            std::cerr << fmt::format("Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias) << std::endl;
+            return;
+        }
+
+        this->base_types.insert(&base_type);
+    }
+
+    std::string get_base_class_string() const {
+
         if (base_types.size() > 1) {
             data_error(fmt::format(
                 "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",

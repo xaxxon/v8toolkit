@@ -170,7 +170,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         this->include_files.insert(current_base_include);
         current_base.include_files.insert(current_include);
-        this->base_types.insert(&current_base);
+        this->add_base_type(current_base);
         current_base.derived_types.insert(this);
 
         //printf("%s now has %d base classes\n", current->class_name.c_str(), (int)current->base_types.size());
@@ -221,7 +221,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
 
-        js_wrapped_class.base_types.insert(this);
+        js_wrapped_class.add_base_type(*this);
 
         cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
                             js_wrapped_class.class_name, this->name_alias) << endl;
@@ -238,21 +238,21 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 }
 
 
-set<unique_ptr<ConstructorFunction>> const & WrappedClass::get_constructors() {
-    this->parse_all_methods();
+set<unique_ptr<ConstructorFunction>> const & WrappedClass::get_constructors() const {
+    assert(this->methods_parsed);
     return this->constructors;
 }
 
 
-set<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() {
-    this->parse_all_methods();
+set<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() const {
+    assert(this->methods_parsed);
     return this->member_functions;
 }
 
 
-set<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() {
-    this->parse_all_methods();
-    return this->static_functions;
+set<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() const {
+    assert(this->methods_parsed);
+        return this->static_functions;
 }
 
 
@@ -522,24 +522,30 @@ void WrappedClass::foreach_inheritance_level(function<void(WrappedClass &)> call
         }
         current_class = *current_class->base_types.begin();
     }
-
 }
 
-map<string, map<string, int>> const & WrappedClass::get_enums() {
+
+map<string, map<string, int>> const & WrappedClass::get_enums() const {
+    assert(this->enums_parsed);
+    return this->enums;
+};
+
+
+void WrappedClass::parse_enums() {
     if (this->enums_parsed) {
-        return this->enums;
+        return;
     }
     enums_parsed = true;
 
     if (this->decl == nullptr) {
         std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
-        return this->enums;
+        return;
     }
 
     std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
 
 
-    for(auto decl : this->decl->decls()) {
+    for (auto decl : this->decl->decls()) {
         if (auto enum_decl = dyn_cast<EnumDecl>(decl)) {
             if (enum_decl == nullptr) {
                 std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
@@ -553,14 +559,18 @@ map<string, map<string, int>> const & WrappedClass::get_enums() {
             this->enums[enum_decl->getNameAsString()] = enum_class;
         }
     }
-
-    return this->enums;
 };
 
 
-set<unique_ptr<DataMember>> & WrappedClass::get_members() {
+set<unique_ptr<DataMember>> const & WrappedClass::get_members() const {
+    assert(this->members_parsed);
+    return this->members;
+}
+
+void WrappedClass::parse_members() {
+
     if (this->members_parsed) {
-        return this->members;
+        return;
     }
     this->members_parsed = true;
 
@@ -586,7 +596,6 @@ set<unique_ptr<DataMember>> & WrappedClass::get_members() {
             this->members.emplace(make_unique<DataMember>(*this, wrapped_class, field));
         }
     });
-    return this->members;
 }
 
 
@@ -880,12 +889,12 @@ void WrappedClass::set_error(string const & error_message) {
 
 
 // return all the header files for all the types used by all the base types of the specified type
-std::set<string> WrappedClass::get_base_type_includes() {
+std::set<string> WrappedClass::get_base_type_includes() const {
     set<string> results{this->my_include};
     results.insert(this->include_files.begin(), this->include_files.end());
     //std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
 
-    //cerr << "Includes at this level: " << endl;
+    //cerr << "Includes at this level: " << endl;   
 //    for (auto include : results) {
 //        cerr << include << endl;
 //    }
@@ -900,7 +909,7 @@ std::set<string> WrappedClass::get_base_type_includes() {
     return results;
 }
 
-std::set<string> WrappedClass::get_derived_type_includes() {
+std::set<string> WrappedClass::get_derived_type_includes() const {
     cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
     set<string> results;
     results.insert(my_include);

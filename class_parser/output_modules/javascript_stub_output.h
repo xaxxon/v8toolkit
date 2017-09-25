@@ -22,7 +22,57 @@ public:
     }
 
     void process(WrappedClass const & c) override {
-        os << "STUFF" << std::endl;
+
+        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
+
+
+        auto & result = this->os;
+        string indentation = "    ";
+
+        result << "/**\n";
+        result << fmt::format(" * @class {}\n", c.name_alias);
+
+        c.get_enums();
+        //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
+        for (auto & member : c.get_members()) {
+            result << member->get_js_stub();
+        }
+        result << fmt::format(" **/\n", indentation);
+
+
+        result << fmt::format("class {}", c.name_alias);
+
+        if (c.base_types.size() == 1) {
+            result << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
+        }
+        result << " {\n\n";
+
+        // not sure what to do if there are multiple constructors...
+        bool first_method = true;
+        for (auto & constructor : c.get_constructors()) {
+            if (!first_method) {
+                result << ",";
+            }
+            first_method = false;
+
+            result << endl << endl;
+            result << constructor->generate_js_stub();
+        }
+
+        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
+        for (auto & method : c.get_member_functions()) {
+            result << std::endl << method->generate_js_stub() << std::endl;
+        }
+
+
+        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
+        for (auto & method : c.get_static_functions()) {
+            result << std::endl << method->generate_js_stub() << std::endl;
+        }
+
+
+        result << fmt::format("\n}}\n");
+//    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
     }
 
     void end() override {
@@ -34,7 +84,7 @@ public:
 class JavascriptStubOutput : public ClassCollectionHandler {
 public:
 
-    JavascriptStubOutput(StreamCreatorCallback callback) : ClassCollectionHandler(callback) {
+    JavascriptStubOutput(StreamCreatorCallback callback) : ClassCollectionHandler(callback, std::make_unique<JavascriptStubClassCriteria>()) {
     }
 
     std::unique_ptr<ClassOutputModule> make_class_output_module() override {
