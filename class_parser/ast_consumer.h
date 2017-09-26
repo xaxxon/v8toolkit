@@ -22,7 +22,7 @@ private:
     CompilerInstance & ci;
 
 public:
-    ClassHandlerASTConsumer(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> const & output_modules);
+    ClassHandlerASTConsumer(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules);
 
     void HandleTranslationUnit(ASTContext & Context) override {
         // Run the matchers when we have the whole TU parsed.

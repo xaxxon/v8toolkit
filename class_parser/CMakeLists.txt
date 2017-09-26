@@ -1,5 +1,4 @@
 
-include(cotire)
 include(ucm)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -31,14 +30,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 
+# header files must be added for clion to recognize the file as being part of the project and give proper syntax
+#   information in those files
 set(CLASS_PARSER_SOURCES parsed_method.cpp class_parser.cpp ast_action.cpp annotations.cpp helper_functions.cpp
-        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp)
+        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp output_modules.h clang.h)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
+
 add_definitions(-DCLANG_HOME="${CLANG_HOME}")
 include_directories(${gtest_SOURCE_DIR}/include)
 add_executable(test-class-parser ${CLASS_PARSER_SOURCES} test/test.cpp)
-cotire(test-class-parser)
 
 # clang libs
 target_link_libraries(test-class-parser clangFrontend clangSerialization clangASTMatchers clangSema
@@ -49,9 +50,6 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
         clangBasic clangParse clangTooling)
 
 target_link_libraries(test-class-parser fmt ${GTEST_LIBRARIES})
-
-cotire(class_parser_plugin)
-
 target_link_libraries(class_parser_plugin fmt)
 
 

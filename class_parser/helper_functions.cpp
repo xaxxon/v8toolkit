@@ -9,6 +9,7 @@
 #include <clang/AST/CXXInheritance.h>
 
 #include "wrapped_class.h"
+#include "output_modules.h"
 
 namespace v8toolkit::class_parser {
 
@@ -61,26 +62,26 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
 
 
     if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
-        cerr << "IS A FUNCTION TYPE!!!!" << endl;
+//        cerr << "IS A FUNCTION TYPE!!!!" << endl;
 
         // it feels strange, but the type int(bool) from std::function<int(bool)> is a FunctionProtoType
         if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
-            cerr << "IS A FUNCTION PROTOTYPE" << endl;
+//            cerr << "IS A FUNCTION PROTOTYPE" << endl;
 
-            cerr << "Recursing on return type" << endl;
+//            cerr << "Recursing on return type" << endl;
             update_wrapped_class_for_type(wrapped_class, function_prototype->getReturnType());
 
             for (auto param : function_prototype->param_types()) {
 
-                cerr << "Recursing on param type" << endl;
+//                cerr << "Recursing on param type" << endl;
                 update_wrapped_class_for_type(wrapped_class, param);
             }
         } else {
-            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+//            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
         }
 
     } else {
-        cerr << "is not a FUNCTION TYPE" << endl;
+//        cerr << "is not a FUNCTION TYPE" << endl;
     }
 
 

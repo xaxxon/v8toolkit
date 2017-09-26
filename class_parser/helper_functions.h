@@ -19,7 +19,7 @@ extern vector<string> base_types_to_ignore;
 
 class WrappedClass;
 
-inline int print_logging = 1;
+inline int print_logging = 0;
 
 // if a static method has a name matching the key, change it to the value
 extern map<string, string> static_method_renames;

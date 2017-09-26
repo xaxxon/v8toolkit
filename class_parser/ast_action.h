@@ -7,9 +7,13 @@
 
 #include "ast_consumer.h"
 #include "output_modules/javascript_stub_output.h"
+#include "output_modules/bindings_output.h"
+#include "output_modules/bidirectional_output.h"
+
 
 namespace v8toolkit::class_parser {
 
+class OutputModule;
 
 // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
 class PrintFunctionNamesAction : public clang::PluginASTAction {
@@ -17,11 +21,12 @@ public:
 
     // open up output files
     PrintFunctionNamesAction() {}
+    ~PrintFunctionNamesAction() {}
 
     // This is called when all parsing is done
     void EndSourceFileAction();
 
-    vector<unique_ptr<ClassCollectionHandler>> output_modules;
+    vector<unique_ptr<OutputModule>> output_modules;
 
 
 protected:
@@ -45,7 +50,7 @@ protected:
             // for "normal" use, the default output modules should be used, instead of others specified
             //   in code from something such as a test harness
             else if (args[i] == "--use-default-output-modules") {
-                output_modules.push_back(std::make_unique<JavascriptStubOutput>(std::make_unique<std::ofstream>("js_api.js")));
+                //output_modules.push_back(std::make_unique<JavascriptStub::Output>(std::make_unique<std::ofstream>("js_api.js")));
 
             }
         }
@@ -61,7 +66,7 @@ protected:
 
 public:
 
-    void add_output_module(std::unique_ptr<ClassCollectionHandler> output_module) {
+    void add_output_module(std::unique_ptr<OutputModule> output_module) {
         this->output_modules.push_back(std::move(output_module));
     }
 

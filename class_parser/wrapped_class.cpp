@@ -20,9 +20,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     annotations(decl),
     found_method(found_method)
 {
-    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method)
-         << endl;
-    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
+//    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
+//    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
         cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name)
@@ -72,8 +71,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         template_instantiations[template_name]++;
     }
 
-    cerr << "Final wrapped class annotations: " << endl;
-    print_vector(annotations.get());
+//    cerr << "Final wrapped class annotations: " << endl;
+//    print_vector(annotations.get());
 
     bool must_have_base_type = false;
     auto annotation_base_types_to_ignore = this->annotations.get_regex(

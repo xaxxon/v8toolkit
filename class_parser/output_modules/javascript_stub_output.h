@@ -7,101 +7,103 @@
 #include "../output_modules.h"
 
 
-namespace v8toolkit::class_parser {
+namespace v8toolkit::class_parser::JavaScriptStub {
+
+// returns whether a WrappedClass object should be part of the JavaScript stub
+class OutputCriteria : public v8toolkit::class_parser::OutputCriteria {
+    bool operator()(WrappedClass const & c) {
+        cerr << "Checking class criteria" << endl;
+
+        if (c.name_alias.find("<") != std::string::npos) {
+            std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
+                                     c.name_alias) << std::endl;
+            return false;
+        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->name_alias.find("<") != std::string::npos) {
+            std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
+                                     c.name_alias,
+                                     (*c.base_types.begin())->name_alias) << std::endl;
+            return false;
+        } else if (c.bidirectional) {
+            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.name_alias) << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+};
+
+
 
 
 extern std::string js_api_header;
+//
+//class ClassOutputModule : public ClassOutputModule {
+//public:
+//
+//    JavascriptStubClassOutput(std::ostream & os) : ClassOutputModule(os) {}
+//
+//    void begin() override {
+//        ClassOutputModule::begin();
+//    }
+//
+//    void process(WrappedClass const & c) override {
+//
+//        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
+//
+//
+//        string indentation = "    ";
+//
+//        os << "/**\n";
+//        os << fmt::format(" * @class {}\n", c.name_alias);
+//
+//        c.get_enums();
+//        for (auto & member : c.get_members()) {
+//            os << member->get_js_stub();
+//        }
+//        os << fmt::format(" **/\n", indentation);
+//
+//
+//        os << fmt::format("class {}", c.name_alias);
+//
+//        if (c.base_types.size() == 1) {
+//            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
+//        }
+//        os << " {\n\n";
+//
+//        // not sure what to do if there are multiple constructors...
+//        bool first_method = true;
+//        for (auto & constructor : c.get_constructors()) {
+//            if (!first_method) {
+//                os << ",";
+//            }
+//            first_method = false;
+//
+//            os << endl << endl;
+//            os << constructor->generate_js_stub();
+//        }
+//
+//        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
+//        for (auto & method : c.get_member_functions()) {
+//            os << std::endl << method->generate_js_stub() << std::endl;
+//        }
+//
+//
+//        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
+//        for (auto & method : c.get_static_functions()) {
+//            os << std::endl << method->generate_js_stub() << std::endl;
+//        }
+//
+//
+//        os << fmt::format("\n}}\n");
+////    fprintf(stderr, "js stub os for class:\n%s", os.str().c_str());
+//    }
+//
+//    void end() override {
+//        ClassOutputModule::end();
+//    }
+//};
+//
 
-class JavascriptStubClassOutput : public ClassOutputModule {
-public:
-
-    JavascriptStubClassOutput(std::ostream & os) : ClassOutputModule(os) {}
-
-    void begin() override {
-        ClassOutputModule::begin();
-    }
-
-    void process(WrappedClass const & c) override {
-
-        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
-
-
-        string indentation = "    ";
-
-        os << "/**\n";
-        os << fmt::format(" * @class {}\n", c.name_alias);
-
-        c.get_enums();
-        for (auto & member : c.get_members()) {
-            os << member->get_js_stub();
-        }
-        os << fmt::format(" **/\n", indentation);
-
-
-        os << fmt::format("class {}", c.name_alias);
-
-        if (c.base_types.size() == 1) {
-            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
-        }
-        os << " {\n\n";
-
-        // not sure what to do if there are multiple constructors...
-        bool first_method = true;
-        for (auto & constructor : c.get_constructors()) {
-            if (!first_method) {
-                os << ",";
-            }
-            first_method = false;
-
-            os << endl << endl;
-            os << constructor->generate_js_stub();
-        }
-
-        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
-        for (auto & method : c.get_member_functions()) {
-            os << std::endl << method->generate_js_stub() << std::endl;
-        }
-
-
-        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
-        for (auto & method : c.get_static_functions()) {
-            os << std::endl << method->generate_js_stub() << std::endl;
-        }
-
-
-        os << fmt::format("\n}}\n");
-//    fprintf(stderr, "js stub os for class:\n%s", os.str().c_str());
-    }
-
-    void end() override {
-        ClassOutputModule::end();
-    }
-};
-
-
-class JavascriptStubOutput : public ClassCollectionHandler {
-public:
-
-    JavascriptStubOutput(std::unique_ptr<std::ostream> os) :
-        ClassCollectionHandler(std::move(os), std::make_unique<JavascriptStubClassCriteria>())
-    {}
-
-    std::unique_ptr<ClassOutputModule> make_class_output_module() override {
-        return std::make_unique<JavascriptStubClassOutput>(this->os);
-    }
-
-
-    void begin() override {
-        ClassCollectionHandler::begin();
-        os << js_api_header << std::endl;
-    }
-
-
-    void end() override {
-        ClassCollectionHandler::end();
-        std::cerr << "Done generating JS stub file" << std::endl;
-    }
-};
 
 
 inline std::string js_api_header = R"JS_API_HEADER(

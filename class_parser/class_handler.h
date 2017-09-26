@@ -9,6 +9,7 @@
 
 namespace v8toolkit::class_parser {
 
+class OutputModule;
 
 class ClassHandler : public ast_matchers::MatchFinder::MatchCallback {
 private:
@@ -16,7 +17,7 @@ private:
 
     WrappedClass * top_level_class; // the class currently being wrapped
     std::set<std::string> names_used;
-    vector<unique_ptr<ClassCollectionHandler>> const & output_modules;
+    vector<unique_ptr<OutputModule>> const & output_modules;
 
 public:
 
@@ -29,11 +30,12 @@ public:
     virtual void run(const ast_matchers::MatchFinder::MatchResult & Result) override;
 
 
-    ClassHandler(CompilerInstance & CI, vector<unique_ptr<ClassCollectionHandler>> const & output_modules) :
+    ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules) :
         ci(CI),
         output_modules(output_modules),
         source_manager(CI.getSourceManager()) {}
 
+    ~ClassHandler();
 
     // all matcher callbacks have been run, now do anything to process the entirety of the data
     virtual void onEndOfTranslationUnit() override;

@@ -71,8 +71,7 @@ public:
     }
 
     void merge(const Annotations & other) {
-        cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size())
-             << endl;
+//        cerr << fmt::format("Merging in {} annotations onto {} existing ones", other.get().size(), this->get().size()) << endl;
         annotations.insert(other.annotations.begin(), other.annotations.end());
     }
 

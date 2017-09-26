@@ -6,6 +6,8 @@
 namespace v8toolkit::class_parser {
 
 
+ClassHandler::~ClassHandler() {}
+
 void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     matched_classes_returned++;
@@ -34,15 +36,15 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
             return;
         }
 
-        cerr << endl << "Got class definition: " << class_name << endl;
-        fprintf(stderr, "decl ptr: %p\n", (void *) klass);
+//        cerr << endl << "Got class definition: " << class_name << endl;
+//        fprintf(stderr, "decl ptr: %p\n", (void *) klass);
 
 
         if (!is_good_record_decl(klass)) {
             cerr << "SKIPPING BAD RECORD DECL" << endl;
         }
 
-        cerr << "Storing it for later processing (unless dupe)" << endl;
+//        cerr << "Storing it for later processing (unless dupe)" << endl;
 
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_UNSPECIFIED);
     }
@@ -263,13 +265,7 @@ void ClassHandler::onEndOfTranslationUnit() {
         exit(1);
     }
 
-    cerr << (void*)&WrappedClass::wrapped_classes << endl;
-    cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
-    cerr << WrappedClass::wrapped_classes.size() << endl;
-    cerr << WrappedClass::wrapped_classes.size() << endl;
-    cerr << (void*)&WrappedClass::wrapped_classes[0] << endl;
-
-    cerr << "*************" << endl << "ABOUT TO GENERATE OUTPUT FILES" << endl << "*****************" << endl;
+    cerr << "Done traversing AST" << endl;
 
     auto & all_wrapped_classes = WrappedClass::wrapped_classes;
 
