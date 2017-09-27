@@ -20,11 +20,11 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
         auto class_name = get_canonical_name_for_decl(klass);
 
-        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;
+//        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;
 
 
         if (klass->isDependentType()) {
-            cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
+//            cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
             return;
         }
 
@@ -54,16 +54,14 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
         "forward declaration with annotation")) {
 
         auto class_name = get_canonical_name_for_decl(klass);
-        std::cerr << fmt::format("Looking at: {} - forward declaration with annotation", class_name) << std::endl;
+//        std::cerr << fmt::format("Looking at: {} - forward declaration with annotation", class_name) << std::endl;
 
 
         /* check to see if this has any annotations we should associate with its associated template */
         auto described_tmpl = klass->getDescribedClassTemplate();
         if (klass->isDependentType() && described_tmpl) {
-            fprintf(stderr, "described template %p, %s\n", (void *) described_tmpl,
-                    described_tmpl->getQualifiedNameAsString().c_str());
-            printf("Merging %d annotations with template %p\n", (int) Annotations(klass).get().size(),
-                   (void *) described_tmpl);
+//            fprintf(stderr, "described template %p, %s\n", (void *) described_tmpl, described_tmpl->getQualifiedNameAsString().c_str());
+//            printf("Merging %d annotations with template %p\n", (int) Annotations(klass).get().size(), (void *) described_tmpl);
             Annotations::annotations_for_class_templates[described_tmpl].merge(Annotations(klass));
         }
     }
@@ -71,14 +69,14 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
 
-        std::cerr << fmt::format("Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass)) << std::endl;
+//        std::cerr << fmt::format("Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass)) << std::endl;
 
         if (!is_good_record_decl(klass)) {
             cerr << "skipping 'bad' record decl" << endl;
             return;
         }
         if (klass->isDependentType()) {
-            cerr << "skipping dependent type" << endl;
+//            cerr << "skipping dependent type" << endl;
             return;
         }
 
@@ -92,19 +90,19 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 
         if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
-            cerr << "Skipping class because it's explicitly marked SKIP" << endl;
+//            cerr << "Skipping class because it's explicitly marked SKIP" << endl;
             return;
         }
 
 
-        print_specialization_info(klass);
+//        print_specialization_info(klass);
 
 
         if (!is_good_record_decl(klass)) {
             cerr << "SKIPPING BAD RECORD DECL" << endl;
         }
 
-        cerr << "Storing it for later processing (unless dupe)" << endl;
+//        cerr << "Storing it for later processing (unless dupe)" << endl;
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE);
     }
 
@@ -130,8 +128,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
         if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
             string name_alias = typedef_decl->getNameAsString();
-            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(),
-                                     typedef_decl->getNameAsString()) << std::endl;
+//            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString()) << std::endl;
             Annotations::names_for_record_decls[record_decl] = name_alias;
 
             // if the class has already been parsed, update it now

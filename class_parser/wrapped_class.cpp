@@ -35,9 +35,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");
 
 
-    cerr << "Top of WrappedClass constructor body" << endl;
+//    cerr << "Top of WrappedClass constructor body" << endl;
     if (class_name == "") {
-        fprintf(stderr, "%p\n", (void *) decl);
+//        fprintf(stderr, "%p\n", (void *) decl);
         llvm::report_fatal_error("Empty name string for decl");
     }
 
@@ -92,8 +92,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     this->include_files.insert(get_include_for_type_decl(this->compiler_instance, this->decl));
 
 
-    print_vector(annotation_base_types_to_ignore, "base types to ignore");
-    print_vector(annotation_base_type_to_use, "base type to use");
+//    print_vector(annotation_base_types_to_ignore, "base types to ignore");
+//    print_vector(annotation_base_type_to_use, "base type to use");
 
 
     bool found_base_type = false;
@@ -111,32 +111,29 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
                                    this->class_name).c_str());
         }
 
-        cerr << "Base type: " << base_type_canonical_name << endl;
+//        cerr << "Base type: " << base_type_canonical_name << endl;
         if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(),
                       base_type_canonical_name) !=
             annotation_base_types_to_ignore.end()) {
-            cerr << "Skipping base type because it was explicitly excluded in annotation on class: "
-                 << base_type_name << endl;
+//            cerr << "Skipping base type because it was explicitly excluded in annotation on class: " << base_type_name << endl;
             continue;
         } else {
-            cerr << "Base type was not explicitly excluded via annotation" << endl;
+//            cerr << "Base type was not explicitly excluded via annotation" << endl;
         }
         if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), base_type_canonical_name) !=
             base_types_to_ignore.end()) {
-            cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: "
-                 << base_type_name << endl;
+//            cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: " << base_type_name << endl;
             continue;
         } else {
-            cerr << "Base type was not explicitly excluded via global ignore list" << endl;
+//            cerr << "Base type was not explicitly excluded via global ignore list" << endl;
         }
         if (!annotation_base_type_to_use.empty() && annotation_base_type_to_use[0] != base_type_name) {
-            cerr << "Skipping base type because it was not the one specified to use via annotation: "
-                 << base_type_name << endl;
+//            cerr << "Skipping base type because it was not the one specified to use via annotation: " << base_type_name << endl;
             continue;
         }
 
         if (base_qual_type->isDependentType()) {
-            cerr << "-- base type is dependent" << endl;
+//            cerr << "-- base type is dependent" << endl;
         }
 
 
@@ -156,7 +153,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         }
         //  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
 
-        cerr << "getting base type wrapped class object" << endl;
+//        cerr << "getting base type wrapped class object" << endl;
         WrappedClass & current_base = WrappedClass::get_or_insert_wrapped_class(base_record_decl,
                                                                                 this->compiler_instance,
                                                                                 this->found_method_means_wrapped()
@@ -217,23 +214,22 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
 
         js_wrapped_class.add_base_type(*this);
 
-        cerr << fmt::format("Adding derived bidirectional type {} to base type: {}",
-                            js_wrapped_class.class_name, this->name_alias) << endl;
+//        cerr << fmt::format("Adding derived bidirectional type {} to base type: {}", js_wrapped_class.class_name, this->name_alias) << endl;
 
         // set the bidirectional class as being a subclass of the non-bidirectional type
         this->derived_types.insert(&js_wrapped_class);
 
         js_wrapped_class.include_files.insert("<v8toolkit/bidirectional.h>");
         js_wrapped_class.include_files.insert(js_wrapped_class.my_include);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
     }
 
-    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
+//    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
 }
 
 
@@ -678,32 +674,31 @@ std::string WrappedClass::generate_js_stub() {
 
 bool WrappedClass::should_be_wrapped() const {
 
-    cerr << fmt::format("In 'should be wrapped' with class {}, annotations: {}", this->class_name,
-                        join(annotations.get())) << endl;
+//    cerr << fmt::format("In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get())) << endl;
 
     if (annotations.has(V8TOOLKIT_NONE_STRING) &&
         annotations.has(V8TOOLKIT_ALL_STRING)) {
-        cerr << "data error - none and all" << endl;
+//        cerr << "data error - none and all" << endl;
         data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
     }
 
     if (found_method == FOUND_BASE_CLASS) {
-        cerr << fmt::format("should be wrapped {}- found base class (YES)", this->name_alias) << endl;
+//        cerr << fmt::format("should be wrapped {}- found base class (YES)", this->name_alias) << endl;
         return true;
     }
     if (found_method == FOUND_GENERATED) {
-        cerr << fmt::format("should be wrapped {}- found generated (YES)", this->name_alias) << endl;
+//        cerr << fmt::format("should be wrapped {}- found generated (YES)", this->name_alias) << endl;
         return true;
     }
 
     if (found_method == FOUND_INHERITANCE) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-            cerr << "Found NONE_STRING" << endl;
+//            cerr << "Found NONE_STRING" << endl;
             return false;
         }
     } else if (found_method == FOUND_ANNOTATION) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-            cerr << "Found NONE_STRING" << endl;
+//            cerr << "Found NONE_STRING" << endl;
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
@@ -712,14 +707,14 @@ bool WrappedClass::should_be_wrapped() const {
         }
     } else if (found_method == FOUND_UNSPECIFIED) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-            cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
+//            cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-            cerr << "didn't find all string on UNSPECIFIED" << endl;
+//            cerr << "didn't find all string on UNSPECIFIED" << endl;
             return false;
         }
-        cerr << "FOUND_UNSPECIFIED" << endl;
+//        cerr << "FOUND_UNSPECIFIED" << endl;
         return false;
     }
 
@@ -745,7 +740,7 @@ bool WrappedClass::should_be_wrapped() const {
                         class_name));
     }
 
-    cerr << "should be wrapped -- fall through returning true (YES)" << endl;
+//    cerr << "should be wrapped -- fall through returning true (YES)" << endl;
     return true;
 }
 

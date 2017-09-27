@@ -44,8 +44,7 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
     // don't capture qualtype by ref since it is changed in this function
                                    QualType qual_type) {
 
-    cerr << fmt::format("In update_wrapped_class_for_type {} in wrapped class {}", qual_type.getAsString(),
-                        wrapped_class.class_name) << endl;
+//    cerr << fmt::format("In update_wrapped_class_for_type {} in wrapped class {}", qual_type.getAsString(), wrapped_class.class_name) << endl;
 
     if (print_logging) cerr << "Went from " << qual_type.getAsString();
     qual_type = qual_type.getLocalUnqualifiedType();
@@ -106,8 +105,7 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
 
 
     wrapped_class.include_files.insert(actual_include_string);
-    cerr << fmt::format("{} now has {} include files having added {}", wrapped_class.name_alias,
-                        wrapped_class.include_files.size(), actual_include_string) << endl;
+//    cerr << fmt::format("{} now has {} include files having added {}", wrapped_class.name_alias, wrapped_class.include_files.size(), actual_include_string) << endl;
 
 
     if (dyn_cast<ClassTemplateSpecializationDecl>(base_type_record_decl)) {

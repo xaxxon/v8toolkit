@@ -237,7 +237,7 @@ void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
             callback(constructor);
         }
     }
-    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
+//    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
 }
 
 

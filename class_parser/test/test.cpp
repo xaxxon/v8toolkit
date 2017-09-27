@@ -27,11 +27,6 @@ TEST(ClassParser, ClassParser) {
         "-I" CLANG_HOME "/lib/clang/5.0.0/include/"
     };
 
-    std::cout << "Printing args:" << std::endl;
-    for(auto const & str : args) {
-        std::cout << str << std::endl;
-    }
-    std::cout << "Done printing args" << std::endl;
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
