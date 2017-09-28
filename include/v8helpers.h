@@ -20,6 +20,8 @@
 #include "stdfunctionreplacement.h"
 #include "cast_to_native.h"
 
+#define constexpr
+
 // if it can be determined safely that cxxabi.h is available, include it for name demangling
 #if defined __has_include
 #if __has_include(<cxxabi.h>)

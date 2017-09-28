@@ -10,6 +10,8 @@ ClassHandler::~ClassHandler() {}
 
 void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
+
+
     matched_classes_returned++;
 
     if (matched_classes_returned % 10000 == 0) {
@@ -241,7 +243,6 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
             return;
 
 #endif
-
         }
 #endif // end TEMPLATE_INFO_ONLY
 }
@@ -277,5 +278,6 @@ void ClassHandler::onEndOfTranslationUnit() {
 ////        generate_bidirectional_classes(this->ci);
 ////        generate_bindings();
     }
+
 }
 }

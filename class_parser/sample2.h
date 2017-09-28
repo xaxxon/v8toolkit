@@ -66,15 +66,15 @@ namespace v8toolkit {
     class EmptyFactoryBase {};
 
     class WrappedClassBase;
-    
+
     template<class, class...>
 	class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS FlexibleParent : public WrappedClassBase {};
-    
+
 
 
 template<class...>
     class TypeList;
-    
+
 template<
     class Base,
     class Child,
@@ -91,7 +91,7 @@ template<
     class ExternalTypeList,
     template<class, class...> class ParentType,
     class FactoryBase>
-    
+
     class V8TOOLKIT_SKIP CppFactory;
 */
 }

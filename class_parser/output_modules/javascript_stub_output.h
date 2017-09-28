@@ -47,54 +47,54 @@ extern std::string js_api_header;
 //    }
 //
 //    void process(WrappedClass const & c) override {
-//
-//        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
-//
-//
-//        string indentation = "    ";
-//
-//        os << "/**\n";
-//        os << fmt::format(" * @class {}\n", c.name_alias);
-//
-//        c.get_enums();
-//        for (auto & member : c.get_members()) {
-//            os << member->get_js_stub();
-//        }
-//        os << fmt::format(" **/\n", indentation);
-//
-//
-//        os << fmt::format("class {}", c.name_alias);
-//
-//        if (c.base_types.size() == 1) {
-//            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
-//        }
-//        os << " {\n\n";
-//
-//        // not sure what to do if there are multiple constructors...
-//        bool first_method = true;
-//        for (auto & constructor : c.get_constructors()) {
-//            if (!first_method) {
-//                os << ",";
-//            }
-//            first_method = false;
-//
-//            os << endl << endl;
-//            os << constructor->generate_js_stub();
-//        }
-//
-//        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
-//        for (auto & method : c.get_member_functions()) {
-//            os << std::endl << method->generate_js_stub() << std::endl;
-//        }
-//
-//
-//        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
-//        for (auto & method : c.get_static_functions()) {
-//            os << std::endl << method->generate_js_stub() << std::endl;
-//        }
-//
-//
-//        os << fmt::format("\n}}\n");
+////
+////        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
+////
+////
+////        string indentation = "    ";
+////
+////        os << "/**\n";
+////        os << fmt::format(" * @class {}\n", c.name_alias);
+////
+////        c.get_enums();
+////        for (auto & member : c.get_members()) {
+////            os << member->get_js_stub();
+////        }
+////        os << fmt::format(" **/\n", indentation);
+////
+////
+////        os << fmt::format("class {}", c.name_alias);
+////
+////        if (c.base_types.size() == 1) {
+////            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
+////        }
+////        os << " {\n\n";
+////
+////        // not sure what to do if there are multiple constructors...
+////        bool first_method = true;
+////        for (auto & constructor : c.get_constructors()) {
+////            if (!first_method) {
+////                os << ",";
+////            }
+////            first_method = false;
+////
+////            os << endl << endl;
+////            os << constructor->generate_js_stub();
+////        }
+////
+////        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
+////        for (auto & method : c.get_member_functions()) {
+////            os << std::endl << method->generate_js_stub() << std::endl;
+////        }
+////
+////
+////        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
+////        for (auto & method : c.get_static_functions()) {
+////            os << std::endl << method->generate_js_stub() << std::endl;
+////        }
+////
+////
+////        os << fmt::format("\n}}\n");
 ////    fprintf(stderr, "js stub os for class:\n%s", os.str().c_str());
 //    }
 //

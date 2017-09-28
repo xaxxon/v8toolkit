@@ -53,43 +53,33 @@ public:
         return this->get_class_stream(class_function.wrapped_class);
     }
 
-    virtual std::ostream & get_class_member_data_steram(DataMember const & data_member) {
+    virtual std::ostream & get_class_member_data_stream(DataMember const & data_member) {
         return this->get_class_stream(data_member.wrapped_class);
     }
 };
 
 
 
-
+class OutputModule_Interface {
+public:
+    virtual void process(std::vector<WrappedClass> const & wrapped_classes) = 0;
+};
 
 
 /**
  * Process the set of classes which are to be wrapped
  */
-class OutputModule {
-public:
-
-    using ClassVisitor = std::function<void(WrappedClass const &, std::ostream &)>;
-    using ClassFunctionVisitor = std::function<void(ClassFunction const &, std::ostream &)>;
-    using DataMemberVisitor = std::function<void(DataMember const &, std::ostream &)>;
-
+template<class OutputCriteria, class ClassVisitor, class MemberFunctionVisitor, class StaticFunctionVisitor, class DataMemberVisitor>
+class OutputModule : public OutputModule_Interface{
 protected:
     std::unique_ptr<OutputStreamProvider> output_stream_provider;
     std::unique_ptr<OutputCriteria> criteria;
 
-    ClassVisitor & class_visitor;
-    ClassFunctionVisitor & class_function_visitor;
-    DataMemberVisitor & data_member_visitor;
-
 public:
     OutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider,
-                 ClassVisitor & class_visitor,
-                 ClassFunctionVisitor & class_function_visitor,
-                 DataMemberVisitor & data_member_visitor) :
+                 std::unique_ptr<OutputCriteria> criteria) :
         output_stream_provider(std::move(output_stream_provider)),
-        class_visitor(class_visitor),
-        class_function_visitor(class_function_visitor),
-        data_member_visitor(data_member_visitor)
+        criteria(std::move(criteria))
     {}
 
 
@@ -97,14 +87,22 @@ public:
 
         for (WrappedClass const & wrapped_class : wrapped_classes) {
             if (wrapped_class.should_be_wrapped() && this->criteria->class_filter(wrapped_class)) {
-                class_visitor(wrapped_class, output_stream_provider->get_class_collection_stream());
+                ClassVisitor class_visitor(wrapped_class, this->output_stream_provider->get_class_stream());
 
                 // go through each method
-                for (auto const & class_function : wrapped_class.get_member_functions()) {
-                    this->class_function_visitor(*class_function, this->output_stream_provider->get_class_function_stream(*class_function));
+                for (auto const & member_function : wrapped_class.get_member_functions()) {
+                    MemberFunctionVisitor class_instance_method(*member_function,
+                                                              this->output_stream_provider->get_class_function_stream(*member_function));
                 }
 
-                // go through each data member
+                for (auto const & static_function : wrapped_class.get_static_functions()) {
+                    MemberFunctionVisitor class_instance_method(*static_function,
+                                                                this->output_stream_provider->get_class_function_stream(*static_function));
+                }
+
+                for (auto const & data_member : wrapped_class.get_members()) {
+                    DataMemberVisitor(*data_member, this->output_stream_provider->get_class_member_data_stream());
+                }
             }
         }
     }

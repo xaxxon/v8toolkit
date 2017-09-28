@@ -123,7 +123,7 @@ namespace v8toolkit {
 	class FactoryBase = EmptyFactoryBase>
     class CppFactory;
 
-    
+
     template<class Base, class Child, class... ExternalConstructorParams, template<class, class...> class ParentType, class FactoryBase>
     class CppFactory<Base, Child, TypeList<ExternalConstructorParams...>, ParentType, FactoryBase> :
 	    public ParentType<Base, TypeList<ExternalConstructorParams...>, FactoryBase> {
@@ -304,8 +304,8 @@ public:
 int main() {
 
     v8toolkit::CppFactory<int, char, v8toolkit::TypeList<double>> factory;
-    
-    
+
+
     Foo f(5,5,5);
 
     f.templated_function(5, 5.5, "hello");

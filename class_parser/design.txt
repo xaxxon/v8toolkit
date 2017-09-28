@@ -24,5 +24,13 @@ Two phases - build up data structures with all relevant data then
   - uses all the built-up data structures to generate the js stub, bindings, and bidirectional types
 
 
+OutputModule:
+
+All classes that should be wrapped are sent to OutputModule
+
+OutputStreamProvider provides output stream for any header/footer data to be written that is not class-specific
+
+Classes are run through Criteria object to select only classes intended to be written by this OutputModule
+
 
 

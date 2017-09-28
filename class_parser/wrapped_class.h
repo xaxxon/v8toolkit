@@ -39,8 +39,13 @@ private:
 
 public:
 
+    ~WrappedClass();
+
     // hack because if this is cleaned up it crashes program, so just leak it.
     //   probably due to different copies of malloc/free being linked in but not sure how
+//    static inline vector<WrappedClass> wrapped_classes;
+    static inline vector<int> deleteme_ints={1,2,3,4,5};
+
     static inline vector<WrappedClass> * wrapped_classes_ptr = new vector<WrappedClass>();
 
     // reference so the "right" way of doing this is still in the code and if the problem is fixed
@@ -288,8 +293,10 @@ public:
                 return wrapped_class;
             }
         }
-        return WrappedClass::wrapped_classes.emplace_back(decl, compiler_instance, found_method);
 
+
+        auto & result = WrappedClass::wrapped_classes.emplace_back(decl, compiler_instance, found_method);
+        return result;
     }
 
     // returns true if the found_method on this class means the class will be wrapped
