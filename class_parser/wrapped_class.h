@@ -22,6 +22,7 @@ class MemberFunction;
 class StaticFunction;
 
 struct WrappedClass {
+    friend class std::allocator<WrappedClass>;
 private:
 
     bool methods_parsed = false;
@@ -37,20 +38,17 @@ private:
     set<unique_ptr<ConstructorFunction>> constructors;
 
 
+    // can't call this directly, must use factory
+    WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
+
+
 public:
+
+    static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
     ~WrappedClass();
 
-    // hack because if this is cleaned up it crashes program, so just leak it.
-    //   probably due to different copies of malloc/free being linked in but not sure how
-//    static inline vector<WrappedClass> wrapped_classes;
-    static inline vector<int> deleteme_ints={1,2,3,4,5};
-
-    static inline vector<WrappedClass> * wrapped_classes_ptr = new vector<WrappedClass>();
-
-    // reference so the "right" way of doing this is still in the code and if the problem is fixed
-    //   just this one remains
-    static inline vector<WrappedClass> & wrapped_classes = *wrapped_classes_ptr;
+    static inline vector<WrappedClass> wrapped_classes;
 
     CXXRecordDecl const * decl = nullptr;
 
@@ -192,8 +190,6 @@ public:
     WrappedClass(const std::string class_name, CompilerInstance & compiler_instance);
 
 
-    // for classes actually in the code being parsed
-    WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
     std::string generate_js_stub();
 
@@ -248,6 +244,8 @@ public:
         return nullptr;
     }
 
+    void make_bidirectional_wrapped_class_if_needed();
+
     static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
                                                       CompilerInstance & compiler_instance,
                                                       FOUND_METHOD found_method) {
@@ -295,8 +293,7 @@ public:
         }
 
 
-        auto & result = WrappedClass::wrapped_classes.emplace_back(decl, compiler_instance, found_method);
-        return result;
+        return WrappedClass::make_wrapped_class(decl, compiler_instance, found_method);
     }
 
     // returns true if the found_method on this class means the class will be wrapped

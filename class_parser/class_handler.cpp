@@ -267,6 +267,8 @@ void ClassHandler::onEndOfTranslationUnit() {
 
     auto & all_wrapped_classes = WrappedClass::wrapped_classes;
 
+    std::cerr << fmt::format("got {} wrapped classes", all_wrapped_classes.size()) << std::endl;
+
     if (this->output_modules.empty()) {
         cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
     }
