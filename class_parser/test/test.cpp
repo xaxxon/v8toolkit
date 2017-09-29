@@ -14,6 +14,7 @@
 
 using ::testing::_;
 using ::testing::Return;
+using namespace v8toolkit::class_parser;
 
 TEST(ClassParser, ClassParser) {
     std::ifstream sample_source("sample.cpp");
@@ -30,6 +31,13 @@ TEST(ClassParser, ClassParser) {
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
+
+    action->add_output_module(std::make_unique<OutputModule<
+        JavascriptStubClassVisitor,
+        JavascriptStubMemberFunctionVisitor,
+        JavascriptStubStaticFunctionVisitor,
+        JavascriptStubDataMemberVisitor>>(std::make_unique<JavascriptStubOutputStreamProvider>(),
+            std::make_unique<JavascriptStubCriteria>()));
 
     clang::tooling::runToolOnCodeWithArgs(action,
                                           sample_source_contents,

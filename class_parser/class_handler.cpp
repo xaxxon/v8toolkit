@@ -250,9 +250,9 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 void ClassHandler::onEndOfTranslationUnit() {
 
-    for (auto & warning : data_warnings) {
-        cerr << warning << endl;
-    }
+//    for (auto & warning : data_warnings) {
+//        cerr << warning << endl;
+//    }
 
     if (!data_errors.empty()) {
         cerr << "Errors detected:" << endl;
@@ -263,11 +263,19 @@ void ClassHandler::onEndOfTranslationUnit() {
         exit(1);
     }
 
-    cerr << "Done traversing AST" << endl;
+//    cerr << "Done traversing AST" << endl;
 
     auto & all_wrapped_classes = WrappedClass::wrapped_classes;
 
-    std::cerr << fmt::format("got {} wrapped classes", all_wrapped_classes.size()) << std::endl;
+    for(auto & c : all_wrapped_classes) {
+        if (c.should_be_wrapped()) {
+            c.parse_enums();
+            c.parse_members();
+            c.parse_all_methods();
+        }
+    }
+
+//    std::cerr << fmt::format("got {} wrapped classes", all_wrapped_classes.size()) << std::endl;
 
     if (this->output_modules.empty()) {
         cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;

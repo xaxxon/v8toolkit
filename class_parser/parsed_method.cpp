@@ -85,36 +85,36 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
     for (auto & conversion_pattern : cpp_to_js_type_conversions) {
         for (auto & pair : cpp_to_js_type_conversions) {
             if (regex_match(simple_type_name, matches, std::regex(pair.first))) {
-                std::cerr << fmt::format("{}'{}' matched {}, converting to {}",
-                                         indentation,
-                                         simple_type_name,
-                                         pair.first,
-                                         pair.second) << std::endl;
+//                std::cerr << fmt::format("{}'{}' matched {}, converting to {}",
+//                                         indentation,
+//                                         simple_type_name,
+//                                         pair.first,
+//                                         pair.second) << std::endl;
                 return pair.second;
             }
         }
     }
 
     // no match, return unchanged
-    std::cerr << fmt::format("{}returning simple type name unchanged {}",
-                             indentation, simple_type_name) << std::endl;
+//    std::cerr << fmt::format("{}returning simple type name unchanged {}",
+//                             indentation, simple_type_name) << std::endl;
     return simple_type_name;
 }
 
 
 string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentation) const {
-    std::cerr << fmt::format("{}converting {}", indentation, this->get_name()) << std::endl;
+//    std::cerr << fmt::format("{}converting {}", indentation, this->get_name()) << std::endl;
 
     vector<string> template_type_jsdoc_conversions;
     if (this->is_templated()) {
 
-        std::cerr << fmt::format("{} is a templated type", this->plain_without_const().get_name()) << std::endl;
+//        std::cerr << fmt::format("{} is a templated type", this->plain_without_const().get_name()) << std::endl;
 
 
         // convert each templated type
         this->for_each_templated_type([&](QualType qualtype) {
             auto typeinfo = TypeInfo(qualtype);
-            std::cerr << fmt::format("{}converting templated type {}", indentation, typeinfo.get_plain_name()) << std::endl;
+//            std::cerr << fmt::format("{}converting templated type {}", indentation, typeinfo.get_plain_name()) << std::endl;
             template_type_jsdoc_conversions.push_back(typeinfo.get_jsdoc_type_name(indentation + "  "));
         });
 
@@ -123,9 +123,9 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
         if (auto specialization = dyn_cast<ClassTemplateSpecializationDecl>(this->get_plain_type_decl())) {
             if (auto spec_tmpl = specialization->getSpecializedTemplate()) {
                 specialized_template_name = spec_tmpl->getQualifiedNameAsString();
-                fprintf(stderr, "%sSpecialized template: %p, %s\n", indentation.c_str(), (void *) spec_tmpl,
-                        specialized_template_name.c_str());
-                print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
+//                fprintf(stderr, "%sSpecialized template: %p, %s\n", indentation.c_str(), (void *) spec_tmpl,
+//                        specialized_template_name.c_str());
+//                print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
             } else {
                 llvm::report_fatal_error("couldn't determine name of template being specialized");
             }
@@ -144,14 +144,14 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
                                                            std::regex(fmt::format("\\${}", i + 1)),
                                                            template_type_jsdoc_conversions[i]);
         }
-        std::cerr << fmt::format("{}final jsdoc conversion: {} =? {}",
-                                 indentation, this->get_plain_name(), specialized_template_name)
-                  << std::endl;
+//        std::cerr << fmt::format("{}final jsdoc conversion: {} =? {}",
+//                                 indentation, this->get_plain_name(), specialized_template_name)
+//                  << std::endl;
         return specialized_template_name;
     }
         // Handle non-templated types
     else {
-        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
+//        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
         return this->convert_simple_typename_to_jsdoc(this->plain_without_const().get_name(), indentation);
     }
 }
@@ -266,20 +266,7 @@ string DataMember::get_bindings() {
     return result.str();
 }
 
-string ClassFunction::ParameterInfo::generate_js_stub() {
-    stringstream result;
 
-    if (this->default_value != "") {
-        result << fmt::format("     * @param {{{}}} [{} = {}] {}\n", this->type.get_jsdoc_type_name(),
-                              this->name,
-                              this->default_value,
-                              this->description);
-    } else {
-        result << fmt::format("     * @param {{{}}} {}\n", this->type.get_jsdoc_type_name(), this->name,
-                              this->description);
-    }
-    return result.str();
-}
 
 ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl,
                                             CompilerInstance & compiler_instance) :
@@ -288,9 +275,9 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
     parameter_decl(parameter_decl),
     position(position),
     type(parameter_decl->getType(), method.template_parameter_types) {
-    std::cerr
-        << fmt::format("In Parameter Info, method has {} template parameter types that were passed in to TypeInfo",
-                       method.template_parameter_types.size()) << std::endl;
+//    std::cerr
+//        << fmt::format("In Parameter Info, method has {} template parameter types that were passed in to TypeInfo",
+//                       method.template_parameter_types.size()) << std::endl;
     //std::cerr << fmt::format("parameterinfo constructor: parsing parameter {}", name) << std::endl;
     // set the name, give placeholder name if unnamed
     //std::cerr << fmt::format("1") << std::endl;
@@ -348,29 +335,29 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     annotations(this->method_decl),
     template_parameter_types(template_parameter_types),
     function_template_decl(function_template_decl) {
-    std::cerr << fmt::format("ClassFunction for {} got {} template substitutions", this->name,
-                             this->template_parameter_types.size()) << std::endl;
+//    std::cerr << fmt::format("ClassFunction for {} got {} template substitutions", this->name,
+//                             this->template_parameter_types.size()) << std::endl;
     // check to see if there's a name annotation on the method giving it a different JavaScript name
     auto annotated_custom_name = annotations.get_regex(
         "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
     if (!annotated_custom_name.empty()) {
-        std::cerr << fmt::format("Overriding method name {} => {}", this->js_name, annotated_custom_name[0])
-                  << std::endl;
+//        std::cerr << fmt::format("Overriding method name {} => {}", this->js_name, annotated_custom_name[0])
+//                  << std::endl;
         this->js_name = annotated_custom_name[0];
-        std::cerr << fmt::format("short name is now {}", this->js_name) << std::endl;
+//        std::cerr << fmt::format("short name is now {}", this->js_name) << std::endl;
     } else {
-        std::cerr << fmt::format("not overriding method name {}", this->js_name) << std::endl;
+//        std::cerr << fmt::format("not overriding method name {}", this->js_name) << std::endl;
     }
 
     this->wrapped_class.declaration_count++;
 
-    std::cerr << fmt::format("***** Parsing method {}", this->name) << std::endl;
+//    std::cerr << fmt::format("***** Parsing method {}", this->name) << std::endl;
 
     update_wrapped_class_for_type(this->wrapped_class, this->return_type.get_plain_type());
 
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
-        std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
+//        std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
         parameters.emplace_back(*this, i, method_decl->getParamDecl(i), this->compiler_instance);
 
         // make sure the wrapped class has includes for all the types in the method
@@ -379,19 +366,19 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 
 
     // get the comment associated with the method and if there is one, parse it
-    std::cerr << fmt::format("Parsing doxygen comments") << std::endl;
+//    std::cerr << fmt::format("Parsing doxygen comments") << std::endl;
     FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(this->method_decl, nullptr);
     if (comment != nullptr) {
 
         auto comment_text = get_source_for_source_range(
             this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
 
-        cerr << "FullComment: " << comment_text << endl;
+//        cerr << "FullComment: " << comment_text << endl;
 
         // go through each portion (child) of the full commetn
         int j = 0;
         for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
+//            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
             auto child_comment_source_range = (*i)->getSourceRange();
             if (child_comment_source_range.isValid()) {
 
@@ -399,27 +386,27 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                     this->compiler_instance.getPreprocessor().getSourceManager(),
                     child_comment_source_range);
 
-                cerr << "Child comment kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+//                cerr << "Child comment kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
 
                 // if the child comment is a param command comment (describes a parameter)
                 if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-                    cerr << "Is ParamCommandComment" << endl;
+//                    cerr << "Is ParamCommandComment" << endl;
                     if (param_command == nullptr) {
-                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
+//                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
                     }
-                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str())
-                              << std::endl;
+//                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str())
+//                              << std::endl;
 
                     // cannot use getParamName() because it crashes if the name doesn't match a parameter
                     auto command_param_name = param_command->getParamNameAsWritten().str();
-                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
+//                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
 
                     ParameterInfo * matching_parameter_info_ptr = nullptr;
                     for (auto & parameter : this->parameters) {
-                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name)
-                                  << std::endl;
+//                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name)
+//                                  << std::endl;
                         if (command_param_name == parameter.name) {
-                            std::cerr << fmt::format("found match!") << std::endl;
+//                            std::cerr << fmt::format("found match!") << std::endl;
                             matching_parameter_info_ptr = &parameter;
                             break;
                         }
@@ -430,9 +417,9 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 //                                         return command_param_name == param.name;
 //                                     });
 
-                    std::cerr << fmt::format("found parameter (not matching .end()) {}",
-                                             matching_parameter_info_ptr != nullptr) << std::endl;
-                    std::cerr << fmt::format("has param name?  {}", param_command->hasParamName()) << std::endl;
+//                    std::cerr << fmt::format("found parameter (not matching .end()) {}",
+//                                             matching_parameter_info_ptr != nullptr) << std::endl;
+//                    std::cerr << fmt::format("has param name?  {}", param_command->hasParamName()) << std::endl;
                     if (param_command->hasParamName() && matching_parameter_info_ptr != nullptr) {
 
                         auto & param_info = *matching_parameter_info_ptr;
@@ -443,16 +430,17 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                         }
                     } else {
                         data_warning(
-                            fmt::format("method parameter comment name doesn't match any parameter {}",
+                            fmt::format("in {}, method parameter comment name '{}' doesn't match any parameter in the function",
+                                        this->name,
                                         command_param_name));
                     }
                 } else {
-                    cerr << "is not param command comment" << endl;
+//                    cerr << "is not param command comment" << endl;
                 }
             }
         }
     } else {
-        cerr << "No comment on " << method_decl->getNameAsString() << endl;
+//        cerr << "No comment on " << method_decl->getNameAsString() << endl;
     }
 
 }
@@ -617,14 +605,14 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
     wrapped_class.add_member_name(this->js_name);
 
     for (auto a = method_decl->attr_begin(); a != method_decl->attr_end(); a++) {
-        std::cerr << fmt::format("on function {} looking at attribute {}", this->name, (*a)->getSpelling())
-                  << std::endl;
+//        std::cerr << fmt::format("on function {} looking at attribute {}", this->name, (*a)->getSpelling())
+//                  << std::endl;
         if ((*a)->getKind() == attr::Kind::Final) {
-            std::cerr << fmt::format("setting is_virtual_final = true") << std::endl;
+//            std::cerr << fmt::format("setting is_virtual_final = true") << std::endl;
             this->is_virtual_final = true;
         }
         if ((*a)->getKind() == attr::Kind::Override) {
-            std::cerr << fmt::format("setting is_virtual_override= true") << std::endl;
+//            std::cerr << fmt::format("setting is_virtual_override= true") << std::endl;
 
             this->is_virtual_override = true;
         }
@@ -646,13 +634,13 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
     ClassFunction(wrapped_class, constructor_decl),
     constructor_decl(constructor_decl) {
 
-    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;
+//    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;
     auto full_source_loc = FullSourceLoc(constructor_decl->getLocation(),
                                          this->compiler_instance.getSourceManager());
-    fprintf(stderr, "%s constructor Decl at line %d, file id: %d\n",
-            wrapped_class.name_alias.c_str(),
-            full_source_loc.getExpansionLineNumber(),
-            full_source_loc.getFileID().getHashValue());
+//    fprintf(stderr, "%s constructor Decl at line %d, file id: %d\n",
+//            wrapped_class.name_alias.c_str(),
+//            full_source_loc.getExpansionLineNumber(),
+//            full_source_loc.getFileID().getHashValue());
 
     // this should be moved to ClassFunction
 //    Annotations constructor_annotations(constructor_decl);
@@ -670,11 +658,11 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
             fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
                         this->js_name.c_str(), wrapped_class.name_alias));
         for (auto & name : used_constructor_names) {
-            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
+//            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
         }
     } else {
-        cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.name_alias,
-                            this->js_name) << endl;
+//        cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.name_alias,
+//                            this->js_name) << endl;
         used_constructor_names.push_back(this->js_name);
     }
 }
@@ -707,23 +695,6 @@ string MemberFunction::generate_js_bindings() {
 }
 
 
-// returns JSDoc and stubbed function for a member function - no trailing newline
-string MemberFunction::generate_js_stub() {
-    stringstream result;
-    result << fmt::format("    /**") << endl;
-    for (auto & parameter : this->parameters) {
-        result << parameter.generate_js_stub();
-    }
-    if (!this->return_type.is_void()) {
-        result << fmt::format("     * @return {{{}}}", this->return_type.get_jsdoc_type_name()) << endl;
-    }
-
-    result << fmt::format("     */") << endl;
-    result << fmt::format("    {}({}){{}}", this->js_name, this->get_js_input_parameter_string());
-
-    return result.str();
-}
-
 
 string MemberFunction::generate_bidirectional() {
     stringstream result;
@@ -742,39 +713,21 @@ string StaticFunction::generate_js_bindings() {
 
 }
 
-
-// returns JSDoc and stubbed function for a static function - no trailing newline
-string StaticFunction::generate_js_stub() {
-    stringstream result;
-    result << fmt::format("    /**") << endl;
-    for (auto & parameter : this->parameters) {
-        result << parameter.generate_js_stub();
-    }
-    if (!this->return_type.is_void()) {
-        result << fmt::format("     * @return {{{}}}", this->return_type.get_jsdoc_type_name()) << endl;
-    }
-    result << fmt::format("     */") << endl;
-
-    result << fmt::format("    static {}({}){{}}", this->js_name, this->get_js_input_parameter_string()) << endl;
-
-    return result.str();
-
-}
-
-string ConstructorFunction::generate_js_stub() {
-    stringstream result;
-
-    result << fmt::format("    /**") << endl;
-    for (auto & parameter : this->parameters) {
-        result << parameter.generate_js_stub();
-    }
-    result << fmt::format("     */") << endl;
-
-    result << fmt::format("    constructor({}){{}}\n\n", this->get_js_input_parameter_string());
-
-    return result.str();
-
-}
+//
+//string ConstructorFunction::generate_js_stub() {
+//    stringstream result;
+//
+//    result << fmt::format("    /**") << endl;
+//    for (auto & parameter : this->parameters) {
+//        result << parameter.generate_js_stub();
+//    }
+//    result << fmt::format("     */") << endl;
+//
+//    result << fmt::format("    constructor({}){{}}\n\n", this->get_js_input_parameter_string());
+//
+//    return result.str();
+//
+//}
 
 
 }

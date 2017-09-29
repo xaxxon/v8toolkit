@@ -7,10 +7,10 @@
 #include "../output_modules.h"
 
 
-namespace v8toolkit::class_parser::JavaScriptStub {
+namespace v8toolkit::class_parser {
 
 // returns whether a WrappedClass object should be part of the JavaScript stub
-class OutputCriteria : public v8toolkit::class_parser::OutputCriteria {
+class JavascriptStubCriteria : public OutputCriteria {
     bool operator()(WrappedClass const & c) {
         cerr << "Checking class criteria" << endl;
 
@@ -32,77 +32,153 @@ class OutputCriteria : public v8toolkit::class_parser::OutputCriteria {
     }
 };
 
+class JavascriptStubOutputStreamProvider : public OutputStreamProvider {
+private:
+    std::stringstream string_stream;
+    virtual std::ostream & get_class_collection_stream() {
+        return this->string_stream;
+    }
+};
+
 
 
 
 extern std::string js_api_header;
+
+class JavascriptStubClassVisitor {
+private:
+    std::ostream & os;
+public:
+
+    JavascriptStubClassVisitor(std::ostream & os) : os(os){}
+
+    void operator()(WrappedClass const & c) {
+
+
+        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
+
+
+        string indentation = "    ";
+
+        os << "/**\n";
+        os << fmt::format(" * @class {}\n", c.name_alias);
+
+        c.get_enums();
+        for (auto & member : c.get_members()) {
+            os << member->get_js_stub();
+        }
+        os << fmt::format(" **/\n", indentation);
+
+
+        os << fmt::format("class {}", c.name_alias);
+
+        if (c.base_types.size() == 1) {
+            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
+        }
+        os << " {\n\n";
+
+//        // not sure what to do if there are multiple constructors...
+//        bool first_method = true;
+//        for (auto & constructor : c.get_constructors()) {
+//            if (!first_method) {
+//                os << ",";
+//            }
+//            first_method = false;
 //
-//class ClassOutputModule : public ClassOutputModule {
-//public:
+//            os << endl << endl;
+//            os << constructor->generate_js_stub();
+//        }
+
+//        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
+//        for (auto & method : c.get_member_functions()) {
+//            os << std::endl << method->generate_js_stub() << std::endl;
+//        }
 //
-//    JavascriptStubClassOutput(std::ostream & os) : ClassOutputModule(os) {}
 //
-//    void begin() override {
-//        ClassOutputModule::begin();
-//    }
-//
-//    void process(WrappedClass const & c) override {
-////
-////        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
-////
-////
-////        string indentation = "    ";
-////
-////        os << "/**\n";
-////        os << fmt::format(" * @class {}\n", c.name_alias);
-////
-////        c.get_enums();
-////        for (auto & member : c.get_members()) {
-////            os << member->get_js_stub();
-////        }
-////        os << fmt::format(" **/\n", indentation);
-////
-////
-////        os << fmt::format("class {}", c.name_alias);
-////
-////        if (c.base_types.size() == 1) {
-////            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
-////        }
-////        os << " {\n\n";
-////
-////        // not sure what to do if there are multiple constructors...
-////        bool first_method = true;
-////        for (auto & constructor : c.get_constructors()) {
-////            if (!first_method) {
-////                os << ",";
-////            }
-////            first_method = false;
-////
-////            os << endl << endl;
-////            os << constructor->generate_js_stub();
-////        }
-////
-////        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
-////        for (auto & method : c.get_member_functions()) {
-////            os << std::endl << method->generate_js_stub() << std::endl;
-////        }
-////
-////
-////        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
-////        for (auto & method : c.get_static_functions()) {
-////            os << std::endl << method->generate_js_stub() << std::endl;
-////        }
-////
-////
-////        os << fmt::format("\n}}\n");
-////    fprintf(stderr, "js stub os for class:\n%s", os.str().c_str());
-//    }
-//
-//    void end() override {
-//        ClassOutputModule::end();
-//    }
-//};
-//
+//        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
+//        for (auto & method : c.get_static_functions()) {
+//            os << std::endl << method->generate_js_stub() << std::endl;
+//        }
+
+
+    }
+
+    ~JavascriptStubClassVisitor(){
+        os << fmt::format("\n}}\n");
+    }
+};
+
+
+class JavascriptStubMemberFunctionVisitor {
+private:
+    std::ostream & os;
+
+public:
+    JavascriptStubMemberFunctionVisitor(std::ostream & os) : os(os) {}
+    void operator()(MemberFunction const & member_function) {
+        os << fmt::format("    /**") << endl;
+        for (auto & parameter : member_function.parameters) {
+            if (parameter.default_value != "") {
+                os << fmt::format("     * @param {{{}}} [{} = {}] {}\n", parameter.type.get_jsdoc_type_name(),
+                                      parameter.name,
+                                      parameter.default_value,
+                                      parameter.description);
+            } else {
+                os << fmt::format("     * @param {{{}}} {}\n", parameter.type.get_jsdoc_type_name(), parameter.name,
+                                      parameter.description);
+            }
+        }
+        if (!member_function.return_type.is_void()) {
+            os << fmt::format("     * @return {{{}}}", member_function.return_type.get_jsdoc_type_name()) << endl;
+        }
+
+        os << fmt::format("     */") << endl;
+        os << fmt::format("    {}({}){{}}", member_function.js_name, member_function.get_js_input_parameter_string());
+
+    }
+};
+
+
+class JavascriptStubStaticFunctionVisitor {
+private:
+    std::ostream & os;
+
+public:
+    JavascriptStubStaticFunctionVisitor(std::ostream & os) : os(os) {}
+    void operator()(StaticFunction const & static_function) {
+        os << fmt::format("    /**") << endl;
+        for (auto & parameter : static_function.parameters) {
+            if (parameter.default_value != "") {
+                os << fmt::format("     * @param {{{}}} [{} = {}] {}\n", parameter.type.get_jsdoc_type_name(),
+                                  parameter.name,
+                                  parameter.default_value,
+                                  parameter.description);
+            } else {
+                os << fmt::format("     * @param {{{}}} {}\n", parameter.type.get_jsdoc_type_name(), parameter.name,
+                                  parameter.description);
+            }
+        }
+        if (!static_function.return_type.is_void()) {
+            os << fmt::format("     * @return {{{}}}", static_function.return_type.get_jsdoc_type_name()) << endl;
+        }
+        os << fmt::format("     */") << endl;
+
+        os << fmt::format("    static {}({}){{}}", static_function.js_name, static_function.get_js_input_parameter_string()) << endl;
+
+    }
+
+};
+
+class JavascriptStubDataMemberVisitor {
+private:
+    std::ostream & os;
+
+public:
+    JavascriptStubDataMemberVisitor(std::ostream & os) : os(os) {}
+    void operator()(DataMember const & data_member) {
+        os << fmt::format(" * @property {{{}}} {} \n", data_member.type.get_jsdoc_type_name(), data_member.short_name);
+    }
+};
 
 
 

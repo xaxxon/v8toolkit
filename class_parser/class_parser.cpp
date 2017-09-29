@@ -669,8 +669,8 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
         return original_type;
     }
 
-    std::cerr << fmt::format("in get_substitution_type_for_type for {}, have {} template_type options",
-                             original_type.getAsString(), template_types.size()) << std::endl;
+//    std::cerr << fmt::format("in get_substitution_type_for_type for {}, have {} template_type options",
+//                             original_type.getAsString(), template_types.size()) << std::endl;
 
     QualType current_type = original_type;
 
@@ -769,11 +769,11 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         }
     }
 
-    std::cerr << fmt::format("Got down to: {}", current_type.getAsString()) << std::endl;
+//    std::cerr << fmt::format("Got down to: {}", current_type.getAsString()) << std::endl;
 
     auto qual_type = get_substitution_type_for_type(current_type, template_types);
 
-    std::cerr << fmt::format("after substitution: {}", qual_type.getAsString()) << std::endl;
+//    std::cerr << fmt::format("after substitution: {}", qual_type.getAsString()) << std::endl;
 
 
 
@@ -791,14 +791,14 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
 
     if (auto function_type = dyn_cast<FunctionType>(&*qual_type)) {
-        std::cerr << fmt::format("treating as function type") << std::endl;
+//        std::cerr << fmt::format("treating as function type") << std::endl;
 
         // the type int(bool) from std::function<int(bool)> is a FunctionProtoType
         if (auto function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
-            cerr << "IS A FUNCTION PROTOTYPE" << endl;
+//            cerr << "IS A FUNCTION PROTOTYPE" << endl;
 
 
-            cerr << "Recursing on return type" << endl;
+//            cerr << "Recursing on return type" << endl;
             string result = fmt::format("{}(", substitute_type(function_prototype->getReturnType(), template_types));
 
             bool first_parameter = true;
@@ -808,19 +808,19 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
                 }
                 first_parameter = false;
 
-                cerr << "Recursing on param type" << endl;
+//                cerr << "Recursing on param type" << endl;
                 result += substitute_type(param, template_types);
             }
 
             result += ")";
-            std::cerr << fmt::format("returning substituted function type: {}", result) << std::endl;
+//            std::cerr << fmt::format("returning substituted function type: {}", result) << std::endl;
             return result;
         } else {
-            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+//            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
         }
 
     } else {
-        cerr << "is not a FUNCTION TYPE" << endl;
+//        cerr << "is not a FUNCTION TYPE" << endl;
     }
 
     if (auto elaborated_type = dyn_cast<ElaboratedType>(&*qual_type)) {
@@ -828,9 +828,9 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
     }
 
     if (auto template_specialization_type = dyn_cast<TemplateSpecializationType>(&*qual_type)) {
-        std::cerr << fmt::format("is template specialization type: {}",
-                                 template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString())
-                  << std::endl;
+//        std::cerr << fmt::format("is template specialization type: {}",
+//                                 template_specialization_type->getTemplateName().getAsTemplateDecl()->getNameAsString())
+//                  << std::endl;
 
 
         auto template_decl = template_specialization_type->getTemplateName().getAsTemplateDecl();
@@ -840,8 +840,8 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
         string result = fmt::format("{}<", templated_decl->getQualifiedNameAsString());
 
 
-        std::cerr << fmt::format("CANONICAL NAME FOR DECL: {}", templated_decl->getQualifiedNameAsString())
-                  << std::endl;
+//        std::cerr << fmt::format("CANONICAL NAME FOR DECL: {}", templated_decl->getQualifiedNameAsString())
+//                  << std::endl;
 
         // go through the template args
         bool first_arg = true;
@@ -869,7 +869,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
             result += substitute_type(template_arg_qual_type, template_types);
         }
         result += fmt::format(">");
-        std::cerr << fmt::format("returning substituted type: {}", result) << std::endl;
+//        std::cerr << fmt::format("returning substituted type: {}", result) << std::endl;
         return result;
     } else {
         if (print_logging)
@@ -882,7 +882,7 @@ std::string substitute_type(QualType original_type, map<string, QualType> templa
 
     std::string new_type_string = get_type_string(qual_type) + suffix;
 
-    std::cerr << fmt::format("returning: {}", new_type_string) << std::endl;
+//    std::cerr << fmt::format("returning: {}", new_type_string) << std::endl;
     return new_type_string;
 
 }
@@ -961,7 +961,7 @@ void print_specialization_info(const CXXRecordDecl * decl) {
         if (auto spec_tmpl = spec->getSpecializedTemplate()) {
             fprintf(stderr, "Specialized template: %p, %s\n", (void *) spec_tmpl,
                     spec_tmpl->getQualifiedNameAsString().c_str());
-            print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
+//            print_vector(Annotations(spec_tmpl).get(), "specialized template annotations", "", false);
         } else {
             cerr << "no spec tmpl" << endl;
         }

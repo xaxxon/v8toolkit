@@ -189,10 +189,6 @@ public:
     // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
     WrappedClass(const std::string class_name, CompilerInstance & compiler_instance);
 
-
-
-    std::string generate_js_stub();
-
     std::string get_derived_classes_string(int level = 0, const std::string indent = "") const {
         vector<string> results;
         //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());

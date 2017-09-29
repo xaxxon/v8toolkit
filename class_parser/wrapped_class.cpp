@@ -223,11 +223,8 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
         string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
 
 // created a WrappedClass for the non-AST JSWrapper class
-        std::cerr << fmt::format("before &wrapped_classes[0] = {}", (void *) &wrapped_classes[0]) << std::endl;
         WrappedClass & js_wrapped_class = WrappedClass::wrapped_classes.emplace_back(bidirectional_class_name,
                                                                                      this->compiler_instance);
-        std::cerr << fmt::format("after &wrapped_classes[0] = {}", (void *) &wrapped_classes[0]) << std::endl;
-
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
@@ -243,7 +240,7 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 
         js_wrapped_class.include_files.insert("<v8toolkit/bidirectional.h>");
         js_wrapped_class.include_files.insert(js_wrapped_class.my_include);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
     }
 }
 
@@ -268,45 +265,51 @@ set<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() con
 void WrappedClass::parse_all_methods() {
 
 
-    if (this->methods_parsed || this->decl == nullptr) {
+    if (this->methods_parsed) {
         return;
     }
 
 
     this->methods_parsed = true;
-    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
+
+    // do this after setting methods_parsed = true
+    //  if it has no decl, then it has no methods, so the methods are effectively already parsed
+    if (this->decl == nullptr) {
+        return;
+    }
+//    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
 
         if (auto using_shadow_decl = dyn_cast<UsingShadowDecl>(current_decl)) {
-            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
+//            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
             auto target_decl = using_shadow_decl->getTargetDecl();
-            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
-            std::cerr
-                << fmt::format("target decl is cxxmethoddecl? {}", dyn_cast<CXXMethodDecl>(target_decl) != nullptr)
-                << std::endl;
+//            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
+//            std::cerr
+//                << fmt::format("target decl is cxxmethoddecl? {}", dyn_cast<CXXMethodDecl>(target_decl) != nullptr)
+//                << std::endl;
 
             if (dyn_cast<CXXMethodDecl>(target_decl) == nullptr) {
                 llvm::report_fatal_error(
                     fmt::format("UsingShadowDecl target decl not a CXXMethodDecl (don't know how to handle this): {}",
                                 target_decl->getNameAsString()));
             }
-            std::cerr << fmt::format("continuing to parse as if shadow decl target was a method in this class")
-                      << std::endl;
+//            std::cerr << fmt::format("continuing to parse as if shadow decl target was a method in this class")
+//                      << std::endl;
             current_decl = target_decl;
         }
 
         Annotations annotations(current_decl);
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
             if (auto named_decl = dyn_cast<NamedDecl>(current_decl)) {
-                std::cerr
-                    << fmt::format("Skipping {} in {} because V8TOOLKIT_NONE_STRING", named_decl->getNameAsString(),
-                                   this->class_name) << std::endl;
+//                std::cerr
+//                    << fmt::format("Skipping {} in {} because V8TOOLKIT_NONE_STRING", named_decl->getNameAsString(),
+//                                   this->class_name) << std::endl;
             } else {
-                std::cerr
-                    << fmt::format("Skipping non-named_decl in {} because V8TOOLKIT_NONE_STRING", this->class_name)
-                    << std::endl;
+//                std::cerr
+//                    << fmt::format("Skipping non-named_decl in {} because V8TOOLKIT_NONE_STRING", this->class_name)
+//                    << std::endl;
             }
         }
 
@@ -328,11 +331,11 @@ void WrappedClass::parse_all_methods() {
 
             std::string full_method_name(method->getQualifiedNameAsString());
 
-            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
+//            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
 
             if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
-                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
+//                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
                 continue;
             }
 
@@ -341,34 +344,34 @@ void WrappedClass::parse_all_methods() {
             // store mapping of templated types to default types
             bool all_template_parameters_have_default_value = true;
 
-            std::cerr << fmt::format("num template parameters for function: {}",
-                                     function_template_decl->getTemplateParameters()->size()) << std::endl;
+//            std::cerr << fmt::format("num template parameters for function: {}",
+//                                     function_template_decl->getTemplateParameters()->size()) << std::endl;
             auto template_parameters = function_template_decl->getTemplateParameters();
             for (auto i = template_parameters->begin(); i != template_parameters->end(); i++) {
-                std::cerr << fmt::format("template parameter: {}", (*i)->getNameAsString()) << std::endl;
+//                std::cerr << fmt::format("template parameter: {}", (*i)->getNameAsString()) << std::endl;
 
                 if (auto template_type_param_decl = dyn_cast<TemplateTypeParmDecl>(*i)) {
-                    std::cerr << fmt::format("--is a type parameter") << std::endl;
+//                    std::cerr << fmt::format("--is a type parameter") << std::endl;
                     if (template_type_param_decl->hasDefaultArgument()) {
                         auto default_type = template_type_param_decl->getDefaultArgument();
-                        std::cerr << fmt::format("----has default argument: {}", get_type_string(default_type))
-                                  << std::endl;
+//                        std::cerr << fmt::format("----has default argument: {}", get_type_string(default_type))
+//                                  << std::endl;
 
-                        std::cerr << fmt::format("In template map: {} => {}", (*i)->getNameAsString(),
-                                                 default_type.getAsString()) << std::endl;
+//                        std::cerr << fmt::format("In template map: {} => {}", (*i)->getNameAsString(),
+//                                                 default_type.getAsString()) << std::endl;
                         template_parameter_types[(*i)->getNameAsString()] = default_type;
                     } else {
                         all_template_parameters_have_default_value = false;
                     }
                 } else if (auto template_value_param_decl = dyn_cast<ValueDecl>(*i)) {
-                    std::cerr << fmt::format("--is a value parameter") << std::endl;
+//                    std::cerr << fmt::format("--is a value parameter") << std::endl;
 
                 } else {
-                    std::cerr << fmt::format("--is unknown type of parameter") << std::endl;
+//                    std::cerr << fmt::format("--is unknown type of parameter") << std::endl;
                 }
             }
-            std::cerr << fmt::format("Do all template parameters have defaults? {}",
-                                     all_template_parameters_have_default_value) << std::endl;
+//            std::cerr << fmt::format("Do all template parameters have defaults? {}",
+//                                     all_template_parameters_have_default_value) << std::endl;
             if (!all_template_parameters_have_default_value) {
                 continue;
 
@@ -386,7 +389,7 @@ void WrappedClass::parse_all_methods() {
             Annotations method_annotations(method);
 
             std::string full_method_name(method->getQualifiedNameAsString());
-            cerr << fmt::format("looking at {}", full_method_name) << endl;
+//            cerr << fmt::format("looking at {}", full_method_name) << endl;
 
             // this is handled now
 //            if (method->isTemplateDecl()) {
@@ -443,10 +446,10 @@ void WrappedClass::parse_all_methods() {
 
 
                 if (constructor_decl->isCopyConstructor()) {
-                    fprintf(stderr, "Skipping copy constructor\n");
+                    if (print_logging) cerr << "Skipping copy constructor" << endl;
                     continue;
                 } else if (constructor_decl->isMoveConstructor()) {
-                    fprintf(stderr, "Skipping move constructor\n");
+                    if (print_logging) cerr << "Skipping move constructor" << endl;
                     continue;
                 } else if (constructor_decl->isDeleted()) {
                     if (print_logging) cerr << "Skipping deleted constructor" << endl;
@@ -506,7 +509,7 @@ void WrappedClass::parse_all_methods() {
                 continue; // don't wrap the method as a normal method
             }
 
-            std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
+//            std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
 
             if (method->isStatic()) {
                 this->static_functions.insert(
@@ -547,22 +550,22 @@ void WrappedClass::parse_enums() {
     enums_parsed = true;
 
     if (this->decl == nullptr) {
-        std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
+//        std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
         return;
     }
 
-    std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
+//    std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
 
 
     for (auto decl : this->decl->decls()) {
         if (auto enum_decl = dyn_cast<EnumDecl>(decl)) {
             if (enum_decl == nullptr) {
-                std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
+//                std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
             }
             std::map<std::string, int> enum_class;
-            std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
+//            std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
             for(EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
-                std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
+//                std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
                 enum_class[constant_decl->getNameAsString()] = constant_decl->getInitVal().getExtValue();
             }
             this->enums[enum_decl->getNameAsString()] = enum_class;
@@ -585,6 +588,11 @@ void WrappedClass::parse_members() {
 
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
+        if (this->decl == nullptr) {
+//            std::cerr << fmt::format("No decls for {} while parsing memberes", this->name_alias) << std::endl;
+            return;
+        }
+
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
             string field_name = field->getQualifiedNameAsString();
@@ -619,71 +627,71 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
 }
 
 
-std::string WrappedClass::generate_js_stub() {
-    if (this->name_alias.find("<") != std::string::npos) {
-        std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-                                 this->name_alias) << std::endl;
-        return std::string();
-    } else if (this->base_types.size() > 0 && (*this->base_types.begin())->name_alias.find("<") != std::string::npos) {
-        std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-                                 this->name_alias,
-                                 (*this->base_types.begin())->name_alias) << std::endl;
-        return std::string();
-    } else {
-        cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
-    }
-
-
-
-    stringstream result;
-    string indentation = "    ";
-
-    result << "/**\n";
-    result << fmt::format(" * @class {}\n", this->name_alias);
-
-    this->get_enums();
-    //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
-    for (auto & member : this->get_members()) {
-        result << member->get_js_stub();
-    }
-    result << fmt::format(" **/\n", indentation);
-
-
-    result << fmt::format("class {}", this->name_alias);
-
-    if (this->base_types.size() == 1) {
-        result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
-    }
-    result << " {\n\n";
-
-    // not sure what to do if there are multiple constructors...
-    bool first_method = true;
-    for (auto & constructor : this->get_constructors()) {
-        if (!first_method) {
-            result << ",";
-        }
-        first_method = false;
-
-        result << endl << endl;
-        result << constructor->generate_js_stub();
-    }
-
-    std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
-    for (auto & method : this->get_member_functions()) {
-        result << std::endl << method->generate_js_stub() << std::endl;
-    }
-
-
-    std::cerr << fmt::format("generating stub for {} static methods", this->get_static_functions().size()) << std::endl;
-    for (auto & method : this->get_static_functions()) {
-        result << std::endl << method->generate_js_stub() << std::endl;
-    }
-
-
-    result << fmt::format("\n}}\n");
-//    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
-    return result.str();
-}
+//std::string WrappedClass::generate_js_stub() {
+//    if (this->name_alias.find("<") != std::string::npos) {
+//        std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
+//                                 this->name_alias) << std::endl;
+//        return std::string();
+//    } else if (this->base_types.size() > 0 && (*this->base_types.begin())->name_alias.find("<") != std::string::npos) {
+//        std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
+//                                 this->name_alias,
+//                                 (*this->base_types.begin())->name_alias) << std::endl;
+//        return std::string();
+//    } else {
+//        cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
+//    }
+//
+//
+//
+//    stringstream result;
+//    string indentation = "    ";
+//
+//    result << "/**\n";
+//    result << fmt::format(" * @class {}\n", this->name_alias);
+//
+//    this->get_enums();
+//    //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
+//    for (auto & member : this->get_members()) {
+//        result << member->get_js_stub();
+//    }
+//    result << fmt::format(" **/\n", indentation);
+//
+//
+//    result << fmt::format("class {}", this->name_alias);
+//
+//    if (this->base_types.size() == 1) {
+//        result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
+//    }
+//    result << " {\n\n";
+//
+//    // not sure what to do if there are multiple constructors...
+//    bool first_method = true;
+//    for (auto & constructor : this->get_constructors()) {
+//        if (!first_method) {
+//            result << ",";
+//        }
+//        first_method = false;
+//
+//        result << endl << endl;
+//        result << constructor->generate_js_stub();
+//    }
+//
+//    std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
+//    for (auto & method : this->get_member_functions()) {
+//        result << std::endl << method->generate_js_stub() << std::endl;
+//    }
+//
+//
+//    std::cerr << fmt::format("generating stub for {} static methods", this->get_static_functions().size()) << std::endl;
+//    for (auto & method : this->get_static_functions()) {
+//        result << std::endl << method->generate_js_stub() << std::endl;
+//    }
+//
+//
+//    result << fmt::format("\n}}\n");
+////    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
+//    return result.str();
+//}
 
 
 bool WrappedClass::should_be_wrapped() const {
@@ -753,6 +761,7 @@ bool WrappedClass::should_be_wrapped() const {
             fmt::format("trying to see if {} should be wrapped but it has more than one base type -- unsupported",
                         class_name));
     }
+
 
 //    cerr << "should be wrapped -- fall through returning true (YES)" << endl;
     return true;

@@ -375,26 +375,6 @@ void generate_bindings() {
 }
 
 
-void generate_javascript_stub(std::string const & filename) {
-    ofstream js_stub;
-    // This filename shouldn't be hard coded - especially not to this value
-    js_stub.open(filename, ios::out);
-    if (!js_stub) {
-        throw std::exception();
-    }
-
-    // write hard-coded text to top of apb api file
-//    js_stub << js_api_header << std::endl;
-
-    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-        // bidirectional types don't have
-        if (wrapped_class.should_be_wrapped() && !wrapped_class.bidirectional) {
-            js_stub << wrapped_class.generate_js_stub();
-        }
-    }
-    js_stub.close();
-}
-
 
 void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
     cerr << "Generating bidirectional classes..." << endl;

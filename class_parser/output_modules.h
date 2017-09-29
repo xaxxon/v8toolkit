@@ -49,12 +49,12 @@ public:
         return this->get_class_collection_stream();
     }
 
-    virtual std::ostream & get_class_function_stream(ClassFunction const & class_function) {
-        return this->get_class_stream(class_function.wrapped_class);
+    virtual std::ostream & get_class_function_stream() {
+        return this->get_class_collection_stream();
     }
 
-    virtual std::ostream & get_class_member_data_stream(DataMember const & data_member) {
-        return this->get_class_stream(data_member.wrapped_class);
+    virtual std::ostream & get_class_member_data_stream() {
+        return this->get_class_collection_stream();
     }
 };
 
@@ -65,19 +65,47 @@ public:
     virtual void process(std::vector<WrappedClass> const & wrapped_classes) = 0;
 };
 
+class NoOpClassVisitor{
+    NoOpClassVisitor(std::ostream &) {}
+    void operator()(WrappedClass const &) {}
+};
+
+class NoOpMemberFunctionVisitor {
+    NoOpMemberFunctionVisitor(std::ostream &) {}
+    void operator()(MemberFunction const &) {}
+};
+
+class NoOpStaticFunctionVisitor {
+    NoOpStaticFunctionVisitor(std::ostream &) {}
+    void operator()(StaticFunction const &) {}
+};
+
+class NoOpDataMemberVisitor {
+    NoOpDataMemberVisitor(std::ostream &) {}
+    void operator()(DataMember const &) {}
+};
+
 
 /**
  * Process the set of classes which are to be wrapped
+ * @tparam OutputCriteria
+ * @tparam ClassVisitor takes an ostream and a WrappedClass and prints and prints any class headers from constructor and any class footers from destructor
+ * @tparam MemberFunctionVisitor takes an ostream and a member function and prints the member function from the constructor
+ * @tparam StaticFunctionVisitor takes an ostream and a static function and prints the static function from the constructor
+ * @tparam DataMemberVisitor takes an ostream and a data member and prints the data member from the constructor
  */
-template<class OutputCriteria, class ClassVisitor, class MemberFunctionVisitor, class StaticFunctionVisitor, class DataMemberVisitor>
+template<
+    class ClassVisitor = NoOpClassVisitor,
+    class MemberFunctionVisitor = NoOpMemberFunctionVisitor,
+    class StaticFunctionVisitor = NoOpStaticFunctionVisitor,
+    class DataMemberVisitor = NoOpDataMemberVisitor>
 class OutputModule : public OutputModule_Interface{
 protected:
     std::unique_ptr<OutputStreamProvider> output_stream_provider;
     std::unique_ptr<OutputCriteria> criteria;
 
 public:
-    OutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider,
-                 std::unique_ptr<OutputCriteria> criteria) :
+    OutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider, std::unique_ptr<OutputCriteria> criteria) :
         output_stream_provider(std::move(output_stream_provider)),
         criteria(std::move(criteria))
     {}
@@ -87,21 +115,29 @@ public:
 
         for (WrappedClass const & wrapped_class : wrapped_classes) {
             if (wrapped_class.should_be_wrapped() && this->criteria->class_filter(wrapped_class)) {
-                ClassVisitor class_visitor(wrapped_class, this->output_stream_provider->get_class_stream());
+                ClassVisitor class_visitor(this->output_stream_provider->get_class_stream(wrapped_class));
+                class_visitor(wrapped_class);
 
                 // go through each method
-                for (auto const & member_function : wrapped_class.get_member_functions()) {
-                    MemberFunctionVisitor class_instance_method(*member_function,
-                                                              this->output_stream_provider->get_class_function_stream(*member_function));
+                {
+                    MemberFunctionVisitor member_function_visitor(this->output_stream_provider->get_class_function_stream());
+                    for (auto const & member_function : wrapped_class.get_member_functions()) {
+                        member_function_visitor(*member_function);
+                    }
                 }
 
-                for (auto const & static_function : wrapped_class.get_static_functions()) {
-                    MemberFunctionVisitor class_instance_method(*static_function,
-                                                                this->output_stream_provider->get_class_function_stream(*static_function));
+                {
+                    StaticFunctionVisitor static_function_visitor(this->output_stream_provider->get_class_function_stream());
+                    for (auto const & static_function : wrapped_class.get_static_functions()) {
+                        static_function_visitor(*static_function);
+                    }
                 }
 
-                for (auto const & data_member : wrapped_class.get_members()) {
-                    DataMemberVisitor(*data_member, this->output_stream_provider->get_class_member_data_stream());
+                {
+                    DataMemberVisitor data_member_visitor(this->output_stream_provider->get_class_member_data_stream());
+                    for (auto const & data_member : wrapped_class.get_members()) {
+                        data_member_visitor(*data_member);
+                    }
                 }
             }
         }

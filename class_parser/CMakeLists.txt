@@ -31,10 +31,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 
+FILE(GLOB OUTPUT_MODULES output_modules/*.h)
+
 # header files must be added for clion to recognize the file as being part of the project and give proper syntax
 #   information in those files
 set(CLASS_PARSER_SOURCES parsed_method.cpp class_parser.cpp ast_action.cpp helper_functions.cpp
-        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp output_modules.h clang.h)
+        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp output_modules.h clang.h ${OUTPUT_MODULES})
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
 

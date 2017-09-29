@@ -78,7 +78,7 @@ struct ClassFunction {
     class ParameterInfo {
         friend class ClassFunction;
 
-    protected:
+    public:
         ClassFunction & method;
         CompilerInstance & compiler_instance;
         ParmVarDecl const * parameter_decl;
@@ -89,12 +89,9 @@ struct ClassFunction {
         // description of parameter pulled from doxygen comment
         string description = "";
 
-
-    public:
         ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl,
                       CompilerInstance & compiler_instance);
 
-        string generate_js_stub();
 
         TypeInfo const type;
 
@@ -137,7 +134,6 @@ struct ClassFunction {
 
     string get_js_input_parameter_string() const;
 
-
 };
 
 
@@ -149,7 +145,6 @@ public:
 
     string generate_js_bindings();
 
-    string generate_js_stub();
 
     string generate_bidirectional();
 };
@@ -162,7 +157,6 @@ public:
 
     string generate_js_bindings();
 
-    string generate_js_stub();
 };
 
 class ConstructorFunction : public ClassFunction {
@@ -171,8 +165,6 @@ public:
     ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl);
 
     string generate_js_bindings();
-
-    string generate_js_stub();
 
     CXXConstructorDecl const * const constructor_decl;
 

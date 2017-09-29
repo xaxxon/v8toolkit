@@ -215,7 +215,7 @@ public:
 
     /**
      * description
-     * @param a something -- missing a named parameter shouldn't cause the plugin to crash
+     * @param this_param_name_does_not_exist something -- missing a named parameter shouldn't cause the plugin to crash
      */
     void broken_comment(int);
 
