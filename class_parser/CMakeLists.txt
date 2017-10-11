@@ -52,7 +52,6 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
         LLVMObject LLVMBitReader LLVMCore clangParse clangAST
         clangBasic clangParse clangTooling)
 
-target_link_libraries(test-class-parser fmt ${GTEST_LIBRARIES})
 
 #cotire(test-class-parser)
 
@@ -84,3 +83,4 @@ add_dependencies(class_parser_driver class_parser_plugin copy_driver_resources)
 
 install(TARGETS class_parser_plugin DESTINATION ${INSTALL_LIB_DIR})
 
+add_subdirectory(test)
