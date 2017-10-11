@@ -1,5 +1,5 @@
 
-include(cotire)
+#include(cotire)
 include(ucm)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -54,7 +54,7 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
 
 target_link_libraries(test-class-parser fmt ${GTEST_LIBRARIES})
 
-cotire(test-class-parser)
+#cotire(test-class-parser)
 
 target_link_libraries(class_parser_plugin fmt)
 

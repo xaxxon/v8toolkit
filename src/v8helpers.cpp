@@ -37,37 +37,6 @@ std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace) {
 }
 
 
-std::string demangle_typeid_name(const std::string & mangled_name) {
-
-#ifdef V8TOOLKIT_DEMANGLE_NAMES
-//    printf("Starting name demangling\n");
-    std::string result;
-    int status;
-    auto demangled_name_needs_to_be_freed = abi::__cxa_demangle(mangled_name.c_str(), nullptr, 0, &status);
-    result = demangled_name_needs_to_be_freed;
-
-    if (demangled_name_needs_to_be_freed == nullptr) {
-	return mangled_name;
-    }
-
-    if (status == 0) {
-        result = demangled_name_needs_to_be_freed;
-    } else {
-        // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
-        //-1: A memory allocation failiure occurred.
-        //-2: mangled_name is not a valid name under the C++ ABI mangling rules.
-        //-3: One of the arguments is invalid.
-        result = mangled_name;
-    }
-    if (demangled_name_needs_to_be_freed) {
-        free(demangled_name_needs_to_be_freed);
-    }
-    return result;
-
-#else
-    return mangled_name;
-#endif
-}
 
 using namespace literals;
 

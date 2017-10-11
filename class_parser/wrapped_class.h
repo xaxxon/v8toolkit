@@ -5,9 +5,12 @@
 #include <set>
 
 #include <xl/library_extensions.h>
+#include <xl/template.h>
 
 #include "parsed_method.h"
 #include "annotations.h"
+
+
 
 
 namespace v8toolkit::class_parser {
@@ -294,7 +297,14 @@ public:
 
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();
-};
+
+    std::unique_ptr<xl::Provider_Interface> get_provider() {
+        return std::unique_ptr<xl::Provider_Interface>(new xl::Provider(
+            std::pair{"class_name", this->class_name},
+            std::pair("name_alias", this->name_alias)
+        ));
+    }
+}; // end class WrappedClass
 
 
 }

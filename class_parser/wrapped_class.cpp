@@ -557,8 +557,8 @@ void WrappedClass::parse_enums() {
 //    std::cerr << fmt::format("about to parse decls for enums in {}", this->name_alias) << std::endl;
 
 
-    for (auto decl : this->decl->decls()) {
-        if (auto enum_decl = dyn_cast<EnumDecl>(decl)) {
+    for (auto any_decl : this->decl->decls()) {
+        if (auto enum_decl = dyn_cast<EnumDecl>(any_decl)) {
             if (enum_decl == nullptr) {
 //                std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
             }

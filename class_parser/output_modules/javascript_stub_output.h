@@ -4,7 +4,10 @@
 #include <fstream>
 #include <iostream>
 
+#include <xl/template.h>
+
 #include "../output_modules.h"
+
 
 
 namespace v8toolkit::class_parser {
@@ -43,6 +46,35 @@ private:
 
 
 
+map<string, string> templates = {
+
+    // template for the entire file
+    {"master", R"(
+{HEADER}
+
+{CLASS_LIST}
+
+{FOOTER}
+)"},
+
+    // template for a single class
+    {"class", R"(
+/**
+ * {CLASS_COMMENT}
+ {PARAMETER_COMMENT_LIST}
+ */
+class {CLASS_NAME}{CLASS_INHERITANCE} {
+{MEMBER_FUNCTION_LIST}
+{STATIC_FUNCTION_LIST}
+}
+
+)"},
+    {"member_function", R"(
+
+)"}
+
+}; // end map of string output templates
+
 extern std::string js_api_header;
 
 class JavascriptStubClassVisitor {
@@ -55,50 +87,51 @@ public:
     void operator()(WrappedClass const & c) {
 
 
-        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
-
-
-        string indentation = "    ";
-
-        os << "/**\n";
-        os << fmt::format(" * @class {}\n", c.name_alias);
-
-        c.get_enums();
-        for (auto & member : c.get_members()) {
-            os << member->get_js_stub();
-        }
-        os << fmt::format(" **/\n", indentation);
-
-
-        os << fmt::format("class {}", c.name_alias);
-
-        if (c.base_types.size() == 1) {
-            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
-        }
-        os << " {\n\n";
-
-//        // not sure what to do if there are multiple constructors...
-//        bool first_method = true;
-//        for (auto & constructor : c.get_constructors()) {
-//            if (!first_method) {
-//                os << ",";
-//            }
-//            first_method = false;
 //
-//            os << endl << endl;
-//            os << constructor->generate_js_stub();
-//        }
-
-//        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
-//        for (auto & method : c.get_member_functions()) {
-//            os << std::endl << method->generate_js_stub() << std::endl;
-//        }
+////        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
 //
 //
-//        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
-//        for (auto & method : c.get_static_functions()) {
-//            os << std::endl << method->generate_js_stub() << std::endl;
+//        string indentation = "    ";
+//
+//        os << "/**\n";
+//        os << fmt::format(" * @class {}\n", c.name_alias);
+//
+//        c.get_enums();
+//        for (auto & member : c.get_members()) {
+//            os << member->get_js_stub();
 //        }
+//        os << fmt::format(" **/\n", indentation);
+//
+//
+//        os << fmt::format("class {}", c.name_alias);
+//
+//        if (c.base_types.size() == 1) {
+//            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
+//        }
+//        os << " {\n\n";
+//
+////        // not sure what to do if there are multiple constructors...
+////        bool first_method = true;
+////        for (auto & constructor : c.get_constructors()) {
+////            if (!first_method) {
+////                os << ",";
+////            }
+////            first_method = false;
+////
+////            os << endl << endl;
+////            os << constructor->generate_js_stub();
+////        }
+//
+////        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
+////        for (auto & method : c.get_member_functions()) {
+////            os << std::endl << method->generate_js_stub() << std::endl;
+////        }
+////
+////
+////        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
+////        for (auto & method : c.get_static_functions()) {
+////            os << std::endl << method->generate_js_stub() << std::endl;
+////        }
 
 
     }
@@ -116,24 +149,51 @@ private:
 public:
     JavascriptStubMemberFunctionVisitor(std::ostream & os) : os(os) {}
     void operator()(MemberFunction const & member_function) {
-        os << fmt::format("    /**") << endl;
-        for (auto & parameter : member_function.parameters) {
-            if (parameter.default_value != "") {
-                os << fmt::format("     * @param {{{}}} [{} = {}] {}\n", parameter.type.get_jsdoc_type_name(),
-                                      parameter.name,
-                                      parameter.default_value,
-                                      parameter.description);
-            } else {
-                os << fmt::format("     * @param {{{}}} {}\n", parameter.type.get_jsdoc_type_name(), parameter.name,
-                                      parameter.description);
-            }
-        }
-        if (!member_function.return_type.is_void()) {
-            os << fmt::format("     * @return {{{}}}", member_function.return_type.get_jsdoc_type_name()) << endl;
-        }
 
-        os << fmt::format("     */") << endl;
-        os << fmt::format("    {}({}){{}}", member_function.js_name, member_function.get_js_input_parameter_string());
+      static xl::Template tmpl(R"(
+    /**
+{PARAMETERS|ClassParameterJSDocHeader|\n}
+     * @return {{{JSDOC_RETURN_TYPE}}}
+     */
+    {JS_NAME}({JS_INPUT_PARAMETER_NAMES}){{}}
+{
+)");
+//
+//        std::map<std::string, xl::Template> templates = {{
+//            "ClassParameterJSDocHeader",
+//            R"(     * @param {{{}}} [{} = {}] {})"
+//                                                         }};
+
+
+        static xl::Template parameter_jsdoc_header_template(R"()");
+
+
+//        return tmpl.fill(Provider{{{"PARAMETERS", Template("     * @param {{{}}} [{} = {}] {}")}}})
+
+//        os << fmt::format("    /**") << endl;
+//        for (auto & parameter : member_function.parameters) {
+//            if (parameter.default_value != "") {
+//                os << fmt::format("     * @param {{{}}} [{} = {}] {}\n", parameter.type.get_jsdoc_type_name(),
+//                                      parameter.name,
+//                                      parameter.default_value,
+//                                      parameter.description);
+//            } else {
+//                os << fmt::format("     * @param {{{}}} {}\n", parameter.type.get_jsdoc_type_name(), parameter.name,
+//                                      parameter.description);
+//            }
+//        }
+//        if (!member_function.return_type.is_void()) {
+//            os << fmt::format("     * @return {{{}}}", member_function.return_type.get_jsdoc_type_name()) << endl;
+//        }
+//
+//        os << fmt::format("     */") << endl;
+//        os << fmt::format("    {}({}){{}}", member_function.js_name, member_function.get_js_input_parameter_string());
+//
+//
+//        auto tmpl = R"(
+//    /**
+//
+//)";
 
     }
 };
