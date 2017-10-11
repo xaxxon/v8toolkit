@@ -16,7 +16,6 @@ file(GLOB TEST_SRC
 
 add_definitions(-DGOOGLE_TEST)
 
-add_subdirectory(googletest)
 
 add_executable(test-v8toolkit ${TEST_SRC})
 add_dependencies(test-v8toolkit copy_snapshots)

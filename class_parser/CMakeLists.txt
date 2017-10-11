@@ -15,7 +15,6 @@ execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-find_package(gtest REQUIRED)
 
 string(REPLACE "\n" " " llvm_config_output ${llvm_config_output})
 
@@ -31,26 +30,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 
-FILE(GLOB OUTPUT_MODULES output_modules/*.h)
-
-# header files must be added for clion to recognize the file as being part of the project and give proper syntax
-#   information in those files
-set(CLASS_PARSER_SOURCES parsed_method.cpp class_parser.cpp ast_action.cpp helper_functions.cpp
-        annotations.cpp class_handler.cpp ast_consumer.cpp wrapped_class.cpp output_modules.h clang.h ${OUTPUT_MODULES})
+FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
 
 add_definitions(-DCLANG_HOME="${CLANG_HOME}")
 include_directories(${gtest_SOURCE_DIR}/include)
-add_executable(test-class-parser ${CLASS_PARSER_SOURCES} test/test.cpp)
 
 # clang libs
-target_link_libraries(test-class-parser clangFrontend clangSerialization clangASTMatchers clangSema
-        clangAnalysis clangRewriteFrontend clangEdit clangDriver clangLex
-        LLVMSymbolize LLVMDebugInfoPDB LLVMScalarOpts LLVMInstCombine LLVMInstrumentation LLVMBitWriter
-        LLVMTransformUtils LLVMExecutionEngine LLVMTarget LLVMAnalysis LLVMRuntimeDyld
-        LLVMObject LLVMBitReader LLVMCore clangParse clangAST
-        clangBasic clangParse clangTooling)
 
 
 #cotire(test-class-parser)
