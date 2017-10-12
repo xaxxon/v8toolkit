@@ -34,13 +34,12 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
 //        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
-        name_alias = using_name;
+        this->set_name_alias(using_name);
+
     }
 
-
-
     // strip off any leading "class " or "struct " off the type name
-    name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");
+    this->name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");
 
 
 //    cerr << "Top of WrappedClass constructor body" << endl;

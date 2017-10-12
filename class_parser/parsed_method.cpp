@@ -298,7 +298,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
         this->name = fmt::format("unspecified_position_{}", this->position);
 
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
-                                 this->method.wrapped_class.name_alias, this->method.name, this->position));
+                                 this->method.wrapped_class.get_name_alias(), this->method.name, this->position));
     }
 
     // set default argument or "" if none
@@ -345,7 +345,11 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     is_virtual(method_decl->isVirtual()),
     annotations(this->method_decl),
     template_parameter_types(template_parameter_types),
-    function_template_decl(function_template_decl) {
+    function_template_decl(function_template_decl)
+{
+
+//    std::cerr << fmt::format("classfunction: preferred name: '{}' vs default name: '{}'", preferred_js_name, method_decl->getNameAsString()) << std::endl;
+
 //    std::cerr << fmt::format("ClassFunction for {} got {} template substitutions", this->name,
 //                             this->template_parameter_types.size()) << std::endl;
     // check to see if there's a name annotation on the method giving it a different JavaScript name
@@ -642,9 +646,10 @@ StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const
 
 
 ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl) :
-    ClassFunction(wrapped_class, constructor_decl, {}, nullptr, wrapped_class.name_alias),
-    constructor_decl(constructor_decl) {
-
+    ClassFunction(wrapped_class, constructor_decl, {}, nullptr, wrapped_class.is_name_alias_default() ? "" : wrapped_class.get_name_alias()),
+    constructor_decl(constructor_decl)
+{
+//    std::cerr << fmt::format("in constructor function constructor body, {} vs {}  -- and {}", wrapped_class.get_name_alias(), wrapped_class.get_short_name(), wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()) << std::endl;
 //    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;
     auto full_source_loc = FullSourceLoc(constructor_decl->getLocation(),
                                          this->compiler_instance.getSourceManager());
@@ -667,7 +672,7 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
         used_constructor_names.end()) {
         data_error(
             fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
-                        this->js_name.c_str(), wrapped_class.name_alias));
+                        this->js_name.c_str(), wrapped_class.get_name_alias()));
         for (auto & name : used_constructor_names) {
 //            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
         }

@@ -45,6 +45,10 @@ private:
     WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
 
+    /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
+    string name_alias;
+    bool name_alias_is_default = true;
+
 public:
 
     static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
@@ -67,8 +71,16 @@ public:
     // name of type that is guaranteed valid c++ (with appropriate included headers)
     string class_name;
 
-    /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
-    string name_alias;
+    std::string const & get_name_alias() const {
+        return this->name_alias;
+    };
+    void set_name_alias(std::string const & new_name_alias) {
+        this->name_alias = new_name_alias;
+        this->name_alias_is_default = false;
+    }
+    bool is_name_alias_default() const {
+        return this->name_alias_is_default;
+    }
 
     set<string> include_files;
 

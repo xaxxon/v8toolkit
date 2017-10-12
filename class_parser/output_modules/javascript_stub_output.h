@@ -196,17 +196,17 @@ class JavascriptStubCriteria : public OutputCriteria {
     bool operator()(WrappedClass const & c) {
         cerr << "Checking class criteria" << endl;
 
-        if (c.name_alias.find("<") != std::string::npos) {
+        if (c.get_name_alias().find("<") != std::string::npos) {
             std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-                                     c.name_alias) << std::endl;
+                                     c.get_name_alias()) << std::endl;
             return false;
-        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->name_alias.find("<") != std::string::npos) {
+        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->get_name_alias().find("<") != std::string::npos) {
             std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-                                     c.name_alias,
-                                     (*c.base_types.begin())->name_alias) << std::endl;
+                                     c.get_name_alias(),
+                                     (*c.base_types.begin())->get_name_alias()) << std::endl;
             return false;
         } else if (c.bidirectional) {
-            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.name_alias) << std::endl;
+            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
             return false;
         }
 

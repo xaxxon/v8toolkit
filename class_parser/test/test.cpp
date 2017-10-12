@@ -205,6 +205,32 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     std::string source = R"(
         template<class T>
         class TemplatedClass : public v8toolkit::WrappedClassBase {};
+
+        TemplatedClass<int> a;
+        TemplatedClass<char> b;
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 2);
+    WrappedClass const & c1 = pruned_vector[0].get();
+    WrappedClass const & c2 = pruned_vector[1].get();
+
+    EXPECT_EQ(c1.get_constructors().size(), 1);
+    EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass");
+    EXPECT_EQ(c2.get_constructors().size(), 1);
+    EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass");
+
+    // expecting error because both instantiations of TmeplatedClass will have the same constructor name
+    EXPECT_EQ(data_errors.size(),1);
+}
+
+
+TEST(ClassParser, TemplatedClassInstantiationsWithRenamedConstructors) {
+    std::string source = R"(
+        template<class T>
+        class TemplatedClass : public v8toolkit::WrappedClassBase {};
         using A V8TOOLKIT_NAME_ALIAS = TemplatedClass<int>;
         using B V8TOOLKIT_NAME_ALIAS = TemplatedClass<char>;
 
@@ -224,6 +250,11 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     EXPECT_EQ(c2.get_constructors().size(), 1);
     EXPECT_TRUE(c2.get_constructors()[0]->js_name == "A" || c2.get_constructors()[0]->js_name == "B");
     EXPECT_NE(c1.get_constructors()[0]->js_name, c2.get_constructors()[0]->js_name);
+
+    // no conflicting constructor name because the name_alias on each type will rename the constructor of each
+    //   instantiation as well
+    EXPECT_EQ(data_errors.size(),0);
+
 }
 
 

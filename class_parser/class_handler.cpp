@@ -135,8 +135,8 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
             // if the class has already been parsed, update it now
             if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
-                std::cerr << fmt::format("Setting name alias for {} to {}", wrapped_class->name_alias, name_alias) << std::endl;
-                wrapped_class->name_alias = name_alias;
+//                std::cerr << fmt::format("Setting name alias for {} to {}", wrapped_class->get_name_alias(), name_alias) << std::endl;
+                wrapped_class->set_name_alias(name_alias);
             }
         }
     }
