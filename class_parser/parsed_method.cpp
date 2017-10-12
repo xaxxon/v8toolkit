@@ -334,12 +334,13 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
 ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                              CXXMethodDecl const * method_decl,
                              std::map<string, QualType> const & template_parameter_types,
-                             FunctionTemplateDecl const * function_template_decl) :
+                             FunctionTemplateDecl const * function_template_decl,
+                             std::string const & preferred_js_name) :
     compiler_instance(wrapped_class.compiler_instance),
     return_type(method_decl->getReturnType(), template_parameter_types),
     method_decl(method_decl),
     name(method_decl->getQualifiedNameAsString()),
-    js_name(method_decl->getNameAsString()),
+    js_name(preferred_js_name != "" ? preferred_js_name : method_decl->getNameAsString()),
     wrapped_class(wrapped_class),
     is_virtual(method_decl->isVirtual()),
     annotations(this->method_decl),
@@ -641,7 +642,7 @@ StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const
 
 
 ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl) :
-    ClassFunction(wrapped_class, constructor_decl),
+    ClassFunction(wrapped_class, constructor_decl, {}, nullptr, wrapped_class.name_alias),
     constructor_decl(constructor_decl) {
 
 //    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;

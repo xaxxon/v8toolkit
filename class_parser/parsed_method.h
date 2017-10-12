@@ -120,7 +120,8 @@ struct ClassFunction {
     ClassFunction(WrappedClass & wrapped_class,
                   CXXMethodDecl const * method_decl,
                   std::map<string, QualType> const & template_parameter_types = {},
-                  FunctionTemplateDecl const * function_template_decl = nullptr);
+                  FunctionTemplateDecl const * function_template_decl = nullptr,
+                  std::string const & preferred_js_name = "");
 
 
     // returns true if the methods have the same name and input parameters

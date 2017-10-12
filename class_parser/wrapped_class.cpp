@@ -33,8 +33,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
-        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name)
-             << endl;
+//        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
         name_alias = using_name;
     }
 

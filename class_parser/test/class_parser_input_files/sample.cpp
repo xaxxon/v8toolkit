@@ -37,8 +37,8 @@ class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
 //
 //
 //
-//template<class T>
-//class V8TOOLKIT_WRAPPED_CLASS NeedIncludeForTemplatedType {};
+template<class T>
+class NeedIncludeForTemplatedType : public v8toolkit::WrappedClassBase {};
 //
 //
 //namespace v8 {
