@@ -21,15 +21,13 @@ using ::testing::_;
 using ::testing::Return;
 using namespace v8toolkit::class_parser;
 
-//    std::ifstream sample_source("sample.cpp");
-//    assert(sample_source.is_open());
-//
-//
-//    std::string sample_source_contents((std::istreambuf_iterator<char>(sample_source)),
-//                                       std::istreambuf_iterator<char>());
-
 
 auto run_code(std::string source) {
+
+    static std::string source_prefix = R"(
+        #include "wrapped_class_base.h"
+        #include "class_parser.h"
+)";
 
     // vector crashes on cleanup for unknown reason so just leak it
     std::vector<std::string> args{
@@ -44,7 +42,7 @@ auto run_code(std::string source) {
 
 
     clang::tooling::runToolOnCodeWithArgs(action,
-                                          source,
+                                          source_prefix + source,
                                           args);
 
     return  erase_if(copy(WrappedClass::wrapped_classes), [](WrappedClass const & c){return !c.should_be_wrapped();});
@@ -54,7 +52,6 @@ auto run_code(std::string source) {
 TEST(ClassParser, ClassParser) {
 
     std::string source = R"(
-        #include "wrapped_class_base.h"
         class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
     )";
 
@@ -67,13 +64,13 @@ TEST(ClassParser, ClassParser) {
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+
 }
 
 TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
 
     std::string source = R"(
-        #include "wrapped_class_base.h"
-        #include "class_parser.h"
         class NotWrappedBase {};
         class NotWrapped : public NotWrappedBase {};
         class WrappedButParentNot : public NotWrapped, public v8toolkit::WrappedClassBase {};
@@ -88,12 +85,12 @@ TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+
 }
 
 TEST(ClassParser, ExplicitIgnoreBaseClass) {
     std::string source = R"(
-        #include "wrapped_class_base.h"
-        #include "class_parser.h"
         class NotWrappedBaseSkip {};
         class NotWrappedSkip : public NotWrappedBaseSkip {};
         class V8TOOLKIT_IGNORE_BASE_TYPE(NotWrappedSkip) WrappedButParentNot_NOSKIP : public NotWrappedSkip, public v8toolkit::WrappedClassBase {};
@@ -104,11 +101,106 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = pruned_vector[0].get();
-    
+
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+
 }
+
+TEST(ClassParser, CustomExtensions) {
+    std::string source = R"(
+    class A : public v8toolkit::WrappedClassBase {
+    public:
+        V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_public();
+        V8TOOLKIT_CUSTOM_EXTENSION void custom_extension_public_not_static();
+    protected:
+        V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_protected();
+    private:
+        V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_private();
+    };)";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_members().size(), 0);
+    EXPECT_EQ(c.get_member_functions().size(), 0);
+    EXPECT_EQ(c.get_static_functions().size(), 0);
+
+    // only the public static entry should actually make it through
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
+
+}
+
+
+TEST(ClassParser, ClassElements) {
+    std::string source = R"(
+    class A : public v8toolkit::WrappedClassBase {
+    public:
+        void member_instance_function();
+        static void member_static_function();
+        int data_member;
+    };)";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_member_functions().size(), 1);
+//    for(auto & f : c.get_member_functions()) {
+//        std::cerr << fmt::format("member function: {}", f->name) << std::endl;
+//    }
+    EXPECT_EQ((*c.get_member_functions().begin())->js_name, "member_instance_function");
+
+    EXPECT_EQ(c.get_static_functions().size(), 1);
+//    for(auto & f : c.get_static_functions()) {
+//        std::cerr << fmt::format("static function: {}", f->js_name) << std::endl;
+//    }
+
+    EXPECT_EQ((*c.get_static_functions().begin())->js_name, "member_static_function");
+
+    EXPECT_EQ(c.get_members().size(), 1);
+    EXPECT_EQ((*c.get_members().begin())->js_name, "data_member");
+
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+}
+
+
+
+TEST(ClassParser, UseDifferentName) {
+    std::string source = R"(
+    class A : public v8toolkit::WrappedClassBase {
+    public:
+        V8TOOLKIT_USE_NAME(alternate_member_instance_function) void member_instance_function();
+        V8TOOLKIT_USE_NAME(alternate_member_static_function) static void member_static_function();
+        V8TOOLKIT_USE_NAME(alternate_data_member) int data_member;
+    };)";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_member_functions().size(), 1);
+    EXPECT_EQ((*c.get_member_functions().begin())->js_name, "alternate_member_instance_function");
+
+    EXPECT_EQ(c.get_static_functions().size(), 1);
+    EXPECT_EQ((*c.get_static_functions().begin())->js_name, "alternate_member_static_function");
+
+    EXPECT_EQ(c.get_members().size(), 1);
+    EXPECT_EQ((*c.get_members().begin())->js_name, "alternate_data_member");
+    // only the public static entry should actually make it through
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+}
+
+
 
 
 

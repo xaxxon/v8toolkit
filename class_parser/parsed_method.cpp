@@ -226,9 +226,19 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     declared_in(declared_in),
     short_name(field_decl->getNameAsString()),
     long_name(field_decl->getQualifiedNameAsString()),
+    js_name(short_name),
     type(field_decl->getType()),
     field_decl(field_decl),
-    annotations(this->field_decl) {
+    annotations(this->field_decl)
+{
+    auto annotated_custom_name = annotations.get_regex(
+        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+    if (!annotated_custom_name.empty()) {
+//        std::cerr << fmt::format("Overriding data member name {} => {}", this->js_name, annotated_custom_name[0])
+//                  << std::endl;
+        this->js_name = annotated_custom_name[0];
+//        std::cerr << fmt::format("short name is now {}", this->js_name) << std::endl;
+    }
     wrapped_class.add_member_name(this->short_name);
     wrapped_class.declaration_count++;
 

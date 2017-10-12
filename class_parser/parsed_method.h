@@ -177,6 +177,7 @@ struct DataMember {
     WrappedClass & declared_in; // level in the hierarchy the member is actually declared at - may match wrapped_class
     string short_name;
     string long_name;
+    string js_name;
     ClassFunction::TypeInfo type;
     FieldDecl const * field_decl;
     Annotations annotations;

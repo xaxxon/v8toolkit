@@ -29,16 +29,16 @@ struct WrappedClass {
 private:
 
     bool methods_parsed = false;
-    set<unique_ptr<MemberFunction>> member_functions;
-    set<unique_ptr<StaticFunction>> static_functions;
+    vector<unique_ptr<MemberFunction>> member_functions;
+    vector<unique_ptr<StaticFunction>> static_functions;
 
     bool members_parsed = false;
-    set<unique_ptr<DataMember>> members;
+    vector<unique_ptr<DataMember>> members;
 
     bool enums_parsed = false;
     map<string, map<string, int>> enums;
 
-    set<unique_ptr<ConstructorFunction>> constructors;
+    vector<unique_ptr<ConstructorFunction>> constructors;
 
 
     // can't call this directly, must use factory
@@ -78,17 +78,17 @@ public:
 
     string my_header_filename = "";
 
-    set<unique_ptr<MemberFunction>> const & get_member_functions() const;
+    vector<unique_ptr<MemberFunction>> const & get_member_functions() const;
 
-    set<unique_ptr<StaticFunction>> const & get_static_functions() const;
+    vector<unique_ptr<StaticFunction>> const & get_static_functions() const;
 
-    set<unique_ptr<DataMember>> const & get_members() const;
+    vector<unique_ptr<DataMember>> const & get_members() const;
     void parse_members();
 
     void parse_enums();
     map<string, map<string, int>> const & get_enums() const;
 
-    set<unique_ptr<ConstructorFunction>> const & get_constructors() const;
+    vector<unique_ptr<ConstructorFunction>> const & get_constructors() const;
 
     set<string> used_member_names;
     set<string> used_static_names;

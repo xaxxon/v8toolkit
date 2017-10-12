@@ -259,8 +259,8 @@ void ClassHandler::onEndOfTranslationUnit() {
         for (auto & error : data_errors) {
             cerr << error << endl;
         }
-        llvm::report_fatal_error("Errors detected in source data");
-        exit(1);
+//        llvm::report_fatal_error("Errors detected in source data");
+//        exit(1);
     }
 
 //    cerr << "Done traversing AST" << endl;

@@ -251,19 +251,19 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
     }
 }
 
-set<unique_ptr<ConstructorFunction>> const & WrappedClass::get_constructors() const {
+vector<unique_ptr<ConstructorFunction>> const & WrappedClass::get_constructors() const {
     assert(this->methods_parsed);
     return this->constructors;
 }
 
 
-set<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() const {
+vector<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() const {
     assert(this->methods_parsed);
     return this->member_functions;
 }
 
 
-set<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() const {
+vector<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() const {
     assert(this->methods_parsed);
         return this->static_functions;
 }
@@ -471,7 +471,7 @@ void WrappedClass::parse_all_methods() {
                             fmt::format("Duplicate constructor javascript name: {}", new_constructor->js_name));
                     }
                 }
-                this->constructors.insert(std::move(new_constructor));
+                this->constructors.push_back(std::move(new_constructor));
                 continue;
             }
             if (dyn_cast<CXXDestructorDecl>(method)) {
@@ -505,6 +505,11 @@ void WrappedClass::parse_all_methods() {
                 if (!method->isStatic()) {
                     data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
                                            full_method_name.c_str()));
+                    continue;
+                } else if (method->getAccess() != AS_public) {
+                    data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be public",
+                                           full_method_name.c_str()));
+                    continue;
                 }
                 if (PRINT_SKIPPED_EXPORT_REASONS)
                     cerr << fmt::format(
@@ -519,10 +524,10 @@ void WrappedClass::parse_all_methods() {
 //            std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
 
             if (method->isStatic()) {
-                this->static_functions.insert(
+                this->static_functions.push_back(
                     make_unique<StaticFunction>(*this, method, template_parameter_types, function_template_decl));
             } else {
-                this->member_functions.insert(
+                this->member_functions.push_back(
                     make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl));
             }
         }
@@ -581,7 +586,7 @@ void WrappedClass::parse_enums() {
 };
 
 
-set<unique_ptr<DataMember>> const & WrappedClass::get_members() const {
+vector<unique_ptr<DataMember>> const & WrappedClass::get_members() const {
     assert(this->members_parsed);
     return this->members;
 }
@@ -617,7 +622,7 @@ void WrappedClass::parse_members() {
                 continue;
             }
 
-            this->members.emplace(make_unique<DataMember>(*this, wrapped_class, field));
+            this->members.emplace_back(make_unique<DataMember>(*this, wrapped_class, field));
         }
     });
 }
