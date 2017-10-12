@@ -94,7 +94,7 @@ add_custom_target(copy_snapshots)
 add_custom_command(TARGET copy_snapshots PRE_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy ${V8_LIB_DIR}/*_blob.bin ${PROJECT_BINARY_DIR})
 
-add_subdirectory(googletest)
+add_subdirectory(googletest EXCLUDE_FROM_ALL)
 add_subdirectory(test)
 
 add_subdirectory(class_parser)

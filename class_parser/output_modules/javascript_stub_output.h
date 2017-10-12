@@ -1,3 +1,5 @@
+// one file for N classes
+
 #pragma once
 
 #include <vector>
@@ -12,53 +14,19 @@
 
 namespace v8toolkit::class_parser {
 
-// returns whether a WrappedClass object should be part of the JavaScript stub
-class JavascriptStubCriteria : public OutputCriteria {
-    bool operator()(WrappedClass const & c) {
-        cerr << "Checking class criteria" << endl;
+class ClassCollectionHandler {
 
-        if (c.name_alias.find("<") != std::string::npos) {
-            std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-                                     c.name_alias) << std::endl;
-            return false;
-        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->name_alias.find("<") != std::string::npos) {
-            std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-                                     c.name_alias,
-                                     (*c.base_types.begin())->name_alias) << std::endl;
-            return false;
-        } else if (c.bidirectional) {
-            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.name_alias) << std::endl;
-            return false;
-        }
-
-        return true;
-    }
 };
 
-class JavascriptStubOutputStreamProvider : public OutputStreamProvider {
-private:
-    std::stringstream string_stream;
-    virtual std::ostream & get_class_collection_stream() {
-        return this->string_stream;
-    }
-};
-
-
-
-
-map<string, string> templates = {
-
-    // template for the entire file
-    {"master", R"(
+inline xl::Template jsdoc_file_template(R"(
 {HEADER}
 
 {CLASS_LIST}
 
 {FOOTER}
-)"},
+)");
 
-    // template for a single class
-    {"class", R"(
+inline xl::Template class_template(R"(
 /**
  * {CLASS_COMMENT}
  {PARAMETER_COMMENT_LIST}
@@ -68,78 +36,12 @@ class {CLASS_NAME}{CLASS_INHERITANCE} {
 {STATIC_FUNCTION_LIST}
 }
 
-)"},
-    {"member_function", R"(
+)");
 
-)"}
+inline xl::Template member_function_template(R"({"member_function", xl::Template(R"()");
 
-}; // end map of string output templates
-
+// defined below - just too big to have here
 extern std::string js_api_header;
-
-class JavascriptStubClassVisitor {
-private:
-    std::ostream & os;
-public:
-
-    JavascriptStubClassVisitor(std::ostream & os) : os(os){}
-
-    void operator()(WrappedClass const & c) {
-
-
-//
-////        cerr << fmt::format("Generating js stub for {}", c.name_alias) << endl;
-//
-//
-//        string indentation = "    ";
-//
-//        os << "/**\n";
-//        os << fmt::format(" * @class {}\n", c.name_alias);
-//
-//        c.get_enums();
-//        for (auto & member : c.get_members()) {
-//            os << member->get_js_stub();
-//        }
-//        os << fmt::format(" **/\n", indentation);
-//
-//
-//        os << fmt::format("class {}", c.name_alias);
-//
-//        if (c.base_types.size() == 1) {
-//            os << fmt::format(" extends {}", (*c.base_types.begin())->name_alias);
-//        }
-//        os << " {\n\n";
-//
-////        // not sure what to do if there are multiple constructors...
-////        bool first_method = true;
-////        for (auto & constructor : c.get_constructors()) {
-////            if (!first_method) {
-////                os << ",";
-////            }
-////            first_method = false;
-////
-////            os << endl << endl;
-////            os << constructor->generate_js_stub();
-////        }
-//
-////        std::cerr << fmt::format("generating stub for {} methods", c.get_member_functions().size()) << std::endl;
-////        for (auto & method : c.get_member_functions()) {
-////            os << std::endl << method->generate_js_stub() << std::endl;
-////        }
-////
-////
-////        std::cerr << fmt::format("generating stub for {} static methods", c.get_static_functions().size()) << std::endl;
-////        for (auto & method : c.get_static_functions()) {
-////            os << std::endl << method->generate_js_stub() << std::endl;
-////        }
-
-
-    }
-
-    ~JavascriptStubClassVisitor(){
-        os << fmt::format("\n}}\n");
-    }
-};
 
 
 class JavascriptStubMemberFunctionVisitor {
@@ -158,12 +60,6 @@ public:
     {JS_NAME}({JS_INPUT_PARAMETER_NAMES}){{}}
 {
 )");
-//
-//        std::map<std::string, xl::Template> templates = {{
-//            "ClassParameterJSDocHeader",
-//            R"(     * @param {{{}}} [{} = {}] {})"
-//                                                         }};
-
 
         static xl::Template parameter_jsdoc_header_template(R"()");
 
@@ -292,6 +188,44 @@ function require(module_name){}
 
 
 )JS_API_HEADER";
+
+
+
+// returns whether a WrappedClass object should be part of the JavaScript stub
+class JavascriptStubCriteria : public OutputCriteria {
+    bool operator()(WrappedClass const & c) {
+        cerr << "Checking class criteria" << endl;
+
+        if (c.name_alias.find("<") != std::string::npos) {
+            std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
+                                     c.name_alias) << std::endl;
+            return false;
+        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->name_alias.find("<") != std::string::npos) {
+            std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
+                                     c.name_alias,
+                                     (*c.base_types.begin())->name_alias) << std::endl;
+            return false;
+        } else if (c.bidirectional) {
+            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.name_alias) << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+};
+
+class JavascriptStubOutputStreamProvider : public OutputStreamProvider {
+private:
+    std::stringstream string_stream;
+public:
+    virtual std::ostream & get_class_collection_stream() {
+//        return this->string_stream;
+        return std::cerr;
+    }
+    ~JavascriptStubOutputStreamProvider(){
+        std::cerr << "Generated: " << string_stream.str() << std::endl;
+    }
+};
 
 
 

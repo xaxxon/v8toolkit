@@ -298,12 +298,7 @@ public:
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();
 
-    std::unique_ptr<xl::Provider_Interface> get_provider() {
-        return std::unique_ptr<xl::Provider_Interface>(new xl::Provider(
-            std::pair{"class_name", this->class_name},
-            std::pair("name_alias", this->name_alias)
-        ));
-    }
+    std::unique_ptr<xl::Provider_Interface> get_provider();
 }; // end class WrappedClass
 
 

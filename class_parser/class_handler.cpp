@@ -278,10 +278,11 @@ void ClassHandler::onEndOfTranslationUnit() {
 //    std::cerr << fmt::format("got {} wrapped classes", all_wrapped_classes.size()) << std::endl;
 
     if (this->output_modules.empty()) {
-        cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
+        //cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
     }
 
     for (auto & output_module : this->output_modules) {
+        std::cerr << fmt::format("running output module") << std::endl;
         output_module->process(WrappedClass::wrapped_classes);
 //
 ////        generate_javascript_stub("js-api.js");

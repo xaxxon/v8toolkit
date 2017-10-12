@@ -968,4 +968,13 @@ bool WrappedClass::found_method_means_wrapped() {
 WrappedClass::~WrappedClass() {}
 
 
+
+std::unique_ptr<xl::Provider_Interface> WrappedClass::get_provider() {
+    return std::unique_ptr<xl::Provider_Interface>(new xl::Provider(
+        std::pair{"class_name", this->class_name},
+        std::pair("name_alias", this->name_alias)
+    ));
 }
+
+
+} // end namespace v8toolkit::class_parser

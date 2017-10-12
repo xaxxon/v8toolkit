@@ -115,30 +115,7 @@ public:
 
         for (WrappedClass const & wrapped_class : wrapped_classes) {
             if (wrapped_class.should_be_wrapped() && this->criteria->class_filter(wrapped_class)) {
-                ClassVisitor class_visitor(this->output_stream_provider->get_class_stream(wrapped_class));
-                class_visitor(wrapped_class);
 
-                // go through each method
-                {
-                    MemberFunctionVisitor member_function_visitor(this->output_stream_provider->get_class_function_stream());
-                    for (auto const & member_function : wrapped_class.get_member_functions()) {
-                        member_function_visitor(*member_function);
-                    }
-                }
-
-                {
-                    StaticFunctionVisitor static_function_visitor(this->output_stream_provider->get_class_function_stream());
-                    for (auto const & static_function : wrapped_class.get_static_functions()) {
-                        static_function_visitor(*static_function);
-                    }
-                }
-
-                {
-                    DataMemberVisitor data_member_visitor(this->output_stream_provider->get_class_member_data_stream());
-                    for (auto const & data_member : wrapped_class.get_members()) {
-                        data_member_visitor(*data_member);
-                    }
-                }
             }
         }
     }
