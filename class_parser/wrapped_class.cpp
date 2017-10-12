@@ -121,8 +121,15 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         }
 
 //        cerr << "Base type: " << base_type_canonical_name << endl;
+//        for(auto & e : annotation_base_types_to_ignore) {
+//            std::cerr << fmt::format("comparing {} and {}", base_type_canonical_name, e) << std::endl;
+//        }
+
+
+        auto base_type_canonical_name_without_class_or_struct = regex_replace(base_type_canonical_name, std::regex("^(struct|class) "), "");
+
         if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(),
-                      base_type_canonical_name) !=
+                      base_type_canonical_name_without_class_or_struct) !=
             annotation_base_types_to_ignore.end()) {
 //            cerr << "Skipping base type because it was explicitly excluded in annotation on class: " << base_type_name << endl;
             continue;
@@ -160,7 +167,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         if (base_record_decl == nullptr) {
             llvm::report_fatal_error("Got null base type record decl - this should be caught ealier");
         }
-        //  printf("Found parent/base class %s\n", record_decl->getNameAsString().c_str());
+//        printf("Found parent/base class %s\n", base_record_decl->getNameAsString().c_str());
 
 //        cerr << "getting base type wrapped class object" << endl;
         WrappedClass & current_base = WrappedClass::get_or_insert_wrapped_class(base_record_decl,
@@ -975,6 +982,63 @@ std::unique_ptr<xl::Provider_Interface> WrappedClass::get_provider() {
         std::pair("name_alias", this->name_alias)
     ));
 }
+
+
+WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * decl,
+                                                         CompilerInstance & compiler_instance,
+                                                         FOUND_METHOD found_method) {
+
+    if (decl->isDependentType()) {
+        llvm::report_fatal_error("unpexpected dependent type");
+    }
+
+    auto class_name = get_canonical_name_for_decl(decl);
+
+//    std::cerr << fmt::format("get or insert wrapped class for {} with found method: {}", class_name, found_method) << std::endl;
+
+    // if this decl isn't a definition, get the actual definition
+    if (!decl->isThisDeclarationADefinition()) {
+
+        cerr << class_name << " is not a definition - getting definition..." << endl;
+        if (!decl->hasDefinition()) {
+            llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
+        }
+
+        decl = decl->getDefinition();
+    }
+
+
+    // go through all the classes which have been seen before
+    for (auto & wrapped_class : wrapped_classes) {
+
+        // if this one matches another class that's already been seen
+        if (wrapped_class.class_name == class_name) {
+
+            // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
+            //   if it is the base of a wrapped type
+            if (found_method == FOUND_BASE_CLASS) {
+//                std::cerr << fmt::format("{} get_or_insert wrapped class -- matched name and method==found_base_class", class_name) << std::endl;
+                // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
+                if (!wrapped_class.should_be_wrapped()) {
+                    wrapped_class.force_no_constructors = true;
+                }
+                wrapped_class.found_method = FOUND_BASE_CLASS;
+
+                // if a type was adjusted, make sure to adjust it's base types as well
+                for(auto & base : wrapped_class.base_types) {
+//                    std::cerr << fmt::format("running through parent classes of {}", wrapped_class.name_alias) << std::endl;
+                    get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
+                }
+            }
+            //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
+            return wrapped_class;
+        }
+    }
+
+
+    return WrappedClass::make_wrapped_class(decl, compiler_instance, found_method);
+}
+
 
 
 } // end namespace v8toolkit::class_parser

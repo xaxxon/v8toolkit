@@ -247,53 +247,7 @@ public:
 
     static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
                                                       CompilerInstance & compiler_instance,
-                                                      FOUND_METHOD found_method) {
-
-        if (decl->isDependentType()) {
-            llvm::report_fatal_error("unpexpected dependent type");
-        }
-
-        auto class_name = get_canonical_name_for_decl(decl);
-
-        // if this decl isn't a definition, get the actual definition
-        if (!decl->isThisDeclarationADefinition()) {
-
-            cerr << class_name << " is not a definition - getting definition..." << endl;
-            if (!decl->hasDefinition()) {
-                llvm::report_fatal_error(fmt::format("{} doesn't have a definition", class_name).c_str());
-            }
-
-            decl = decl->getDefinition();
-        }
-
-
-        for (auto & wrapped_class : wrapped_classes) {
-
-            if (wrapped_class.class_name == class_name) {
-
-                // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
-                //   if it is the base of a wrapped type
-                if (found_method == FOUND_BASE_CLASS) {
-
-                    // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
-                    if (!wrapped_class.should_be_wrapped()) {
-                        wrapped_class.force_no_constructors = true;
-                    }
-                    wrapped_class.found_method = FOUND_BASE_CLASS;
-
-                    // if a type was adjusted, make sure to adjust it's base types as well
-                    for(auto & base : wrapped_class.base_types) {
-                        get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
-                    }
-                }
-                //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
-                return wrapped_class;
-            }
-        }
-
-
-        return WrappedClass::make_wrapped_class(decl, compiler_instance, found_method);
-    }
+                                                      FOUND_METHOD found_method);
 
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();

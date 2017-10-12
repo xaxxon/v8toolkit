@@ -20,7 +20,7 @@ class PrintFunctionNamesAction : public clang::PluginASTAction {
 public:
 
     // open up output files
-    PrintFunctionNamesAction() {}
+    PrintFunctionNamesAction() {WrappedClass::wrapped_classes.clear();}
     ~PrintFunctionNamesAction() {}
 
     // This is called when all parsing is done

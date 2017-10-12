@@ -21,7 +21,6 @@ using ::testing::_;
 using ::testing::Return;
 using namespace v8toolkit::class_parser;
 
-TEST(ClassParser, ClassParser) {
 //    std::ifstream sample_source("sample.cpp");
 //    assert(sample_source.is_open());
 //
@@ -29,10 +28,8 @@ TEST(ClassParser, ClassParser) {
 //    std::string sample_source_contents((std::istreambuf_iterator<char>(sample_source)),
 //                                       std::istreambuf_iterator<char>());
 
-std::string source = R"(
-    #include "wrapped_class_base.h"
-    class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
-)";
+
+auto run_code(std::string source) {
 
     // vector crashes on cleanup for unknown reason so just leak it
     std::vector<std::string> args{
@@ -50,7 +47,19 @@ std::string source = R"(
                                           source,
                                           args);
 
-    auto pruned_vector = erase_if(copy(WrappedClass::wrapped_classes), [](WrappedClass const & c){return !c.should_be_wrapped();});
+    return  erase_if(copy(WrappedClass::wrapped_classes), [](WrappedClass const & c){return !c.should_be_wrapped();});
+
+}
+
+TEST(ClassParser, ClassParser) {
+
+    std::string source = R"(
+        #include "wrapped_class_base.h"
+        class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
+    )";
+
+
+    auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = pruned_vector[0].get();
@@ -58,8 +67,49 @@ std::string source = R"(
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
-
 }
+
+TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
+
+    std::string source = R"(
+        #include "wrapped_class_base.h"
+        #include "class_parser.h"
+        class NotWrappedBase {};
+        class NotWrapped : public NotWrappedBase {};
+        class WrappedButParentNot : public NotWrapped, public v8toolkit::WrappedClassBase {};
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 3);
+    WrappedClass const & c = pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_members().size(), 0);
+    EXPECT_EQ(c.get_member_functions().size(), 0);
+    EXPECT_EQ(c.get_static_functions().size(), 0);
+}
+
+TEST(ClassParser, ExplicitIgnoreBaseClass) {
+    std::string source = R"(
+        #include "wrapped_class_base.h"
+        #include "class_parser.h"
+        class NotWrappedBaseSkip {};
+        class NotWrappedSkip : public NotWrappedBaseSkip {};
+        class V8TOOLKIT_IGNORE_BASE_TYPE(NotWrappedSkip) WrappedButParentNot_NOSKIP : public NotWrappedSkip, public v8toolkit::WrappedClassBase {};
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector[0].get();
+    
+    EXPECT_EQ(c.get_members().size(), 0);
+    EXPECT_EQ(c.get_member_functions().size(), 0);
+    EXPECT_EQ(c.get_static_functions().size(), 0);
+}
+
 
 
 int main(int argc, char* argv[]) {
