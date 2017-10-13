@@ -1,8 +1,11 @@
 
+#include <xl/regexer.h>
+
 #include "wrapped_class.h"
 #include "parsed_method.h"
 #include "class_handler.h"
 
+using namespace xl;
 
 namespace v8toolkit::class_parser {
 
@@ -196,6 +199,95 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
+    FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(this->decl, nullptr);
+
+    if (comment != nullptr) {
+
+        auto comment_text = get_source_for_source_range(
+            this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+
+//        cerr << "FullComment: " << comment_text << endl;
+
+        // go through each portion (child) of the full commetn
+        int j = 0;
+        for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
+//            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
+            auto child_comment_source_range = (*i)->getSourceRange();
+            if (child_comment_source_range.isValid()) {
+
+                auto child_comment_text = get_source_for_source_range(
+                    this->compiler_instance.getPreprocessor().getSourceManager(),
+                    child_comment_source_range);
+
+                cerr << "Child comment - kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+//                if (auto )
+
+                std::cerr << fmt::format("ParamCommandComment kind: {}", clang::comments::BlockContentComment::ParamCommandCommentKind) << std::endl;
+                std::cerr << fmt::format("TParamCommandComment kind: {}", clang::comments::BlockContentComment::TParamCommandCommentKind) << std::endl;
+                std::cerr << fmt::format("ParagraphComment kind: {}", clang::comments::BlockContentComment::ParagraphCommentKind) << std::endl;
+                // if the child comment is a param command comment (describes a parameter)
+                if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
+                    cerr << "Is ParamCommandComment" << endl;
+                    if (param_command == nullptr) {
+//                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
+                    }
+//                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str())
+//                              << std::endl;
+
+                    // cannot use getParamName() because it crashes if the name doesn't match a parameter
+                    auto command_param_name = param_command->getParamNameAsWritten().str();
+//                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
+
+//                    ParameterInfo * matching_parameter_info_ptr = nullptr;
+//                    for (auto & parameter : this->parameters) {
+////                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name)
+////                                  << std::endl;
+//                        if (command_param_name == parameter.name) {
+////                            std::cerr << fmt::format("found match!") << std::endl;
+//                            matching_parameter_info_ptr = &parameter;
+//                            break;
+//                        }
+//                    }
+//                    auto matching_param_iterator =
+//                        std::find_if(parameters.begin(), parameters.end(),
+//                                     [&command_param_name](auto &param) {
+//                                         return command_param_name == param.name;
+//                                     });
+
+//                    std::cerr << fmt::format("found parameter (not matching .end()) {}",
+//                                             matching_parameter_info_ptr != nullptr) << std::endl;
+//                    std::cerr << fmt::format("has param name?  {}", param_command->hasParamName()) << std::endl;
+//                    if (param_command->hasParamName() && matching_parameter_info_ptr != nullptr) {
+//
+//                        auto & param_info = *matching_parameter_info_ptr;
+//                        if (param_command->getParagraph() != nullptr) {
+//                            param_info.description = get_source_for_source_range(
+//                                this->compiler_instance.getPreprocessor().getSourceManager(),
+//                                param_command->getParagraph()->getSourceRange());
+//                        }
+//                    } else {
+//                        data_warning(
+//                            fmt::format("in {}, method parameter comment name '{}' doesn't match any parameter in the function",
+//                                        this->name,
+//                                        command_param_name));
+//                    }
+                } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
+                    auto comment_text = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
+
+                    this->comment = trim_doxygen_comment_whitespace(comment_text);
+
+                }
+
+
+            }
+        }
+    } else {
+//        cerr << "No comment on " << method_decl->getNameAsString() << endl;
+    }
+
+
+
 //    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
 }
 
@@ -282,13 +374,13 @@ void WrappedClass::parse_all_methods() {
     if (this->decl == nullptr) {
         return;
     }
-//    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
+    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
 
         if (auto using_shadow_decl = dyn_cast<UsingShadowDecl>(current_decl)) {
-//            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
+            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
             auto target_decl = using_shadow_decl->getTargetDecl();
 //            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
 //            std::cerr
@@ -336,7 +428,7 @@ void WrappedClass::parse_all_methods() {
 
             std::string full_method_name(method->getQualifiedNameAsString());
 
-//            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
+            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
 
             if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
@@ -394,7 +486,7 @@ void WrappedClass::parse_all_methods() {
             Annotations method_annotations(method);
 
             std::string full_method_name(method->getQualifiedNameAsString());
-//            cerr << fmt::format("looking at {}", full_method_name) << endl;
+            cerr << fmt::format("looking at {}", full_method_name) << endl;
 
             // this is handled now
 //            if (method->isTemplateDecl()) {

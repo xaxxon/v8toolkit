@@ -114,6 +114,9 @@ public:
     set<string> wrapper_custom_extensions;
     CompilerInstance & compiler_instance;
 
+    /// doxygen-style comment associated with the class
+    std::string comment;
+
     string my_include; // the include for getting my type, including "" or <>
     bool done = false;
     bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types

@@ -1,5 +1,10 @@
+#include <xl/regexer.h>
+
 #include "parsed_method.h"
 #include "wrapped_class.h"
+
+
+using namespace xl;
 
 namespace v8toolkit::class_parser {
 
@@ -297,6 +302,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
         //std::cerr << fmt::format("3") << std::endl;
         this->name = fmt::format("unspecified_position_{}", this->position);
 
+        // if the parameter has no name, then no comment can be associated with it
         data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
                                  this->method.wrapped_class.get_name_alias(), this->method.name, this->position));
     }
@@ -327,7 +333,6 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
     } else {
         this->default_value = "";
     }
-
 }
 
 
@@ -345,8 +350,7 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     is_virtual(method_decl->isVirtual()),
     annotations(this->method_decl),
     template_parameter_types(template_parameter_types),
-    function_template_decl(function_template_decl)
-{
+    function_template_decl(function_template_decl) {
 
 //    std::cerr << fmt::format("classfunction: preferred name: '{}' vs default name: '{}'", preferred_js_name, method_decl->getNameAsString()) << std::endl;
 
@@ -388,12 +392,13 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
         auto comment_text = get_source_for_source_range(
             this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
 
-//        cerr << "FullComment: " << comment_text << endl;
+        cerr << "FullComment: " << comment_text << endl;
 
         // go through each portion (child) of the full commetn
         int j = 0;
         for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-//            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
+            std::cerr << fmt::format("looking at child comment {} - kind: {} {}", ++j, (*i)->getCommentKindName(),
+                                     (*i)->getCommentKind()) << std::endl;
             auto child_comment_source_range = (*i)->getSourceRange();
             if (child_comment_source_range.isValid()) {
 
@@ -439,25 +444,32 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 
                         auto & param_info = *matching_parameter_info_ptr;
                         if (param_command->getParagraph() != nullptr) {
-                            param_info.description = get_source_for_source_range(
+                            auto parameter_comment = get_source_for_source_range(
                                 this->compiler_instance.getPreprocessor().getSourceManager(),
                                 param_command->getParagraph()->getSourceRange());
+                            param_info.description = trim_doxygen_comment_whitespace(parameter_comment);
                         }
                     } else {
                         data_warning(
-                            fmt::format("in {}, method parameter comment name '{}' doesn't match any parameter in the function",
-                                        this->name,
-                                        command_param_name));
+                            fmt::format(
+                                "in {}, method parameter comment name '{}' doesn't match any parameter in the function",
+                                this->name,
+                                command_param_name));
                     }
-                } else {
-//                    cerr << "is not param command comment" << endl;
+                } else if (auto block_command_comment = dyn_cast<BlockCommandComment>(*i)) {
+                    auto block_comment = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(),
+                        block_command_comment->getSourceRange());
+
+                    if (auto results = regexer(block_comment, "^[@]return(.*)"_rei)) {
+                        this->return_type_comment = trim_doxygen_comment_whitespace(results[1]);
+                    }
                 }
             }
         }
     } else {
 //        cerr << "No comment on " << method_decl->getNameAsString() << endl;
     }
-
 }
 
 

@@ -8,17 +8,7 @@
 
 
 
-class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
 
-//
-//class NotWrappedBase {};
-//class NotWrapped : public NotWrappedBase {};
-//class WrappedButParentNot : public NotWrapped, public v8toolkit::WrappedClassBase {};
-//
-//class NotWrappedBaseSkip {};
-//class NotWrappedSkip : public NotWrappedBaseSkip {};
-//class V8TOOLKIT_IGNORE_BASE_TYPE(NotWrapped) WrappedButParentNot_NOSKIP : public NotWrappedSkip, public v8toolkit::WrappedClassBase {};
-//
 //
 //class A : public v8toolkit::WrappedClassBase {
 //public:
@@ -37,8 +27,6 @@ class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
 //
 //
 //
-template<class T>
-class NeedIncludeForTemplatedType : public v8toolkit::WrappedClassBase {};
 //
 //
 //namespace v8 {
@@ -48,15 +36,7 @@ class NeedIncludeForTemplatedType : public v8toolkit::WrappedClassBase {};
 //
 //
 ////
-////int do_something(int i){return i;}
 ////
-////char do_something(char c){return c;}
-////
-////class V8TOOLKIT_WRAPPED_CLASS AbstractClass {
-////public:
-////    AbstractClass(){}
-////    virtual void pure_virtual_function() = 0;
-////};
 ////
 //class HelperClass {
 //public:
@@ -322,7 +302,6 @@ int main() {
 //	dfwcb.function_in_templated_class(5);
 
 
-//	NeedIncludeForTemplatedType<function<bool(Uninteresting&)>> uninteresting;
     //    DerivedFromWrappedClassBase<char>;
 }
 

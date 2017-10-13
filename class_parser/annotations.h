@@ -51,7 +51,7 @@ public:
     }
 
     std::vector<string> get_regex(const string & regex_string) const {
-        auto re = regex(regex_string);
+        auto re = std::regex(regex_string);
         std::vector<string> results;
 
         for (auto & annotation : annotations) {

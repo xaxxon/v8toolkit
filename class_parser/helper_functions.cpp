@@ -1,10 +1,12 @@
 
+#include <regex>
 
 #include "helper_functions.h"
 
 #include <iostream>
 #include <fstream>
 #include <fmt/ostream.h>
+
 
 #include <clang/AST/CXXInheritance.h>
 
@@ -343,21 +345,6 @@ void generate_bindings() {
     }
 
 
-//    if (generate_v8classwrapper_sfinae) {
-//        string sfinae_filename = fmt::format("v8toolkit_generated_v8classwrapper_sfinae.h", file_count);
-//        ofstream sfinae_file;
-//
-//        sfinae_file.open(sfinae_filename, ios::out);
-//        if (!sfinae_file) {
-//            llvm::report_fatal_error(fmt::format( "Couldn't open {}", sfinae_filename).c_str());
-//        }
-//
-//        sfinae_file << "#pragma once\n\n";
-//
-//        sfinae_file << get_sfinae_matching_wrapped_classes(WrappedClass::wrapped_classes) << std::endl;
-//        sfinae_file.close();
-//    }
-
     cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
 
 
@@ -554,57 +541,6 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             current_inheritance_class = *current_inheritance_class->base_types.begin();
         }
 
-//        // go through all the virtual functions in the base class of the bidirectional type
-//        CXXFinalOverriderMap override_map;
-//        base_type->decl->getFinalOverriders(override_map);
-//        std::cerr << fmt::format("6") << std::endl;
-//
-//        // store which virtual methods have already been added so they aren't added multiple times
-//        set<string> js_access_virtual_methods_added;
-//        map<CXXRecordDecl const *, set<CXXMethodDecl const *>> class_virtuals;
-//
-//        for(auto & overrider_pair : override_map) {
-//
-//            CXXMethodDecl const *bidirectional_virtual_method = overrider_pair.first;
-//
-//            // skip virtual destructors
-//            if (dyn_cast<CXXDestructorDecl>(bidirectional_virtual_method)) {
-//                continue;
-//            }
-//
-//            std::cerr << fmt::format(
-//                    "Looking at overrider pair for virtual method {} cxxmethoddecl {} parent class decl: {}",
-//                    bidirectional_virtual_method->getNameAsString(), (void *) bidirectional_virtual_method,
-//                    bidirectional_virtual_method->getParent()->getNameAsString()) << std::endl;
-//            std::cerr << fmt::format("7") << std::endl;
-//            if (!bidirectional_virtual_method->isVirtual()) {
-//                llvm::report_fatal_error("Assuming this must be virtual");
-//            }
-//            class_virtuals[bidirectional_virtual_method->getParent()].insert(bidirectional_virtual_method);
-//        }
-//
-//        // now go through the inheritance chain and only populate with the first one found
-//        map<string, CXXMethodDecl const *> final_virtuals; // map string signature to actual decl
-//        auto current_inheritance_class = wrapped_class;
-//
-//        while(current_inheritance_class) {
-//            auto find_result = class_virtuals.find(current_inheritance_class->decl);
-//            if (find_result == class_virtuals.end()) {
-//                continue;
-//            }
-//
-//            for (auto virtual_decl : find_result->second) {
-//                string virtual_decl_signature =
-//                if (final_virtuals.find())
-//            }
-//        }
-
-//
-//            std::cerr << fmt::format("8") << std::endl;
-//            // skip pure virtual functions
-//            if (bidirectional_virtual_method->isPure()) {
-//                continue;
-//            }
         bidirectional_file << endl << "};" << endl << endl;
 
 
@@ -612,103 +548,9 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
 
     }
 }
-//
-//// converts from c++ type to javascript type
-//string convert_type_to_jsdoc(std::string const & type_name_input) {
-//    string type_name = type_name_input;
-//    std::smatch matches;
-//    std::cerr << fmt::format("converting {}...", type_name) << std::endl;
-//
-//    // remove any leading struct/class text
-//    type_name = regex_replace(type_name, std::regex("^(struct|class) "), "");
-//
-//
-//
-//
-////    // things like: change vector<int> to Array.[Number]
-////    for (auto &pair : cpp_to_js_type_conversions) {
-////
-////        if (regex_match(type_name, matches, std::regex(pair.first))) {
-////             std::cerr << fmt::format("matched {}, converting to {}", pair.first, pair.second) << std::endl;
-////
-////            string replacement_type = pair.second; // need a temp because the regex matches point into the current this->type
-////
-////            // go through each capturing match and...
-////            for (size_t i = 1; i < matches.size(); i++) {
-//////                // recursively convert the matched type
-////                string converted_captured_type_name = convert_type_to_jsdoc(matches[i].str());
-////
-////                // look for $1, $2, etc in replacement and substitute in the matching position
-////                replacement_type = std::regex_replace(replacement_type, std::regex(fmt::format("\\${}", i)),
-////                                              converted_captured_type_name);
-////            }
-////            type_name = replacement_type;
-////            std::cerr << fmt::format("... final conversion to: {}", replacement_type) << std::endl;
-////            break;
-////        }
-////    }
-//
-//    std::cerr << fmt::format("returning jsdoc converted type: {}", type_name) << std::endl;
-//    return type_name;
-//}
-//
-//
 
-
-
-
-
-
-#if 0
-//ifdef TEMPLATE_INFO_ONLY
-{
-        cerr << fmt::format("Class template instantiations") << endl;
-        vector<pair<string, int>> insts;
-        for (auto & class_template : class_templates) {
-            insts.push_back({class_template->name, class_template->instantiations});
-        }
-        std::sort(insts.begin(), insts.end(), [](auto & a, auto & b){
-            return a.second < b.second;
-            });
-        int skipped = 0;
-        int total = 0;
-        cerr << endl << fmt::format("Class templates with more than {} or more instantiations:", TEMPLATED_CLASS_PRINT_THRESHOLD) << endl;
-        for (auto & pair : insts) {
-            total += pair.second;
-            if (pair.second < TEMPLATED_CLASS_PRINT_THRESHOLD) {
-            skipped++;
-            continue;
-            }
-            cerr << pair.first << ": " << pair.second << endl;;
-        }
-        cerr << endl;
-        cerr << "Skipped " << skipped << " entries because they had fewer than " << TEMPLATED_CLASS_PRINT_THRESHOLD << " instantiations" << endl;
-        cerr << "Total of " << total << " instantiations" << endl;
-        skipped = 0;
-        total = 0;
-        insts.clear();
-        for (auto & function_template : function_templates) {
-            insts.push_back({function_template->name, function_template->instantiations});
-        }
-        std::sort(insts.begin(), insts.end(), [](auto & a, auto & b){
-            return a.second < b.second;
-            });
-        cerr << endl << fmt::format("Function templates with more than {} or more instantiations:", TEMPLATED_FUNCTION_PRINT_THRESHOLD) << endl;
-        for (auto & pair : insts) {
-            total += pair.second;
-            if (pair.second < TEMPLATED_FUNCTION_PRINT_THRESHOLD) {
-            skipped++;
-            continue;
-            }
-            cerr << pair.first << ": " << pair.second << endl;;
-        }
-
-
-        cerr << endl;
-        cerr << "Skipped " << skipped << " entries because they had fewer than " << TEMPLATED_FUNCTION_PRINT_THRESHOLD << " instantiations" << endl;
-        cerr << "Total of " << total << " instantiations" << endl;
-        return;
-        }
-#endif
-
+std::string trim_doxygen_comment_whitespace(std::string const & comment) {
+    return std::regex_replace(comment, std::regex("\\s*([^\\n]*?)\\s*(?:[\n]|$)\\s*[*]*\\s*?(\\s?)"), "$1$2");
 }
+
+} // end namespace v8toolkit::class_parser

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#define PRINT_SKIPPED_EXPORT_REASONS false
+#define PRINT_SKIPPED_EXPORT_REASONS true
 //#define PRINT_SKIPPED_EXPORT_REASONS false
 
 #include "helper_functions.h"

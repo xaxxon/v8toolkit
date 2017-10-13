@@ -133,7 +133,7 @@ TEST(ClassParser, CustomExtensions) {
 
     // only the public static entry should actually make it through
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
-
+    EXPECT_EQ(data_errors.size(), 1); // the non-static method marked as custom extensino
 }
 
 
@@ -227,7 +227,7 @@ TEST(ClassParser, TemplatedClassInstantiations) {
 }
 
 
-TEST(ClassParser, TemplatedClassInstantiationsWithRenamedConstructors) {
+TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias) {
     std::string source = R"(
         template<class T>
         class TemplatedClass : public v8toolkit::WrappedClassBase {};
@@ -254,6 +254,108 @@ TEST(ClassParser, TemplatedClassInstantiationsWithRenamedConstructors) {
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
     //   instantiation as well
     EXPECT_EQ(data_errors.size(),0);
+}
+
+
+TEST(ClassParser, AbstractClass) {
+    std::string source = R"(
+        class AbstractClass : public v8toolkit::WrappedClassBase{
+        public:
+            AbstractClass(){}
+            virtual void pure_virtual_function() = 0;
+        };
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector[0].get();
+
+    // no reason to deal with constructors of abstract types since they won't be constructed directly
+    EXPECT_EQ(c.get_constructors().size(), 0);
+
+    EXPECT_EQ(c.get_member_functions().size(), 1);
+
+    // no conflicting constructor name because the name_alias on each type will rename the constructor of each
+    //   instantiation as well
+    EXPECT_EQ(data_errors.size(),0);
+}
+
+
+
+
+TEST(ClassParser, ClassComments) {
+    std::string source = R"(
+        /**
+         * Class Description
+         * and more class description
+         */
+        class ClassWithComments : public v8toolkit::WrappedClassBase {
+        public:
+            /**
+             * function description
+             * @param input input description
+             * @param input2 this is a longer, multiline
+             *   comment which should all be captured
+             * @return return description
+             */
+            int function(char* input, int input2);
+
+            /**
+             * static function description
+             * @param input static function input description
+             * @return static function return description
+             */
+            int static static_function(char* input);
+
+            /**
+             * data member description
+             */
+            int data_member;
+        };
+
+        /// Short class comment
+        class AnotherClassWithComments : public v8toolkit::WrappedClassBase {};
+
+        /**
+         * TemplatedClassWithComments description
+         * @tparam T template type parameter
+         * @tparam i template non-type parameter
+         */
+        template<class T, int i>
+        class TemplatedClassWithComments : public v8toolkit::WrappedClassBase {};
+
+        TemplatedClassWithComments<int, 5> a;
+        TemplatedClassWithComments<char, 6> b;
+
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 4);
+    WrappedClass const & c1 = pruned_vector.at(0).get();
+    WrappedClass const & c2 = pruned_vector.at(1).get();
+
+    EXPECT_EQ(c1.get_name_alias(), "ClassWithComments");
+    EXPECT_EQ(c1.get_member_functions().size(), 1);
+    EXPECT_EQ(c1.comment, "Class Description and more class description");
+    MemberFunction const & member_function = *c1.get_member_functions()[0];
+    EXPECT_EQ(member_function.return_type_comment, "return description");
+    EXPECT_EQ(member_function.parameters.size(), 2);
+    {
+        ClassFunction::ParameterInfo const & parameter = member_function.parameters.at(0);
+        EXPECT_EQ(parameter.name, "input");
+        EXPECT_EQ(parameter.type.get_name(), "char *");
+        EXPECT_EQ(parameter.description, "input description");
+    }
+    {
+        ClassFunction::ParameterInfo const & parameter = member_function.parameters.at(1);
+        EXPECT_EQ(parameter.name, "input2");
+        EXPECT_EQ(parameter.type.get_name(), "int");
+        EXPECT_EQ(parameter.description, "this is a longer, multiline comment which should all be captured");
+    }
 
 }
 
@@ -261,7 +363,23 @@ TEST(ClassParser, TemplatedClassInstantiationsWithRenamedConstructors) {
 
 
 
+//TEST(ClassParser, ClassComments) {
+//    std::string source = R"(
+//
+//    )";
+//
+//
+//    auto pruned_vector = run_code(source);
+//
+//    EXPECT_EQ(pruned_vector.size(), 1);
+//    WrappedClass const & c = pruned_vector[0].get();
+//}
+
+
+
+
+
 int main(int argc, char* argv[]) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+testing::InitGoogleTest(&argc, argv);
+return RUN_ALL_TESTS();
 }

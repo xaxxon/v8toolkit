@@ -240,5 +240,7 @@ void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
 //    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
 }
 
+std::string trim_doxygen_comment_whitespace(std::string const & comment);
+
 
 }
