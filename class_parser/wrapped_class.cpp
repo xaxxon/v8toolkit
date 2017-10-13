@@ -30,8 +30,10 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
-    found_method(found_method)
+    found_method(found_method),
+    log_watcher(log)
 {
+    this->log_watcher.add();
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];
@@ -282,6 +284,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
 //    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
+
+    this->log_watcher.remove();
 }
 
 
@@ -653,7 +657,7 @@ void WrappedClass::parse_enums() {
             }
             std::map<std::string, int> enum_class;
 //            std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
-            for(EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
+            for (EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
 //                std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
                 enum_class[constant_decl->getNameAsString()] = constant_decl->getInitVal().getExtValue();
             }
@@ -710,7 +714,8 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
     name_alias(class_name),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid
-    found_method(FOUND_GENERATED)
+    found_method(FOUND_GENERATED),
+    log_watcher(log)
 {
 }
 

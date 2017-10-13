@@ -255,9 +255,11 @@ void ClassHandler::onEndOfTranslationUnit() {
 
     for(auto & c : all_wrapped_classes) {
         if (c.should_be_wrapped()) {
+            c.log_watcher.add();
             c.parse_enums();
             c.parse_members();
             c.parse_all_methods();
+            c.log_watcher.remove();
         }
     }
 

@@ -22,21 +22,9 @@ using ::testing::Return;
 using namespace v8toolkit::class_parser;
 
 
-struct LogCallback {
-    int error_count = 0;
-    void operator()(LogT const &, LogT::LogMessage const & message) {
-        if (message.level == LogLevelsT::Levels::Error) {
-            error_count++;
-        }
-//        std::cout << message.string << std::endl;
-    }
-};
 
-std::unique_ptr<LogCallback> log_callback = std::make_unique<LogCallback>();
 auto run_code(std::string source) {
 
-    log_callback = std::make_unique<LogCallback>();
-    v8toolkit::class_parser::log.set_log_callback(std::ref(*log_callback));
 
     static std::string source_prefix = R"(
         #include "wrapped_class_base.h"
@@ -146,7 +134,7 @@ TEST(ClassParser, CustomExtensions) {
 
     // only the public static entry should actually make it through
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
-    EXPECT_EQ(log_callback->error_count, 1); // the non-static method marked as custom extensino
+    EXPECT_EQ(c.log_watcher.errors.size(), 1);
 }
 
 
@@ -235,8 +223,11 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     EXPECT_EQ(c2.get_constructors().size(), 1);
     EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass");
 
-    // expecting error because both instantiations of TmeplatedClass will have the same constructor name
-    EXPECT_EQ(log_callback->error_count, 1);
+    // expecting error because both instantiations of TemplatedClass will have the same constructor name
+    //   but the error only shows up on the second class because it's still unique when the first one is
+    //   processed
+    EXPECT_EQ(c1.log_watcher.errors.size() + c2.log_watcher.errors.size(), 1);
+
 }
 
 
@@ -266,7 +257,7 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
 
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
     //   instantiation as well
-    EXPECT_EQ(log_callback->error_count,0);
+    EXPECT_EQ(c1.log_watcher.errors.size() + c2.log_watcher.errors.size(), 0);
 }
 
 
@@ -290,9 +281,6 @@ TEST(ClassParser, AbstractClass) {
 
     EXPECT_EQ(c.get_member_functions().size(), 1);
 
-    // no conflicting constructor name because the name_alias on each type will rename the constructor of each
-    //   instantiation as well
-    EXPECT_EQ(log_callback->error_count, 0);
 }
 
 

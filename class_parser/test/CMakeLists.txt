@@ -11,6 +11,8 @@ add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
 find_package(fmt REQUIRED)
 target_link_libraries(test-class-parser fmt gmock gmock_main)
 
+# Can't have RTTI because the clang libs don't have it which means
+target_compile_options(test-class-parser PRIVATE -fno-rtti)
 add_dependencies(test-class-parser gmock gtest copy_test_resources)
 
 target_link_libraries(test-class-parser clangFrontend clangSerialization clangASTMatchers clangSema

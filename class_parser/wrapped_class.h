@@ -24,10 +24,31 @@ class MemberFunction;
 
 class StaticFunction;
 
+class LogWatcher {
+private:
+    LogT & logger;
+    LogT::CallbackT * callback = nullptr;
+public:
+    LogWatcher(LogT & logger) : logger(logger) {}
+    vector<LogT::LogMessage> errors;
+    void operator()(LogT::LogMessage const & message) {
+        if (message.level == LogLevelsT::Levels::Error) {
+            this->errors.push_back(message);
+        }
+    }
+
+    void add() {
+        this->callback = &logger.add_callback(std::ref(*this));
+    }
+
+    void remove() {
+        logger.remove_callback(*this->callback);
+    }
+};
+
 struct WrappedClass {
     friend class std::allocator<WrappedClass>;
 private:
-
     bool methods_parsed = false;
     vector<unique_ptr<MemberFunction>> member_functions;
     vector<unique_ptr<StaticFunction>> static_functions;
@@ -50,6 +71,7 @@ private:
     bool name_alias_is_default = true;
 
 public:
+    LogWatcher log_watcher;
 
     static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
