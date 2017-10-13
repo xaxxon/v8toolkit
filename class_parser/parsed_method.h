@@ -192,6 +192,11 @@ struct DataMember {
 
     string get_bindings();
 
+    /**
+     * Doxygen-style comment associated with the data member
+     */
+    string comment;
+
 };
 
 }

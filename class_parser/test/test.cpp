@@ -285,7 +285,7 @@ TEST(ClassParser, AbstractClass) {
 
 
 
-TEST(ClassParser, ClassComments) {
+TEST(ClassParser, ClassAndFunctionComments) {
     std::string source = R"(
         /**
          * Class Description
@@ -328,7 +328,6 @@ TEST(ClassParser, ClassComments) {
 
         TemplatedClassWithComments<int, 5> a;
         TemplatedClassWithComments<char, 6> b;
-
     )";
 
 
@@ -337,6 +336,8 @@ TEST(ClassParser, ClassComments) {
     EXPECT_EQ(pruned_vector.size(), 4);
     WrappedClass const & c1 = pruned_vector.at(0).get();
     WrappedClass const & c2 = pruned_vector.at(1).get();
+    WrappedClass const & c3 = pruned_vector.at(2).get();
+    WrappedClass const & c4 = pruned_vector.at(3).get();
 
     EXPECT_EQ(c1.get_name_alias(), "ClassWithComments");
     EXPECT_EQ(c1.get_member_functions().size(), 1);
@@ -356,7 +357,11 @@ TEST(ClassParser, ClassComments) {
         EXPECT_EQ(parameter.type.get_name(), "int");
         EXPECT_EQ(parameter.description, "this is a longer, multiline comment which should all be captured");
     }
-
+    {
+        auto & member = c1.get_members().at(0);
+        EXPECT_EQ(member->type.get_name(), "int");
+        EXPECT_EQ(member->comment, "data member description");
+    }
 }
 
 

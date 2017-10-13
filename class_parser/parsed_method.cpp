@@ -234,8 +234,7 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     js_name(short_name),
     type(field_decl->getType()),
     field_decl(field_decl),
-    annotations(this->field_decl)
-{
+    annotations(this->field_decl) {
     auto annotated_custom_name = annotations.get_regex(
         "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
     if (!annotated_custom_name.empty()) {
@@ -252,8 +251,15 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     // the member will be wrapped as const if the actual data type is const or there's an attribute saying it should be const
     this->is_const = this->type.is_const() || annotations.has(V8TOOLKIT_READONLY_STRING);
 
-}
 
+    FullComment * comment = this->wrapped_class.compiler_instance.getASTContext().getCommentForDecl(this->field_decl,
+                                                                                                    nullptr);
+    if (comment != nullptr) {
+        auto comment_text = get_source_for_source_range(
+            this->wrapped_class.compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+        this->comment = trim_doxygen_comment_whitespace(comment_text);
+    }
+}
 
 string DataMember::get_js_stub() {
 

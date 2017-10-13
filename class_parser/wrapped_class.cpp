@@ -208,7 +208,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 //        cerr << "FullComment: " << comment_text << endl;
 
-        // go through each portion (child) of the full commetn
+        // go through each portion (child) of the full comment
         int j = 0;
         for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
 //            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
@@ -220,7 +220,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
                     child_comment_source_range);
 
                 cerr << "Child comment - kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
-//                if (auto )
 
                 std::cerr << fmt::format("ParamCommandComment kind: {}", clang::comments::BlockContentComment::ParamCommandCommentKind) << std::endl;
                 std::cerr << fmt::format("TParamCommandComment kind: {}", clang::comments::BlockContentComment::TParamCommandCommentKind) << std::endl;
