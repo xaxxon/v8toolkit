@@ -29,6 +29,12 @@ public:
 using LogLevelsT = xl::log::DefaultLevels;
 using LogT = xl::Log<LogLevelsT, LogSubjects>;
 
+
+#if 0
+auto printer = [](LogT::LogMessage const & message){std::cerr << fmt::format("{}", message.string) << std::endl;};
+inline LogT log(printer);
+#else
 inline LogT log;
+#endif
 
 } // end namespace v8toolkit::class_parser

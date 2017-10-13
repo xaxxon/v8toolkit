@@ -252,11 +252,11 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     this->is_const = this->type.is_const() || annotations.has(V8TOOLKIT_READONLY_STRING);
 
 
-    FullComment * comment = this->wrapped_class.compiler_instance.getASTContext().getCommentForDecl(this->field_decl,
+    FullComment * full_comment = this->wrapped_class.compiler_instance.getASTContext().getCommentForDecl(this->field_decl,
                                                                                                     nullptr);
-    if (comment != nullptr) {
+    if (full_comment != nullptr) {
         auto comment_text = get_source_for_source_range(
-            this->wrapped_class.compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+            this->wrapped_class.compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
         this->comment = trim_doxygen_comment_whitespace(comment_text);
     }
 }
@@ -356,7 +356,8 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     is_virtual(method_decl->isVirtual()),
     annotations(this->method_decl),
     template_parameter_types(template_parameter_types),
-    function_template_decl(function_template_decl) {
+    function_template_decl(function_template_decl)
+{
 
 //    std::cerr << fmt::format("classfunction: preferred name: '{}' vs default name: '{}'", preferred_js_name, method_decl->getNameAsString()) << std::endl;
 

@@ -30,10 +30,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
-    found_method(found_method),
-    log_watcher(log)
+    found_method(found_method)
 {
-    this->log_watcher.add();
+    xl::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];
@@ -201,18 +200,18 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
-    FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(this->decl, nullptr);
+    FullComment * full_comment = this->compiler_instance.getASTContext().getCommentForDecl(this->decl, nullptr);
 
-    if (comment != nullptr) {
+    if (full_comment != nullptr) {
 
         auto comment_text = get_source_for_source_range(
-            this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+            this->compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
 
 //        cerr << "FullComment: " << comment_text << endl;
 
         // go through each portion (child) of the full comment
         int j = 0;
-        for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
+        for (auto i = full_comment->child_begin(); i != full_comment->child_end(); i++) {
 //            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
             auto child_comment_source_range = (*i)->getSourceRange();
             if (child_comment_source_range.isValid()) {
@@ -284,8 +283,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
 //    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
-
-    this->log_watcher.remove();
 }
 
 
@@ -395,8 +392,8 @@ void WrappedClass::parse_all_methods() {
             current_decl = target_decl;
         }
 
-        Annotations annotations(current_decl);
-        if (annotations.has(V8TOOLKIT_NONE_STRING)) {
+        Annotations decl_annotations(current_decl);
+        if (decl_annotations.has(V8TOOLKIT_NONE_STRING)) {
             if (auto named_decl = dyn_cast<NamedDecl>(current_decl)) {
 //                std::cerr
 //                    << fmt::format("Skipping {} in {} because V8TOOLKIT_NONE_STRING", named_decl->getNameAsString(),
@@ -714,8 +711,7 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
     name_alias(class_name),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid
-    found_method(FOUND_GENERATED),
-    log_watcher(log)
+    found_method(FOUND_GENERATED)
 {
 }
 

@@ -6,9 +6,20 @@
 #include "class_parser.h"
 #include "helper_functions.h"
 
+#include "log.h"
 
 namespace v8toolkit::class_parser {
 
+
+
+struct LogWatcher {
+    vector<LogT::LogMessage> errors;
+    void operator()(LogT::LogMessage const & message) {
+        if (message.level == LogLevelsT::Levels::Error) {
+            this->errors.push_back(message);
+        }
+    }
+};
 
 struct ClassFunction {
 
@@ -20,6 +31,7 @@ struct ClassFunction {
     bool is_virtual_final = false;
     bool is_virtual_override = false;
 
+    LogWatcher log_watcher;
 
     // empty if function isn't a template
     FunctionTemplateDecl const * function_template_decl = nullptr;
