@@ -367,6 +367,44 @@ TEST(ClassParser, ClassAndFunctionComments) {
 
 
 
+TEST(ClassParser, SkipClassEvenThoughInheritsFromWrappedClassBase) {
+    std::string source = R"(
+class V8TOOLKIT_SKIP AnnotatedNotToBeWrapped : public v8toolkit::WrappedClassBase {};
+    )";
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 0);
+}
+
+
+TEST(ClassParser, V8TOOLKIT_SKIP_TESTS) {
+    std::string source = R"(
+class ClassWithSomeMethodsMarkedToBeSkipped : public v8toolkit::WrappedClassBase {
+public:
+    V8TOOLKIT_SKIP void skip_this_method();
+    void do_not_skip_this_method();
+
+    V8TOOLKIT_SKIP static void skip_this_static_method();
+    static void do_not_skip_this_static_method();
+
+    V8TOOLKIT_SKIP int skip_this_data_member;
+    int do_not_skip_this_data_member;
+};
+    )";
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = pruned_vector.at(0);
+    EXPECT_EQ(c.get_member_functions().size(), 1);
+    EXPECT_EQ(c.get_static_functions().size(), 1);
+    EXPECT_EQ(c.get_members().size(), 1);
+}
+
+
+
+
 
 //TEST(ClassParser, ClassComments) {
 //    std::string source = R"(

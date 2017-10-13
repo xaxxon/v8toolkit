@@ -131,11 +131,7 @@
 //};
 //
 //
-//class UnwrappedClassThatIsUsed {};
 //
-//
-//class SomeParentClass {};
-//class SomeClass : SomeParentClass {};
 //
 //
 //class V8TOOLKIT_WRAPPED_CLASS  V8TOOLKIT_BIDIRECTIONAL_CLASS
