@@ -6,7 +6,7 @@
 
 #include "../clang.h"
 #include "../ast_action.h"
-
+#include "../log.h"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -22,7 +22,21 @@ using ::testing::Return;
 using namespace v8toolkit::class_parser;
 
 
+struct LogCallback {
+    int error_count = 0;
+    void operator()(LogT const &, LogT::LogMessage const & message) {
+        if (message.level == LogLevelsT::Levels::Error) {
+            error_count++;
+        }
+//        std::cout << message.string << std::endl;
+    }
+};
+
+std::unique_ptr<LogCallback> log_callback = std::make_unique<LogCallback>();
 auto run_code(std::string source) {
+
+    log_callback = std::make_unique<LogCallback>();
+    v8toolkit::class_parser::log.set_log_callback(std::ref(*log_callback));
 
     static std::string source_prefix = R"(
         #include "wrapped_class_base.h"
@@ -46,7 +60,6 @@ auto run_code(std::string source) {
                                           args);
 
     return  erase_if(copy(WrappedClass::wrapped_classes), [](WrappedClass const & c){return !c.should_be_wrapped();});
-
 }
 
 TEST(ClassParser, ClassParser) {
@@ -133,7 +146,7 @@ TEST(ClassParser, CustomExtensions) {
 
     // only the public static entry should actually make it through
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
-    EXPECT_EQ(data_errors.size(), 1); // the non-static method marked as custom extensino
+    EXPECT_EQ(log_callback->error_count, 1); // the non-static method marked as custom extensino
 }
 
 
@@ -166,7 +179,7 @@ TEST(ClassParser, ClassElements) {
     EXPECT_EQ((*c.get_static_functions().begin())->js_name, "member_static_function");
 
     EXPECT_EQ(c.get_members().size(), 1);
-    EXPECT_EQ((*c.get_members().begin())->js_name, "data_member");
+    EXPECT_EQ(c.get_members().at(0)->js_name, "data_member");
 
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
 }
@@ -223,7 +236,7 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass");
 
     // expecting error because both instantiations of TmeplatedClass will have the same constructor name
-    EXPECT_EQ(data_errors.size(),1);
+    EXPECT_EQ(log_callback->error_count, 1);
 }
 
 
@@ -253,7 +266,7 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
 
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
     //   instantiation as well
-    EXPECT_EQ(data_errors.size(),0);
+    EXPECT_EQ(log_callback->error_count,0);
 }
 
 
@@ -279,7 +292,7 @@ TEST(ClassParser, AbstractClass) {
 
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
     //   instantiation as well
-    EXPECT_EQ(data_errors.size(),0);
+    EXPECT_EQ(log_callback->error_count, 0);
 }
 
 

@@ -249,19 +249,6 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 void ClassHandler::onEndOfTranslationUnit() {
 
-//    for (auto & warning : data_warnings) {
-//        cerr << warning << endl;
-//    }
-
-    if (!data_errors.empty()) {
-        cerr << "Errors detected:" << endl;
-        for (auto & error : data_errors) {
-            cerr << error << endl;
-        }
-//        llvm::report_fatal_error("Errors detected in source data");
-//        exit(1);
-    }
-
 //    cerr << "Done traversing AST" << endl;
 
     auto & all_wrapped_classes = WrappedClass::wrapped_classes;

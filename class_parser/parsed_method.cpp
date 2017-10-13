@@ -309,8 +309,8 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
         this->name = fmt::format("unspecified_position_{}", this->position);
 
         // if the parameter has no name, then no comment can be associated with it
-        data_warning(fmt::format("class {} method {} parameter index {} has no variable name",
-                                 this->method.wrapped_class.get_name_alias(), this->method.name, this->position));
+        log.warn(LogSubjects::Comments, "class {} method {} parameter index {} has no variable name",
+                                 this->method.wrapped_class.get_name_alias(), this->method.name, this->position);
     }
 
     // set default argument or "" if none
@@ -398,13 +398,13 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
         auto comment_text = get_source_for_source_range(
             this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
 
-        cerr << "FullComment: " << comment_text << endl;
+        log.info(LogSubjects::Comments, "full comment: '{}'", comment_text);
 
         // go through each portion (child) of the full commetn
         int j = 0;
         for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
-            std::cerr << fmt::format("looking at child comment {} - kind: {} {}", ++j, (*i)->getCommentKindName(),
-                                     (*i)->getCommentKind()) << std::endl;
+            log.info(LogSubjects::Comments, "looking at child comment {} - kind: {} {}", ++j, (*i)->getCommentKindName(),
+                                     (*i)->getCommentKind());
             auto child_comment_source_range = (*i)->getSourceRange();
             if (child_comment_source_range.isValid()) {
 
@@ -456,11 +456,10 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                             param_info.description = trim_doxygen_comment_whitespace(parameter_comment);
                         }
                     } else {
-                        data_warning(
-                            fmt::format(
-                                "in {}, method parameter comment name '{}' doesn't match any parameter in the function",
-                                this->name,
-                                command_param_name));
+                        log.warn(LogSubjects::Comments,
+                                    "in {}, method parameter comment name '{}' doesn't match any parameter in the function",
+                                    this->name,
+                                    command_param_name);
                     }
                 } else if (auto block_command_comment = dyn_cast<BlockCommandComment>(*i)) {
                     auto block_comment = get_source_for_source_range(
@@ -688,9 +687,9 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 
     if (std::find(used_constructor_names.begin(), used_constructor_names.end(), this->js_name) !=
         used_constructor_names.end()) {
-        data_error(
-            fmt::format("Error: because duplicate JS constructor function name: {} in class {}",
-                        this->js_name.c_str(), wrapped_class.get_name_alias()));
+        log.error(LogSubjects::Constructors,
+                  "Error: duplicate JS constructor function name: {} in class {}",
+                        this->js_name.c_str(), wrapped_class.get_name_alias());
         for (auto & name : used_constructor_names) {
 //            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
         }

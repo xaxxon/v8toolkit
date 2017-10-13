@@ -10,7 +10,7 @@
 #include "parsed_method.h"
 #include "annotations.h"
 
-
+#include "log.h"
 
 
 namespace v8toolkit::class_parser {
@@ -231,9 +231,8 @@ public:
     std::string get_base_class_string() const {
 
         if (base_types.size() > 1) {
-            data_error(fmt::format(
-                "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",
-                class_name));
+            log.error(LogSubjects::Class, "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",
+                class_name);
 
         }
         return base_types.size() ? (*base_types.begin())->class_name : "";

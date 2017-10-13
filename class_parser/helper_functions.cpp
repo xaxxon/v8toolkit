@@ -138,7 +138,10 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
 }
 
 
-EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous) {
+/**
+ * Takes a named decl and tries to figure out whether it should be wrapped or not
+ */
+EXPORT_TYPE get_export_type(const NamedDecl * decl, LogSubjects::Subjects log_subject, EXPORT_TYPE previous) {
     auto & attrs = decl->getAttrs();
     EXPORT_TYPE export_type = previous;
 
@@ -153,52 +156,21 @@ EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous) {
 
             if (annotation_string == V8TOOLKIT_ALL_STRING) {
                 if (found_export_specifier) {
-                    data_error(fmt::format("Found more than one export specifier on {}", name));
+                    log.error(log_subject, "Found more than one export specifier on {}", name);
                 }
 
                 export_type = EXPORT_ALL;
                 found_export_specifier = true;
-            } else if (annotation_string == "v8toolkit_generate_bindings_some") {
-                if (found_export_specifier) {
-                    data_error(fmt::format("Found more than one export specifier on {}", name));
-                }
-                export_type = EXPORT_SOME;
-                found_export_specifier = true;
-            } else if (annotation_string == "v8toolkit_generate_bindings_except") {
-                if (found_export_specifier) {
-                    data_error(fmt::format("Found more than one export specifier on {}", name).c_str());
-                }
-                export_type = EXPORT_EXCEPT;
-                found_export_specifier = true;
             } else if (annotation_string == V8TOOLKIT_NONE_STRING) {
                 if (found_export_specifier) {
-                    data_error(fmt::format("Found more than one export specifier on {}", name).c_str());
+                    log.error(log_subject, "Found more than one export specifier on {}", name);
                 }
                 export_type = EXPORT_NONE; // just for completeness
                 found_export_specifier = true;
             }
         }
     }
-
-    // go through bases looking for specific ones
-    if (const CXXRecordDecl * record_decl = dyn_cast<CXXRecordDecl>(decl)) {
-        for (auto & base : record_decl->bases()) {
-            auto type = base.getType();
-            auto base_decl = type->getAsCXXRecordDecl();
-            auto base_name = get_canonical_name_for_decl(base_decl);
-//                cerr << "%^%^%^%^%^%^%^% " << get_canonical_name_for_decl(base_decl) << endl;
-            if (base_name == "class v8toolkit::WrappedClassBase") {
-                cerr << "FOUND WRAPPED CLASS BASE -- EXPORT_ALL" << endl;
-                if (found_export_specifier) {
-                    data_error(fmt::format("Found more than one export specifier on {}", name).c_str());
-                }
-                export_type = EXPORT_ALL;
-                found_export_specifier = true;
-            }
-        }
-    }
-
-    //        printf("Returning export type: %d for %s\n", export_type, name.c_str());
+    log.info(log_subject, "Returning export type: {} for {}", export_type, name);
     return export_type;
 }
 
@@ -227,22 +199,6 @@ std::string get_canonical_name_for_decl(const TypeDecl * decl) {
 
 
 
-
-// list of data (source code being processed) errors occuring during the run.   Clang API errors are still immediate fails with
-//   llvm::report_fatal_error
-vector<string> data_errors;
-
-void data_error(const string & error) {
-    cerr << "DATA ERROR: " << error << endl;
-    data_errors.push_back(error);
-}
-
-vector<string> data_warnings;
-
-void data_warning(const string & warning) {
-    cerr << "DATA WARNING: " << warning << endl;
-    data_warnings.push_back(warning);
-}
 //
 //QualType get_plain_type(QualType qual_type) {
 //    auto type = qual_type.getNonReferenceType();//.getUnqualifiedType();

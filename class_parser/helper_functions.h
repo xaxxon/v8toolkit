@@ -9,6 +9,7 @@
 #include "clang.h"
 
 #include "annotations.h"
+#include "log.h"
 
 
 namespace v8toolkit::class_parser {
@@ -28,8 +29,6 @@ extern vector<string> base_types_to_ignore;
 extern vector<string> types_to_ignore_regex;
 extern std::vector<std::string> used_constructor_names;
 extern int matched_classes_returned;
-extern vector<string> data_warnings;
-extern vector<string> data_errors;
 extern vector<string> never_include_for_any_file;
 extern string header_for_every_class_wrapper_file;
 extern vector<string> includes_for_every_class_wrapper_file;
@@ -51,12 +50,11 @@ enum FOUND_METHOD {
 enum EXPORT_TYPE {
     EXPORT_UNSPECIFIED = 0,
     EXPORT_NONE, // export nothing
-    EXPORT_SOME, // only exports specifically marked entities
-    EXPORT_EXCEPT, // exports everything except specifically marked entities
     EXPORT_ALL
 }; // exports everything
 
-EXPORT_TYPE get_export_type(const NamedDecl * decl, EXPORT_TYPE previous = EXPORT_UNSPECIFIED);
+// log_subject - what subject to log any messages under, since this is used on different pieces of the AST
+EXPORT_TYPE get_export_type(const NamedDecl * decl, LogSubjects::Subjects log_subject, EXPORT_TYPE previous = EXPORT_UNSPECIFIED);
 
 string remove_reference_from_type_string(string const & type_string);
 
@@ -67,10 +65,6 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
 
 template<class T>
 std::string join(const T & source, const std::string & between = ", ", bool leading_between = false);
-
-void data_error(const string & error);
-
-void data_warning(const string & warning);
 
 QualType get_plain_type(QualType qual_type);
 
@@ -131,11 +125,6 @@ void generate_javascript_stub(string const &);
 void generate_bidirectional_classes(CompilerInstance & compiler_instance);
 
 void generate_bindings();
-
-void data_error(const string & error);
-
-void data_warning(const string & warning);
-
 
 class PrintLoggingGuard {
     bool logging = false;
@@ -212,7 +201,7 @@ void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
             if (print_logging) cerr << "  Skipping non-public constructor" << endl;
             skip = true;
         }
-        if (get_export_type(constructor) == EXPORT_NONE) {
+        if (get_export_type(constructor, LogSubjects::Constructors) == EXPORT_NONE) {
             if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
             skip = true;
         }

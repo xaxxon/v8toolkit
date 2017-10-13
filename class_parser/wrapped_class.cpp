@@ -90,7 +90,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     auto annotation_base_type_to_use = this->annotations.get_regex(
         "^" V8TOOLKIT_USE_BASE_TYPE_PREFIX "(.*)$");
     if (annotation_base_type_to_use.size() > 1) {
-        data_error(fmt::format("More than one base type specified to use for type", this->class_name));
+        log.error(LogSubjects::Class, "More than one base type specified to use for type", this->class_name);
     }
 
     // if a base type to use is specified, then it must match an actual base type or error
@@ -117,8 +117,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         if (base_type_canonical_name == "class v8toolkit::WrappedClassBase" &&
             base_class.getAccessSpecifier() != AS_public) {
-            data_error(fmt::format("class inherits from v8toolkit::WrappedClassBase but not publicly: {}",
-                                   this->class_name).c_str());
+
+            log.error(LogSubjects::Class, "class inherits from v8toolkit::WrappedClassBase but not publicly: {}",
+                                   this->class_name);
         }
 
 //        cerr << "Base type: " << base_type_canonical_name << endl;
@@ -194,8 +195,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
     if (print_logging) cerr << "done with base classes" << endl;
     if (must_have_base_type && !found_base_type) {
-        data_error(
-            fmt::format("base_type_to_use specified but no base type found: {}", this->class_name));
+        log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
 
 
@@ -219,23 +219,17 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
                     this->compiler_instance.getPreprocessor().getSourceManager(),
                     child_comment_source_range);
 
-                cerr << "Child comment - kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
+                log.info(LogSubjects::Comments, "Child comment - kind: {} - '{}'", (*i)->getCommentKind(), child_comment_text);
 
-                std::cerr << fmt::format("ParamCommandComment kind: {}", clang::comments::BlockContentComment::ParamCommandCommentKind) << std::endl;
-                std::cerr << fmt::format("TParamCommandComment kind: {}", clang::comments::BlockContentComment::TParamCommandCommentKind) << std::endl;
-                std::cerr << fmt::format("ParagraphComment kind: {}", clang::comments::BlockContentComment::ParagraphCommentKind) << std::endl;
+
                 // if the child comment is a param command comment (describes a parameter)
                 if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-                    cerr << "Is ParamCommandComment" << endl;
-                    if (param_command == nullptr) {
-//                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
-                    }
-//                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str())
-//                              << std::endl;
+                    log.info(LogSubjects::Comments, "Is ParamCommandComment");
+                    log.info(LogSubjects::Comments,"param name as written: {}", param_command->getParamNameAsWritten().str());
 
                     // cannot use getParamName() because it crashes if the name doesn't match a parameter
                     auto command_param_name = param_command->getParamNameAsWritten().str();
-//                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
+                    log.info(LogSubjects::Comments, "got command param name {}", command_param_name);
 
 //                    ParameterInfo * matching_parameter_info_ptr = nullptr;
 //                    for (auto & parameter : this->parameters) {
@@ -304,7 +298,7 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 // iterate through all constructors with the specified annotation
         foreach_constructor(this->decl, [&](auto constructor_decl) {
             if (bidirectional_constructor) {
-                data_error(fmt::format("ERROR: Got more than one bidirectional constructor for {}", this->name_alias));
+                log.error(LogSubjects::Constructors, "ERROR: Got more than one bidirectional constructor for {}", this->name_alias);
                 return;
             }
             this->bidirectional_constructor = constructor_decl;
@@ -373,7 +367,8 @@ void WrappedClass::parse_all_methods() {
     if (this->decl == nullptr) {
         return;
     }
-    std::cerr << fmt::format("*** Parsing class methods") << std::endl;
+
+    log.info(LogSubjects::Methods, "Parsing class methods for {}", this->get_name_alias());
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
@@ -485,7 +480,7 @@ void WrappedClass::parse_all_methods() {
             Annotations method_annotations(method);
 
             std::string full_method_name(method->getQualifiedNameAsString());
-            cerr << fmt::format("looking at {}", full_method_name) << endl;
+            log.info(LogSubjects::Methods, "looking at {}", full_method_name);
 
             // this is handled now
 //            if (method->isTemplateDecl()) {
@@ -493,22 +488,21 @@ void WrappedClass::parse_all_methods() {
 //            }
 
             if (method->hasInheritedPrototype()) {
-                cerr << fmt::format("Skipping method %s because it has inherited prototype", full_method_name) << endl;
+                log.info(LogSubjects::Methods, "Skipping method {} because it has inherited prototype", full_method_name);
                 continue;
             }
 
-            auto export_type = get_export_type(method, EXPORT_ALL);
+            auto export_type = get_export_type(method, LogSubjects::Methods, EXPORT_ALL);
 
-            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-                if (PRINT_SKIPPED_EXPORT_REASONS)
-                    printf("Skipping method %s because not supposed to be exported %d\n",
-                           full_method_name.c_str(), export_type);
+            if (export_type != EXPORT_ALL) {
+                log.info(LogSubjects::Methods, "Skipping method {} because not supposed to be exported %d",
+                           full_method_name, export_type);
                 continue;
             }
 
             // only deal with public methods
             if (method->getAccess() != AS_public) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", full_method_name.c_str());
+                log.info(LogSubjects::Methods, "{} is not public, skipping\n", full_method_name);
                 continue;
             }
 
@@ -522,8 +516,7 @@ void WrappedClass::parse_all_methods() {
                 } else {
 
                     // otherwise skip overloaded operators
-                    if (PRINT_SKIPPED_EXPORT_REASONS)
-                        printf("**skipping overloaded operator %s\n", full_method_name.c_str());
+                    log.info(LogSubjects::Methods, "skipping overloaded operator {}", full_method_name.c_str());
                     continue;
                 }
             }
@@ -564,12 +557,12 @@ void WrappedClass::parse_all_methods() {
                 continue;
             }
             if (dyn_cast<CXXDestructorDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**skipping destructor %s\n", full_method_name.c_str());
+                log.info(LogSubjects::Destructors, "skipping destructor {}", full_method_name);
                 continue;
             }
+
             if (dyn_cast<CXXConversionDecl>(method)) {
-                if (PRINT_SKIPPED_EXPORT_REASONS)
-                    printf("**skipping conversion operator %s\n", full_method_name.c_str());
+                log.info(LogSubjects::Methods, "skipping conversion operator {}", full_method_name);
                 continue;
             }
 
@@ -577,14 +570,11 @@ void WrappedClass::parse_all_methods() {
             if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
                 // cerr << "has extend wrapper string" << endl;
                 if (!method->isStatic()) {
-                    data_error(fmt::format("method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static",
-                                           full_method_name.c_str()));
+                    log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static",
+                                           full_method_name.c_str());
 
                 }
-                if (PRINT_SKIPPED_EXPORT_REASONS)
-                    cerr << fmt::format(
-                        "**skipping static method marked as v8 class wrapper extension method, but will call it during class wrapping")
-                         << endl;
+                log.info(LogSubjects::Methods, "skipping static method '{}' marked as v8 class wrapper extension method, but will call it during class wrapping", full_method_name);
                 this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
                 continue; // don't wrap the method as a normal method
             }
@@ -592,18 +582,16 @@ void WrappedClass::parse_all_methods() {
             // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
             if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
                 if (!method->isStatic()) {
-                    data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
-                                           full_method_name.c_str()));
+                    log.error(LogSubjects::Methods, "method '{}' annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
+                                           full_method_name);
                     continue;
                 } else if (method->getAccess() != AS_public) {
-                    data_error(fmt::format("method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be public",
-                                           full_method_name.c_str()));
+                    log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be public", full_method_name);
                     continue;
                 }
-                if (PRINT_SKIPPED_EXPORT_REASONS)
-                    cerr << fmt::format(
-                        "**skipping static method marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping")
-                         << endl;
+                log.info(LogSubjects::Methods, "skipping static method '{}' marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping", full_method_name);
+
+                // TODO: don't put the text here, just store the method in WrappedClass
                 this->wrapper_custom_extensions.insert(
                     fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});",
                                 full_method_name));
@@ -698,16 +686,15 @@ void WrappedClass::parse_members() {
 
             string field_name = field->getQualifiedNameAsString();
 
-            auto export_type = get_export_type(field, EXPORT_ALL);
-            if (export_type != EXPORT_ALL && export_type != EXPORT_EXCEPT) {
-                if (PRINT_SKIPPED_EXPORT_REASONS)
-                    printf("Skipping data member %s because not supposed to be exported %d\n",
+            auto export_type = get_export_type(field, LogSubjects::DataMembers, EXPORT_ALL);
+            if (export_type == EXPORT_NONE) {
+                log.info(LogSubjects::DataMembers, "Skipping data member {} because not supposed to be exported {}",
                            field_name.c_str(), export_type);
                 continue;
             }
 
             if (field->getAccess() != AS_public) {
-                if (PRINT_SKIPPED_EXPORT_REASONS) printf("**%s is not public, skipping\n", field_name.c_str());
+                log.info(LogSubjects::DataMembers, "{} is not public, skipping", field_name);
                 continue;
             }
 
@@ -799,10 +786,11 @@ bool WrappedClass::should_be_wrapped() const {
 
 //    cerr << fmt::format("In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get())) << endl;
 
+    // TODO: Isn't this handled in get_exports function?
     if (annotations.has(V8TOOLKIT_NONE_STRING) &&
         annotations.has(V8TOOLKIT_ALL_STRING)) {
 //        cerr << "data error - none and all" << endl;
-        data_error(fmt::format("type has both NONE_STRING and ALL_STRING - this makes no sense", class_name));
+        log.error(LogSubjects::Class, "type has both NONE_STRING and ALL_STRING - this makes no sense", class_name);
     }
 
     if (found_method == FOUND_BASE_CLASS) {
@@ -858,9 +846,7 @@ bool WrappedClass::should_be_wrapped() const {
 
     // if it should be wrapped but there are too many base types, error out
     if (base_types.size() > 1) {
-        data_error(
-            fmt::format("trying to see if {} should be wrapped but it has more than one base type -- unsupported",
-                        class_name));
+        log.error(LogSubjects::Class, "trying to see if {} should be wrapped but it has more than one base type -- unsupported", class_name);
     }
 
 

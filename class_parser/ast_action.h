@@ -22,7 +22,6 @@ public:
     // open up output files
     PrintFunctionNamesAction() {
         WrappedClass::wrapped_classes.clear();
-        data_errors.clear();
     }
     ~PrintFunctionNamesAction() {}
 

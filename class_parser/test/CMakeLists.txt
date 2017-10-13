@@ -1,5 +1,6 @@
 project ("Class Parser Test")
 set(CMAKE_VERBOSE_MAKEFILE on)
+include(cotire)
 
 
 include_directories(${gtest_SOURCE_DIR}/include)
@@ -29,3 +30,5 @@ add_custom_command(TARGET copy_test_resources POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/../class_parser.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../../include/wrapped_class_base.h
         ${PROJECT_BINARY_DIR}/)
+
+cotire(test-class-parser)
