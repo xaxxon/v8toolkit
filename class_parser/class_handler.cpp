@@ -20,8 +20,6 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     // if the current result is matched from the "not std:: class"-bound matcher
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
-        assert(klass != nullptr);
-        std::cerr << fmt::format("got CXXRecordDecl at address {}", (void*)klass) << std::endl;
         auto class_name = get_canonical_name_for_decl(klass);
 
 //        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;

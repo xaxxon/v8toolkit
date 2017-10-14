@@ -42,7 +42,7 @@ auto run_code(std::string source) {
     // there's a bug during cleanup if this object is destroyed, so just leak it
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
 
-    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
+//    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
     clang::tooling::runToolOnCodeWithArgs(action,
                                           source_prefix + source,
                                           args);

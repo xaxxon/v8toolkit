@@ -222,12 +222,12 @@ public:
 
     void add_base_type(WrappedClass & base_type) {
         if (xl::contains(base_types_to_ignore, base_type.class_name)) {
-            std::cerr << fmt::format("Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias) << std::endl;
+            log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias);
             return;
         }
 
-        std::cerr << fmt::format("adding base type {} {} to derived type: {} {}",
-                                 base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this) << std::endl;
+        log.info(LogSubjects::Class, "adding base type {} {} to derived type: {} {}",
+                                 base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this);
 
         this->base_types.insert(&base_type);
     }

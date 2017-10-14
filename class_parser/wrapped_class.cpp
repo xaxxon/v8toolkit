@@ -32,7 +32,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     annotations(decl),
     found_method(found_method)
 {
-    std::cerr << fmt::format("!!! Created new WRAPPED CLASS: {} {}", this->get_name_alias(), (void*)this) << std::endl;
+    log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
     xl::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
@@ -677,7 +677,7 @@ void WrappedClass::parse_members() {
     }
     this->members_parsed = true;
 
-    std::cerr << fmt::format("parsing members for {} at {}", this->get_name_alias(), (void*)this) << std::endl;
+//    std::cerr << fmt::format("parsing members for {} at {}", this->get_name_alias(), (void*)this) << std::endl;
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
         if (this->decl == nullptr) {
@@ -687,7 +687,7 @@ void WrappedClass::parse_members() {
 
 
 
-        std::cerr << fmt::format("getting fields for {} at {} which has {} base types", wrapped_class.get_name_alias(), (void*)&wrapped_class, wrapped_class.base_types.size()) << std::endl;
+//        std::cerr << fmt::format("getting fields for {} at {} which has {} base types", wrapped_class.get_name_alias(), (void*)&wrapped_class, wrapped_class.base_types.size()) << std::endl;
 //        std::cerr << fmt::format("getting fields for {}", wrapped_class.decl->) << std::endl;
 
         for (FieldDecl * field : wrapped_class.decl->fields()) {
@@ -1061,7 +1061,7 @@ bool WrappedClass::found_method_means_wrapped() {
 }
 
 WrappedClass::~WrappedClass() {
-    std::cerr << fmt::format("!!! WRAPPED CLASS DELETED: {} {}***********", this->get_name_alias(), (void*)this) << std::endl;
+    log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->get_name_alias(), (void*)this);
 }
 
 
