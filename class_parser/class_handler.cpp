@@ -20,6 +20,8 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     // if the current result is matched from the "not std:: class"-bound matcher
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
+        assert(klass != nullptr);
+        std::cerr << fmt::format("got CXXRecordDecl at address {}", (void*)klass) << std::endl;
         auto class_name = get_canonical_name_for_decl(klass);
 
 //        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;
@@ -254,11 +256,11 @@ void ClassHandler::onEndOfTranslationUnit() {
     auto & all_wrapped_classes = WrappedClass::wrapped_classes;
 
     for(auto & c : all_wrapped_classes) {
-        if (c.should_be_wrapped()) {
-            xl::LogCallbackGuard g(log, c.log_watcher);
-            c.parse_enums();
-            c.parse_members();
-            c.parse_all_methods();
+        if (c->should_be_wrapped()) {
+            xl::LogCallbackGuard g(log, c->log_watcher);
+            c->parse_enums();
+            c->parse_members();
+            c->parse_all_methods();
         }
     }
 
@@ -270,7 +272,7 @@ void ClassHandler::onEndOfTranslationUnit() {
 
     for (auto & output_module : this->output_modules) {
         std::cerr << fmt::format("running output module") << std::endl;
-        output_module->process(WrappedClass::wrapped_classes);
+       // output_module->process(WrappedClass::wrapped_classes);
 //
 ////        generate_javascript_stub("js-api.js");
 ////        generate_bidirectional_classes(this->ci);

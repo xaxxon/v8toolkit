@@ -363,7 +363,7 @@ bool has_wrapped_class(const CXXRecordDecl * decl) {
 
     for (auto & wrapped_class : WrappedClass::wrapped_classes) {
 
-        if (wrapped_class.class_name == class_name) {
+        if (wrapped_class->class_name == class_name) {
             return true;
         }
     }

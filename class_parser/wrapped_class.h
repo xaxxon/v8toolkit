@@ -56,7 +56,7 @@ public:
 
     ~WrappedClass();
 
-    static inline vector<WrappedClass> wrapped_classes;
+    static inline vector<unique_ptr<WrappedClass>> wrapped_classes;
 
     CXXRecordDecl const * decl = nullptr;
 
@@ -226,6 +226,9 @@ public:
             return;
         }
 
+        std::cerr << fmt::format("adding base type {} {} to derived type: {} {}",
+                                 base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this) << std::endl;
+
         this->base_types.insert(&base_type);
     }
 
@@ -251,8 +254,8 @@ public:
             return nullptr;
         }
         for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-            if (wrapped_class.decl == decl) {
-                return &wrapped_class;
+            if (wrapped_class->decl == decl) {
+                return wrapped_class.get();
             }
         }
         return nullptr;

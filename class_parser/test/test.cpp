@@ -42,12 +42,12 @@ auto run_code(std::string source) {
     // there's a bug during cleanup if this object is destroyed, so just leak it
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
 
-
+    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
     clang::tooling::runToolOnCodeWithArgs(action,
                                           source_prefix + source,
                                           args);
 
-    return  erase_if(copy(WrappedClass::wrapped_classes), [](WrappedClass const & c){return !c.should_be_wrapped();});
+    return  erase_if(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){return !c->should_be_wrapped();});
 }
 
 TEST(ClassParser, ClassParser) {
@@ -60,7 +60,7 @@ TEST(ClassParser, ClassParser) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
@@ -81,7 +81,7 @@ TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 3);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
@@ -101,7 +101,7 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
@@ -126,7 +126,7 @@ TEST(ClassParser, CustomExtensions) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_members().size(), 0);
     EXPECT_EQ(c.get_member_functions().size(), 0);
@@ -151,7 +151,7 @@ TEST(ClassParser, ClassElements) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_member_functions().size(), 1);
 //    for(auto & f : c.get_member_functions()) {
@@ -187,7 +187,7 @@ TEST(ClassParser, UseDifferentName) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_member_functions().size(), 1);
     EXPECT_EQ((*c.get_member_functions().begin())->js_name, "alternate_member_instance_function");
@@ -215,8 +215,8 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 2);
-    WrappedClass const & c1 = pruned_vector[0].get();
-    WrappedClass const & c2 = pruned_vector[1].get();
+    WrappedClass const & c1 = *pruned_vector[0].get();
+    WrappedClass const & c2 = *pruned_vector[1].get();
 
     EXPECT_EQ(c1.get_constructors().size(), 1);
     EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass");
@@ -246,8 +246,8 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 2);
-    WrappedClass const & c1 = pruned_vector[0].get();
-    WrappedClass const & c2 = pruned_vector[1].get();
+    WrappedClass const & c1 = *pruned_vector[0].get();
+    WrappedClass const & c2 = *pruned_vector[1].get();
 
     EXPECT_EQ(c1.get_constructors().size(), 1);
     EXPECT_TRUE(c1.get_constructors()[0]->js_name == "A" || c1.get_constructors()[0]->js_name == "B");
@@ -274,7 +274,7 @@ TEST(ClassParser, AbstractClass) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector[0].get();
+    WrappedClass const & c = *pruned_vector[0].get();
 
     // no reason to deal with constructors of abstract types since they won't be constructed directly
     EXPECT_EQ(c.get_constructors().size(), 0);
@@ -335,10 +335,10 @@ TEST(ClassParser, ClassAndFunctionComments) {
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 4);
-    WrappedClass const & c1 = pruned_vector.at(0).get();
-    WrappedClass const & c2 = pruned_vector.at(1).get();
-    WrappedClass const & c3 = pruned_vector.at(2).get();
-    WrappedClass const & c4 = pruned_vector.at(3).get();
+    WrappedClass const & c1 = *pruned_vector.at(0).get();
+    WrappedClass const & c2 = *pruned_vector.at(1).get();
+    WrappedClass const & c3 = *pruned_vector.at(2).get();
+    WrappedClass const & c4 = *pruned_vector.at(3).get();
 
     EXPECT_EQ(c1.get_name_alias(), "ClassWithComments");
     EXPECT_EQ(c1.get_member_functions().size(), 1);
@@ -397,7 +397,7 @@ public:
     auto pruned_vector = run_code(source);
 
     EXPECT_EQ(pruned_vector.size(), 1);
-    WrappedClass const & c = pruned_vector.at(0);
+    WrappedClass const & c = *pruned_vector.at(0).get();
     EXPECT_EQ(c.get_member_functions().size(), 1);
     EXPECT_EQ(c.get_static_functions().size(), 1);
     EXPECT_EQ(c.get_members().size(), 1);
@@ -416,7 +416,7 @@ public:
 //    auto pruned_vector = run_code(source);
 //
 //    EXPECT_EQ(pruned_vector.size(), 1);
-//    WrappedClass const & c = pruned_vector[0].get();
+//    WrappedClass const & c = *pruned_vector[0].get();
 //}
 
 

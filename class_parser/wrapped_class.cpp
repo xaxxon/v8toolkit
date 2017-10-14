@@ -12,11 +12,11 @@ namespace v8toolkit::class_parser {
 
 WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance,
                                                FOUND_METHOD found_method) {
-    auto & new_wrapped_class = WrappedClass::wrapped_classes.emplace_back(decl, compiler_instance, found_method);
+    auto & new_wrapped_class = WrappedClass::wrapped_classes.emplace_back(new WrappedClass(decl, compiler_instance, found_method));
 
-    new_wrapped_class.make_bidirectional_wrapped_class_if_needed();
+    new_wrapped_class->make_bidirectional_wrapped_class_if_needed();
 
-    return new_wrapped_class;
+    return *new_wrapped_class;
 }
 
 // Having this too high can lead to VERY memory-intensive compilation units
@@ -32,6 +32,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     annotations(decl),
     found_method(found_method)
 {
+    std::cerr << fmt::format("!!! Created new WRAPPED CLASS: {} {}", this->get_name_alias(), (void*)this) << std::endl;
     xl::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
@@ -266,10 +267,10 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 //                                        command_param_name));
 //                    }
                 } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
-                    auto comment_text = get_source_for_source_range(
+                    auto paragraph_comment_text = get_source_for_source_range(
                         this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
 
-                    this->comment = trim_doxygen_comment_whitespace(comment_text);
+                    this->comment = trim_doxygen_comment_whitespace(paragraph_comment_text);
 
                 }
 
@@ -314,8 +315,8 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
         string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
 
 // created a WrappedClass for the non-AST JSWrapper class
-        WrappedClass & js_wrapped_class = WrappedClass::wrapped_classes.emplace_back(bidirectional_class_name,
-                                                                                     this->compiler_instance);
+        WrappedClass & js_wrapped_class = *WrappedClass::wrapped_classes.emplace_back(new WrappedClass(bidirectional_class_name,
+                                                                                     this->compiler_instance));
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
@@ -676,12 +677,18 @@ void WrappedClass::parse_members() {
     }
     this->members_parsed = true;
 
+    std::cerr << fmt::format("parsing members for {} at {}", this->get_name_alias(), (void*)this) << std::endl;
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
         if (this->decl == nullptr) {
-//            std::cerr << fmt::format("No decls for {} while parsing memberes", this->name_alias) << std::endl;
+            std::cerr << fmt::format("No decls for {} while parsing memberes", this->name_alias) << std::endl;
             return;
         }
+
+
+
+        std::cerr << fmt::format("getting fields for {} at {} which has {} base types", wrapped_class.get_name_alias(), (void*)&wrapped_class, wrapped_class.base_types.size()) << std::endl;
+//        std::cerr << fmt::format("getting fields for {}", wrapped_class.decl->) << std::endl;
 
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
@@ -1053,7 +1060,9 @@ bool WrappedClass::found_method_means_wrapped() {
 
 }
 
-WrappedClass::~WrappedClass() {}
+WrappedClass::~WrappedClass() {
+    std::cerr << fmt::format("!!! WRAPPED CLASS DELETED: {} {}***********", this->get_name_alias(), (void*)this) << std::endl;
+}
 
 
 
@@ -1093,26 +1102,26 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
     for (auto & wrapped_class : wrapped_classes) {
 
         // if this one matches another class that's already been seen
-        if (wrapped_class.class_name == class_name) {
+        if (wrapped_class->class_name == class_name) {
 
             // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
             //   if it is the base of a wrapped type
             if (found_method == FOUND_BASE_CLASS) {
 //                std::cerr << fmt::format("{} get_or_insert wrapped class -- matched name and method==found_base_class", class_name) << std::endl;
                 // if the class wouldn't otherwise be wrapped, need to make sure no constructors are created
-                if (!wrapped_class.should_be_wrapped()) {
-                    wrapped_class.force_no_constructors = true;
+                if (!wrapped_class->should_be_wrapped()) {
+                    wrapped_class->force_no_constructors = true;
                 }
-                wrapped_class.found_method = FOUND_BASE_CLASS;
+                wrapped_class->found_method = FOUND_BASE_CLASS;
 
                 // if a type was adjusted, make sure to adjust it's base types as well
-                for(auto & base : wrapped_class.base_types) {
-//                    std::cerr << fmt::format("running through parent classes of {}", wrapped_class.name_alias) << std::endl;
+                for(auto & base : wrapped_class->base_types) {
+//                    std::cerr << fmt::format("running through parent classes of {}", wrapped_class->name_alias) << std::endl;
                     get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
                 }
             }
             //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
-            return wrapped_class;
+            return *wrapped_class;
         }
     }
 
