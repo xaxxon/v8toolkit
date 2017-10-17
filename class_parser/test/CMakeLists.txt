@@ -9,7 +9,7 @@ include_directories(${gmock_SOURCE_DIR}/include)
 
 add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
 find_package(fmt REQUIRED)
-target_link_libraries(test-class-parser fmt gmock gmock_main )
+target_link_libraries(test-class-parser fmt gmock gmock_main)
 
 # Can't have RTTI because the clang libs don't have it which means
 target_compile_options(test-class-parser PRIVATE -fno-rtti)
@@ -40,4 +40,4 @@ add_custom_command(TARGET copy_test_resources PRE_BUILD
         ${PROJECT_BINARY_DIR}/bidirectional_templates/
         )
 
-cotire(test-class-parser)
+#cotire(test-class-parser)

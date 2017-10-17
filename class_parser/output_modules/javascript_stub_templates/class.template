@@ -1,17 +1,15 @@
 /**
- * {{CLASS_COMMENT}}
- * @class {{NAME_ALIAS}}
-{{PARAMETER_COMMENT_LIST|!!
- * @property \{{{TYPE}}\} {{NAME}}}}
+ * {{comment}}
+ * @class {{name}}
+{{data_members|!!
+ * @property \{{{type}}\} {{name}} {{comment}}}}
  */
 class {{CLASS_NAME}}{{CLASS_INHERITANCE}}
 {
-{{CONSTRUCTOR_LIST|!!
+{{constructors|!!
 constructor({}){{}}}}
 
-{{MEMBER_FUNCTION_LIST|!!
-{{MEMBER_FUNCTIONS|member_function}}
+{{member_functions|member_function}}
 
-{{STATIC_FUNCTION_LIST|!!
-{{STATIC_FUNCTIONS|static_function}}
+{{static_functions|static_function}}
 }

@@ -40,6 +40,8 @@ find_package(Boost REQUIRED COMPONENTS system)
 
 # bring in libxl and make require that it have access to libfmt for additional logging functionality
 set(xl::USE_LIB_FMT REQUIRED)
+
+set(USE_PCRE false)
 find_package(xl REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIR})

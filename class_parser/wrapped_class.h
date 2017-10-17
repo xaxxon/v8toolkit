@@ -5,7 +5,6 @@
 #include <set>
 
 #include <xl/library_extensions.h>
-#include <xl/templates.h>
 
 #include "parsed_method.h"
 #include "annotations.h"

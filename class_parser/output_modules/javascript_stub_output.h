@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <xl/templates.h>
 
 #include "../output_modules.h"
 
@@ -52,19 +51,11 @@ public:
 
 
 
-inline std::unique_ptr<xl::templates::Provider_Interface> get_provider(WrappedClass const * wrapped_class) {
-    return xl::templates::make_provider("test");
-}
-
 
 class JavascriptStubOutputModule : public OutputModule {
 
 public:
-    void process(std::vector<WrappedClass const *> const & wrapped_classes) override {
-        auto templates = xl::templates::load_templates("javascript_stub_templates");
-
-        templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
-    }
+    void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
 };
 
 

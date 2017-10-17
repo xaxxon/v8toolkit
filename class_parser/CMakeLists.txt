@@ -30,7 +30,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -pedantic")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${llvm_config_output}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 
-FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h)
+FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h output_modules/*.cpp)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
 cotire(class_parser_plugin)
