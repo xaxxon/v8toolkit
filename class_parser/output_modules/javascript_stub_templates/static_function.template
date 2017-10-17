@@ -1,6 +1,6 @@
 /**
  * @param MISSING STUFF
- * @return MORE MISSING STUFF
+ * @return \{{{return_type_name}}\} {{return_comment}}
  */
 static {{name}}({{parameters|!{{name}}}}){}
 

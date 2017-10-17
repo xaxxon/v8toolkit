@@ -44,7 +44,8 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<
         std::pair("name", f->js_name),
         std::pair("static", f->is_static ? "static" : ""),
         std::pair("parameters", xl::templates::make_provider(f->parameters)),
-        std::pair("return", xl::templates::make_provider(f->return_type))
+        std::pair("return_type_name", xl::templates::make_provider(f->return_type.get_jsdoc_type_name())),
+        std::pair("return_comment", f->return_type_comment)
     );
 }
 
@@ -54,19 +55,20 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<
         std::pair("name", f->js_name),
         std::pair("static", f->is_static ? "static" : ""),
         std::pair("parameters", xl::templates::make_provider(f->parameters)),
-        std::pair("return", xl::templates::make_provider(f->return_type))
+        std::pair("return_type_name", xl::templates::make_provider(f->return_type.get_jsdoc_type_name())),
+        std::pair("return_comment", f->return_type_comment)
     );
 }
 
 
 
 std::unique_ptr<xl::templates::Provider_Interface> get_provider(ClassFunction::ParameterInfo const & p) {
-    return xl::templates::make_provider("BOGUS PARAMETERINFO PROVIDER");
+    return xl::templates::make_provider("Implement me");
 }
 
 
-std::unique_ptr<xl::templates::Provider_Interface> get_provider(ClassFunction::TypeInfo const & p) {
-    return xl::templates::make_provider("BOGUS TYPEINFO PROVIDER");
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(ClassFunction::TypeInfo const & t) {
+    return xl::templates::make_provider("Implement me");
 
 }
 
