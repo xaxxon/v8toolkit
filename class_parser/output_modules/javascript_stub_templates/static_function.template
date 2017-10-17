@@ -1,0 +1,7 @@
+/**
+ * @param {{{}}} [{} = {}] {} <== how to pick which of these two?
+ * @param {{{}}} {} <== how to pick which of these two?
+ * @return {{{}}} {}
+ */
+static {{SHORT_NAME}}({{PARAMETERS|!{{NAME}}}}){}
+

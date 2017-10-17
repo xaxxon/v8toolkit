@@ -20,8 +20,7 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
         LLVMSymbolize LLVMDebugInfoPDB LLVMScalarOpts LLVMInstCombine LLVMInstrumentation LLVMBitWriter
         LLVMTransformUtils LLVMExecutionEngine LLVMTarget LLVMAnalysis LLVMRuntimeDyld
         LLVMObject LLVMBitReader LLVMCore clangParse clangAST
-        clangBasic clangParse clangTooling)
-
+        clangBasic clangParse clangTooling c++experimental)
 
 
 add_custom_target(copy_test_resources)

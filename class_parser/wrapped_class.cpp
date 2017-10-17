@@ -12,12 +12,12 @@ namespace v8toolkit::class_parser {
 
 WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance,
                                                FOUND_METHOD found_method) {
+
     auto & new_wrapped_class = WrappedClass::wrapped_classes.emplace_back(new WrappedClass(decl, compiler_instance, found_method));
-
     new_wrapped_class->make_bidirectional_wrapped_class_if_needed();
-
     return *new_wrapped_class;
 }
+
 
 // Having this too high can lead to VERY memory-intensive compilation units
 // Single classes (+base classes) with more than this number of declarations will still be in one file.

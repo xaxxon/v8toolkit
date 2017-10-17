@@ -14,31 +14,7 @@
 
 namespace v8toolkit::class_parser {
 
-class ClassCollectionHandler {
 
-};
-
-inline xl::Template jsdoc_file_template(R"(
-{HEADER}
-
-{CLASS_LIST}
-
-{FOOTER}
-)");
-
-inline xl::Template class_template(R"(
-/**
- * {CLASS_COMMENT}
- {PARAMETER_COMMENT_LIST}
- */
-class {CLASS_NAME}{CLASS_INHERITANCE} {
-{MEMBER_FUNCTION_LIST}
-{STATIC_FUNCTION_LIST}
-}
-
-)");
-
-inline xl::Template member_function_template(R"({"member_function", xl::Template(R"()");
 
 // defined below - just too big to have here
 extern std::string js_api_header;
@@ -139,52 +115,6 @@ public:
 
 
 inline std::string js_api_header = R"JS_API_HEADER(
-
-/**
- * @type World
- */
-var world;
-
-/**
- * @type Map
- */
-var map;
-
-/**
- * @type Game
- */
-var game;
-
-/**
- * Prints a string and appends a newline
- * @param {String} s the string to be printed
- */
-function println(s){}
-
-/**
- * Prints a string without adding a newline to the end
- * @param {String} s the string to be printed
- */
-function print(s){}
-
-/**
- * Dumps the contents of the given variable - only 'own' properties
- * @param o {Object} the variable to be dumped
- */
-function printobj(o){}
-
-/**
- * Dumps the contents of the given variable - all properties including those of prototype chain
- * @param o {Object} the variable to be dumped
- */
-function printobjall(o){}
-
-/**
- * Attempts to load the given module and returns the exported data.  Requiring the same module
- *   more than once will return the cached os, not re-execute the source.
- * @param {String} module_name name of the module to require
- */
-function require(module_name){}
 
 
 )JS_API_HEADER";
