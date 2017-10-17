@@ -4,7 +4,7 @@
 {{data_members|!!
  * @property \{{{type}}\} {{name}} {{comment}}}}
  */
-class {{CLASS_NAME}}{{CLASS_INHERITANCE}}
+class {{name}}{{inheritance}}
 {
 {{constructors|!!
 constructor({}){{}}}}
