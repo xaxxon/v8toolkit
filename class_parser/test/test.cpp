@@ -23,7 +23,7 @@ using namespace v8toolkit::class_parser;
 
 
 
-auto run_code(std::string source) {
+auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}) {
 
 
     static std::string source_prefix = R"(
@@ -40,7 +40,10 @@ auto run_code(std::string source) {
 
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
-    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction;
+    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
+    for(auto & output_module : output_modules) {
+        action->add_output_module(std::move(output_module));
+    }
 
 //    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
     clang::tooling::runToolOnCodeWithArgs(action,
@@ -66,7 +69,6 @@ TEST(ClassParser, ClassParser) {
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
-
 }
 
 TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
@@ -404,6 +406,26 @@ public:
 }
 
 
+
+
+TEST(ClassParser, ClassComments) {
+    std::string source = R"(
+    class A : public v8toolkit::WrappedClassBase {
+    public:
+        void member_instance_function();
+        static void member_static_function();
+        int data_member;
+    };
+    )";
+
+
+    vector<unique_ptr<OutputModule>> output_modules;
+    output_modules.push_back(make_unique<JavascriptStubOutputModule>());
+    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = *pruned_vector[0].get();
+}
 
 
 

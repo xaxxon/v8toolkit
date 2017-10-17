@@ -5,7 +5,7 @@
 #include <set>
 
 #include <xl/library_extensions.h>
-#include <xl/template.h>
+#include <xl/templates.h>
 
 #include "parsed_method.h"
 #include "annotations.h"
@@ -270,7 +270,6 @@ public:
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();
 
-    std::unique_ptr<xl::Provider_Interface> get_provider();
 }; // end class WrappedClass
 
 

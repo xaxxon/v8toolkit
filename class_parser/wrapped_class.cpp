@@ -1,5 +1,5 @@
 
-#include <xl/regexer.h>
+#include <xl/regex/regexer.h>
 
 #include "wrapped_class.h"
 #include "parsed_method.h"
@@ -1064,14 +1064,6 @@ WrappedClass::~WrappedClass() {
     log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->get_name_alias(), (void*)this);
 }
 
-
-
-std::unique_ptr<xl::Provider_Interface> WrappedClass::get_provider() {
-    return std::unique_ptr<xl::Provider_Interface>(new xl::Provider(
-        std::pair{"class_name", this->class_name},
-        std::pair("name_alias", this->name_alias)
-    ));
-}
 
 
 WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * decl,

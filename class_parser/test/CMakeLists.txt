@@ -20,16 +20,24 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
         LLVMSymbolize LLVMDebugInfoPDB LLVMScalarOpts LLVMInstCombine LLVMInstrumentation LLVMBitWriter
         LLVMTransformUtils LLVMExecutionEngine LLVMTarget LLVMAnalysis LLVMRuntimeDyld
         LLVMObject LLVMBitReader LLVMCore clangParse clangAST
-        clangBasic clangParse clangTooling c++experimental)
+        clangBasic clangParse clangTooling c++experimental pcre)
 
 
 add_custom_target(copy_test_resources)
-add_custom_command(TARGET copy_test_resources POST_BUILD
+add_custom_command(TARGET copy_test_resources PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/class_parser_input_files/sample.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/class_parser_input_files/sample.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../class_parser.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../../include/wrapped_class_base.h
-        ${PROJECT_BINARY_DIR}/)
+        ${PROJECT_BINARY_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/javascript_stub_templates/
+        ${PROJECT_BINARY_DIR}/javascript_stub_templates/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/bindings_templates/
+        ${PROJECT_BINARY_DIR}/bindings_templates/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/bidirectional_templates/
+        ${PROJECT_BINARY_DIR}/bidirectional_templates/
+        )
 
 cotire(test-class-parser)

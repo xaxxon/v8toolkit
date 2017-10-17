@@ -1,7 +1,7 @@
 #include "wrapped_class.h"
 #include "class_handler.h"
 
-
+#include <xl/library_extensions.h>
 
 namespace v8toolkit::class_parser {
 
@@ -251,9 +251,9 @@ void ClassHandler::onEndOfTranslationUnit() {
 
 //    cerr << "Done traversing AST" << endl;
 
-    auto & all_wrapped_classes = WrappedClass::wrapped_classes;
 
-    for(auto & c : all_wrapped_classes) {
+
+    for(auto & c : WrappedClass::wrapped_classes) {
         if (c->should_be_wrapped()) {
             xl::LogCallbackGuard g(log, c->log_watcher);
             c->parse_enums();
@@ -262,15 +262,21 @@ void ClassHandler::onEndOfTranslationUnit() {
         }
     }
 
-//    std::cerr << fmt::format("got {} wrapped classes", all_wrapped_classes.size()) << std::endl;
+    vector<WrappedClass const *> should_be_wrapped_classes;
+    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
+        if (wrapped_class->should_be_wrapped()) {
+            should_be_wrapped_classes.push_back(wrapped_class.get());
+        }
+    }
+
 
     if (this->output_modules.empty()) {
         //cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
     }
 
     for (auto & output_module : this->output_modules) {
-        std::cerr << fmt::format("running output module") << std::endl;
-       // output_module->process(WrappedClass::wrapped_classes);
+//        std::cerr << fmt::format("running output module") << std::endl;
+        output_module->process(should_be_wrapped_classes);
 //
 ////        generate_javascript_stub("js-api.js");
 ////        generate_bidirectional_classes(this->ci);
@@ -278,4 +284,4 @@ void ClassHandler::onEndOfTranslationUnit() {
     }
 
 }
-}
+} // end namespace v8toolkit::class_parser

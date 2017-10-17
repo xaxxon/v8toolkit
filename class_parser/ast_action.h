@@ -13,7 +13,6 @@
 
 namespace v8toolkit::class_parser {
 
-class OutputModule_Interface;
 
 // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
 class PrintFunctionNamesAction : public clang::PluginASTAction {
@@ -28,7 +27,7 @@ public:
     // This is called when all parsing is done
     void EndSourceFileAction();
 
-    vector<unique_ptr<OutputModule_Interface>> output_modules;
+    vector<unique_ptr<OutputModule>> output_modules;
 
 
 protected:
@@ -68,7 +67,7 @@ protected:
 
 public:
 
-    void add_output_module(std::unique_ptr<OutputModule_Interface> output_module) {
+    void add_output_module(unique_ptr<OutputModule> output_module) {
         this->output_modules.push_back(std::move(output_module));
     }
 

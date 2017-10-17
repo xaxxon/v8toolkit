@@ -1,5 +1,5 @@
 
-#include(cotire)
+include(cotire)
 include(ucm)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -33,6 +33,8 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
+cotire(class_parser_plugin)
+
 
 add_definitions(-DCLANG_HOME="${CLANG_HOME}")
 include_directories(${gtest_SOURCE_DIR}/include)
@@ -40,7 +42,6 @@ include_directories(${gtest_SOURCE_DIR}/include)
 # clang libs
 
 
-#cotire(test-class-parser)
 
 target_link_libraries(class_parser_plugin fmt)
 
