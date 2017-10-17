@@ -34,6 +34,11 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<
 }
 
 
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<ConstructorFunction> const & f) {
+    return xl::templates::make_provider("BOGUS CONSTRUCTOR PROVIDER");
+}
+
+
 std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<MemberFunction> const & f) {
     return xl::templates::make_provider(
         std::pair("name", f->js_name),

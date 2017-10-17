@@ -1,7 +1,6 @@
 /**
- * @param {{{}}} [{} = {}] {} <== how to pick which of these two?
- * @param {{{}}} {} <== how to pick which of these two?
- * @return {{{}}} {}
+ * @param STUFF MISSING HERE
+ * @return MORE STUFF MISSING HERE
  */
-{{SHORT_NAME}}({{PARAMETERS|!{{NAME}}}}){}
+{{name}}({{parameters|!{{name}}}}){}
 
