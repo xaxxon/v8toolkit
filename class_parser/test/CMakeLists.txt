@@ -40,4 +40,4 @@ add_custom_command(TARGET copy_test_resources PRE_BUILD
         ${PROJECT_BINARY_DIR}/bidirectional_templates/
         )
 
-#cotire(test-class-parser)
+cotire(test-class-parser)

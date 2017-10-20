@@ -30,6 +30,7 @@ struct ClassFunction {
     bool is_virtual;
     bool is_virtual_final = false;
     bool is_virtual_override = false;
+    std::string comment;
 
     LogWatcher log_watcher;
 
@@ -106,7 +107,6 @@ struct ClassFunction {
 
 
         TypeInfo const type;
-
 
     }; // end ParameterInfo
 

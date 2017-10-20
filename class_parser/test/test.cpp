@@ -428,8 +428,23 @@ TEST(ClassParser, ClassComments) {
     };
     class C : public v8toolkit::WrappedClassBase {
     public:
-        void member_instance_functionC();
-        static void member_static_functionC();
+        /**
+          * member instance function C comment
+          * @param p1 some string parametere
+          * @param p2 some number parameter
+          * @return some number returned
+          */
+        int member_instance_functionC(char * p1, int p2);
+
+        void member_function_no_params();
+
+        /**
+          * static instance function C comment
+          * @param p1 static some string parametere
+          * @param p2 static some number parameter
+          * @return static some number returned
+          */
+        static void member_static_functionC(char * p1, int p2);
 
         /// comment on data_memberC
         int data_memberC;

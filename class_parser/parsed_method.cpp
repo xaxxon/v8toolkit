@@ -393,17 +393,17 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 
     // get the comment associated with the method and if there is one, parse it
 //    std::cerr << fmt::format("Parsing doxygen comments") << std::endl;
-    FullComment * comment = this->compiler_instance.getASTContext().getCommentForDecl(this->method_decl, nullptr);
-    if (comment != nullptr) {
+    FullComment * full_comment = this->compiler_instance.getASTContext().getCommentForDecl(this->method_decl, nullptr);
+    if (full_comment != nullptr) {
 
         auto comment_text = get_source_for_source_range(
-            this->compiler_instance.getPreprocessor().getSourceManager(), comment->getSourceRange());
+            this->compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
 
         log.info(LogSubjects::Comments, "full comment: '{}'", comment_text);
 
         // go through each portion (child) of the full commetn
         int j = 0;
-        for (auto i = comment->child_begin(); i != comment->child_end(); i++) {
+        for (auto i = full_comment->child_begin(); i != full_comment->child_end(); i++) {
             log.info(LogSubjects::Comments, "looking at child comment {} - kind: {} {}", ++j, (*i)->getCommentKindName(),
                                      (*i)->getCommentKind());
             auto child_comment_source_range = (*i)->getSourceRange();
@@ -413,27 +413,15 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                     this->compiler_instance.getPreprocessor().getSourceManager(),
                     child_comment_source_range);
 
-//                cerr << "Child comment kind: " << (*i)->getCommentKind() << ": " << child_comment_text << endl;
-
                 // if the child comment is a param command comment (describes a parameter)
                 if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-//                    cerr << "Is ParamCommandComment" << endl;
-                    if (param_command == nullptr) {
-//                        std::cerr << fmt::format("THIS CANT BE RIGHT") << std::endl;
-                    }
-//                    std::cerr << fmt::format("param name aswritten: {}", param_command->getParamNameAsWritten().str())
-//                              << std::endl;
 
                     // cannot use getParamName() because it crashes if the name doesn't match a parameter
                     auto command_param_name = param_command->getParamNameAsWritten().str();
-//                    std::cerr << fmt::format("got command param name {}", command_param_name) << std::endl;
 
                     ParameterInfo * matching_parameter_info_ptr = nullptr;
                     for (auto & parameter : this->parameters) {
-//                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name)
-//                                  << std::endl;
                         if (command_param_name == parameter.name) {
-//                            std::cerr << fmt::format("found match!") << std::endl;
                             matching_parameter_info_ptr = &parameter;
                             break;
                         }
@@ -470,6 +458,12 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                     if (auto results = regexer(block_comment, "^[@]return(.*)"_rei)) {
                         this->return_type_comment = trim_doxygen_comment_whitespace(results[1]);
                     }
+                } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
+                    auto paragraph_comment_text = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
+
+                    this->comment = trim_doxygen_comment_whitespace(paragraph_comment_text);
+
                 }
             }
         }

@@ -25,45 +25,49 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(WrappedClass con
 }
 
 
-std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<DataMember> const & d) {
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(DataMember const & d) {
     return xl::templates::make_provider(
-        std::pair("comment", d->comment),
-        std::pair("name", d->js_name),
-        std::pair("type", d->type.get_jsdoc_type_name())
+        std::pair("comment", d.comment),
+        std::pair("name", d.js_name),
+        std::pair("type", d.type.get_jsdoc_type_name())
     );
 }
 
 
-std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<ConstructorFunction> const & f) {
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(ConstructorFunction const & f) {
     return xl::templates::make_provider("BOGUS CONSTRUCTOR PROVIDER");
 }
 
 
-std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<MemberFunction> const & f) {
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(MemberFunction const & f) {
     return xl::templates::make_provider(
-        std::pair("name", f->js_name),
-        std::pair("static", f->is_static ? "static" : ""),
-        std::pair("parameters", xl::templates::make_provider(f->parameters)),
-        std::pair("return_type_name", xl::templates::make_provider(f->return_type.get_jsdoc_type_name())),
-        std::pair("return_comment", f->return_type_comment)
+        std::pair("name", f.js_name),
+        std::pair("comment", f.comment),
+        std::pair("parameters", xl::templates::make_provider(f.parameters)),
+        std::pair("return_type_name", xl::templates::make_provider(f.return_type.get_jsdoc_type_name())),
+        std::pair("return_comment", f.return_type_comment)
     );
 }
 
 
-std::unique_ptr<xl::templates::Provider_Interface> get_provider(std::unique_ptr<StaticFunction> const & f) {
+std::unique_ptr<xl::templates::Provider_Interface> get_provider(StaticFunction const & f) {
     return xl::templates::make_provider(
-        std::pair("name", f->js_name),
-        std::pair("static", f->is_static ? "static" : ""),
-        std::pair("parameters", xl::templates::make_provider(f->parameters)),
-        std::pair("return_type_name", xl::templates::make_provider(f->return_type.get_jsdoc_type_name())),
-        std::pair("return_comment", f->return_type_comment)
+        std::pair("name", f.js_name),
+        std::pair("comment", f.comment),
+        std::pair("parameters", xl::templates::make_provider(f.parameters)),
+        std::pair("return_type_name", xl::templates::make_provider(f.return_type.get_jsdoc_type_name())),
+        std::pair("return_comment", f.return_type_comment)
     );
 }
 
 
 
 std::unique_ptr<xl::templates::Provider_Interface> get_provider(ClassFunction::ParameterInfo const & p) {
-    return xl::templates::make_provider("Implement me");
+    return xl::templates::make_provider(
+        std::pair("type", p.type.get_jsdoc_type_name()),
+        std::pair("name", p.name),
+        std::pair("comment", p.description)
+    );
 }
 
 

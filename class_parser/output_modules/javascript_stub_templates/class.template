@@ -2,12 +2,12 @@
  * {{comment}}
  * @class {{name}}
 {{data_members|!!
- * @property \{{{type}}\} {{name}} {{comment}}}}
+ * @property  {{name}} {{comment}}}}
  */
 class {{name}}{{inheritance}}
 {
 {{constructors|!!
-constructor({}){{}}}}
+constructor(){\}}}
 
 {{member_functions|member_function}}
 
