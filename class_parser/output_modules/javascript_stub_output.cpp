@@ -35,7 +35,10 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(DataMember const
 
 
 std::unique_ptr<xl::templates::Provider_Interface> get_provider(ConstructorFunction const & f) {
-    return xl::templates::make_provider("BOGUS CONSTRUCTOR PROVIDER");
+    return xl::templates::make_provider(
+        std::pair("comment", f.comment),
+        std::pair("parameters", xl::templates::make_provider(f.parameters))
+    );
 }
 
 
@@ -44,7 +47,7 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(MemberFunction c
         std::pair("name", f.js_name),
         std::pair("comment", f.comment),
         std::pair("parameters", xl::templates::make_provider(f.parameters)),
-        std::pair("return_type_name", xl::templates::make_provider(f.return_type.get_jsdoc_type_name())),
+        std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
         std::pair("return_comment", f.return_type_comment)
     );
 }
@@ -55,7 +58,7 @@ std::unique_ptr<xl::templates::Provider_Interface> get_provider(StaticFunction c
         std::pair("name", f.js_name),
         std::pair("comment", f.comment),
         std::pair("parameters", xl::templates::make_provider(f.parameters)),
-        std::pair("return_type_name", xl::templates::make_provider(f.return_type.get_jsdoc_type_name())),
+        std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
         std::pair("return_comment", f.return_type_comment)
     );
 }

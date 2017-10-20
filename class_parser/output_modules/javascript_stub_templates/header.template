@@ -16,27 +16,27 @@ var game;
 
 /**
  * Prints a string and appends a newline
- * @param {String} s the string to be printed
+ * @param {String} str the string to be printed
  */
-function println(s){}
+function println(str){}
 
 /**
  * Prints a string without adding a newline to the end
- * @param {String} s the string to be printed
+ * @param {String} str the string to be printed
  */
-function print(s){}
+function print(str){}
 
 /**
  * Dumps the contents of the given variable - only 'own' properties
- * @param o {Object} the variable to be dumped
+ * @param {Object} obj the variable to be dumped
  */
-function printobj(o){}
+function printobj(obj){}
 
 /**
  * Dumps the contents of the given variable - all properties including those of prototype chain
- * @param o {Object} the variable to be dumped
+ * @param {Object} obj the variable to be dumped
  */
-function printobjall(o){}
+function printobjall(obj){}
 
 /**
  * Attempts to load the given module and returns the exported data.  Requiring the same module

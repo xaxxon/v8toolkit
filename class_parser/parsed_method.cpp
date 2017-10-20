@@ -87,18 +87,18 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
 
     std::smatch matches;
 
-    for (auto & conversion_pattern : cpp_to_js_type_conversions) {
-        for (auto & pair : cpp_to_js_type_conversions) {
-            if (regex_match(simple_type_name, matches, std::regex(pair.first))) {
+//    std::cerr << fmt::format("trying to convert: {}", simple_type_name) << std::endl;
+    for (auto & pair : cpp_to_js_type_conversions) {
+        if (regex_match(simple_type_name, matches, std::regex(pair.first))) {
 //                std::cerr << fmt::format("{}'{}' matched {}, converting to {}",
 //                                         indentation,
 //                                         simple_type_name,
 //                                         pair.first,
 //                                         pair.second) << std::endl;
-                return pair.second;
-            }
+            return pair.second;
         }
     }
+
 
     // no match, return unchanged
 //    std::cerr << fmt::format("{}returning simple type name unchanged {}",
@@ -157,7 +157,7 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
         // Handle non-templated types
     else {
 //        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
-        return this->convert_simple_typename_to_jsdoc(this->plain_without_const().get_name(), indentation);
+        return this->convert_simple_typename_to_jsdoc(this->get_name(), indentation);
     }
 }
 

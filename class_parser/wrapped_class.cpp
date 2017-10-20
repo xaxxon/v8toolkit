@@ -108,6 +108,56 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 //    print_vector(annotation_base_type_to_use, "base type to use");
 
 
+
+    // if a comment is directly attached to this class, get it
+    FullComment * full_comment = get_full_comment_for_decl(this->compiler_instance, this->decl, false);
+
+    if (full_comment != nullptr) {
+
+//        auto comment_text = get_source_for_source_range(
+//            this->compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
+
+
+        // go through each portion (child) of the full comment
+        int j = 0;
+        for (auto i = full_comment->child_begin(); i != full_comment->child_end(); i++) {
+//            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
+            auto child_comment_source_range = (*i)->getSourceRange();
+            if (child_comment_source_range.isValid()) {
+
+                auto child_comment_text = get_source_for_source_range(
+                    this->compiler_instance.getPreprocessor().getSourceManager(),
+                    child_comment_source_range);
+
+                log.info(LogSubjects::Comments, "Child comment - kind: {} - '{}'", (*i)->getCommentKind(), child_comment_text);
+
+
+                // if the child comment is a param command comment (describes a parameter)
+                if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
+                    log.info(LogSubjects::Comments, "Is ParamCommandComment");
+                    log.info(LogSubjects::Comments,"param name as written: {}", param_command->getParamNameAsWritten().str());
+
+                    // cannot use getParamName() because it crashes if the name doesn't match a parameter
+                    auto command_param_name = param_command->getParamNameAsWritten().str();
+                    log.info(LogSubjects::Comments, "got command param name {}", command_param_name);
+
+                } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
+                    auto paragraph_comment_text = get_source_for_source_range(
+                        this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
+
+                    this->comment = trim_doxygen_comment_whitespace(paragraph_comment_text);
+
+                }
+
+
+            }
+        }
+    } else {
+//        cerr << "No comment on " << method_decl->getNameAsString() << endl;
+    }
+
+
+
     bool found_base_type = false;
     if (print_logging) cerr << "About to process base classes" << endl;
     for (auto base_class : this->decl->bases()) {
@@ -200,86 +250,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
 
-
-    FullComment * full_comment = this->compiler_instance.getASTContext().getCommentForDecl(this->decl, nullptr);
-
-    if (full_comment != nullptr) {
-
-        auto comment_text = get_source_for_source_range(
-            this->compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
-
-//        cerr << "FullComment: " << comment_text << endl;
-
-        // go through each portion (child) of the full comment
-        int j = 0;
-        for (auto i = full_comment->child_begin(); i != full_comment->child_end(); i++) {
-//            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
-            auto child_comment_source_range = (*i)->getSourceRange();
-            if (child_comment_source_range.isValid()) {
-
-                auto child_comment_text = get_source_for_source_range(
-                    this->compiler_instance.getPreprocessor().getSourceManager(),
-                    child_comment_source_range);
-
-                log.info(LogSubjects::Comments, "Child comment - kind: {} - '{}'", (*i)->getCommentKind(), child_comment_text);
-
-
-                // if the child comment is a param command comment (describes a parameter)
-                if (auto param_command = dyn_cast<ParamCommandComment>(*i)) {
-                    log.info(LogSubjects::Comments, "Is ParamCommandComment");
-                    log.info(LogSubjects::Comments,"param name as written: {}", param_command->getParamNameAsWritten().str());
-
-                    // cannot use getParamName() because it crashes if the name doesn't match a parameter
-                    auto command_param_name = param_command->getParamNameAsWritten().str();
-                    log.info(LogSubjects::Comments, "got command param name {}", command_param_name);
-
-//                    ParameterInfo * matching_parameter_info_ptr = nullptr;
-//                    for (auto & parameter : this->parameters) {
-////                        std::cerr << fmt::format("comparing {} against {}", command_param_name, parameter.name)
-////                                  << std::endl;
-//                        if (command_param_name == parameter.name) {
-////                            std::cerr << fmt::format("found match!") << std::endl;
-//                            matching_parameter_info_ptr = &parameter;
-//                            break;
-//                        }
-//                    }
-//                    auto matching_param_iterator =
-//                        std::find_if(parameters.begin(), parameters.end(),
-//                                     [&command_param_name](auto &param) {
-//                                         return command_param_name == param.name;
-//                                     });
-
-//                    std::cerr << fmt::format("found parameter (not matching .end()) {}",
-//                                             matching_parameter_info_ptr != nullptr) << std::endl;
-//                    std::cerr << fmt::format("has param name?  {}", param_command->hasParamName()) << std::endl;
-//                    if (param_command->hasParamName() && matching_parameter_info_ptr != nullptr) {
-//
-//                        auto & param_info = *matching_parameter_info_ptr;
-//                        if (param_command->getParagraph() != nullptr) {
-//                            param_info.description = get_source_for_source_range(
-//                                this->compiler_instance.getPreprocessor().getSourceManager(),
-//                                param_command->getParagraph()->getSourceRange());
-//                        }
-//                    } else {
-//                        data_warning(
-//                            fmt::format("in {}, method parameter comment name '{}' doesn't match any parameter in the function",
-//                                        this->name,
-//                                        command_param_name));
-//                    }
-                } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
-                    auto paragraph_comment_text = get_source_for_source_range(
-                        this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
-
-                    this->comment = trim_doxygen_comment_whitespace(paragraph_comment_text);
-
-                }
-
-
-            }
-        }
-    } else {
-//        cerr << "No comment on " << method_decl->getNameAsString() << endl;
-    }
 
 
 

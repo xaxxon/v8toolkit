@@ -509,4 +509,24 @@ std::string trim_doxygen_comment_whitespace(std::string const & comment) {
     return std::regex_replace(comment, std::regex("\\s*([^\\n]*?)\\s*(?:[\n]|$)\\s*[*]*\\s*?(\\s?)"), "$1$2");
 }
 
+
+/**
+ * Returns the FullComment object associated with the specified decl.  Only returns a FullComment if the returned
+ * FullComment is attached to the specified Decl, unless `any` is set to true
+ * @param decl decl to find an attached comment for
+ * @param any specify if comments attached to `related` decls are acceptable to be returned.  For example
+ *   a derived class without an attached comment may return its base type's attached comment.  Unless `any` is
+ *   true, this situation will result in nullptr being returned from this function
+ * @return FullComment * matching the criteria specified or nullptr if no such FullComment was found
+ */
+FullComment * get_full_comment_for_decl(CompilerInstance & ci, Decl const * decl, bool any) {
+    FullComment * full_comment = ci.getASTContext().getCommentForDecl(decl, nullptr);
+
+    if (full_comment != nullptr && (any || full_comment->getDecl() == decl)) {
+        return full_comment;
+    }
+
+    return nullptr;
+}
+
 } // end namespace v8toolkit::class_parser

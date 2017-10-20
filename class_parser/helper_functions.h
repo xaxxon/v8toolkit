@@ -15,7 +15,7 @@
 namespace v8toolkit::class_parser {
 
 
-extern map<string, string> cpp_to_js_type_conversions;
+extern vector<pair<string, string>> cpp_to_js_type_conversions;
 extern vector<string> base_types_to_ignore;
 
 class WrappedClass;
@@ -231,5 +231,8 @@ void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
 
 std::string trim_doxygen_comment_whitespace(std::string const & comment);
 
+
+
+FullComment * get_full_comment_for_decl(CompilerInstance & ci, Decl const * decl, bool any = false);
 
 }

@@ -4,4 +4,4 @@
      * @param \{{{type}}\} {{name}} {{comment}}}}
      * @return \{{{return_type_name}}\} {{return_comment}}
      */
-    {{name}}({{parameters%, |!{{name}}}}){}
+    {{name}}({{parameters%, |!{{name}}}}) {}
