@@ -1,7 +1,16 @@
 
 
 {{!standard_includes}}
+{{includes|!#include {{include}}}}
+
+{{explicit_instantiations|!{{instantiation}}}}
+
+{{extern_templates|!{{instantiation}}}}
 
 {{classes|class}}
 
+
+{{call_next_function}}
+
+}
 

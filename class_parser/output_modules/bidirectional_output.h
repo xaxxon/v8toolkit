@@ -45,7 +45,6 @@ public:
         return std::cerr;
     }
     ~BidirectionalOutputStreamProvider(){
-        std::cerr << "Generated: " << string_stream.str() << std::endl;
     }
 };
 

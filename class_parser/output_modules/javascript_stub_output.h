@@ -45,7 +45,6 @@ public:
         return std::cerr;
     }
     ~JavascriptStubOutputStreamProvider(){
-        std::cerr << "Generated: " << string_stream.str() << std::endl;
     }
 };
 

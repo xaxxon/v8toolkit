@@ -26,9 +26,8 @@ private:
     std::ofstream output_stream;
 public:
     std::ostream & get_class_collection_stream() override;
-    ~BindingsOutputStreamProvider(){
-        std::cerr << "Generated: " << string_stream.str() << std::endl;
-    }
+    ~BindingsOutputStreamProvider()
+    {}
 };
 
 
