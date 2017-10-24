@@ -18,7 +18,10 @@ public:
         DataMembers,
         Enums,
         Constructors,
-        Destructors
+        Destructors,
+        BidirectionalOutput,
+        BindingsOutput,
+        JavaScriptStubOutput
     };
 
     static std::string const & get_subject_name(Subjects subject) {

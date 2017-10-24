@@ -1,8 +1,13 @@
+#include "clang/Frontend/FrontendPluginRegistry.h"
+
 #include "ast_action.h"
+#include "helper_functions.h"
 
 #include <fstream>
 
 namespace v8toolkit::class_parser {
+
+extern int print_logging;
 
 
 static FrontendPluginRegistry::Add <PrintFunctionNamesAction>
@@ -35,7 +40,7 @@ void write_classes(int file_count, vector<WrappedClass *> & classes, bool last_o
     set<string> already_included_this_file;
     already_included_this_file.insert(never_include_for_any_file.begin(), never_include_for_any_file.end());
 
-    class_wrapper_file << header_for_every_class_wrapper_file << "\n";
+//    class_wrapper_file << header_for_every_class_wrapper_file << "\n";
 
     // first the ones that go in every file regardless of its contents
     for (auto & include : includes_for_every_class_wrapper_file) {
@@ -49,8 +54,6 @@ void write_classes(int file_count, vector<WrappedClass *> & classes, bool last_o
 
     for (WrappedClass * wrapped_class : classes) {
 
-        // force methods to be parsed
-        wrapped_class->parse_all_methods();
 
         for (auto derived_type : wrapped_class->derived_types) {
             extern_templates.insert(derived_type);

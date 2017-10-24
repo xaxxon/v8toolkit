@@ -1,8 +1,29 @@
 
 #include "annotations.h"
 #include "helper_functions.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
+
+
 
 namespace v8toolkit::class_parser {
+
+
+void Annotations::get_annotations_for_decl(const Decl * decl_to_check) {
+    if (!decl_to_check) { return; }
+    for (auto attr : decl_to_check->getAttrs()) {
+        AnnotateAttr * annotation = dyn_cast<AnnotateAttr>(attr);
+        if (annotation) {
+            auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
+            auto annotation_string = attribute_attr->getAnnotation().str();
+            //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
+            annotations.emplace(annotation->getAnnotation().str());
+        }
+    }
+}
 
 
 Annotations::Annotations(const CXXRecordDecl * decl_to_check) {
@@ -17,7 +38,18 @@ Annotations::Annotations(const CXXRecordDecl * decl_to_check) {
     } else {
 //        cerr << "Not a template" << endl;
     }
-
 }
+
+
+
+
+Annotations::Annotations(const CXXMethodDecl * decl_to_check) {
+    get_annotations_for_decl(decl_to_check);
+}
+
+
+
+
+
 
 } // end v8toolkit::class_parser namespace

@@ -5,11 +5,18 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <functional>
 
-#include "clang.h"
+#include "clang_fwd.h"
+#include "qual_type_wrapper.h"
+
+/*** NO CLANG INCLUDES ALLOWED ***/
+// anything requiring a clang include must go in clang_helper_functions.h
 
 #include "annotations.h"
 #include "log.h"
+
+
 
 
 namespace v8toolkit::class_parser {
@@ -30,21 +37,13 @@ extern vector<string> types_to_ignore_regex;
 extern std::vector<std::string> used_constructor_names;
 extern int matched_classes_returned;
 extern vector<string> never_include_for_any_file;
-extern string header_for_every_class_wrapper_file;
+//extern string header_for_every_class_wrapper_file;
 extern vector<string> includes_for_every_class_wrapper_file;
 
 bool has_wrapped_class(const CXXRecordDecl * decl);
 
-
-// how was a wrapped class determined to be a wrapped class?
-enum FOUND_METHOD {
-    FOUND_UNSPECIFIED = 0, // no information on why this class is being wrapped - may change later if more information found
-    FOUND_ANNOTATION, // this class was annotated as being wrapped
-    FOUND_INHERITANCE, // this class is a base of a function that is wrapped
-    FOUND_GENERATED,
-    FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
-    FOUND_NEVER_WRAP
-};
+std::string get_type_string(QualType const & qual_type,
+                            const std::string & indentation = "");
 
 
 enum EXPORT_TYPE {
@@ -60,13 +59,15 @@ string remove_reference_from_type_string(string const & type_string);
 
 string remove_local_const_from_type_string(string const & type_string);
 
-// for a possibly templated type, return either the stripped down original type or the default template parameter type
-QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> template_types);
+std::string substitute_type(QualType const & original_type, map<string, QualTypeWrapper> template_types);
+
+void update_wrapped_class_for_type(WrappedClass & wrapped_class,
+                                   QualType const & qual_type);
+
 
 template<class T>
 std::string join(const T & source, const std::string & between = ", ", bool leading_between = false);
 
-QualType get_plain_type(QualType qual_type);
 
 std::string get_include_for_type_decl(CompilerInstance & compiler_instance, const TypeDecl * type_decl);
 
@@ -90,8 +91,6 @@ std::string get_method_parameters(CompilerInstance & compiler_instance,
                                   bool insert_variable_names = false,
                                   const string & annotation = "");
 
-void update_wrapped_class_for_type(WrappedClass & wrapped_class,
-                                   QualType qual_type);
 
 // takes a file number starting at 1 and incrementing 1 each time
 // a list of WrappedClasses to print
@@ -99,22 +98,11 @@ void update_wrapped_class_for_type(WrappedClass & wrapped_class,
 void write_classes(int file_count, vector<WrappedClass *> & classes, bool last_one);
 
 
-vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instance,
-                                             const CXXMethodDecl * method,
-                                             string const & annotation = "");
 
-vector<string> generate_variable_names(vector<QualType> qual_types, bool with_std_move = false);
 
 void print_specialization_info(const CXXRecordDecl * decl);
 
-std::string substitute_type(QualType original_type, map<string, QualType> template_types);
 
-std::string get_type_string(QualType qual_type,
-                            const std::string & indentation = "");
-
-template<class Callback>
-void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
-                         const std::string & annotation = "");
 
 std::string get_method_string(CompilerInstance & compiler_instance,
                               WrappedClass & wrapped_class,
@@ -170,64 +158,10 @@ std::string join(const T & source, const std::string & between, bool leading_bet
     return result.str();
 }
 
+void foreach_constructor(const CXXRecordDecl * klass,
+                         std::function<void(CXXConstructorDecl const *)> callback,
+                         const std::string & annotation);
 
-// calls callback for each constructor in the class.  If annotation specified, only
-//   constructors with that annotation will be sent to the callback
-template<class Callback>
-void foreach_constructor(const CXXRecordDecl * klass, Callback && callback,
-                         const std::string & annotation) {
-
-    if (klass == nullptr) {
-        cerr << fmt::format("Skipping foreach_constructor because decl was nullptr") << endl;
-        return;
-    }
-
-    string class_name = klass->getNameAsString();
-    if (print_logging)
-        cerr << "Enumerating constructors for " << class_name << " with optional annotation: " << annotation << endl;
-
-    for (CXXMethodDecl * method : klass->methods()) {
-        CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
-        bool skip = false;
-        Annotations annotations(method);
-
-        // check if method is a constructor
-        if (constructor == nullptr) {
-            continue;
-        }
-
-        if (print_logging) cerr << "Checking constructor: " << endl;
-        if (constructor->getAccess() != AS_public) {
-            if (print_logging) cerr << "  Skipping non-public constructor" << endl;
-            skip = true;
-        }
-        if (get_export_type(constructor, LogSubjects::Constructors) == EXPORT_NONE) {
-            if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
-            skip = true;
-        }
-
-        if (annotation != "" && !annotations.has(annotation)) {
-            if (print_logging)
-                cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
-            skip = true;
-        } else {
-            if (skip) {
-                if (print_logging)
-                    cerr << "  Annotation " << annotation
-                         << " found, but constructor skipped for reason(s) listed above" << endl;
-            }
-        }
-
-
-        if (skip) {
-            continue;
-        } else {
-            if (print_logging) cerr << " Running callback on constructor" << endl;
-            callback(constructor);
-        }
-    }
-//    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
-}
 
 std::string trim_doxygen_comment_whitespace(std::string const & comment);
 

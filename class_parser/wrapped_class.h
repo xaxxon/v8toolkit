@@ -24,6 +24,18 @@ class MemberFunction;
 class StaticFunction;
 
 
+
+// how was a wrapped class determined to be a wrapped class?
+enum FOUND_METHOD {
+    FOUND_UNSPECIFIED = 0, // no information on why this class is being wrapped - may change later if more information found
+    FOUND_ANNOTATION, // this class was annotated as being wrapped
+    FOUND_INHERITANCE, // this class is a base of a function that is wrapped
+    FOUND_GENERATED,
+    FOUND_BASE_CLASS, // if the class is a base class of a wrapped type, the class must be wrapped
+    FOUND_NEVER_WRAP
+};
+
+
 struct WrappedClass {
     friend class std::allocator<WrappedClass>;
 private:
@@ -121,7 +133,6 @@ public:
     bool done = false;
     bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
     Annotations annotations;
-    bool dumped = false; // this class has been dumped to file
     set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
     FOUND_METHOD found_method;
     bool force_no_constructors = false;
@@ -132,13 +143,7 @@ public:
     bool bidirectional = false;
     CXXConstructorDecl const * bidirectional_constructor = nullptr;
 
-    std::string get_short_name() const {
-        if (decl == nullptr) {
-            llvm::report_fatal_error(
-                fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
-        }
-        return decl->getNameAsString();
-    }
+    std::string get_short_name() const;
 
     bool has_static_method() { return !this->static_functions.empty(); }
 
@@ -191,7 +196,7 @@ public:
 
     bool should_be_wrapped() const;
 
-    bool ready_for_wrapping(set<WrappedClass *> dumped_classes) const;
+    bool ready_for_wrapping(set<WrappedClass const *> dumped_classes) const;
 
     // return all the header files for all the types used by all the base types of the specified type
     std::set<string> get_base_type_includes() const;
@@ -207,39 +212,11 @@ public:
     // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
     WrappedClass(const std::string class_name, CompilerInstance & compiler_instance);
 
-    std::string get_derived_classes_string(int level = 0, const std::string indent = "") const {
-        vector<string> results;
-        //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
-        for (WrappedClass * derived_class : derived_types) {
-            results.push_back(derived_class->class_name);
-            // only use directly derived types now
-            //results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
-        }
-        //            printf("%s Returning %s\n", indent.c_str(), join(results).c_str());
-        return join(results);
-    }
+    std::string get_derived_classes_string(int level = 0, const std::string indent = "") const;
 
-    void add_base_type(WrappedClass & base_type) {
-        if (xl::contains(base_types_to_ignore, base_type.class_name)) {
-            log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias);
-            return;
-        }
+    void add_base_type(WrappedClass & base_type);
 
-        log.info(LogSubjects::Class, "adding base type {} {} to derived type: {} {}",
-                                 base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this);
-
-        this->base_types.insert(&base_type);
-    }
-
-    std::string get_base_class_string() const {
-
-        if (base_types.size() > 1) {
-            log.error(LogSubjects::Class, "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",
-                class_name);
-
-        }
-        return base_types.size() ? (*base_types.begin())->class_name : "";
-    }
+    std::string get_base_class_string() const;
 
     std::string get_bindings();
 

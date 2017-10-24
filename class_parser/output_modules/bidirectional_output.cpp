@@ -8,10 +8,10 @@ using xl::templates::ProviderPtr;
 
 
 #include "../wrapped_class.h"
-#include "javascript_stub_output.h"
-
+#include "bidirectional_output.h"
 
 namespace v8toolkit::class_parser {
+
 
 static ProviderPtr get_provider(WrappedClass const * c) {
     return xl::templates::make_provider(
@@ -81,14 +81,10 @@ static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
 }
 
 
-void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> const & wrapped_classes) {
-    auto templates = xl::templates::load_templates("javascript_stub_templates");
+void BidirectionalOutputModule::process(std::vector < WrappedClass const*> const & wrapped_classes)
+{
 
-    auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", wrapped_classes)), templates);
-//        auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
-
-    std::cerr << fmt::format("result: {}", result) << std::endl;
 }
 
 
-} // end namespace v8toolkit::class_parser
+}

@@ -9,9 +9,14 @@
 
 
 #include <clang/AST/CXXInheritance.h>
+#include "clang/AST/DeclTemplate.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/AST/Comment.h"
+
 
 #include "wrapped_class.h"
 #include "output_modules.h"
+#include "clang_helper_functions.h"
 
 namespace v8toolkit::class_parser {
 
@@ -44,12 +49,12 @@ string make_macro_safe_comma(string const & input) {
 //   and puts it in wrapped_class.include_files
 void update_wrapped_class_for_type(WrappedClass & wrapped_class,
     // don't capture qualtype by ref since it is changed in this function
-                                   QualType qual_type) {
+                                   QualType const & input_qual_type) {
 
 //    cerr << fmt::format("In update_wrapped_class_for_type {} in wrapped class {}", qual_type.getAsString(), wrapped_class.class_name) << endl;
 
-    if (print_logging) cerr << "Went from " << qual_type.getAsString();
-    qual_type = qual_type.getLocalUnqualifiedType();
+    if (print_logging) cerr << "Went from " << input_qual_type.getAsString();
+    QualType qual_type = input_qual_type.getLocalUnqualifiedType();
 
 
     // remove pointers
@@ -220,7 +225,7 @@ void generate_bindings() {
 
     vector<WrappedClass *> classes_for_this_file;
 
-    set<WrappedClass *> already_wrapped_classes;
+    set<WrappedClass const *> already_wrapped_classes;
 
     vector<vector<WrappedClass *>> classes_per_file;
 
@@ -277,7 +282,6 @@ void generate_bindings() {
             classes_for_this_file.push_back(wrapped_class.get());
 
             // assert false - this shouldn't alter it
-            wrapped_class->dumped = true;
             declaration_count_this_file += wrapped_class->declaration_count;
         }
     }
@@ -306,17 +310,74 @@ void generate_bindings() {
 
     cerr << "Classes used that were not wrapped:" << endl;
     for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-        assert(false); // dumped needs to go away
-        if (!wrapped_class->dumped) { continue; }
-        for (auto used_class : wrapped_class->used_classes) {
-            if (!used_class->dumped) {
-                cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->get_name_alias(), used_class->get_name_alias())
-                     << endl;
-            }
-        }
+//        if (!wrapped_class->dumped) { continue; }
+//        for (auto used_class : wrapped_class->used_classes) {
+//            if (!used_class->dumped) {
+//                cerr << fmt::format("{} uses unwrapped type: {}", wrapped_class->get_name_alias(), used_class->get_name_alias())
+//                     << endl;
+//            }
+//        }
     }
 }
 
+
+
+// calls callback for each constructor in the class.  If annotation specified, only
+//   constructors with that annotation will be sent to the callback
+void foreach_constructor(const CXXRecordDecl * klass, std::function<void(CXXConstructorDecl const *)> callback,
+                         const std::string & annotation) {
+
+    if (klass == nullptr) {
+        cerr << fmt::format("Skipping foreach_constructor because decl was nullptr") << endl;
+        return;
+    }
+
+    string class_name = klass->getNameAsString();
+    if (print_logging)
+        cerr << "Enumerating constructors for " << class_name << " with optional annotation: " << annotation << endl;
+
+    for (CXXMethodDecl * method : klass->methods()) {
+        CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);
+        bool skip = false;
+        Annotations annotations(method);
+
+        // check if method is a constructor
+        if (constructor == nullptr) {
+            continue;
+        }
+
+        if (print_logging) cerr << "Checking constructor: " << endl;
+        if (constructor->getAccess() != AS_public) {
+            if (print_logging) cerr << "  Skipping non-public constructor" << endl;
+            skip = true;
+        }
+        if (get_export_type(constructor, LogSubjects::Constructors) == EXPORT_NONE) {
+            if (print_logging) cerr << "  Skipping constructor marked for begin skipped" << endl;
+            skip = true;
+        }
+
+        if (annotation != "" && !annotations.has(annotation)) {
+            if (print_logging)
+                cerr << "  Annotation " << annotation << " requested, but constructor doesn't have it" << endl;
+            skip = true;
+        } else {
+            if (skip) {
+                if (print_logging)
+                    cerr << "  Annotation " << annotation
+                         << " found, but constructor skipped for reason(s) listed above" << endl;
+            }
+        }
+
+
+        if (skip) {
+            continue;
+        } else {
+            if (print_logging) cerr << " Running callback on constructor" << endl;
+            callback(constructor);
+        }
+    }
+//    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
+}
 
 
 void generate_bidirectional_classes(CompilerInstance & compiler_instance) {

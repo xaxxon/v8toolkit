@@ -65,6 +65,7 @@ public:
  * Process the set of classes which are to be wrapped
  */
 class OutputModule {
+
 public:
     virtual void process(std::vector<WrappedClass const *> const & wrapped_classes) = 0;
 

@@ -1,9 +1,16 @@
 
+#include "clang/AST/Comment.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
+
+
+
 #include <xl/regex/regexer.h>
 
 #include "wrapped_class.h"
 #include "parsed_method.h"
 #include "class_handler.h"
+#include "helper_functions.h"
 
 using namespace xl;
 
@@ -377,7 +384,7 @@ void WrappedClass::parse_all_methods() {
         }
 
         CXXMethodDecl const * method = dyn_cast<CXXMethodDecl>(current_decl);
-        map<string, QualType> template_parameter_types;
+        map<string, QualTypeWrapper> template_parameter_types;
         FunctionTemplateDecl const * function_template_decl = nullptr;
 
 
@@ -833,7 +840,7 @@ bool WrappedClass::should_be_wrapped() const {
 }
 
 
-bool WrappedClass::ready_for_wrapping(set<WrappedClass *> dumped_classes) const {
+bool WrappedClass::ready_for_wrapping(set<WrappedClass const *> dumped_classes) const {
 
 
 
@@ -848,16 +855,6 @@ bool WrappedClass::ready_for_wrapping(set<WrappedClass *> dumped_classes) const 
         return false;
     }
 
-    /*
-        // if all this class's directly derived types have been wrapped, then we're good since their
-        //   dependencies would have to be met for them to be wrapped
-        for (auto derived_type : derived_types) {
-            if (find(dumped_classes.begin(), dumped_classes.end(), derived_type) == dumped_classes.end()) {
-                printf("Couldn't find %s\n", derived_type->class_name.c_str());
-                return false;
-            }
-        }
-    */
     for (auto base_type : base_types) {
         if (find(dumped_classes.begin(), dumped_classes.end(), base_type) == dumped_classes.end()) {
             printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
@@ -970,23 +967,16 @@ void WrappedClass::set_error(string const & error_message) {
 }
 
 
-// return all the header files for all the types used by all the base types of the specified type
+// return all the header files for all the types used by this class and all base classes
 std::set<string> WrappedClass::get_base_type_includes() const {
     set<string> results{this->my_include};
     results.insert(this->include_files.begin(), this->include_files.end());
-    //std::cerr << fmt::format("adding base type include for {} with {} base types", this->class_name, this->base_types.size()) << std::endl;
-
-    //cerr << "Includes at this level: " << endl;
-//    for (auto include : results) {
-//        cerr << include << endl;
-//    }
 
     for (WrappedClass * base_class : this->base_types) {
         //cerr << fmt::format("...base type: {}", base_class->name_alias) << endl;
         auto base_results = base_class->get_base_type_includes();
         results.insert(base_results.begin(), base_results.end());
     }
-    // std::cerr << fmt::format("done adding base type include for {}", this->class_name) << std::endl;
 
     return results;
 }
@@ -1090,6 +1080,51 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
 
     return WrappedClass::make_wrapped_class(decl, compiler_instance, found_method);
 }
+
+
+std::string WrappedClass::get_short_name() const {
+    if (decl == nullptr) {
+        llvm::report_fatal_error(
+            fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
+    }
+    return decl->getNameAsString();
+}
+
+
+std::string WrappedClass::get_derived_classes_string(int level, const std::string indent) const {
+    vector<string> results;
+    //            printf("%s In (%d) %s looking at %d derived classes\n", indent.c_str(), level, class_name.c_str(), (int)derived_types.size());
+    for (WrappedClass * derived_class : derived_types) {
+        results.push_back(derived_class->class_name);
+        // only use directly derived types now
+        //results.push_back(derived_class->get_derived_classes_string(level + 1, indent + "  "));
+    }
+    //            printf("%s Returning %s\n", indent.c_str(), join(results).c_str());
+    return join(results);
+}
+
+void WrappedClass::add_base_type(WrappedClass & base_type) {
+    if (xl::contains(base_types_to_ignore, base_type.class_name)) {
+        log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias);
+        return;
+    }
+
+    log.info(LogSubjects::Class, "adding base type {} {} to derived type: {} {}",
+             base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this);
+
+    this->base_types.insert(&base_type);
+}
+
+std::string WrappedClass::get_base_class_string() const {
+
+    if (base_types.size() > 1) {
+        log.error(LogSubjects::Class, "Type {} has more than one base class - this isn't supported because javascript doesn't support MI\n",
+                  class_name);
+
+    }
+    return base_types.size() ? (*base_types.begin())->class_name : "";
+}
+
 
 
 

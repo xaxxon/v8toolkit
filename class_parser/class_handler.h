@@ -1,8 +1,7 @@
 #pragma once
 
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 
-
-#include "helper_functions.h"
 #include "output_modules.h"
 
 namespace v8toolkit::class_parser {
@@ -27,10 +26,7 @@ public:
     virtual void run(const ast_matchers::MatchFinder::MatchResult & Result) override;
 
 
-    ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules) :
-        ci(CI),
-        output_modules(output_modules),
-        source_manager(CI.getSourceManager()) {}
+    ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules);
 
     ~ClassHandler();
 

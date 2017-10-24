@@ -4,12 +4,18 @@
 
 
 #include "class_parser.h"
-#include "helper_functions.h"
-
+#include "clang_fwd.h"
+#include "annotations.h"
 #include "log.h"
+
+#include "qual_type_wrapper.h"
+
+using namespace std;
 
 namespace v8toolkit::class_parser {
 
+
+class WrappedClass;
 
 
 struct LogWatcher {
@@ -38,7 +44,7 @@ struct ClassFunction {
     FunctionTemplateDecl const * function_template_decl = nullptr;
 
     // default template type mapping - empty if not templated
-    map<string, QualType> template_parameter_types;
+    map<string, QualTypeWrapper> template_parameter_types;
 
     // if this virtual function doesn't exist in a parent class
     bool new_virtual;
@@ -48,19 +54,20 @@ struct ClassFunction {
     private:
         static string convert_simple_typename_to_jsdoc(string simple_type_name, std::string const & = "");
 
-        map<string, QualType> template_parameter_types;
+        map<string, QualTypeWrapper> template_parameter_types;
 
         // the type cannot be gotten because after template substitution there may not be an actual
         //   Type object for the resulting type.  It is only available as a string.  However, the "plain type"
         //   is guaranteed to exist as a Type object
-        QualType type;
+        QualTypeWrapper type;
 
     public:
-        TypeInfo(QualType const & type, map<string, QualType> template_parameter_types = {});
+        TypeInfo(QualType const & type, map<string, QualTypeWrapper> template_parameter_types = {});
+        ~TypeInfo();
 
         CXXRecordDecl const * get_plain_type_decl() const;
 
-        QualType get_plain_type() const;
+        QualTypeWrapper get_plain_type() const;
 
         /// name of actual type
         string get_name() const;
@@ -81,7 +88,7 @@ struct ClassFunction {
 
         bool is_templated() const;
 
-        void for_each_templated_type(std::function<void(QualType)>) const;
+        void for_each_templated_type(std::function<void(QualType const &)>) const;
 
         bool is_void() const;
     };
@@ -131,10 +138,11 @@ struct ClassFunction {
 
     ClassFunction(WrappedClass & wrapped_class,
                   CXXMethodDecl const * method_decl,
-                  std::map<string, QualType> const & template_parameter_types = {},
+                  std::map<string, QualTypeWrapper> const & template_parameter_types = {},
                   FunctionTemplateDecl const * function_template_decl = nullptr,
                   std::string const & preferred_js_name = "");
 
+    ~ClassFunction();
 
     // returns true if the methods have the same name and input parameters
     bool compare_signatures(ClassFunction const & other);
@@ -153,7 +161,7 @@ struct ClassFunction {
 class MemberFunction : public ClassFunction {
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {},
+                   map<string, QualTypeWrapper> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr);
 
     string generate_js_bindings();
@@ -165,7 +173,7 @@ public:
 class StaticFunction : public ClassFunction {
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {},
+                   map<string, QualTypeWrapper> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr);
 
     string generate_js_bindings();

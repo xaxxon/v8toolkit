@@ -1,11 +1,15 @@
 #pragma once
 
-#include "clang.h"
+#include "clang_fwd.h"
 
 #include <regex>
 #include <iostream>
 #include <fmt/ostream.h>
 #include <set>
+#include <string>
+#include <map>
+
+using namespace std;
 
 namespace v8toolkit::class_parser {
 
@@ -13,18 +17,7 @@ namespace v8toolkit::class_parser {
 class Annotations {
     set<string> annotations;
 
-    void get_annotations_for_decl(const Decl * decl_to_check) {
-        if (!decl_to_check) { return; }
-        for (auto attr : decl_to_check->getAttrs()) {
-            AnnotateAttr * annotation = dyn_cast<AnnotateAttr>(attr);
-            if (annotation) {
-                auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
-                auto annotation_string = attribute_attr->getAnnotation().str();
-                //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
-                annotations.emplace(annotation->getAnnotation().str());
-            }
-        }
-    }
+    void get_annotations_for_decl(const Decl * decl_to_check);
 
 
 public:
@@ -34,10 +27,7 @@ public:
     }
 
 
-    Annotations(const CXXMethodDecl * decl_to_check) {
-        get_annotations_for_decl(decl_to_check);
-
-    }
+    Annotations(const CXXMethodDecl * decl_to_check);
 
     Annotations() = default;
 

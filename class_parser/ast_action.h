@@ -2,7 +2,8 @@
 
 #include <regex>
 
-#include "clang.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "wrapped_class.h"
 
 #include "ast_consumer.h"

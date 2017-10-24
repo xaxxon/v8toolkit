@@ -1,6 +1,6 @@
 #pragma once
 
-#include "clang.h"
+#include "clang/AST/ASTConsumer.h"
 
 #include "class_handler.h"
 

@@ -51,9 +51,10 @@ using namespace std;
 
 #include <fmt/ostream.h>
 
-#include "clang.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 #include "class_parser.h"
+#include "helper_functions.h"
 
 
 
@@ -94,9 +95,6 @@ vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mix
 
 vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8toolkit/v8_class_wrapper_impl.h>"};
 
-// error if bidirectional types don't make it in due to include file ordering
-// disable "fast_compile" so the V8ClassWrapper code can be generated 
-string header_for_every_class_wrapper_file = "#define NEED_BIDIRECTIONAL_TYPES\n#undef V8TOOLKIT_WRAPPER_FAST_COMPILE\n";
 
 // sometimes files sneak in that just shouldn't be
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
@@ -484,8 +482,11 @@ bool is_nontrivial_std_type(QualType & qual_type, std::string & output) {
 #endif
 
 
-std::string get_type_string(QualType qual_type,
+std::string get_type_string(QualType const & input_qual_type,
                             const std::string & indentation) {
+
+    // doing this to keep from needing definition of QualType in function declaration
+    QualType qual_type = input_qual_type;
 
     auto original_qualifiers = qual_type.getLocalFastQualifiers();
     // chase any typedefs to get the "real" type
@@ -663,7 +664,7 @@ std::string get_type_string(QualType qual_type,
 }
 
 
-QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> template_types) {
+QualType get_substitution_type_for_type(QualType original_type, map<string, QualTypeWrapper> const & template_types) {
 
     if (!original_type->isDependentType()) {
         return original_type;
@@ -705,12 +706,12 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
         // if this is being called, a stripped down type is fine, so ship back the stripped down original type
         return current_type;
     } else {
-        return i->second;
+        return *i->second;
     }
 }
 
 
-std::string substitute_type(QualType original_type, map<string, QualType> template_types) {
+std::string substitute_type(QualType const & original_type, map<string, QualTypeWrapper> template_types) {
 
     if (!original_type->isDependentType()) {
         auto result = get_type_string(original_type);

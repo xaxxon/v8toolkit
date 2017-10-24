@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "../clang.h"
+#include "clang/Tooling/Tooling.h"
 #include "../ast_action.h"
 #include "../log.h"
 
@@ -16,6 +16,8 @@ using namespace xl;
 using namespace std;
 
 #include "../output_modules/javascript_stub_output.h"
+#include "../output_modules/bindings_output.h"
+#include "../output_modules/bidirectional_output.h"
 
 using ::testing::_;
 using ::testing::Return;
@@ -465,6 +467,9 @@ TEST(ClassParser, ClassComments) {
 
     vector<unique_ptr<OutputModule>> output_modules;
     output_modules.push_back(make_unique<JavascriptStubOutputModule>());
+    output_modules.push_back(make_unique<BindingsOutputModule>(10));
+    output_modules.push_back(make_unique<BidirectionalOutputModule>());
+
     auto pruned_vector = run_code(source, std::move(output_modules));
 
     EXPECT_EQ(pruned_vector.size(), 3);

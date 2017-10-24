@@ -42,5 +42,5 @@ add_custom_command(TARGET copy_test_resources PRE_BUILD
 add_dependencies(test-class-parser gmock gtest copy_test_resources)
 
 
-cotire(test-class-parser)
-add_dependencies(test-class-parser_unity gmock gtest copy_test_resources)
+#cotire(test-class-parser)
+#add_dependencies(test-class-parser_unity gmock gtest copy_test_resources)

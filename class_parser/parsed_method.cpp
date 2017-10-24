@@ -1,7 +1,15 @@
 #include <xl/regex/regexer.h>
 
+#include "clang/AST/DeclTemplate.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/AST/Comment.h"
+
+
+
 #include "parsed_method.h"
 #include "wrapped_class.h"
+#include "clang_helper_functions.h"
 
 
 using namespace xl;
@@ -9,8 +17,8 @@ using namespace xl;
 namespace v8toolkit::class_parser {
 
 
-ClassFunction::TypeInfo::TypeInfo(QualType const & type, map<string, QualType> template_parameter_types) :
-    template_parameter_types(template_parameter_types),
+ClassFunction::TypeInfo::TypeInfo(QualType const & type, map<string, QualTypeWrapper> template_parameter_types) :
+    template_parameter_types(std::move(template_parameter_types)),
     type(type)
 //name(this->type.getAsString()),
 //    name(get_type_string(this->type)),
@@ -23,8 +31,11 @@ ClassFunction::TypeInfo::TypeInfo(QualType const & type, map<string, QualType> t
 }
 
 
+ClassFunction::TypeInfo::~TypeInfo()
+{}
+
 string ClassFunction::TypeInfo::get_name() const {
-    return substitute_type(this->type, this->template_parameter_types);
+    return substitute_type(*this->type, this->template_parameter_types);
 }
 
 
@@ -33,15 +44,15 @@ bool ClassFunction::TypeInfo::is_void() const {
 }
 
 
-QualType ClassFunction::TypeInfo::get_plain_type() const {
+QualTypeWrapper ClassFunction::TypeInfo::get_plain_type() const {
 
 
-    QualType plain_type = this->type;
+    QualType plain_type = *this->type;
     plain_type = plain_type.getNonReferenceType();//.getUnqualifiedType();
     while (!plain_type->getPointeeType().isNull()) {
         plain_type = plain_type->getPointeeType();//.getUnqualifiedType();
     }
-    if (!this->type->isDependentType()) {
+    if (!(*this->type)->isDependentType()) {
         return plain_type;
     }
 
@@ -68,7 +79,7 @@ QualType ClassFunction::TypeInfo::get_plain_type() const {
 
 
 string ClassFunction::TypeInfo::get_plain_name() const {
-    return get_type_string(this->get_plain_type());
+    return get_type_string(*this->get_plain_type());
 }
 
 
@@ -162,19 +173,19 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
 }
 
 bool ClassFunction::TypeInfo::is_const() const {
-    return this->get_plain_type().isConstQualified();
+    return this->get_plain_type()->isConstQualified();
 }
 
 
 ClassFunction::TypeInfo ClassFunction::TypeInfo::plain_without_const() const {
-    QualType non_const = this->get_plain_type();
-    non_const.removeLocalConst();
-    return TypeInfo(non_const, this->template_parameter_types);
+    auto non_const = this->get_plain_type();
+    non_const->removeLocalConst();
+    return TypeInfo(*non_const,this->template_parameter_types);
 }
 
 
 CXXRecordDecl const * ClassFunction::TypeInfo::get_plain_type_decl() const {
-    auto decl = this->get_plain_type()->getAsCXXRecordDecl();
+    auto decl = (*this->get_plain_type())->getAsCXXRecordDecl();
     if (decl == nullptr) {
         return nullptr;
     }
@@ -197,9 +208,9 @@ bool ClassFunction::TypeInfo::is_templated() const {
 }
 
 
-void ClassFunction::TypeInfo::for_each_templated_type(std::function<void(QualType)> callback) const {
+void ClassFunction::TypeInfo::for_each_templated_type(std::function<void(QualType const &)> callback) const {
     if (auto specialization_decl = dyn_cast<ClassTemplateSpecializationDecl>(
-        this->get_plain_type()->getAsCXXRecordDecl())) {
+        (*this->get_plain_type())->getAsCXXRecordDecl())) {
 
         // go through the template args
         auto & template_arg_list = specialization_decl->getTemplateArgs();
@@ -219,7 +230,7 @@ void ClassFunction::TypeInfo::for_each_templated_type(std::function<void(QualTyp
         }
     } else {
         if (print_logging)
-            cerr << "Not a template specializaiton type " << this->get_plain_type().getAsString() << endl;
+            cerr << "Not a template specializaiton type " << this->get_plain_type()->getAsString() << endl;
     }
 }
 
@@ -246,7 +257,7 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     wrapped_class.add_member_name(this->short_name);
     wrapped_class.declaration_count++;
 
-    update_wrapped_class_for_type(wrapped_class, this->type.get_plain_type());
+    update_wrapped_class_for_type(wrapped_class, *this->type.get_plain_type());
 
     // the member will be wrapped as const if the actual data type is const or there's an attribute saying it should be const
     this->is_const = this->type.is_const() || annotations.has(V8TOOLKIT_READONLY_STRING);
@@ -344,7 +355,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
 
 ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                              CXXMethodDecl const * method_decl,
-                             std::map<string, QualType> const & template_parameter_types,
+                             std::map<string, QualTypeWrapper> const & template_parameter_types,
                              FunctionTemplateDecl const * function_template_decl,
                              std::string const & preferred_js_name) :
     compiler_instance(wrapped_class.compiler_instance),
@@ -379,7 +390,7 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 
 //    std::cerr << fmt::format("***** Parsing method {}", this->name) << std::endl;
 
-    update_wrapped_class_for_type(this->wrapped_class, this->return_type.get_plain_type());
+    update_wrapped_class_for_type(this->wrapped_class, *this->return_type.get_plain_type());
 
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
@@ -387,7 +398,7 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
         parameters.emplace_back(*this, i, method_decl->getParamDecl(i), this->compiler_instance);
 
         // make sure the wrapped class has includes for all the types in the method
-        update_wrapped_class_for_type(this->wrapped_class, this->parameters.back().type.get_plain_type());
+        update_wrapped_class_for_type(this->wrapped_class, *this->parameters.back().type.get_plain_type());
     }
 
 
@@ -472,6 +483,9 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     }
 }
 
+ClassFunction::~ClassFunction()
+{}
+
 
 
 //
@@ -525,7 +539,7 @@ string ClassFunction::get_default_argument_tuple_string() const {
 
 
         // this should go away once there's proper support
-        if (std::regex_search(param.type.get_plain_type().getAsString(),
+        if (std::regex_search(param.type.get_plain_type()->getAsString(),
                               std::regex("^(class|struct)?\\s*std::function"))) {
             std::cerr << fmt::format("Cannot handle std::function default parameters yet -- skipping") << std::endl;
             continue;
@@ -627,7 +641,7 @@ string ClassFunction::get_signature_string() {
 }
 
 MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl) :
+                               map<string, QualTypeWrapper> const & map, FunctionTemplateDecl const * function_template_decl) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
     wrapped_class.add_member_name(this->js_name);
 
@@ -647,7 +661,7 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
 }
 
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl) :
+                               map<string, QualTypeWrapper> const & map, FunctionTemplateDecl const * function_template_decl) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
     wrapped_class.add_static_name(this->js_name);
 

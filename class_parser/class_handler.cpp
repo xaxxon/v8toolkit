@@ -1,5 +1,9 @@
+#include "clang/Frontend/CompilerInstance.h"
+
+
 #include "wrapped_class.h"
 #include "class_handler.h"
+#include "helper_functions.h"
 
 #include <xl/library_extensions.h>
 
@@ -252,22 +256,19 @@ void ClassHandler::onEndOfTranslationUnit() {
 //    cerr << "Done traversing AST" << endl;
 
 
-
-    for(auto & c : WrappedClass::wrapped_classes) {
-        if (c->should_be_wrapped()) {
-            xl::LogCallbackGuard g(log, c->log_watcher);
-            c->parse_enums();
-            c->parse_members();
-            c->parse_all_methods();
+    vector<WrappedClass const *> const should_be_wrapped_classes = [&] {
+        vector<WrappedClass const *> results;
+        for (auto & c : WrappedClass::wrapped_classes) {
+            if (c->should_be_wrapped()) {
+                xl::LogCallbackGuard g(log, c->log_watcher);
+                c->parse_enums();
+                c->parse_members();
+                c->parse_all_methods();
+                results.push_back(c.get());
+            }
         }
-    }
-
-    vector<WrappedClass const *> should_be_wrapped_classes;
-    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-        if (wrapped_class->should_be_wrapped()) {
-            should_be_wrapped_classes.push_back(wrapped_class.get());
-        }
-    }
+        return results;
+    }();
 
 
     if (this->output_modules.empty()) {
@@ -275,13 +276,19 @@ void ClassHandler::onEndOfTranslationUnit() {
     }
 
     for (auto & output_module : this->output_modules) {
-//        std::cerr << fmt::format("running output module") << std::endl;
-        output_module->process(should_be_wrapped_classes);
-//
-////        generate_javascript_stub("js-api.js");
-////        generate_bidirectional_classes(this->ci);
-////        generate_bindings();
+        output_module->process(std::as_const(should_be_wrapped_classes));
     }
 
 }
+
+
+
+
+ClassHandler::ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules) :
+    ci(CI),
+    output_modules(output_modules),
+    source_manager(CI.getSourceManager())
+{}
+
+
 } // end namespace v8toolkit::class_parser
