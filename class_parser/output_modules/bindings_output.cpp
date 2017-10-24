@@ -59,7 +59,8 @@ std::ostream & BindingsOutputStreamProvider::get_class_collection_stream() {
 static ProviderPtr get_provider(WrappedClass const * c) {
     return xl::templates::make_provider(
         std::pair("comment", c->comment),
-        std::pair("name", c->get_name_alias()),
+        std::pair("name", c->get_short_name()),
+        std::pair("alias", c->get_name_alias()),
         std::pair("data_members", xl::templates::make_provider(c->get_members())),
         std::pair("constructors", xl::templates::make_provider(c->get_constructors())),
         std::pair("member_functions", xl::templates::make_provider(c->get_member_functions())),
@@ -73,6 +74,7 @@ static ProviderPtr get_provider(DataMember const & d) {
     return xl::templates::make_provider(
         std::pair("comment", d.comment),
         std::pair("name", d.js_name),
+        std::pair("binding_parameters", "BOGUS BINDING PARAMETERS"),
         std::pair("type", d.type.get_jsdoc_type_name())
     );
 }
@@ -81,6 +83,7 @@ static ProviderPtr get_provider(DataMember const & d) {
 static ProviderPtr get_provider(ConstructorFunction const & f) {
     return xl::templates::make_provider(
         std::pair("comment", f.comment),
+        std::pair("binding_parameters", "BOGUS BINDING PARAMETERS"),
         std::pair("parameters", xl::templates::make_provider(f.parameters))
     );
 }
@@ -90,9 +93,11 @@ static ProviderPtr get_provider(MemberFunction const & f) {
     return xl::templates::make_provider(
         std::pair("name", f.js_name),
         std::pair("comment", f.comment),
+        std::pair("binding_parameters", "BOGUS BINDING PARAMETERS"),
         std::pair("parameters", xl::templates::make_provider(f.parameters)),
         std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
-        std::pair("return_comment", f.return_type_comment)
+        std::pair("return_comment", f.return_type_comment),
+        std::pair("class_name", f.wrapped_class.get_short_name())
     );
 }
 
@@ -101,12 +106,13 @@ static ProviderPtr get_provider(StaticFunction const & f) {
     return xl::templates::make_provider(
         std::pair("name", f.js_name),
         std::pair("comment", f.comment),
+        std::pair("binding_parameters", "BOGUS BINDING PARAMETERS"),
         std::pair("parameters", xl::templates::make_provider(f.parameters)),
         std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
-        std::pair("return_comment", f.return_type_comment)
+        std::pair("return_comment", f.return_type_comment),
+        std::pair("class_name", f.wrapped_class.get_short_name())
     );
 }
-
 
 
 static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
@@ -212,17 +218,24 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
                             already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
     }
 
+    std::cerr << fmt::format("about to dump {} binding_files", binding_files.size()) << std::endl;
     for (int i = 0; i < binding_files.size(); i++) {
 
         auto & binding_file = binding_files[i];
         bool last_file = i == binding_files.size() - 1;
+        int file_number = i + 1;
 
         // this takes care of providing the correct stream for each subsequent call
         auto & output_stream = stream_provider.get_class_collection_stream();
         auto template_result = bindings_templates["file"].fill(
             xl::templates::make_provider(
+                std::pair("file_number", fmt::format("{}", file_number)),
+                std::pair("next_file_number", fmt::format("{}", file_number + 1)), // ok if it won't actually exist
                 std::pair("classes", make_provider(binding_file.get_classes())),
-                std::pair("includes", make_provider(std::bind(&BindingFile::get_includes, binding_file)))
+                std::pair("includes", make_provider(std::bind(&BindingFile::get_includes, binding_file))),
+                std::pair("extern_templates", make_provider(std::bind(&BindingFile::get_extern_template_instantiations, binding_file))),
+                std::pair("explicit_instantiations", make_provider(std::bind(&BindingFile::get_extern_template_instantiations, binding_file))),
+                std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number) : "")
             ),
             bindings_templates
         );

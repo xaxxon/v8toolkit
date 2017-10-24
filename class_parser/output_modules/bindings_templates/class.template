@@ -1,0 +1,17 @@
+{
+    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
+    class_wrapper.set_class_name("{{alias}}");
+{{member_functions|!<!
+    class_wrapper.add_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());}}
+{{static_functions|!<!
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());}}
+{{data_members|!<!
+    class_wrapper.add_member<{{binding_parameters}}>("{{name}}");}}
+
+    BOGUS PARENT TYPE
+    BOGUS DERIVED TYPES
+
+    class_wrapper.finalize(true);
+
+    BOGUS ADD CONSTRUCTOR OR EXPOSE STATIC METHODS
+}
