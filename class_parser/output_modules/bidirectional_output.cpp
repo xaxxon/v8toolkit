@@ -13,15 +13,15 @@ using xl::templates::ProviderPtr;
 namespace v8toolkit::class_parser {
 
 
-static ProviderPtr get_provider(WrappedClass const * c) {
+static ProviderPtr get_provider(WrappedClass const & c) {
     return xl::templates::make_provider(
-        std::pair("comment", c->comment),
-        std::pair("name", c->get_name_alias()),
-        std::pair("data_members", xl::templates::make_provider(c->get_members())),
-        std::pair("constructors", xl::templates::make_provider(c->get_constructors())),
-        std::pair("member_functions", xl::templates::make_provider(c->get_member_functions())),
-        std::pair("static_functions", xl::templates::make_provider(c->get_static_functions())),
-        std::pair("inheritance", fmt::format("{}", c->base_types.empty() ? "" : (*c->base_types.begin())->get_name_alias()))
+        std::pair("comment", c.comment),
+        std::pair("name", c.get_name_alias()),
+        std::pair("data_members", xl::templates::make_provider(c.get_members())),
+        std::pair("constructors", xl::templates::make_provider(c.get_constructors())),
+        std::pair("member_functions", xl::templates::make_provider(c.get_member_functions())),
+        std::pair("static_functions", xl::templates::make_provider(c.get_static_functions())),
+        std::pair("inheritance", fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias()))
     );
 }
 

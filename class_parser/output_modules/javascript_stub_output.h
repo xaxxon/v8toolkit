@@ -38,21 +38,18 @@ class JavascriptStubCriteria : public OutputCriteria {
 
 class JavascriptStubOutputStreamProvider : public OutputStreamProvider {
 private:
-    std::stringstream string_stream;
+    std::unique_ptr<ostream> output_stream;
 public:
-    virtual std::ostream & get_class_collection_stream() {
-//        return this->string_stream;
-        return std::cerr;
-    }
-    ~JavascriptStubOutputStreamProvider(){
-    }
+    virtual std::ostream & get_class_collection_stream();
+    ~JavascriptStubOutputStreamProvider();
 };
 
 
 
 
 class JavascriptStubOutputModule : public OutputModule {
-
+private:
+    JavascriptStubOutputStreamProvider stream_provider;
 public:
     void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
 };

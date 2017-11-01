@@ -12,18 +12,34 @@
 #include <gmock/gmock.h>
 
 #include <xl/library_extensions.h>
+#include <xl/templates.h>
 using namespace xl;
 using namespace std;
 
 #include "../output_modules/javascript_stub_output.h"
-#include "../output_modules/bindings_output.h"
+//#include "../output_modules/bindings_output.h"
 #include "../output_modules/bidirectional_output.h"
+
+
 
 using ::testing::_;
 using ::testing::Return;
 using namespace v8toolkit::class_parser;
 
+class Environment : public ::testing::Environment {
+    ~Environment() override {}
+    // Override this to define how to set up the environment.
+    void SetUp() override {
+        xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
+            std::cerr << fmt::format("xl::templates: {}", message.string) << std::endl;
+        });
+    }
+    // Override this to define how to tear down the environment.
+    void TearDown() override {}
 
+};
+
+static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(new Environment);
 
 auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}) {
 
@@ -439,7 +455,7 @@ TEST(ClassParser, ClassComments) {
         /// comment on data_memberB
         int data_memberB;
     };
-    class C : public v8toolkit::WrappedClassBase {
+    class C : public B {
     public:
         /**
           * member instance function C comment
@@ -468,7 +484,7 @@ TEST(ClassParser, ClassComments) {
     vector<unique_ptr<OutputModule>> output_modules;
     output_modules.push_back(make_unique<JavascriptStubOutputModule>());
     output_modules.push_back(make_unique<BindingsOutputModule>(15));
-    output_modules.push_back(make_unique<BidirectionalOutputModule>());
+//    output_modules.push_back(make_unique<BidirectionalOutputModule>());
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 

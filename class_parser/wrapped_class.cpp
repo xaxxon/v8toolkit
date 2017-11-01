@@ -846,23 +846,23 @@ bool WrappedClass::ready_for_wrapping(set<WrappedClass const *> dumped_classes) 
 
     // don't double wrap yourself
     if (find(dumped_classes.begin(), dumped_classes.end(), this) != dumped_classes.end()) {
-        printf("Already wrapped %s\n", class_name.c_str());
+//        printf("Already wrapped %s\n", class_name.c_str());
         return false;
     }
 
     if (!should_be_wrapped()) {
-        cerr << "should be wrapped returned false" << endl;
+//        cerr << "should be wrapped returned false" << endl;
         return false;
     }
 
     for (auto base_type : base_types) {
         if (find(dumped_classes.begin(), dumped_classes.end(), base_type) == dumped_classes.end()) {
-            printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
+//            printf("base type %s not already wrapped - return false\n", base_type->class_name.c_str());
             return false;
         }
     }
 
-    printf("Ready to wrap %s\n", class_name.c_str());
+//    printf("Ready to wrap %s\n", class_name.c_str());
 
     return true;
 }
@@ -982,20 +982,20 @@ std::set<string> WrappedClass::get_base_type_includes() const {
 }
 
 std::set<string> WrappedClass::get_derived_type_includes() const {
-    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
+//    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
     set<string> results;
     results.insert(my_include);
     for (auto derived_type : derived_types) {
 
-        std::cerr << fmt::format("1 - derived type loop for {}", derived_type->name_alias) << std::endl;
+//        std::cerr << fmt::format("1 - derived type loop for {}", derived_type->name_alias) << std::endl;
         results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
         //std::cerr << fmt::format("2") << std::endl;
         auto derived_includes = derived_type->get_derived_type_includes();
         //std::cerr << fmt::format("3") << std::endl;
         results.insert(derived_includes.begin(), derived_includes.end());
         //std::cerr << fmt::format("4") << std::endl;
-        cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias,
-                            derived_type->class_name, join(derived_includes)) << endl;
+//        cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias,
+//                            derived_type->class_name, join(derived_includes)) << endl;
 
     }
     //std::cerr << fmt::format("aaa") << std::endl;
@@ -1083,7 +1083,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
 
 
 std::string WrappedClass::get_short_name() const {
-    if (decl == nullptr) {
+    if (this->decl == nullptr) {
         llvm::report_fatal_error(
             fmt::format("Tried to get_short_name on 'fake' WrappedClass {}", class_name).c_str());
     }

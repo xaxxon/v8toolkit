@@ -1,6 +1,5 @@
 project ("Class Parser Test")
 set(CMAKE_VERBOSE_MAKEFILE on)
-include(cotire)
 
 
 include_directories(${gtest_SOURCE_DIR}/include)
@@ -8,6 +7,11 @@ include_directories(${gmock_SOURCE_DIR}/include)
 
 
 add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
+
+# Uncomment next line to print debugging info from xl::template library
+# target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE)
+
+
 find_package(fmt REQUIRED)
 target_link_libraries(test-class-parser fmt gmock gmock_main)
 
@@ -42,5 +46,3 @@ add_custom_command(TARGET copy_test_resources PRE_BUILD
 add_dependencies(test-class-parser gmock gtest copy_test_resources)
 
 
-#cotire(test-class-parser)
-#add_dependencies(test-class-parser_unity gmock gtest copy_test_resources)

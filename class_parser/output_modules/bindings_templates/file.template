@@ -3,11 +3,14 @@
 #### FILE: {{file_number}} ####
 
 {{!standard_includes}}
-{{includes|!#include {{include}}}}
+{{includes|!!
+#include {{include}}}}
 
-{{explicit_instantiations|!{{instantiation}}}}
+{{<explicit_instantiations|!!
+template class {{instantiation}}>}}
 
-{{extern_templates|!{{instantiation}}}}
+{{<extern_templates|!!
+extern template {{class_name}}>}}
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {

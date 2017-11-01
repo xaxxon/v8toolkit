@@ -259,8 +259,8 @@ void generate_bindings() {
             already_wrapped_classes.insert(wrapped_class.get());
             found_match = true;
 
-            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->get_name_alias(),
-                                     wrapped_class->declaration_count) << std::endl;
+//            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->get_name_alias(),
+//                                     wrapped_class->declaration_count) << std::endl;
 
             // if there's room in the current file, add this class
             auto space_available = declaration_count_this_file == 0 ||
@@ -270,7 +270,7 @@ void generate_bindings() {
             if (!space_available) {
 
 
-                std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
+//                std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
                 classes_per_file.emplace_back(classes_for_this_file);
 
                 // reset for next file
@@ -295,8 +295,8 @@ void generate_bindings() {
     }
 
     if (already_wrapped_classes.size() != WrappedClass::wrapped_classes.size()) {
-        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
-                            already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
+//        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
+//                            already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
     }
 
     int total_file_count = classes_per_file.size();
@@ -305,10 +305,10 @@ void generate_bindings() {
     }
 
 
-    cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
+//    cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
 
 
-    cerr << "Classes used that were not wrapped:" << endl;
+//    cerr << "Classes used that were not wrapped:" << endl;
     for (auto & wrapped_class : WrappedClass::wrapped_classes) {
 //        if (!wrapped_class->dumped) { continue; }
 //        for (auto used_class : wrapped_class->used_classes) {
