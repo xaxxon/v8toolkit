@@ -23,18 +23,18 @@ namespace v8toolkit::class_parser {
 
 // remove trailing & or && from the end of a string
 string remove_reference_from_type_string(string const & type_string) {
-    std::cerr << fmt::format("removing reference from string: '{}'", type_string) << std::endl;
+//    std::cerr << fmt::format("removing reference from string: '{}'", type_string) << std::endl;
     auto result = std::regex_replace(type_string, std::regex("\\s*&{1,2}\\s*$"), "");
-    std::cerr << fmt::format("result: '{}'", result) << std::endl;
+//    std::cerr << fmt::format("result: '{}'", result) << std::endl;
     return result;
 
 }
 
 string remove_local_const_from_type_string(string const & type_string) {
-    std::cerr << fmt::format("removing const from string: '{}'", type_string) << std::endl;
+//    std::cerr << fmt::format("removing const from string: '{}'", type_string) << std::endl;
 
     auto result = std::regex_replace(type_string, std::regex("^\\s*const\\s*"), "");
-    std::cerr << fmt::format("result: '{}'", result) << std::endl;
+//    std::cerr << fmt::format("result: '{}'", result) << std::endl;
     return result;
 
 }

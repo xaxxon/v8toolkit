@@ -15,7 +15,19 @@ using xl::templates::ProviderPtr;
 
 using namespace xl::templates;
 
-namespace v8toolkit::class_parser {
+namespace v8toolkit::class_parser::bindings_output {
+
+extern Template file_template;
+extern Template class_template;
+extern Template standard_includes_template;
+
+
+std::map<string, Template> bindings_templates {
+    std::pair("class", class_template),
+    std::pair("file", file_template),
+    std::pair("standard_includes", standard_includes_template)
+};
+
 
 bool BindingsCriteria::class_filter(WrappedClass const & c) {
     cerr << "Checking class criteria" << endl;
@@ -60,12 +72,12 @@ using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
 struct BindingsProviderContainer {
 
 
+
     static ProviderPtr get_provider(WrappedClass const & c) {
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
             std::pair("name", c.get_short_name()),
             std::pair("alias", c.get_name_alias()),
-            std::pair("constructor", "BOGUS"),
             std::pair("data_members", P::make_provider(c.get_members())),
             std::pair("member_functions", P::make_provider(c.get_member_functions())),
             std::pair("static_functions", P::make_provider(c.get_static_functions())),
@@ -73,9 +85,10 @@ struct BindingsProviderContainer {
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
                                                  c.get_name_alias()) :
                                      fmt::format(
-                                         "class_wrapper.add_constructor<{}>(\"{}\", isolate, std::tuple<{}>({}));",
-                                         "BOGUS TYPE DATA", c.get_name_alias(), "BOGUS DEFAULT PARAMETER TYPES",
-                                         "BOGUS DEFAULT PARAMETER VALUES")),
+                                         "class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
+                                         c.get_constructors().back()->get_return_and_class_and_parameter_types_string(),
+                                         c.get_name_alias(), c.get_constructors().back()->get_default_argument_tuple_string())),
+
             std::pair("inheritance",
                       fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias())),
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->get_short_name()),
@@ -174,16 +187,21 @@ struct BindingFile {
     auto & get_extern_template_instantiations() const { return this->extern_templates; }
 
     void add_class(WrappedClass const * wrapped_class) {
+        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
         assert(this->declaration_count <= this->max_declaration_count);
 
+
         auto base_type_includes = wrapped_class->get_base_type_includes();
+        std::cerr << fmt::format("adding base type includes: {}", join(base_type_includes)) << std::endl;
         includes.insert(base_type_includes.begin(), base_type_includes.end());
 
         auto derived_type_includes = wrapped_class->get_derived_type_includes();
+        std::cerr << fmt::format("adding derived type includes: {}", join(derived_type_includes)) << std::endl;
         includes.insert(derived_type_includes.begin(), derived_type_includes.end());
 
+        this->explicit_instantiations.insert(wrapped_class);
 
     }
 
@@ -203,7 +221,6 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
     std::vector<BindingFile> binding_files{BindingFile(this->max_declarations_per_file)};
     BindingsOutputStreamProvider stream_provider;
 
-    auto bindings_templates = xl::templates::load_templates("bindings_templates");
     std::set<WrappedClass const *> already_wrapped_classes;
 
 
@@ -288,4 +305,62 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
 }
 
 
-} // end namespace v8toolkit::class_parser
+Template class_template(R"({
+    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
+    class_wrapper.set_class_name("{{alias}}");
+{{<member_functions|!!
+    class_wrapper.add_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());>}}
+{{<static_functions|!!
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());>}}
+{{<data_members|!!
+    class_wrapper.add_member<{{binding_parameters>}}>("{{name}}");>}}
+
+    class_wrapper.set_parent_type<{{<base_type_name>}}>();
+
+
+    class_wrapper.set_compatible_types<{{<derived_types|!name>}}>();
+
+    class_wrapper.finalize(true);
+    {{<constructor>}}
+})");
+
+
+Template file_template(R"(
+#### FILE: {{file_number}} ####
+
+{{!standard_includes}}
+// includes
+{{<includes|!!
+#include {{<include>}}>}}
+// /includes
+
+// explicit instantiations
+{{<explicit_instantiations|!!
+template class {{<instantiation>}}>}}
+// /explicit instantiations
+
+{{<extern_templates|!!
+extern template {{class_name}}>}}
+
+void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
+void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {
+{
+
+
+{{classes|class}}
+
+
+{{call_next_function}}
+
+}
+)");
+
+
+Template standard_includes_template(R"(
+#include "js_casts.h"
+#include <v8toolkit/v8_class_wrapper_impl.h>
+
+)");
+
+
+} // end namespace v8toolkit::class_parser::bindings_output

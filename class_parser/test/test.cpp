@@ -4,7 +4,11 @@
 #include <iostream>
 #include <sstream>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/Tooling/Tooling.h"
+#pragma clang diagnostic pop
+
 #include "../ast_action.h"
 #include "../log.h"
 
@@ -25,6 +29,8 @@ using namespace std;
 using ::testing::_;
 using ::testing::Return;
 using namespace v8toolkit::class_parser;
+using namespace v8toolkit::class_parser::javascript_stub_output;
+using namespace v8toolkit::class_parser::bindings_output;
 
 class Environment : public ::testing::Environment {
     ~Environment() override {}
@@ -428,7 +434,7 @@ public:
 
 TEST(ClassParser, ClassComments) {
     std::string source = R"(
-    class A : public v8toolkit::WrappedClassBase {
+    class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
     public:
         void member_instance_functionA();
         static void member_static_functionA();
@@ -447,7 +453,7 @@ TEST(ClassParser, ClassComments) {
          * Construct a B from a string
          * @param string_name the name for creating B with
          */
-        B(char * string_name);
+        B(char const * string_name = "default string name");
 
         void member_instance_functionB();
         static void member_static_functionB();

@@ -1,4 +1,8 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#pragma clang diagnostic pop
+
 
 #include "ast_action.h"
 #include "helper_functions.h"

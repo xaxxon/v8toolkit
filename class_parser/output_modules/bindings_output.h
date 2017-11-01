@@ -10,7 +10,7 @@
 #include "../output_modules.h"
 
 
-namespace v8toolkit::class_parser {
+namespace v8toolkit::class_parser::bindings_output {
 
 
 // returns whether a WrappedClass object should be part of the JavaScript stub

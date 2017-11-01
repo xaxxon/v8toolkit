@@ -3,11 +3,15 @@
 #### FILE: {{file_number}} ####
 
 {{!standard_includes}}
-{{includes|!!
-#include {{include}}}}
+// includes
+{{<includes|!!
+#include {{<include>}}>}}
+// /includes
 
+// explicit instantiations
 {{<explicit_instantiations|!!
-template class {{instantiation}}>}}
+template class {{<instantiation>}}>}}
+// /explicit instantiations
 
 {{<extern_templates|!!
 extern template {{class_name}}>}}

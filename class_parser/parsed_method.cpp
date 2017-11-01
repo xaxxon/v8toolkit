@@ -556,9 +556,9 @@ string ClassFunction::get_default_argument_tuple_string() const {
         first_default_argument = false;
 
         //types << param.type.name; // still has const and references on it, which doesn't work well for tuples
-        std::cerr << fmt::format("ORIG: {}", param.type.get_name()) << std::endl;
-        std::cerr << fmt::format("POST: {}", remove_local_const_from_type_string(
-            remove_reference_from_type_string(param.type.get_name()))) << std::endl;
+//        std::cerr << fmt::format("ORIG: {}", param.type.get_name()) << std::endl;
+//        std::cerr << fmt::format("POST: {}", remove_local_const_from_type_string(
+//            remove_reference_from_type_string(param.type.get_name()))) << std::endl;
         types << remove_local_const_from_type_string(remove_reference_from_type_string(param.type.get_name()));
 
 

@@ -2,8 +2,12 @@
 
 #include <regex>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
+#pragma clang diagnostic pop
+
 #include "wrapped_class.h"
 
 #include "ast_consumer.h"

@@ -15,6 +15,4 @@
 
     class_wrapper.finalize(true);
     {{<constructor>}}
-
-    BOGUS ADD CONSTRUCTOR OR EXPOSE STATIC METHODS
 }

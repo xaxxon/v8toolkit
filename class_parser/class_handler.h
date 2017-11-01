@@ -1,6 +1,9 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#pragma clang diagnostic pop
 
 #include "output_modules.h"
 
