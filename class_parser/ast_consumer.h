@@ -19,8 +19,6 @@ private:
     // MatchCallback object called for each element matched by matcher
     ClassHandler class_handler;
 
-    CompilerInstance & ci;
-
 public:
     ClassHandlerASTConsumer(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules);
 

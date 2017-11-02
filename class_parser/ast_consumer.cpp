@@ -7,7 +7,8 @@ namespace v8toolkit::class_parser {
 
 ClassHandlerASTConsumer::ClassHandlerASTConsumer(CompilerInstance & ci,
                                                  vector<unique_ptr<OutputModule>> const & output_modules) :
-    class_handler(ci, output_modules), ci(ci) {
+    class_handler(ci, output_modules)
+{
 
 #ifdef TEMPLATE_INFO_ONLY
 

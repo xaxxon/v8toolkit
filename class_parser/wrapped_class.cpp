@@ -660,7 +660,7 @@ void WrappedClass::parse_members() {
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
         if (this->decl == nullptr) {
-            std::cerr << fmt::format("No decls for {} while parsing memberes", this->name_alias) << std::endl;
+            std::cerr << fmt::format("No decls for {} while parsing members", this->name_alias) << std::endl;
             return;
         }
 

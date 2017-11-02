@@ -33,6 +33,9 @@ FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h output_modules/*.cpp
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
 
+# googletest sets the CMAKE_DEBUG_POSTFIX value to "d" so unset it here
+set_target_properties(class_parser_plugin PROPERTIES
+        DEBUG_POSTFIX "")
 
 add_definitions(-DCLANG_HOME="${CLANG_HOME}" -DXL_FORCE_NO_DEMANGLE_NAMES)
 include_directories(${gtest_SOURCE_DIR}/include)
@@ -41,7 +44,7 @@ include_directories(${gtest_SOURCE_DIR}/include)
 
 
 
-target_link_libraries(class_parser_plugin fmt)
+target_link_libraries(class_parser_plugin fmt pcre)
 
 
 add_custom_target(class_parser_driver

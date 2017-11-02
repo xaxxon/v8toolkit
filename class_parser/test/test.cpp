@@ -362,9 +362,9 @@ TEST(ClassParser, ClassAndFunctionComments) {
 
     EXPECT_EQ(pruned_vector.size(), 4);
     WrappedClass const & c1 = *pruned_vector.at(0).get();
-    WrappedClass const & c2 = *pruned_vector.at(1).get();
-    WrappedClass const & c3 = *pruned_vector.at(2).get();
-    WrappedClass const & c4 = *pruned_vector.at(3).get();
+    (void) *pruned_vector.at(1).get();
+    (void) *pruned_vector.at(2).get();
+    (void) *pruned_vector.at(3).get();
 
     EXPECT_EQ(c1.get_name_alias(), "ClassWithComments");
     EXPECT_EQ(c1.get_member_functions().size(), 1);
@@ -495,7 +495,7 @@ TEST(ClassParser, ClassComments) {
     auto pruned_vector = run_code(source, std::move(output_modules));
 
     EXPECT_EQ(pruned_vector.size(), 3);
-    WrappedClass const & c = *pruned_vector[0].get();
+    (void)*pruned_vector[0].get();
 }
 
 

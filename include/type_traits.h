@@ -3,6 +3,11 @@
 
 #include <type_traits>
 #include <string_view>
+#include <set>
+#include <vector>
+#include <array>
+#include <unordered_set>
+#include <unordered_map>
 
 #include <xl/library_extensions.h>
 
@@ -225,7 +230,9 @@ template<typename T>
 struct _acts_like_map<T,
     std::enable_if_t<
         xl::is_template_for_v<std::map, T> ||
-        xl::is_template_for_v<std::multimap, T>
+            xl::is_template_for_v<std::multimap, T> ||
+            xl::is_template_for_v<std::unordered_map, T> ||
+            xl::is_template_for_v<std::unordered_multimap, T>
 
     >> : public std::true_type {};
 

@@ -254,6 +254,11 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 }
 
 
+void ClassHandler::onStartOfTranslationUnit() {
+
+}
+
+
 void ClassHandler::onEndOfTranslationUnit() {
 
 //    cerr << "Done traversing AST" << endl;
@@ -275,7 +280,8 @@ void ClassHandler::onEndOfTranslationUnit() {
 
 
     if (this->output_modules.empty()) {
-        //cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
+        cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
+        llvm::report_fatal_error("No output modules specified, aborting...");
     }
 
     for (auto & output_module : this->output_modules) {
@@ -288,9 +294,9 @@ void ClassHandler::onEndOfTranslationUnit() {
 
 
 ClassHandler::ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules) :
-    ci(CI),
+    source_manager(CI.getSourceManager()),
     output_modules(output_modules),
-    source_manager(CI.getSourceManager())
+    ci(CI)
 {}
 
 

@@ -3,42 +3,42 @@
 
 namespace clang {
 
-struct Decl;
+class Decl;
 
-struct CXXMethodDecl;
+class CXXMethodDecl;
 
-struct ClassTemplateDecl;
+class ClassTemplateDecl;
 
-struct CXXRecordDecl;
+class CXXRecordDecl;
 
-struct NamedDecl;
+class NamedDecl;
 
-struct CompilerInstance;
+class CompilerInstance;
 
-struct TypeDecl;
+class TypeDecl;
 
-struct CXXConstructorDecl;
+class CXXConstructorDecl;
 
-struct FunctionTemplateDecl;
+class FunctionTemplateDecl;
 
-struct ParmVarDecl;
+class ParmVarDecl;
 
-struct FunctionTemplateDecl;
+class FunctionTemplateDecl;
 
-struct SourceManager;
-struct SourceRange;
-struct FileID;
+class SourceManager;
+class SourceRange;
+class FileID;
 
-struct QualType;
+class QualType;
 
-struct FieldDecl;
+class FieldDecl;
 
 namespace driver {}
 namespace tooling {}
 namespace comments {
 
 
-struct FullComment;
+class FullComment;
 
 }
 

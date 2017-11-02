@@ -15,7 +15,7 @@ using namespace std;
 namespace v8toolkit::class_parser {
 
 
-class WrappedClass;
+struct WrappedClass;
 
 
 struct LogWatcher {
@@ -96,7 +96,7 @@ struct ClassFunction {
 
     /* PARAMETER INFO */
     class ParameterInfo {
-        friend class ClassFunction;
+        friend struct ClassFunction;
 
     public:
         ClassFunction & method;

@@ -30,20 +30,21 @@ public:
     ~PrintFunctionNamesAction() {}
 
     // This is called when all parsing is done
-    void EndSourceFileAction();
+    void EndSourceFileAction() override;
 
     vector<unique_ptr<OutputModule>> output_modules;
 
+    bool BeginInvocation(CompilerInstance & ci) override;
 
 protected:
     // The value returned here is used internally to run checks against
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
-                                                   llvm::StringRef) {
+                                                   llvm::StringRef) override {
         return llvm::make_unique<ClassHandlerASTConsumer>(CI, this->output_modules);
     }
 
     bool ParseArgs(const CompilerInstance & CI,
-                   const std::vector<std::string> & args) {
+                   const std::vector<std::string> & args) override {
         for (unsigned i = 0, e = args.size(); i < e; ++i) {
             llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
@@ -51,13 +52,14 @@ protected:
             std::smatch match_results;
             if (std::regex_match(args[i], match_results, declaration_count_regex)) {
                 auto count = std::stoi(match_results[1].str());
+                std::cerr << fmt::format("Set declaration count to {}", count) << std::endl;
                 MAX_DECLARATIONS_PER_FILE = count;
             }
             // for "normal" use, the default output modules should be used, instead of others specified
             //   in code from something such as a test harness
             else if (args[i] == "--use-default-output-modules") {
-                //output_modules.push_back(std::make_unique<JavascriptStub::Output>(std::make_unique<std::ofstream>("js_api.js")));
-
+                std::cerr << fmt::format("Using default output modules") << std::endl;
+                output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
             }
         }
         if (args.size() && args[0] == "help")

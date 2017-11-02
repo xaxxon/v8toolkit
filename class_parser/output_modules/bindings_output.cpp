@@ -45,7 +45,7 @@ std::ostream & BindingsOutputStreamProvider::get_class_collection_stream() {
 }
 
 
-class BindingsProviderContainer;
+struct BindingsProviderContainer;
 
 using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
 
@@ -76,7 +76,7 @@ struct BindingsProviderContainer {
             xl::forward_as_pair("derived_types", c.derived_types)
         );
 
-        return std::move(provider);
+        return provider;
     }
 
 
@@ -127,7 +127,6 @@ struct BindingsProviderContainer {
 
     static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
         return P::make_provider("Implement me");
-
     }
 
 }; // end BindingsProviderContainer

@@ -14,6 +14,17 @@ namespace v8toolkit::class_parser {
 extern int print_logging;
 
 
+bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
+    if (this->output_modules.empty()) {
+        cerr << "NO OUTPUT MODULES SPECIFIED - *ABORTING* - did you mean to pass --use-default-output-modules" << endl;
+        return false;
+    } else {
+        std::cerr << fmt::format("{} output modules registered", this->output_modules.size()) << std::endl;
+        return true;
+    }
+}
+
+
 static FrontendPluginRegistry::Add <PrintFunctionNamesAction>
     X("v8toolkit-generate-bindings", "generate v8toolkit bindings");
 

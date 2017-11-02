@@ -36,6 +36,8 @@ public:
     // all matcher callbacks have been run, now do anything to process the entirety of the data
     virtual void onEndOfTranslationUnit() override;
 
+    // Run after compiling but before running the plugin over the contents of the AST
+    virtual void onStartOfTranslationUnit() override;
 
 
 

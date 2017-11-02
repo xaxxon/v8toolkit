@@ -25,7 +25,7 @@ namespace v8toolkit::class_parser {
 extern vector<pair<string, string>> cpp_to_js_type_conversions;
 extern vector<string> base_types_to_ignore;
 
-class WrappedClass;
+struct WrappedClass;
 
 inline int print_logging = 0;
 
