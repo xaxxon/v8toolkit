@@ -11,6 +11,8 @@
 #include <utility>
 #include <assert.h>
 
+#include <xl/demangle.h>
+
 // vector_map compiles a LOT faster than std::map as the number of wrapped classes increases
 #define USE_EASTL_FOR_INTERNALS
 
@@ -213,16 +215,16 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 	TypeChecker(v8::Isolate * isolate) : SUPER(isolate) {}
 
     virtual T * check(AnyBase * any_base, bool first_call = true) const override {
-//		ANYBASE_PRINT("In Type Checker<{}> Const mismatch: {} (string: {})", demangle<T>(), demangle<Head>(), any_base->type_name);
+//		ANYBASE_PRINT("In Type Checker<{}> Const mismatch: {} (string: {})", xl::demangle<T>(), xl::demangle<Head>(), any_base->type_name);
         if (dynamic_cast<AnyPtr<Head> *>(any_base) != nullptr) {
-//            ANYBASE_PRINT("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?", demangle<T>(), demangle<Head>());
+//            ANYBASE_PRINT("Not a match, but the value is a const version of goal type! {} vs {} Should you be casting to a const type instead?",  xl::demangle<T>(),  xl::demangle<Head>());
         }
         return SUPER::check(any_base);
     }
 
 };
 
- 
+
 // tests an AnyBase * against a list of types compatible with T
 //   to see if the AnyBase is an Any<TypeList...> ihn
 template<class T, class Head, class... Tail>
@@ -376,7 +378,7 @@ private:
 	/**
 	 * Name that will be reported from JavaScript `typeof` function
 	 */
-	std::string class_name = demangle<T>();
+	std::string class_name = xl::demangle<T>();
 
 	/**
 	 * List of names already in use for methods/static methods/accessors
@@ -599,7 +601,7 @@ private:
 
 		} catch(std::exception & e) {
             log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running C++ constructor for {}: {}",
-                       demangle<T>(), e.what());
+                        xl::demangle<T>(), e.what());
 			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 			return;
 		}
@@ -614,7 +616,7 @@ private:
 		// // return the object to the javascript caller
 		info.GetReturnValue().Set(info.This());
 	}
-	
+
 	// takes a Data() parameter of a StdFunctionCallbackType lambda and calls it
 	//   Useful because capturing lambdas don't have a traditional function pointer type
 	static void callback_helper(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -631,7 +633,7 @@ public:
 
 	std::string get_class_details_string() {
 		std::stringstream result;
-		result << fmt::format("V8ClassWrapper<{}>\n", demangle<T>()) << std::endl;
+		result << fmt::format("V8ClassWrapper<{}>\n",  xl::demangle<T>()) << std::endl;
 		result << fmt::format("finalized: {}", this->finalized) << std::endl;
 		result << fmt::format("Constructing FunctionTemplates created: {}", this->this_class_function_templates.size()) << std::endl;
 		result << fmt::format("methods added: {}", this->method_adders.size()) << std::endl;
@@ -661,7 +663,7 @@ public:
      * @param callback
      */
     void register_callback(PropertyChangedCallback callback);
-    
+
 	/**
 	 * Object still has the memory, it just doesn't own it.  It may or may not have owned it before, but now
 	 * it doesn't.  For example, this is called passing an object to a C++ function taking a parameter type of a
@@ -711,7 +713,7 @@ public:
     static bool does_object_own_memory(v8::Local<v8::Object> object) {
         WrappedData<T> & wrapped_data = get_wrapped_data(object);
 
-//		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data, demangle<T>(), (void*)wrapped_data) << std::endl;
+//		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data,  xl::demangle<T>(), (void*)wrapped_data) << std::endl;
 //		if (wrapped_data.weak_callback_data) {
 //			std::cerr << fmt::format("callback data destructive? {}", wrapped_data->weak_callback_data->destructive) << std::endl;
 //		}
@@ -731,7 +733,7 @@ public:
 										 DestructorBehavior const & destructor_behavior)
 	{
 #ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n", demangle<T>().c_str(), *js_object, cpp_object);
+        fprintf(stderr, "Initializing new js object for %s for v8::object at %p and cpp object at %p\n",  xl::demangle<T>().c_str(), *js_object, cpp_object);
 #endif
         if (js_object->InternalFieldCount() == 0) {
             fprintf(stderr, "Maybe you are calling a constructor without 'new'?");
@@ -765,12 +767,12 @@ public:
 		this->existing_wrapped_objects.emplace(cpp_object,
 											   v8::Global<v8::Object>(isolate, js_object));
 
-		V8TOOLKIT_DEBUG("Inserting new %s object at %p into existing_wrapped_objects hash that is now of size: %d\n", demangle<T>().c_str(), cpp_object, (int)this->existing_wrapped_objects.size());
+		V8TOOLKIT_DEBUG("Inserting new %s object at %p into existing_wrapped_objects hash that is now of size: %d\n",  xl::demangle<T>().c_str(), cpp_object, (int)this->existing_wrapped_objects.size());
 
 
 	}
-	
-	
+
+
     /**
     * Creates a new v8::FunctionTemplate capabale of creating wrapped T objects based on previously added methods and members.
     */
@@ -787,13 +789,13 @@ public:
     v8::Local<v8::FunctionTemplate> get_function_template();
 
 
-	
+
 	/**
 	 * Check to see if an object can be converted to type T, else return nullptr
 	 */
     T * cast(AnyBase * any_base);
 
-    
+
     void init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template);
 
     void init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template);
@@ -811,7 +813,7 @@ public:
         used_constructor_name_list_map.erase(isolate);
 	}
 
-	
+
 	/**
 	* Returns a "singleton-per-isolate" instance of the V8ClassWrapper for the wrapped class type.
 	* For each isolate you need to add constructors/methods/members separately.
@@ -829,12 +831,12 @@ public:
 
 
     /**
-     * Specify the name of the object which will be used for debugging statements as well as 
+     * Specify the name of the object which will be used for debugging statements as well as
      *   being the type returned from javascript typeof
      */
     void set_class_name(const std::string & name);
 
-    
+
 
     /**
     * Species other types that can be substituted for T when calling a function expecting T
@@ -882,8 +884,8 @@ public:
 		}
 		this->destructor_behavior_delete = std::make_unique<Deleter<T>>();
 	}
-	
-	
+
+
     /**
      * This wrapped class will inherit all the methods from the parent type (and its parent...)
      *
@@ -906,19 +908,19 @@ public:
 
 		if (!V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized()) {
 			fprintf(stderr, "Tried to set parent type of %s to unfinalized %s\n",
-					demangle<T>().c_str(), demangle<ParentType>().c_str());
+					 xl::demangle<T>().c_str(),  xl::demangle<ParentType>().c_str());
 
 		}
 		assert(V8ClassWrapper<ParentType>::get_instance(isolate).is_finalized());
-//	fprintf(stderr, "Setting parent of %s to %s\n", demangle<T>().c_str(), demangle<ParentType>().c_str());
+//	fprintf(stderr, "Setting parent of %s to %s\n",  xl::demangle<T>().c_str(),  xl::demangle<ParentType>().c_str());
 		ISOLATE_SCOPED_RUN(isolate);
 		global_parent_function_template =
 			v8::Global<v8::FunctionTemplate>(isolate,
 											 V8ClassWrapper<ParentType>::get_instance(isolate).get_function_template());
 
 	}
-    
-    
+
+
 	/**
 	* V8ClassWrapper objects shouldn't be deleted during the normal flow of your program unless the associated isolate
 	*   is going away forever.   Things will break otherwise as no additional objects will be able to be created
@@ -975,7 +977,7 @@ public:
 
 	/**
 	* Used when wanting to return an object from a c++ function call back to javascript, or in conjunction with
-    *   add_variable to give a javascript name to an existing c++ object 
+    *   add_variable to give a javascript name to an existing c++ object
     * \code{cpp}
     * add_variable(context, context->GetGlobal(), "js_name", class_wrapper.wrap_existing_cpp_object(context, some_c++_object));
     * \endcode
@@ -991,23 +993,23 @@ public:
 	    if (!this->is_finalized()) {
             // fprintf(stderr, "wrap existing cpp object cast to js %s\n", typeid(T).name());
 //            return CastToJS<T>()(isolate, *existing_cpp_object).template As<v8::Object>();
-			throw CastException(fmt::format("Tried to wrap existing cpp object for a type that isn't finalized: {}", demangle<T>()));
+			throw CastException(fmt::format("Tried to wrap existing cpp object for a type that isn't finalized: {}",  xl::demangle<T>()));
         }
 
 #ifdef V8_CLASS_WRAPPER_DEBUG
-        fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p type: %s\n", existing_cpp_object, this, isolate, v8toolkit::demangle<T>().c_str());
+        fprintf(stderr, "Wrapping existing c++ object %p in v8 wrapper this: %p isolate %p type: %s\n", existing_cpp_object, this, isolate, v8toolkit:: xl::demangle<T>().c_str());
 #endif
-		
+
 		// if there's currently a javascript object wrapping this pointer, return that instead of making a new one
         //   This makes sure if the same object is returned multiple times, the javascript object is also the same
 		v8::Local<v8::Object> javascript_object;
 		if(this->existing_wrapped_objects.find(existing_cpp_object) != this->existing_wrapped_objects.end()) {
-			V8TOOLKIT_DEBUG("Found existing javascript object for c++ object %p - %s\n", (void*)existing_cpp_object, v8toolkit::demangle<T>().c_str());
+			V8TOOLKIT_DEBUG("Found existing javascript object for c++ object %p - %s\n", (void*)existing_cpp_object, v8toolkit:: xl::demangle<T>().c_str());
 			javascript_object = v8::Local<v8::Object>::New(isolate, this->existing_wrapped_objects[existing_cpp_object]);
 
 		} else {
 
-            V8TOOLKIT_DEBUG("Creating new javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit::demangle<T>().c_str());
+            V8TOOLKIT_DEBUG("Creating new javascript object for c++ object %p - %s\n", existing_cpp_object, v8toolkit:: xl::demangle<T>().c_str());
 
 			v8::Isolate::Scope is(isolate);
 			v8::Context::Scope cs(context);
@@ -1040,7 +1042,7 @@ public:
 
                 initialize_new_js_object(isolate, javascript_object, existing_cpp_object, destructor_behavior);
 
-                V8TOOLKIT_DEBUG("Wrap existing cpp object returning object about to be cast to a value: %s - %s\n", *v8::String::Utf8Value(javascript_object), v8toolkit::demangle<T>().c_str());
+                V8TOOLKIT_DEBUG("Wrap existing cpp object returning object about to be cast to a value: %s - %s\n", *v8::String::Utf8Value(javascript_object), v8toolkit:: xl::demangle<T>().c_str());
             }
 		}
 		return javascript_object;
@@ -1099,7 +1101,7 @@ public:
 							default_args_tuple);
 					} catch (std::exception & e) {
 						log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running static method {}::{}: {}",
-								   demangle<T>(), method_name, e.what());
+								    xl::demangle<T>(), method_name, e.what());
 						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 						return;
 					}
@@ -1116,10 +1118,10 @@ public:
 
 	}
 
-	    
 
 
-    
+
+
     /**
     * Function to force API user to declare that all members/methods have been added before any
     *   objects of the wrapped type can be createL10d to make sure everything stays consistent
@@ -1432,7 +1434,7 @@ public:
                     CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
 					log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running 'fake method' {}::{}: {}",
-							   demangle<T>(), method_name, e.what());
+							    xl::demangle<T>(), method_name, e.what());
 
 					isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 					return;
@@ -1465,7 +1467,7 @@ public:
 			throw InvalidCallException(
 				fmt::format(
 					"Object did not have an object of type {} in its prototype chain",
-					demangle<T>()));
+					 xl::demangle<T>()));
 		}
 		return result;
 	}
@@ -1510,7 +1512,7 @@ public:
 																   default_args_tuple));
 					} catch (std::exception & e) {
 						log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running method {}::{}: {}",
-								   demangle<T>(), method_name, e.what());
+								    xl::demangle<T>(), method_name, e.what());
 
 						isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
 						return;
@@ -1834,7 +1836,7 @@ struct CastToJS<T *, std::enable_if_t<is_wrapped_type_v<T>>> {
 
         assert(cpp_object != (void *) 0xbebebebebebebebe);
 
-        V8TOOLKIT_DEBUG("CastToJS from T* %s\n", demangle_typeid_name(typeid(T).name()).c_str());
+        V8TOOLKIT_DEBUG("CastToJS from T* %s\n",  xl::demangle<_typeid_name(typeid(T).name()).c_str());
         auto context = isolate->GetCurrentContext();
         V8ClassWrapper <T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
 
@@ -1930,7 +1932,7 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 			//   pointed by the InternalField of the javascript object -- even if it has no "real" content.
 			return std::move(*cpp_object);
 		}
-		throw CastException("Could not cast object to {} && because it doesn't own it's memory", demangle<T>());
+		throw CastException("Could not cast object to {} && because it doesn't own it's memory",  xl::demangle<T>());
 	}
 	static constexpr bool callable(){return true;}
 };
@@ -1960,7 +1962,7 @@ std::string type_details(){
 // specialization for pointers and reference types
  template<class T, std::enable_if_t<std::is_pointer<T>::value || std::is_reference<T>::value, int> = 0>
 	T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-     throw CastException(fmt::format("Pointer and reference types ({}) won't ever succeed in getting an embedded cpp object", demangle<T>()));
+     throw CastException(fmt::format("Pointer and reference types ({}) won't ever succeed in getting an embedded cpp object",  xl::demangle<T>()));
  }
 
 /**
@@ -1972,10 +1974,10 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	V8TOOLKIT_DEBUG("cast to native\n");
 
 	auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(get_value_as<v8::Object>(isolate, value));
-//	 std::cerr << fmt::format("about to call cast on {}", demangle<T>()) << std::endl;
+//	 std::cerr << fmt::format("about to call cast on {}",  xl::demangle<T>()) << std::endl;
 	if (cpp_object == nullptr) {
 		fprintf(stderr, "Failed to convert types: want:  %d %s\n", std::is_const<T>::value, typeid(T).name());
-		throw CastException(fmt::format("Cannot convert AnyBase to {}", demangle<T>()));
+		throw CastException(fmt::format("Cannot convert AnyBase to {}",  xl::demangle<T>()));
 	}
 //		std::cerr << fmt::format("Successfully converted") << std::endl;
 	return *cpp_object;
@@ -1998,7 +2000,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_typ
 			return std::unique_ptr<T, Rest...>(new T(cpp_object));
 		} else {
 			throw CastException("Cannot CastToNative<unique_ptr<{}>> from object that doesn't own it's memory and isn't copy constructible: {}",
-				demangle<T>(), *v8::String::Utf8Value(value));
+				 xl::demangle<T>(), *v8::String::Utf8Value(value));
 		}
 	}
 	static constexpr bool callable(){return true;}
@@ -2023,9 +2025,9 @@ TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
 					         !std::is_const<Head>::value>
            >::check(AnyBase * any_base, bool first_call) const {
 	assert(any_base != nullptr);
-//	ANYBASE_PRINT("typechecker::check for {}  with anyptr {} (string: {})", demangle<Head>(), (void*)any_base, any_base->type_name);
+//	ANYBASE_PRINT("typechecker::check for {}  with anyptr {} (string: {})",  xl::demangle<Head>(), (void*)any_base, any_base->type_name);
 	if(auto any = dynamic_cast<AnyPtr<Head> *>(any_base)) {
-//		ANYBASE_PRINT("Got match on: {}, returning {}", demangle<Head>(), (void*)(any->get()));
+//		ANYBASE_PRINT("Got match on: {}, returning {}",  xl::demangle<Head>(), (void*)(any->get()));
 		return static_cast<T*>(any->get());
 	}
 
@@ -2077,7 +2079,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 	T /* T& or T&& */ operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 					std::vector<std::unique_ptr<StuffBase>> & stuff,
 					DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-		PB_PRINT("ParameterBuilder handling wrapped type: {} {}", demangle<T>(),
+		PB_PRINT("ParameterBuilder handling wrapped type: {} {}",  xl::demangle<T>(),
 				 std::is_rvalue_reference_v<T> ? "&&" : "&");
 		auto isolate = info.GetIsolate();
 
@@ -2116,7 +2118,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 				return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
 			}
 			throw CastException("Could not create requested object of type: {} {}.  Maybe you don't 'own' your memory?",
-								demangle<T>(),
+								 xl::demangle<T>(),
 								std::is_rvalue_reference_v<T> ? "&&" : "&");
 		}
 	}
@@ -2131,7 +2133,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_copy_constructible_v<T> && i
 	T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 				 std::vector<std::unique_ptr<StuffBase>> & stuff,
 				 DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-		PB_PRINT("ParameterBuilder handling wrapped type: {}", demangle<T>());
+		PB_PRINT("ParameterBuilder handling wrapped type: {}",  xl::demangle<T>());
 		auto isolate = info.GetIsolate();
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 

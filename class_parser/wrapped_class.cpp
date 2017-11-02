@@ -1,8 +1,10 @@
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/AST/Comment.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
-
+#pragma clang diagnostic pop
 
 
 #include <xl/regex/regexer.h>

@@ -4,6 +4,8 @@
 #include <type_traits>
 #include <string_view>
 
+#include <xl/library_extensions.h>
+
 #include "wrapped_class_base.h"
 #include "stdfunctionreplacement.h"
 namespace v8toolkit {
@@ -184,6 +186,54 @@ auto get_index_sequence_for_func_function(func::function<R(Args...)>) {
     return std::index_sequence_for<Args...>{};
 };
 
+template<typename T, typename = void>
+struct _acts_like_set : public std::false_type {};
+
+template<typename T>
+struct _acts_like_set<T,
+    std::enable_if_t<
+        xl::is_template_for_v<std::set, T> ||
+        xl::is_template_for_v<std::unordered_set, T>>> : public std::true_type {};
+
+template<class T>
+using acts_like_set = _acts_like_set<std::decay_t<T>>;
+
+template<typename T>
+constexpr bool acts_like_set_v = acts_like_set<T>::value;
+
+
+template<typename T, typename = void>
+struct _acts_like_array : public std::false_type {};
+
+template<typename T>
+struct _acts_like_array<T,
+    std::enable_if_t<
+        xl::is_template_for_v<std::vector, T> ||
+        xl::is_std_array_v<T>>> : public std::true_type {};
+
+template<class T>
+using acts_like_array = _acts_like_array<std::decay_t<T>>;
+
+template<typename T>
+constexpr bool acts_like_array_v = acts_like_array<T>::value;
+
+
+template<typename T, typename = void>
+struct _acts_like_map : public std::false_type {};
+
+template<typename T>
+struct _acts_like_map<T,
+    std::enable_if_t<
+        xl::is_template_for_v<std::map, T> ||
+        xl::is_template_for_v<std::multimap, T>
+
+    >> : public std::true_type {};
+
+template<class T>
+using acts_like_map = _acts_like_map<std::decay_t<T>>;
+
+template<typename T>
+constexpr bool acts_like_map_v = acts_like_map<T>::value;
 
 } // end namespace v8toolkit
 

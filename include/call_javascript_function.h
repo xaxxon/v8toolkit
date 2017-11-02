@@ -21,7 +21,7 @@ struct TupleForEach : public TupleForEach<position - 1, Tuple> {
     using super = TupleForEach<position - 1, Tuple>;
 
     void operator()(v8::Isolate * isolate, v8::Local <v8::Value> * params, const Tuple & tuple) {
-        constexpr int array_position = position - 1;
+        constexpr const int array_position = position - 1;
         params[array_position] = CastToJS<typename std::tuple_element<array_position, Tuple>::type>()(isolate,
                                                                                                       std::get<array_position>(
                                                                                                           tuple));
@@ -74,7 +74,7 @@ v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> con
                                                const v8::Local <v8::Function> function,
                                                const v8::Local <v8::Object> receiver,
                                                const TupleType & tuple = {}) {
-    constexpr int tuple_size = std::tuple_size<TupleType>::value;
+    constexpr const int tuple_size = std::tuple_size<TupleType>::value;
     std::array<v8::Local < v8::Value>, tuple_size > parameters;
     auto isolate = context->GetIsolate();
     TupleForEach<tuple_size, TupleType>()(isolate, parameters.data(), tuple);

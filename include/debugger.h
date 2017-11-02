@@ -270,7 +270,6 @@ enum {
 
 class DebugContext : public v8_inspector::V8InspectorClient, public v8toolkit::Context {
 private:
-    short port;
     std::string frame_id = "12345.1"; // arbitrary value
     std::unique_ptr<WebsocketChannel> channel;
     std::unique_ptr<v8_inspector::V8Inspector> inspector;
@@ -278,6 +277,7 @@ private:
 
     std::vector<std::string> message_types_handled_by_v8_inspector = {};
 
+    short port;
 
 public:
     DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port);
@@ -299,8 +299,7 @@ public:
     std::string const & get_frame_id() const {return this->frame_id;}
     std::string get_base_url() const {return this->get_uuid_string();}
 
-public:
-       v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override {
+    v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override {
         return *this;
     }
 
@@ -311,7 +310,7 @@ public:
     v8_inspector::V8InspectorSession & get_session() {return *this->session;}
     void reset_session();
 
-
+    short get_port(){return this->port;}
 
 };
 ///// END NEW DEBUG CODE

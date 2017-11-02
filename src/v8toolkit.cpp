@@ -444,7 +444,6 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
 //                             compiled_function->GetScriptOrigin().ResourceColumnOffset()->Value(), module_source.c_str()) << std::endl;
 
 
-    v8::Local<v8::Object> receiver = v8::Object::New(isolate);
     v8::Local<v8::Value> module_params[2];
     module_params[0] = v8::Object::New(isolate);
     auto exports_object = v8::Object::New(isolate);

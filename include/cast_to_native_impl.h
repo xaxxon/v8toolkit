@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <xl/demangle.h>
+
 #include "cast_to_native.h"
 #include "call_javascript_function.h"
 #include "v8helpers.h"
@@ -36,18 +38,6 @@ struct CastToNative<T, std::enable_if_t<std::is_enum_v<T>>> {
     }
 };
 
-//template<class T>
-//struct is_wrapped_type<T, std::enable_if_t<std::is_reference<
-//    typename std::result_of_t<
-//        CastToNative<
-//            std::remove_pointer_t<
-//                std::remove_reference_t<T>
-//            >                                 /* remove_pointer */
-//        >(v8::Isolate*, v8::Local<v8::Value>) /* CastToNative */
-//    >                                         /* result_of */
-//>::value>>  : public std::true_type {};
-
-
 
 template<>
 struct CastToNative<void> {
@@ -57,7 +47,6 @@ struct CastToNative<void> {
 
 
 CAST_TO_NATIVE(bool, {HANDLE_FUNCTION_VALUES; return static_cast<bool>(value->ToBoolean()->Value());});
-
 
 
 // integers
@@ -94,7 +83,7 @@ struct CastToNative<std::tuple<Ts...>>
 {
 std::tuple<Ts...> operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
     if (!value->IsArray()) {
-        throw v8toolkit::CastException(fmt::format("CastToNative tried to create a {} object but was not given a JavaScript array", demangle<std::tuple<Ts...>>()));
+        throw v8toolkit::CastException(fmt::format("CastToNative tried to create a {} object but was not given a JavaScript array", xl::demangle<std::tuple<Ts...>>()));
     }
     v8::Local<v8::Array> array = v8::Local<v8::Array>::Cast(value);
 
@@ -105,14 +94,6 @@ static constexpr bool callable(){return true;}
 
 };
 
-// If the type returns an rvalue, then the the const version is the same as the non-const version
-template<class T>
-struct CastToNative<T const,
-    std::enable_if_t<!is_wrapped_type_v<T>>> {
-T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-    return CastToNative<T>()(isolate, value);
-}
-};
 
 
 // A T const & can take an rvalue, so send it one, since an actual object isn't available for non-wrapped types
@@ -257,7 +238,7 @@ v.emplace_back(std::forward<T>(CastToNative<T>()(isolate, value)));
 }
 } else {
 throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
-                                demangle<T>(),
+                                xl::demangle<T>(),
                                 stringify_value(isolate, value)));
 }
 return v;
@@ -283,7 +264,7 @@ SetTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate
         }
     } else {
         throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
-                                        demangle<T>(),
+                                        xl::demangle<T>(),
                                         stringify_value(isolate, value)));
     }
     return set;
@@ -293,12 +274,32 @@ SetTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate
 
 //Returns a vector of the requested type unless CastToNative on ElementType returns a different type, such as for char*, const char *
 // Must make copies of all the values
-template<class T, class... Rest>
-struct CastToNative<std::vector<T, Rest...>, std::enable_if_t<std::is_copy_constructible<T>::value>> {
-    using ResultType = std::vector<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
+template<class T>
+struct CastToNative<T, std::enable_if_t<acts_like_array_v<T> && std::is_copy_constructible<T>::value>> {
 
-    ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
-        return vector_type_helper<std::vector, T, Rest...>(isolate, value);
+    using NonConstT = std::remove_const_t<T>;
+
+    T operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
+        using ValueT = typename T::value_type;
+        static_assert(!std::is_reference<ValueT>::value, "vector-like value type cannot be reference");
+        HANDLE_FUNCTION_VALUES;
+        auto context = isolate->GetCurrentContext();
+        NonConstT a;
+        if (value->IsArray()) {
+            auto array = v8::Local<v8::Object>::Cast(value);
+            auto array_length = get_array_length(isolate, array);
+            auto back_inserter = std::back_inserter(a);
+
+            for (int i = 0; i < array_length; i++) {
+                auto value = array->Get(context, i).ToLocalChecked();
+                back_inserter = std::forward<ValueT>(CastToNative<ValueT>()(isolate, value));
+            }
+        } else {
+            throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
+                                            xl::demangle<T>(),
+                                            stringify_value(isolate, value)));
+        }
+        return a;
     }
     static constexpr bool callable(){return true;}
 
@@ -318,14 +319,33 @@ static constexpr bool callable(){return true;}
 };
 
 
-template<class T, class... Rest>
-struct CastToNative<std::set<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<std::set<T, Rest...>>>> {
-using ResultType = std::set<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>;
+template<class T>
+struct CastToNative<T, std::enable_if_t<acts_like_set_v<T> && !is_wrapped_type_v<T>>> {
 
-ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
-    return set_type_helper<std::set, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
-}
-static constexpr bool callable(){return true;}
+    using NonConstT = std::remove_const_t<T>;
+
+    T operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
+        using ValueT = typename T::value_type;
+        static_assert(!std::is_reference<ValueT>::value, "Set-like value type cannot be reference");
+        HANDLE_FUNCTION_VALUES;
+        auto context = isolate->GetCurrentContext();
+        NonConstT set;
+        if (value->IsArray()) {
+            auto array = v8::Local<v8::Object>::Cast(value);
+            auto array_length = get_array_length(isolate, array);
+            for (int i = 0; i < array_length; i++) {
+                auto value = array->Get(context, i).ToLocalChecked();
+                set.emplace(CastToNative<ValueT>()(isolate, value));
+            }
+        } else {
+            throw CastException(
+                fmt::format("CastToNative<std::set-like<{}>> requires an array but instead got JS: '{}'",
+                            xl::demangle<ValueT>(),
+                            stringify_value(isolate, value)));
+        }
+        return set;
+    }
+    static constexpr bool callable(){return true;}
 
 };
 
@@ -386,10 +406,30 @@ ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8
     return results;
 }
 
-template<class Key, class Value, class... Args>
-struct CastToNative<std::map<Key, Value, Args...>> {
-    std::map<Key, Value, Args...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return map_type_helper<std::map, Key, Value, Args...>(isolate, value);
+template<class T>
+struct CastToNative<T, std::enable_if_t<acts_like_map_v<T>>> {
+    using NonConstT = std::remove_const_t<T>;
+    using KeyT = typename T::key_type;
+    using ValueT = typename T::mapped_type;
+
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        if (!value->IsObject()) {
+            throw CastException(
+                fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+                            stringify_value(isolate, value)));
+        }
+
+        auto context = isolate->GetCurrentContext();
+
+        NonConstT results;
+        for_each_own_property(context, value->ToObject(),
+                              [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
+                                  v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value) {
+                                      results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
+                                                      v8toolkit::CastToNative<ValueT>()(isolate, sub_value));
+                                  });
+                              });
+        return results;
     }
     static constexpr bool callable(){return true;}
 
@@ -418,26 +458,19 @@ ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolat
 }
 
 
-
-template<class Key, class Value, class... Args>
-struct CastToNative<std::multimap<Key, Value, Args...>> {
-
-    using ResultType = std::multimap<Key, Value, Args...>;
-
-    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return multimap_type_helper<std::multimap, Key, Value, Args...>(isolate, value);
-    }
-    static constexpr bool callable(){return true;}
-
-};
-
-
 //
-
-
-
-//TODO: unordered_set
-
+//template<class Key, class Value, class... Args>
+//struct CastToNative<std::multimap<Key, Value, Args...>> {
+//
+//    using ResultType = std::multimap<Key, Value, Args...>;
+//
+//    ResultType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+//        return multimap_type_helper<std::multimap, Key, Value, Args...>(isolate, value);
+//    }
+//    static constexpr bool callable(){return true;}
+//
+//};
+//
 
 
 

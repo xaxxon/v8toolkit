@@ -4,8 +4,9 @@
 #include <type_traits>
 #include <tuple>
 
-
 #include <v8.h>
+
+#include <xl/demangle.h>
 
 #include "v8helpers.h"
 #include "casts.h"
@@ -19,7 +20,7 @@ struct cast_to_native_no_value {
         std::cerr << fmt::format("") << std::endl;
         throw InvalidCallException(fmt::format("Not enough javascript parameters for function call - "
                                                    "requires {} but only {} were specified, missing {}",
-                                               i+1, info.Length(), demangle<T>()));
+                                               i+1, info.Length(), xl::demangle<T>()));
     }
 };
 
@@ -45,7 +46,7 @@ T * get_default_parameter(const v8::FunctionCallbackInfo<v8::Value> & info, int 
         stuff.push_back(Stuff<T>::stuffer(CastToNative<T>()(info.GetIsolate())));
         return static_cast<Stuff<T>&>(stuff.back()).get();
     } else {
-        throw CastException("No default value available for type {}", demangle<T>());
+        throw CastException("No default value available for type {}", xl::demangle<T>());
     }
 };
 
@@ -55,7 +56,7 @@ T * get_default_parameter(const v8::FunctionCallbackInfo<v8::Value> & info, int 
 //NoRefT & set_unspecified_parameter_value(const v8::FunctionCallbackInfo<v8::Value> & info, int & i, std::vector<std::unique_ptr<StuffBase>> & stuff,
 //                                DefaultArgsTuple && default_args_tuple)
 //{
-//    throw CastException("No function-declared default value or 'global' default value for type: {}", demangle<NoRefT>());
+//    throw CastException("No function-declared default value or 'global' default value for type: {}", xl::demangle<NoRefT>());
 //}
 //
 //

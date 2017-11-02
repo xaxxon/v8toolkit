@@ -22,29 +22,10 @@ extern Template class_template;
 extern Template standard_includes_template;
 
 
-std::map<string, Template> bindings_templates {
-    std::pair("class", class_template),
-    std::pair("file", file_template),
-    std::pair("standard_includes", standard_includes_template)
-};
-
+extern std::map<string, Template> bindings_templates;
 
 bool BindingsCriteria::class_filter(WrappedClass const & c) {
     cerr << "Checking class criteria" << endl;
-
-//        if (c.get_name_alias().find("<") != std::string::npos) {
-//            std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-//                                     c.get_name_alias()) << std::endl;
-//            return false;
-//        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->get_name_alias().find("<") != std::string::npos) {
-//            std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-//                                     c.get_name_alias(),
-//                                     (*c.base_types.begin())->get_name_alias()) << std::endl;
-//            return false;
-//        } else if (c.bidirectional) {
-//            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
-//            return false;
-//        }
 
     return true;
 }
@@ -210,6 +191,8 @@ struct BindingFile {
 
 void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wrapped_classes)
 {
+    std::cerr << fmt::format("file template contents: {}", file_template.c_str()) << std::endl;
+
 //    std::cerr << fmt::format("making bindings output") << std::endl;
 //    std::cerr << fmt::format("all binding classes:") << std::endl;
 //    for (auto c : wrapped_classes) {
@@ -272,6 +255,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
 
         // this takes care of providing the correct stream for each subsequent call
         auto & output_stream = stream_provider.get_class_collection_stream();
+        std::cerr << fmt::format("bindings_templates[file] contents: {}", bindings_templates["file"].c_str()) << std::endl;
         auto template_result = bindings_templates["file"].fill<BindingsProviderContainer>(
             P::make_provider(
                 std::pair("file_number", fmt::format("{}", file_number)),
@@ -361,6 +345,13 @@ Template standard_includes_template(R"(
 #include <v8toolkit/v8_class_wrapper_impl.h>
 
 )");
+
+
+std::map<string, Template> bindings_templates {
+    std::pair("class", class_template),
+    std::pair("file", file_template),
+    std::pair("standard_includes", standard_includes_template)
+};
 
 
 } // end namespace v8toolkit::class_parser::bindings_output

@@ -1,12 +1,15 @@
 
 #include "annotations.h"
 #include "helper_functions.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-
+#pragma clang diagnostic pop
 
 
 namespace v8toolkit::class_parser {

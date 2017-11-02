@@ -56,12 +56,7 @@ public:
 
         int i = 0;
 
-        constexpr int user_parameter_count = sizeof...(Args);
-
         constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
-
-        // while this is negative, no default argument is available
-        constexpr int default_parameter_position = default_arg_count - user_parameter_count - 1;
 
         std::vector<std::unique_ptr<StuffBase>> stuff;
         info.GetReturnValue().

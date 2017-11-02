@@ -17,8 +17,8 @@ std::atomic<int> script_id_counter(0);
 Context::Context(std::shared_ptr<Isolate> isolate_helper,
                  v8::Local<v8::Context> context) :
     isolate_helper(isolate_helper),
-    isolate(isolate_helper->get_isolate()),
-    context(v8::Global<v8::Context>(*isolate_helper, context))
+    context(v8::Global<v8::Context>(*isolate_helper, context)),
+    isolate(isolate_helper->get_isolate())
 {}
 
 
@@ -205,7 +205,7 @@ std::string Context::get_url(std::string const & name) const {
 v8::Local<v8::Value> Context::require(std::string const & filename, std::vector<std::string> const & paths) {
     v8::Local<v8::Value> require_result;
     v8toolkit::require(this->get_context(), filename,
-                       require_result, paths, false, true, [this](RequireResult const & require_result) {},
+                       require_result, paths, false, true, [](RequireResult const & require_result) {},
     [this](std::string const & filename){return this->get_url(filename);}
     );
     return require_result;

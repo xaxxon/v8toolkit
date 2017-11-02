@@ -1,5 +1,8 @@
-#include "clang/Frontend/CompilerInstance.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+#include "clang/Frontend/CompilerInstance.h"
+#pragma clang diagnostic pop
 
 #include "wrapped_class.h"
 #include "class_handler.h"

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <xl/demangle.h>
+
 #include "v8helpers.h"
 
 namespace v8toolkit {
@@ -35,7 +37,7 @@ private:
 
 public:
     AnyPtr(T * data) :
-        AnyBase(demangle<T>()),
+        AnyBase(xl::demangle<T>()),
         data(data) {}
 
 

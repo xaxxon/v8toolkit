@@ -5,6 +5,8 @@
 
 #include <v8.h>
 
+#include <xl/demangle.h>
+
 #include "casts_impl.h"
 #include "v8helpers.h"
 #include "unspecified_parameter_value.h"
@@ -46,7 +48,7 @@ struct ParameterBuilder<T const> {
     const T operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder proxying const {} => {}", demangle<T>(), demangle<T>());
+        PB_PRINT("ParameterBuilder proxying const {} => {}", xl::demangle<T>(), xl::demangle<T>());
         return ParameterBuilder<T>()(info, i, stuff, std::move(default_args_tuple));
     }
 };
@@ -62,7 +64,7 @@ struct ParameterBuilder<T &, std::enable_if_t<!std::is_same_v<std::remove_const_
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                  std::vector<std::unique_ptr<StuffBase>> & stuff,
                  DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder handling lvalue reference: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling lvalue reference: {}", xl::demangle<T>());
         return * ParameterBuilder<T*>()(info, i, stuff, std::move(default_args_tuple));
     }
 
@@ -75,7 +77,7 @@ struct ParameterBuilder<T &, std::enable_if_t<std::is_same_v<std::remove_const_t
     T & operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder handling lvalue reference for char: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling lvalue reference for char: {}", xl::demangle<T>());
         auto value = info[i++];
         auto isolate = info.GetIsolate();
         stuff.push_back(std::make_unique<Stuff<char>>(std::make_unique<char>(CastToNative<char>()(isolate, value))));
@@ -94,7 +96,7 @@ struct ParameterBuilder<T &&, std::enable_if_t<!is_wrapped_type_v<T>>> {
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-        PB_PRINT("ParameterBuilder handling rvalue reference to unwrapped type: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling rvalue reference to unwrapped type: {}", xl::demangle<T>());
 //        std::cerr << fmt::format("default_arg_position: {}", default_arg_position) << std::endl;
         return std::move(*(ParameterBuilder<T*>().template operator()<default_arg_position>(info, i, stuff, std::move(default_args_tuple))));
     }
@@ -121,9 +123,7 @@ struct ParameterBuilder<T*,
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTupleRef && default_args_tuple = DefaultArgsTupleRef()) {
 
-        using DefaultArgsTuple = std::remove_reference_t<DefaultArgsTupleRef>;
-
-        PB_PRINT("ParameterBuilder handling pointers to unwrapped types: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling pointers to unwrapped types: {}", xl::demangle<T>());
         if (i >= info.Length()) {
             return get_default_parameter<WrappedT, default_arg_position>(info, i, stuff, default_args_tuple);
         } else {
@@ -151,7 +151,7 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
                    std::vector<std::unique_ptr<StuffBase>> & stuff,
                    DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-        PB_PRINT("ParameterBuilder handling pointer to wrapped type: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling pointer to wrapped type: {}", xl::demangle<T>());
 
         //std::cerr << fmt::format("ParameterBuilder type: pointer-to {} default_arg_position = {}", v8toolkit::demangle<T>(), default_arg_position) << std::endl;
         if (i >= info.Length()) {
@@ -194,17 +194,17 @@ struct ParameterBuilder<T, std::enable_if_t<
 
         using DefaultArgsTuple = std::remove_reference_t<DefaultArgsTupleRef>;
 
-        PB_PRINT("ParameterBuilder handling type: {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling type: {}", xl::demangle<T>());
         if (i < info.Length()) {
             return CastToNative<T>()(info.GetIsolate(), info[i++]);
 
         } else if constexpr(default_arg_position >= 0 && default_arg_position < std::tuple_size_v<std::remove_reference_t<DefaultArgsTuple>>) {
 
-//            `                         demangle<std::tuple_element_t<default_arg_position, DefaultArgsTuple>>()) << std::endl;
+//            `                         xl::demangle<std::tuple_element_t<default_arg_position, DefaultArgsTuple>>()) << std::endl;
 
             return std::get<(std::size_t) default_arg_position>(default_args_tuple);
         } else {
-            throw CastException("Not enough parameters and no default value for {}", demangle<T>());
+            throw CastException("Not enough parameters and no default value for {}", xl::demangle<T>());
         }
     }
 
@@ -294,7 +294,7 @@ struct ParameterBuilder<T, std::enable_if_t<is_string_not_owning_memory_v<T>>> {
                             std::vector<std::unique_ptr<StuffBase>> & stuff,
                             DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
-        PB_PRINT("ParameterBuilder handling {}", demangle<T>());
+        PB_PRINT("ParameterBuilder handling {}", xl::demangle<T>());
 
         //std::cerr << fmt::format("ParameterBuilder type: char const *, default_arg_position = {}", default_arg_position) << std::endl;
 
@@ -382,7 +382,7 @@ struct ParameterBuilder<
                                      std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         static_assert(default_arg_position < 0, "Cannot have a default value for a v8::Local<T> parameter");
-        PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
+        PB_PRINT("ParameterBuilder handling v8::Local<{}>", xl::demangle<T>());
 
         return v8toolkit::get_value_as<T>(info.GetIsolate(), info[i++]);
     }
@@ -406,7 +406,7 @@ struct ParameterBuilder<
 //    v8toolkit::Holder operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
 //                            std::vector<std::unique_ptr<StuffBase>> & stuff,
 //                            DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-//        PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
+//        PB_PRINT("ParameterBuilder handling v8::Local<{}>", xl::demangle<T>());
 //
 //        // holder is the JavaScript object which is the actual WrappedClass, not something which may have that as a
 //        //   prototype
@@ -427,7 +427,7 @@ struct ParameterBuilder<
     v8toolkit::This operator()(const v8::FunctionCallbackInfo<v8::Value> & info, int & i,
                                      std::vector<std::unique_ptr<StuffBase>> & stuff,
                                      DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
-        PB_PRINT("ParameterBuilder handling v8::Local<{}>", demangle<T>());
+        PB_PRINT("ParameterBuilder handling v8::Local<{}>", xl::demangle<T>());
 
         // holder is the JavaScript object which is the actual WrappedClass, not something which may have that as a
         //   prototype

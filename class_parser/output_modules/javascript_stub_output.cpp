@@ -20,14 +20,7 @@ extern Template header_template;
 extern Template member_function_template;
 extern Template static_function_template;
 
-std::map<std::string, Template> templates {
-    std::pair("class", class_template),
-    std::pair("constructor", constructor_template),
-    std::pair("file", file_template),
-    std::pair("header", header_template),
-    std::pair("member_function", member_function_template),
-    std::pair("static_function", static_function_template),
-};
+extern std::map<std::string, Template> templates;
 
 std::ostream & JavascriptStubOutputStreamProvider::get_class_collection_stream() {
     if (!this->output_stream) {
@@ -241,6 +234,14 @@ Template static_function_template(R"(
 )");
 
 
+std::map<std::string, Template> templates {
+    std::pair("class", class_template),
+    std::pair("constructor", constructor_template),
+    std::pair("file", file_template),
+    std::pair("header", header_template),
+    std::pair("member_function", member_function_template),
+    std::pair("static_function", static_function_template),
+};
 
 
 } // end namespace v8toolkit::class_parser::javascript_stub_output

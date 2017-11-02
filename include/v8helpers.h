@@ -15,12 +15,12 @@
 
 #include <xl/zstring_view.h>
 #include <xl/log.h>
+#include <xl/demangle.h>
 
 #include "type_traits.h"
 #include "stdfunctionreplacement.h"
 #include "cast_to_native.h"
 
-#define constexpr
 
 // if it can be determined safely that cxxabi.h is available, include it for name demangling
 #if defined __has_include
@@ -171,35 +171,6 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch);
 #define V8TOOLKIT_MACRO_TYPE(...) __VA_ARGS__
 
 
-
-/**
- * Returns a demangled version of the typeid(T).name() passed in if it knows how,
- *   otherwise returns the mangled name exactly as passed in
- */
-std::string demangle_typeid_name(const std::string & mangled_name);
-
-template<class T>
-std::string & demangle(){
-    static std::string cached_name;
-    std::atomic<bool> cache_set = false;
-
-    if (cache_set) {
-        return cached_name;
-    } else {
-        static std::mutex mutex;
-
-        std::lock_guard<std::mutex> lock_guard(mutex);
-        if (!cache_set) {
-            auto demangled_name = demangle_typeid_name(typeid(T).name());
-            std::string constness = std::is_const<T>::value ? "const " : "";
-            std::string volatility = std::is_volatile<T>::value ? "volatile " : "";
-            cached_name = constness + volatility + demangled_name;
-            cache_set = true;
-        }
-    }
-
-    return cached_name;
- }
 
 // polymorphic types work just like normal
 template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<Source>::value, int> = 0>
@@ -538,39 +509,46 @@ struct Stuff : public StuffBase {
 };
 
 
+/**
+ * Returns the given JavaScript value as the parameterized type
+ * @tparam T
+ * @param isolate
+ * @param value
+ * @return
+ */
 template<class T>
 auto get_value_as(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-    bool valid = false;
-    if constexpr(std::is_same<T, v8::Function>::value) {
+
+    if constexpr(std::is_same_v<T, v8::Function>) {
         if (value->IsFunction()) {
             return v8::Local<T>::Cast(value);
         }
 
-    } else if constexpr(std::is_same<T, v8::Object>::value) {
+    } else if constexpr(std::is_same_v<T, v8::Object>) {
         if (value->IsObject()) {
             return v8::Local<T>::Cast(value);
         }
 
-    } else if constexpr(std::is_same<T, v8::Array>::value) {
+    } else if constexpr(std::is_same_v<T, v8::Array>) {
         if (value->IsArray()) {
             return v8::Local<T>::Cast(value);
         }
 
-    } else if constexpr(std::is_same<T, v8::String>::value) {
+    } else if constexpr(std::is_same_v<T, v8::String>) {
         if (value->IsString()) {
             return v8::Local<T>::Cast(value);
         }
 
-    } else if constexpr(std::is_same<T, v8::Boolean>::value) {
+    } else if constexpr(std::is_same_v<T, v8::Boolean>) {
         if (value->IsBoolean()) {
             return v8::Local<T>::Cast(value);
         }
 
-    } else if constexpr(std::is_same<T, v8::Number>::value) {
+    } else if constexpr(std::is_same_v<T, v8::Number>) {
         if(value->IsNumber()) {
             return v8::Local<T>::Cast(value);
         }
-    } else if constexpr(std::is_same<T, v8::Value>::value) {
+    } else if constexpr(std::is_same_v<T, v8::Value>) {
         // this can be handy for dealing with global values
         //   passed in through the version that takes globals
         return v8::Local<T>::Cast(value);
@@ -581,7 +559,7 @@ auto get_value_as(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
     //printf("Throwing exception, failed while trying to cast value as type: %s\n", demangle<T>().c_str());
     //print_v8_value_details(value);
-    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", demangle<T>().c_str()));
+    throw v8toolkit::CastException(fmt::format("Couldn't cast value to requested type", xl::demangle<T>().c_str()));
 
 }
 

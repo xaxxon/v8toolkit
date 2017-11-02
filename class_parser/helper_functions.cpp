@@ -7,12 +7,13 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include <clang/AST/CXXInheritance.h>
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/AST/Comment.h"
-
+#pragma clang diagnostic pop
 
 #include "wrapped_class.h"
 #include "output_modules.h"

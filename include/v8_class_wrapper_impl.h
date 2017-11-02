@@ -138,7 +138,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::make_wrapping_func
 	// if there is a parent type set, set that as this object's prototype
 	auto parent_function_template = global_parent_function_template.Get(isolate);
 	if (!parent_function_template.IsEmpty()) {
-		//fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", demangle<T>().c_str());
+		//fprintf(stderr, "FOUND PARENT TYPE of %s, USING ITS PROTOTYPE AS PARENT PROTOTYPE\n", xl::demangle<T>().c_str());
 		function_template->Inherit(parent_function_template);
 	}
 
@@ -146,7 +146,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::make_wrapping_func
 		callback(function_template);
 	}
 
-	// fprintf(stderr, "Adding this_class_function_template for %s\n", demangle<T>().c_str());
+	// fprintf(stderr, "Adding this_class_function_template for %s\n", xl::demangle<T>().c_str());
 	this_class_function_templates.emplace_back(v8::Global<v8::FunctionTemplate>(isolate, function_template));
 	return function_template;
 }
@@ -160,11 +160,11 @@ template<class T>
 v8::Local<v8::FunctionTemplate>
 V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::get_function_template() {
 	if (this_class_function_templates.empty()) {
-//		fprintf(stderr, "Making function template because there isn't one %s\n", demangle<T>().c_str());
+//		fprintf(stderr, "Making function template because there isn't one %s\n", xl::demangle<T>().c_str());
 		// this will store it for later use automatically
 		return make_wrapping_function_template();
 	} else {
-		// fprintf(stderr, "Not making function template because there is already one %s\n", demangle<T>().c_str());
+		// fprintf(stderr, "Not making function template because there is already one %s\n", xl::demangle<T>().c_str());
 		// return an arbitrary one, since they're all the same when used to call .NewInstance()
 		return this_class_function_templates[0].Get(isolate);
 	}
@@ -183,7 +183,7 @@ T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::get_cpp_object
 		throw CastException(
 			fmt::format(
 				"Tried to get internal field from object with more than one internal fields - this is not supported by v8toolkit: {}",
-				demangle<T>()));
+				xl::demangle<T>()));
 	}
 
 	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
@@ -201,7 +201,7 @@ T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::get_cpp_object
  */
 template<class T>
 T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::cast(AnyBase * any_base) {
-	V8TOOLKIT_DEBUG("In ClassWrapper::cast for type %s\n", demangle<T>().c_str());
+	V8TOOLKIT_DEBUG("In ClassWrapper::cast for type %s\n", xl::demangle<T>().c_str());
 	if (type_checker != nullptr) {
 		V8TOOLKIT_DEBUG("Explicit compatible types set, using that\n");
 		return type_checker->check(any_base);
@@ -243,7 +243,7 @@ init_prototype_object_template(v8::Local<v8::ObjectTemplate> object_template) {
 
 	for (auto & adder : this->method_adders) {
 
-		//std::cerr << fmt::format("Class: {} adding method: {}", demangle<T>(), adder.method_name) << std::endl;
+		//std::cerr << fmt::format("Class: {} adding method: {}", xl::demangle<T>(), adder.method_name) << std::endl;
 
 		// create a function template, set the lambda created above to be the handler
 		auto function_template = v8::FunctionTemplate::New(this->isolate,
@@ -299,7 +299,7 @@ void
 V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::finalize(bool wrap_as_most_derived_flag) {
 	if (this->finalized) {
 		throw V8Exception(this->isolate,
-						  fmt::format("Called ::finalize on wrapper that was already finalized: {}", demangle<T>()));
+						  fmt::format("Called ::finalize on wrapper that was already finalized: {}", xl::demangle<T>()));
 	}
 
     if constexpr(is_wrapped_type_v<std::add_const_t<T>> && !std::is_const_v<T>)

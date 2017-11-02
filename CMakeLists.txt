@@ -50,7 +50,7 @@ include_directories(${Boost_INCLUDE_DIR})
 if (WIN32)
 
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -target ${TARGET_TRIPLE}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -Wall -target ${TARGET_TRIPLE}")
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
 endif()
 
@@ -74,21 +74,20 @@ target_link_libraries(v8toolkit_shared xl::xl ${V8_LIBS})
 target_link_libraries(v8toolkit_shared fmt ${Boost_LIBRARIES} c++experimental)
 
 
-#add_library(v8toolkit_static STATIC ${SOURCE_FILES})
-#set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
-#target_link_libraries(v8toolkit_static fmt ${Boost_LIBRARIES})
-#
-#if (WIN32)
-#	target_link_libraries(v8toolkit_static WinMM)
-#endif()
+add_library(v8toolkit_static STATIC ${SOURCE_FILES})
+set_target_properties(v8toolkit_static PROPERTIES OUTPUT_NAME "v8toolkit")
+target_link_libraries(v8toolkit_static fmt ${Boost_LIBRARIES})
+
+if (WIN32)
+	target_link_libraries(v8toolkit_static WinMM)
+endif()
 
 
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(INSTALL_INCLUDE_DIR "include/v8toolkit" CACHE PATH "Installation directory for header files")
 
 install(FILES ${HEADER_FILES} DESTINATION ${INSTALL_INCLUDE_DIR})
-#install(TARGETS v8toolkit_static v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR})
-install(TARGETS v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR})
+install(TARGETS v8toolkit_static v8toolkit_shared DESTINATION ${INSTALL_LIB_DIR})
 
 link_directories(${PROJECT_BINARY_DIR})
 

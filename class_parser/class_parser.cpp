@@ -51,7 +51,10 @@ using namespace std;
 
 #include <fmt/ostream.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/Frontend/CompilerInstance.h"
+#pragma clang diagnostic pop
 
 #include "class_parser.h"
 #include "helper_functions.h"

@@ -2,15 +2,6 @@
 #include <array>
 
 
-TEST_F(JavaScriptFixture, Helpers) {
-    EXPECT_EQ(demangle<int>(), "int");
-    EXPECT_EQ(demangle<const int>(), "const int");
-    EXPECT_EQ(demangle<volatile int>(), "volatile int");
-    EXPECT_EQ(demangle<const volatile int >(), "const volatile int");
-
-}
-
-
 TEST_F(JavaScriptFixture, NumberTypes) {
     this->create_context();
 
@@ -266,6 +257,26 @@ TEST_F(JavaScriptFixture, Sets) {
             EXPECT_NE(set.find("c"), set.end());
         }
 
+
+        // CastToNative set
+        {
+            auto js_set = c->run("[`a`, `b`, `c`]");
+            auto set = CastToNative<std::unordered_set<std::string>>()(*i, js_set.Get(*i));
+            EXPECT_EQ(set.size(), 3);
+            EXPECT_NE(set.find("a"), set.end());
+            EXPECT_NE(set.find("b"), set.end());
+            EXPECT_NE(set.find("c"), set.end());
+        }
+        // CastToNative const set
+        {
+            auto js_set = c->run("[`a`, `b`, `c`]");
+            auto set = CastToNative<std::unordered_set<std::string> const>()(*i, js_set.Get(*i));
+            EXPECT_EQ(set.size(), 3);
+            EXPECT_NE(set.find("a"), set.end());
+            EXPECT_NE(set.find("b"), set.end());
+            EXPECT_NE(set.find("c"), set.end());
+        }
+
     });
 }
 
@@ -310,6 +321,23 @@ TEST_F(JavaScriptFixture, Maps) {
             EXPECT_EQ(map["a"], 1);
             EXPECT_EQ(map["b"], 2);
             EXPECT_EQ(map["c"], 3);
+        }
+
+        {
+            auto js_object = c->run("new Object({a: 1, b: 2, c: 3});");
+            auto map = CastToNative<std::multimap<std::string, int>>()(*i, js_object.Get(*i));
+            EXPECT_EQ(map.size(), 3);
+            EXPECT_EQ(map.count("a"), 1);
+            EXPECT_EQ(map.count("b"), 1);
+            EXPECT_EQ(map.count("c"), 1);
+        }
+        {
+            auto js_object = c->run("new Object({a: 1, b: 2, c: 3});");
+            auto map = CastToNative<std::multimap<std::string, int> const>()(*i, js_object.Get(*i));
+            EXPECT_EQ(map.size(), 3);
+            EXPECT_EQ(map.count("a"), 1);
+            EXPECT_EQ(map.count("b"), 1);
+            EXPECT_EQ(map.count("c"), 1);
         }
 
     });

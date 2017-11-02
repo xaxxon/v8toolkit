@@ -81,8 +81,8 @@ WebsocketChannel::~WebsocketChannel() {}
 
 WebsocketChannel::WebsocketChannel(v8toolkit::DebugContext & debug_context, short port) :
             isolate(debug_context.get_isolate()),
-            port(port),
-            debug_context(debug_context)
+            debug_context(debug_context),
+            port(port)
 //    ,
 //            message_manager(debug_context)
 {
@@ -258,11 +258,10 @@ void DebugContext::reset_session() {
 
 DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v8::Local<v8::Context> context, short port) :
         v8toolkit::Context(isolate_helper, context),
-        port(port),
         channel(std::make_unique<WebsocketChannel>(*this, port)),
         inspector(v8_inspector::V8Inspector::create(this->get_isolate(), this)),
-        session(inspector->connect(1, channel.get(), v8_inspector::StringView()))
-
+        session(inspector->connect(1, channel.get(), v8_inspector::StringView())),
+        port(port)
 {
 
 

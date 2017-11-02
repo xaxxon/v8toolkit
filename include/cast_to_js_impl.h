@@ -440,12 +440,12 @@ struct CastTupleToJS;
 template<class... Args>
 struct CastTupleToJS<0, std::tuple<Args...>> {
     v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple) {
-        constexpr int array_position = sizeof...(Args) - 0 - 1;
+        constexpr const int array_position = sizeof...(Args) - 0 - 1;
 
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
-        using TuplePositionType = typename std::tuple_element<array_position, std::tuple<Args...>>::type;
+        using TuplePositionType = typename std::tuple_element_t<array_position, std::tuple<Args...>>;
 
         (void) array->Set(context,
                           array_position,
@@ -458,8 +458,8 @@ struct CastTupleToJS<0, std::tuple<Args...>> {
 template<int position, class... Args>
 struct CastTupleToJS<position, std::tuple<Args...>> {
     v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple) {
-        constexpr int array_position = sizeof...(Args) - position - 1;
-        using TuplePositionType = typename std::tuple_element<array_position, std::tuple<Args...>>::type;
+        constexpr const int array_position = sizeof...(Args) - position - 1;
+        using TuplePositionType = typename std::tuple_element_t<array_position, std::tuple<Args...>>;
 
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
