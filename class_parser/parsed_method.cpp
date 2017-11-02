@@ -1,9 +1,12 @@
 #include <xl/regex/regexer.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/AST/Comment.h"
+#pragma clang diagnostic pop
 
 
 
@@ -85,7 +88,7 @@ string ClassFunction::TypeInfo::get_plain_name() const {
 
 string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_type_name,
                                                                  std::string const & indentation) {
-
+//    std::cerr << fmt::format("converting '{}' to jsdoc name", simple_type_name) << std::endl;
     // picks off the middle namespace of things like:
     //   std::__cxx11::string as well as std::__1::vector so type names are more predictable
     simple_type_name = regex_replace(simple_type_name, regex("std::__(cxx\\d\\d|\\d)::"), "std::");
@@ -94,7 +97,7 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
     simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)\\s*"), "");
 
     // remove const/volatile
-    simple_type_name = regex_replace(simple_type_name, regex("^(const\\s*|volatile\\s*)*\\s*"), "");
+    simple_type_name = regex_replace(simple_type_name, regex("^(?:const\\s*|volatile\\s*)*\\s*(.*?)\\s*&?&?$"), "$1");
 
     std::smatch matches;
 
@@ -120,6 +123,8 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
 
 string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentation) const {
 //    std::cerr << fmt::format("{}converting {}", indentation, this->get_name()) << std::endl;
+
+    string result;
 
     vector<string> template_type_jsdoc_conversions;
     if (this->is_templated()) {
@@ -163,13 +168,16 @@ string ClassFunction::TypeInfo::get_jsdoc_type_name(std::string const & indentat
 //        std::cerr << fmt::format("{}final jsdoc conversion: {} =? {}",
 //                                 indentation, this->get_plain_name(), specialized_template_name)
 //                  << std::endl;
-        return specialized_template_name;
+        result = specialized_template_name;
     }
         // Handle non-templated types
     else {
 //        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
-        return this->convert_simple_typename_to_jsdoc(this->get_name(), indentation);
+        result = this->convert_simple_typename_to_jsdoc(this->get_name(), indentation);
     }
+
+
+    return result;
 }
 
 bool ClassFunction::TypeInfo::is_const() const {
@@ -693,19 +701,18 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 //        constructor_name = constructor_name_annotation[0];
 //    }
 
-
-    if (std::find(used_constructor_names.begin(), used_constructor_names.end(), this->js_name) !=
-        used_constructor_names.end()) {
+    if (std::find(WrappedClass::used_constructor_names.begin(), WrappedClass::used_constructor_names.end(), this->js_name) !=
+        WrappedClass::used_constructor_names.end()) {
         log.error(LogSubjects::Constructors,
                   "Error: duplicate JS constructor function name: {} in class {}",
                         this->js_name.c_str(), wrapped_class.get_name_alias());
-        for (auto & name : used_constructor_names) {
+//        for (auto & name : used_constructor_names) {
 //            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
-        }
+//        }
     } else {
-//        cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.name_alias,
+//        cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.get_name_alias(),
 //                            this->js_name) << endl;
-        used_constructor_names.push_back(this->js_name);
+        WrappedClass::used_constructor_names.push_back(this->js_name);
     }
 }
 

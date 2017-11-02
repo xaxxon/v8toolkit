@@ -116,7 +116,7 @@ void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> const
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), templates);
 //        auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
 
-    std::cerr << result << std::endl;
+//    std::cerr << result << std::endl;
     stream_provider.get_class_collection_stream() << result << std::endl;
 }
 

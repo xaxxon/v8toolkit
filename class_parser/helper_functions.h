@@ -34,7 +34,6 @@ extern map<string, string> static_method_renames;
 extern map<string, int> template_instantiations;
 extern vector<string> base_types_to_ignore;
 extern vector<string> types_to_ignore_regex;
-extern std::vector<std::string> used_constructor_names;
 extern int matched_classes_returned;
 extern vector<string> never_include_for_any_file;
 //extern string header_for_every_class_wrapper_file;

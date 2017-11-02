@@ -1,4 +1,3 @@
-// one file for N classes
 
 #pragma once
 
@@ -56,3 +55,4 @@ public:
 
 
 } // end namespace v8toolkit::class_parser::javascript_stub_output
+

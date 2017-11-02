@@ -339,10 +339,6 @@ struct FunctionTemplate {
     }
 };
 
-// store all the constructor names used, since they all go into the same global object template used as for building contexts
-std::vector<std::string> used_constructor_names;
-
-
 /*
 vector<WrappedClass *> get_wrapped_class_regex(const string & regex_string) {
 cerr << "Searching with regex: " << regex_string << endl;
@@ -725,19 +721,10 @@ std::string substitute_type(QualType const & original_type, map<string, QualType
 //    std::cerr << fmt::format("Substituting dependent type: {} with template_types size: {}", original_type.getAsString(), template_types.size()) << std::endl;
 
     if (template_types.size() == 0) {
-        char * f = nullptr;
-
         llvm::report_fatal_error("can't have no substitutions for a dependent type");
     }
 
     std::string suffix;
-
-
-
-
-
-//********************************************************************************
-
 
 
     QualType current_type = original_type;

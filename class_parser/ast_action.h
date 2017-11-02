@@ -26,6 +26,8 @@ public:
     // open up output files
     PrintFunctionNamesAction() {
         WrappedClass::wrapped_classes.clear();
+        WrappedClass::used_constructor_names.clear();
+
     }
     ~PrintFunctionNamesAction() {}
 

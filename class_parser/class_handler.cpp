@@ -264,9 +264,16 @@ void ClassHandler::onEndOfTranslationUnit() {
 //    cerr << "Done traversing AST" << endl;
 
 
+
+
     vector<WrappedClass const *> const should_be_wrapped_classes = [&] {
         vector<WrappedClass const *> results;
+        bool found_data_error = false;
         for (auto & c : WrappedClass::wrapped_classes) {
+            for (auto const & error : c->data_errors) {
+                std::cerr << fmt::format("ERROR in {}: '{}'", c->get_name_alias(), error) << std::endl;
+                found_data_error = true;
+            }
             if (c->should_be_wrapped()) {
                 xl::LogCallbackGuard g(log, c->log_watcher);
                 c->parse_enums();
@@ -274,6 +281,9 @@ void ClassHandler::onEndOfTranslationUnit() {
                 c->parse_all_methods();
                 results.push_back(c.get());
             }
+        }
+        if (found_data_error) {
+            llvm::report_fatal_error("Aborting due to data errors listed above");
         }
         return results;
     }();

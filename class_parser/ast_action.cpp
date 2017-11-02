@@ -19,7 +19,7 @@ bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
         cerr << "NO OUTPUT MODULES SPECIFIED - *ABORTING* - did you mean to pass --use-default-output-modules" << endl;
         return false;
     } else {
-        std::cerr << fmt::format("{} output modules registered", this->output_modules.size()) << std::endl;
+//        std::cerr << fmt::format("{} output modules registered", this->output_modules.size()) << std::endl;
         return true;
     }
 }

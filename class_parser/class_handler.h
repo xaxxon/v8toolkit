@@ -14,7 +14,6 @@ class ClassHandler : public ast_matchers::MatchFinder::MatchCallback {
 private:
     SourceManager & source_manager;
 
-    WrappedClass * top_level_class; // the class currently being wrapped
     std::set<std::string> names_used;
     vector<unique_ptr<OutputModule>> const & output_modules;
 

@@ -33,9 +33,9 @@ WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, Compi
 int MAX_DECLARATIONS_PER_FILE = 50;
 
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
+    name_alias(decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()),
     decl(decl),
     class_name(get_canonical_name_for_decl(decl)),
-    name_alias(decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()),
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
@@ -47,7 +47,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
-//        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
+        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
         this->set_name_alias(using_name);
 
     }
@@ -128,7 +128,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
         // go through each portion (child) of the full comment
-        int j = 0;
         for (auto i = full_comment->child_begin(); i != full_comment->child_end(); i++) {
 //            std::cerr << fmt::format("looking at child comment {}", ++j) << std::endl;
             auto child_comment_source_range = (*i)->getSourceRange();
@@ -273,7 +272,6 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
     if (this->annotations.has(V8TOOLKIT_BIDIRECTIONAL_CLASS_STRING)) {
 
 // find bidirectional constructor
-        int constructor_parameter_count;
         vector<QualType> constructor_parameters;
 
 // iterate through all constructors with the specified annotation
@@ -348,6 +346,7 @@ void WrappedClass::parse_all_methods() {
     if (this->decl == nullptr) {
         return;
     }
+
 
     log.info(LogSubjects::Methods, "Parsing class methods for {}", this->get_name_alias());
 
@@ -502,31 +501,33 @@ void WrappedClass::parse_all_methods() {
                 }
             }
             if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
-
                 // don't deal with constructors on abstract types
                 if (this->decl->isAbstract()) {
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping abstract class constructor");
                     continue;
                 }
                 if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping constructor because DO_NOT_WRAP_CONSTRUCTORS");
                     continue;
                 }
                 if (this->force_no_constructors) {
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping because force no constructors");
                     continue;
                 }
 
 
                 if (constructor_decl->isCopyConstructor()) {
-                    if (print_logging) cerr << "Skipping copy constructor" << endl;
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping copy constructor");
                     continue;
                 } else if (constructor_decl->isMoveConstructor()) {
-                    if (print_logging) cerr << "Skipping move constructor" << endl;
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping move constructor");
                     continue;
                 } else if (constructor_decl->isDeleted()) {
-                    if (print_logging) cerr << "Skipping deleted constructor" << endl;
+                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping deleted constructor");
                     continue;
                 }
 
-                // make sure there's no dupes
+                // make sure there's no duplicate constructor names
                 auto new_constructor = std::make_unique<ConstructorFunction>(*this, constructor_decl);
                 for (auto & existing_constructor : this->constructors) {
                     if (new_constructor->js_name == existing_constructor->js_name) {
@@ -537,6 +538,7 @@ void WrappedClass::parse_all_methods() {
                 this->constructors.push_back(std::move(new_constructor));
                 continue;
             }
+
             if (dyn_cast<CXXDestructorDecl>(method)) {
                 log.info(LogSubjects::Destructors, "skipping destructor {}", full_method_name);
                 continue;
@@ -692,9 +694,9 @@ void WrappedClass::parse_members() {
 
 
 WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
+    name_alias(class_name),
     decl(nullptr),
     class_name(class_name),
-    name_alias(class_name),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid
     found_method(FOUND_GENERATED)
@@ -771,32 +773,32 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
 
 bool WrappedClass::should_be_wrapped() const {
 
-//    cerr << fmt::format("In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get())) << endl;
+    log.info(LogSubjects::Subjects::ShouldBeWrapped, "In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get()));
 
     // TODO: Isn't this handled in get_exports function?
     if (annotations.has(V8TOOLKIT_NONE_STRING) &&
         annotations.has(V8TOOLKIT_ALL_STRING)) {
-//        cerr << "data error - none and all" << endl;
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "data error - none and all");
         log.error(LogSubjects::Class, "type has both NONE_STRING and ALL_STRING - this makes no sense", class_name);
     }
 
     if (found_method == FOUND_BASE_CLASS) {
-//        cerr << fmt::format("should be wrapped {}- found base class (YES)", this->name_alias) << endl;
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found base class (YES)", this->name_alias);
         return true;
     }
     if (found_method == FOUND_GENERATED) {
-//        cerr << fmt::format("should be wrapped {}- found generated (YES)", this->name_alias) << endl;
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found generated (YES)", this->name_alias);
         return true;
     }
 
     if (found_method == FOUND_INHERITANCE) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING" << endl;
+            log.info(LogSubjects::Subjects::ShouldBeWrapped, "Found NONE_STRING");
             return false;
         }
     } else if (found_method == FOUND_ANNOTATION) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING" << endl;
+            log.info(LogSubjects::Subjects::ShouldBeWrapped, "Found NONE_STRING");
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
@@ -805,14 +807,14 @@ bool WrappedClass::should_be_wrapped() const {
         }
     } else if (found_method == FOUND_UNSPECIFIED) {
         if (annotations.has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Found NONE_STRING on UNSPECIFIED" << endl;
+            log.info(LogSubjects::Subjects::ShouldBeWrapped, "Found NONE_STRING on UNSPECIFIED");
             return false;
         }
         if (!annotations.has(V8TOOLKIT_ALL_STRING)) {
-//            cerr << "didn't find all string on UNSPECIFIED" << endl;
+            log.info(LogSubjects::Subjects::ShouldBeWrapped, "didn't find all string on UNSPECIFIED");
             return false;
         }
-//        cerr << "FOUND_UNSPECIFIED" << endl;
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "FOUND_UNSPECIFIED");
         return false;
     }
 
@@ -837,7 +839,7 @@ bool WrappedClass::should_be_wrapped() const {
     }
 
 
-//    cerr << "should be wrapped -- fall through returning true (YES)" << endl;
+    log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped -- fall through returning true (YES)");
     return true;
 }
 
@@ -1125,6 +1127,34 @@ std::string WrappedClass::get_base_class_string() const {
 
     }
     return base_types.size() ? (*base_types.begin())->class_name : "";
+}
+
+
+string WrappedClass::get_jsdoc_name() const {
+    auto result = this->get_name_alias();
+
+    if (Regex("[<>]").match(result)) {
+        log.error(LogSubjects::Subjects::JSDoc,
+                  "JSDoc type name has < or > in it, must be aliased to a standard name: '{}'", result);
+    }
+
+    return result;
+}
+
+
+// not sure it's necessary to call this from anywhere but not deleting it yet
+void WrappedClass::update_data() {
+    cerr << "Updating wrapped class data for " << class_name << endl;
+    string new_name = Annotations::names_for_record_decls[decl];
+    if (!new_name.empty()) {
+        cerr << "Got type alias: " << new_name << endl;
+        this->set_name_alias(new_name);
+    } else {
+        cerr << "no type alias" << endl;
+    }
+    cerr << "Went from " << this->annotations.get().size() << " annotations to ";
+    this->annotations = Annotations(this->decl);
+    cerr << this->annotations.get().size() << endl;
 }
 
 

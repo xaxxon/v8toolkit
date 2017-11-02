@@ -21,7 +21,9 @@ public:
         Destructors,
         BidirectionalOutput,
         BindingsOutput,
-        JavaScriptStubOutput
+        JavaScriptStubOutput,
+        JSDoc,
+        ShouldBeWrapped
     };
 
     static std::string const & get_subject_name(Subjects subject) {

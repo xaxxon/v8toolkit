@@ -20,6 +20,7 @@
 using namespace xl;
 using namespace std;
 
+#include "../output_modules/noop_output.h"
 #include "../output_modules/javascript_stub_output.h"
 //#include "../output_modules/bindings_output.h"
 #include "../output_modules/bidirectional_output.h"
@@ -32,20 +33,45 @@ using namespace v8toolkit::class_parser;
 using namespace v8toolkit::class_parser::javascript_stub_output;
 using namespace v8toolkit::class_parser::bindings_output;
 
-class Environment : public ::testing::Environment {
+struct  Environment : public ::testing::Environment {
     ~Environment() override {}
+    bool _expect_errors = false;
+    int error_count = 0;
+
+    void expect_errors(){assert(!this->_expect_errors); this->_expect_errors = true;}
+    int expect_no_errors() {
+        assert(this->_expect_errors);
+        this->_expect_errors = false;
+        int result = error_count;
+        error_count = 0;
+        return result;
+    }
     // Override this to define how to set up the environment.
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
             std::cerr << fmt::format("xl::templates: {}", message.string) << std::endl;
+            EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
         });
+
+        v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
+            if (!_expect_errors) {
+                std::cerr << fmt::format("class_parser error message: {}", message.string) << std::endl;
+                EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
+            } else {
+                error_count++;
+            }
+        });
+
+        v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
+        v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}
 
 };
 
-static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(new Environment);
+Environment * environment = new Environment;
+static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(environment);
 
 auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}) {
 
@@ -69,6 +95,11 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
         action->add_output_module(std::move(output_module));
     }
 
+    // added to bypass the "no modules specified" abort rule
+    if (action->output_modules.empty()) {
+        action->add_output_module(std::make_unique<noop_output::NoOpOutputModule>());
+    }
+
 //    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
     clang::tooling::runToolOnCodeWithArgs(action,
                                           source_prefix + source,
@@ -80,7 +111,30 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
 TEST(ClassParser, ClassParser) {
 
     std::string source = R"(
-        class SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
+        struct SimpleWrappedClass : public v8toolkit::WrappedClassBase {
+            SimpleWrappedClass(){}
+};
+    )";
+
+
+    auto pruned_vector = run_code(source);
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = *pruned_vector[0].get();
+    EXPECT_EQ(c.get_short_name(), "SimpleWrappedClass");
+
+    EXPECT_EQ(c.get_members().size(), 0);
+    EXPECT_EQ(c.get_member_functions().size(), 0);
+    EXPECT_EQ(c.get_static_functions().size(), 0);
+    EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+
+    EXPECT_EQ(c.get_constructors().size(), 1);
+}
+
+TEST(ClassParser, DoNotWrapConstructors) {
+
+    std::string source = R"(
+        struct V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
     )";
 
 
@@ -93,7 +147,11 @@ TEST(ClassParser, ClassParser) {
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 0);
+
+    EXPECT_EQ(c.get_constructors().size(), 0);
+
 }
+
 
 TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
 
@@ -136,6 +194,44 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 
 }
 
+
+
+
+TEST(ClassParser, JSDocTypeNames) {
+    std::string source = R"(
+        #include <vector>
+        struct B {};
+
+        struct A : public v8toolkit::WrappedClassBase {
+          public:
+            std::vector<int> & do_something(int & i){static std::vector<int> v; return v;}
+            B & b_func(B & b1, B && b2){return b1;}
+        };
+    )";
+
+
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = *pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_member_functions().size(), 2);
+    auto & mf = *c.get_member_functions()[0];
+    auto & mf2 = *c.get_member_functions()[1];
+
+    EXPECT_EQ(mf.parameters.size(), 1);
+    EXPECT_EQ(mf.parameters[0].type.get_jsdoc_type_name(), "Number");
+    EXPECT_EQ(mf.return_type.get_jsdoc_type_name(), "Array.{Number}");
+
+    EXPECT_EQ(mf2.parameters.size(), 2);
+    EXPECT_EQ(mf2.return_type.get_jsdoc_type_name(), "B");
+    EXPECT_EQ(mf2.parameters[0].type.get_jsdoc_type_name(), "B");
+    EXPECT_EQ(mf2.parameters[1].type.get_jsdoc_type_name(), "B");
+
+
+
+}
+
+
 TEST(ClassParser, CustomExtensions) {
     std::string source = R"(
     class A : public v8toolkit::WrappedClassBase {
@@ -148,8 +244,10 @@ TEST(ClassParser, CustomExtensions) {
         V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_private();
     };)";
 
-
+    environment->expect_errors();
     auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+
 
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
@@ -237,8 +335,9 @@ TEST(ClassParser, TemplatedClassInstantiations) {
         TemplatedClass<char> b;
     )";
 
-
+    environment->expect_errors();
     auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
 
     EXPECT_EQ(pruned_vector.size(), 2);
     WrappedClass const & c1 = *pruned_vector[0].get();
@@ -248,6 +347,12 @@ TEST(ClassParser, TemplatedClassInstantiations) {
     EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass");
     EXPECT_EQ(c2.get_constructors().size(), 1);
     EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass");
+
+    environment->expect_errors();
+    (void)c1.get_jsdoc_name();
+    (void)c2.get_jsdoc_name();
+    EXPECT_EQ(environment->expect_no_errors(), 2);
+
 
     // expecting error because both instantiations of TemplatedClass will have the same constructor name
     //   but the error only shows up on the second class because it's still unique when the first one is
@@ -280,6 +385,10 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
     EXPECT_EQ(c2.get_constructors().size(), 1);
     EXPECT_TRUE(c2.get_constructors()[0]->js_name == "A" || c2.get_constructors()[0]->js_name == "B");
     EXPECT_NE(c1.get_constructors()[0]->js_name, c2.get_constructors()[0]->js_name);
+
+    (void)c1.get_jsdoc_name();
+    (void)c2.get_jsdoc_name();
+
 
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
     //   instantiation as well
@@ -351,7 +460,7 @@ TEST(ClassParser, ClassAndFunctionComments) {
          * @tparam i template non-type parameter
          */
         template<class T, int i>
-        class TemplatedClassWithComments : public v8toolkit::WrappedClassBase {};
+        class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS TemplatedClassWithComments : public v8toolkit::WrappedClassBase {};
 
         TemplatedClassWithComments<int, 5> a;
         TemplatedClassWithComments<char, 6> b;

@@ -167,18 +167,18 @@ struct BindingFile {
     auto & get_extern_template_instantiations() const { return this->extern_templates; }
 
     void add_class(WrappedClass const * wrapped_class) {
-        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
+//        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
         assert(this->declaration_count <= this->max_declaration_count);
 
 
         auto base_type_includes = wrapped_class->get_base_type_includes();
-        std::cerr << fmt::format("adding base type includes: {}", join(base_type_includes)) << std::endl;
+//        std::cerr << fmt::format("adding base type includes: {}", join(base_type_includes)) << std::endl;
         includes.insert(base_type_includes.begin(), base_type_includes.end());
 
         auto derived_type_includes = wrapped_class->get_derived_type_includes();
-        std::cerr << fmt::format("adding derived type includes: {}", join(derived_type_includes)) << std::endl;
+//        std::cerr << fmt::format("adding derived type includes: {}", join(derived_type_includes)) << std::endl;
         includes.insert(derived_type_includes.begin(), derived_type_includes.end());
 
         this->explicit_instantiations.insert(wrapped_class);
@@ -190,7 +190,7 @@ struct BindingFile {
 
 void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wrapped_classes)
 {
-    std::cerr << fmt::format("file template contents: {}", file_template.c_str()) << std::endl;
+//    std::cerr << fmt::format("file template contents: {}", file_template.c_str()) << std::endl;
 
 //    std::cerr << fmt::format("making bindings output") << std::endl;
 //    std::cerr << fmt::format("all binding classes:") << std::endl;
@@ -254,7 +254,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
 
         // this takes care of providing the correct stream for each subsequent call
         auto & output_stream = stream_provider.get_class_collection_stream();
-        std::cerr << fmt::format("bindings_templates[file] contents: {}", bindings_templates["file"].c_str()) << std::endl;
+//        std::cerr << fmt::format("bindings_templates[file] contents: {}", bindings_templates["file"].c_str()) << std::endl;
         auto template_result = bindings_templates["file"].fill<BindingsProviderContainer>(
             P::make_provider(
                 std::pair("file_number", fmt::format("{}", file_number)),

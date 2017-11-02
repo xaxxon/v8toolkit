@@ -68,6 +68,8 @@ public:
     ~WrappedClass();
 
     static inline vector<unique_ptr<WrappedClass>> wrapped_classes;
+    static inline std::vector<std::string> used_constructor_names;
+
 
     CXXRecordDecl const * decl = nullptr;
 
@@ -93,6 +95,8 @@ public:
     bool is_name_alias_default() const {
         return this->name_alias_is_default;
     }
+
+    string get_jsdoc_name() const;
 
     set<string> include_files;
 
@@ -168,19 +172,7 @@ public:
     void add_static_name(string const & name);
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
-    void update_data() {
-        cerr << "Updating wrapped class data for " << class_name << endl;
-        string new_name = Annotations::names_for_record_decls[decl];
-        if (!new_name.empty()) {
-            cerr << "Got type alias: " << new_name << endl;
-            name_alias = new_name;
-        } else {
-            cerr << "no type alias" << endl;
-        }
-        cerr << "Went from " << this->annotations.get().size() << " annotations to ";
-        this->annotations = Annotations(this->decl);
-        cerr << this->annotations.get().size() << endl;
-    }
+    void update_data();
 
     std::string make_sfinae_to_match_wrapped_class() const {
 

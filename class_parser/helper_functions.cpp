@@ -310,7 +310,7 @@ void generate_bindings() {
 
 
 //    cerr << "Classes used that were not wrapped:" << endl;
-    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
+//    for (auto & wrapped_class : WrappedClass::wrapped_classes) {
 //        if (!wrapped_class->dumped) { continue; }
 //        for (auto used_class : wrapped_class->used_classes) {
 //            if (!used_class->dumped) {
@@ -318,7 +318,7 @@ void generate_bindings() {
 //                     << endl;
 //            }
 //        }
-    }
+//    }
 }
 
 
