@@ -52,7 +52,7 @@ struct JavascriptStubProviderContainer {
 
             std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("inheritance", fmt::format("{}", c.base_types.empty() ? "" : " extends " +
-                                                                                   (*c.base_types.begin())->get_name_alias()))
+                                                                                   (*c.base_types.begin())->get_jsdoc_name()))
         );
     }
 

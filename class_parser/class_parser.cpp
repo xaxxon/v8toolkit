@@ -90,7 +90,7 @@ namespace v8toolkit::class_parser {
 bool generate_v8classwrapper_sfinae = true;
 
 // Any base types you want to always ignore -- v8toolkit::WrappedClassBase must remain, others may be added/changed
-vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "class Subscriber"};
+vector<string> base_types_to_ignore = {"class v8toolkit::WrappedClassBase", "class Subscriber", "class v8toolkit::EmptyFactoryBase"};
 
 
 // Top level types that will be immediately discarded

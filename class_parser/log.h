@@ -8,7 +8,10 @@
 namespace v8toolkit::class_parser {
 
 class LogSubjects {
-    inline static std::string subject_names[] = {"default"};
+    inline static std::string subject_names[] = {
+        "comments", "class", "methods", "data members", "enums", "constructors", "destructors", "bidirectional output",
+        "bindings output", "javascript stub output", "jsdoc", "should be wrapped"
+    };
 
 public:
     enum Subjects {
@@ -23,7 +26,10 @@ public:
         BindingsOutput,
         JavaScriptStubOutput,
         JSDoc,
-        ShouldBeWrapped
+        ShouldBeWrapped,
+
+        LOG_LAST_SUBJECT
+
     };
 
     static std::string const & get_subject_name(Subjects subject) {

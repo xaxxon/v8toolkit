@@ -54,16 +54,21 @@ struct  Environment : public ::testing::Environment {
         });
 
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
-            if (!_expect_errors) {
-                std::cerr << fmt::format("class_parser error message: {}", message.string) << std::endl;
-                EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
-            } else {
-                error_count++;
+            if (message.level == LogT::Levels::Levels::Error) {
+                if (!_expect_errors) {
+                    std::cerr << fmt::format("class_parser error message: {}", message.string) << std::endl;
+                    EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
+                } else {
+                    error_count++;
+                }
             }
+            std::cout << message.string << std::endl;
         });
 
+        // set defaults if file doesn't exist
         v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
         v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
+        v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}
@@ -636,7 +641,6 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
     EXPECT_EQ(c.get_member_functions().size(), 1);
     EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 
-    std::cerr << fmt::format("TEST TEMPLATE RESULT: {}", string_stream.str()) << std::endl;
 }
 
 

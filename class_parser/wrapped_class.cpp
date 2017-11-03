@@ -18,6 +18,10 @@ using namespace xl;
 
 namespace v8toolkit::class_parser {
 
+std::vector<std::string> never_wrap_class_names = {
+    "class v8toolkit::WrappedClassBase",
+    "class v8toolkit::EmptyFactoryBase"
+};
 
 WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance,
                                                FOUND_METHOD found_method) {
@@ -41,6 +45,11 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     annotations(decl),
     found_method(found_method)
 {
+//    std::cerr << fmt::format("created {}", this->class_name) << std::endl;
+    if (contains(never_wrap_class_names, this->class_name)) {
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "{} found in never_wrap_class_names list", this->get_short_name());
+        this->found_method = FOUND_METHOD::FOUND_NEVER_WRAP;
+    }
     log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
     xl::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
@@ -775,10 +784,15 @@ bool WrappedClass::should_be_wrapped() const {
 
     log.info(LogSubjects::Subjects::ShouldBeWrapped, "In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get()));
 
+    if (this->found_method == FOUND_METHOD::FOUND_NEVER_WRAP) {
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "Class marked as FOUND_NEVER_WRAP");
+        return false;
+    }
+
     // TODO: Isn't this handled in get_exports function?
     if (annotations.has(V8TOOLKIT_NONE_STRING) &&
         annotations.has(V8TOOLKIT_ALL_STRING)) {
-        log.info(LogSubjects::Subjects::ShouldBeWrapped, "data error - none and all");
+        log.error(LogSubjects::Subjects::ShouldBeWrapped, "data error - none and all");
         log.error(LogSubjects::Class, "type has both NONE_STRING and ALL_STRING - this makes no sense", class_name);
     }
 
@@ -1057,6 +1071,11 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
     // go through all the classes which have been seen before
     for (auto & wrapped_class : wrapped_classes) {
 
+        // never wrap NEVER_WRAP classes no matter what
+        if (wrapped_class->found_method == FOUND_METHOD::FOUND_NEVER_WRAP) {
+            continue;
+        }
+
         // if this one matches another class that's already been seen
         if (wrapped_class->class_name == class_name) {
 
@@ -1133,9 +1152,9 @@ std::string WrappedClass::get_base_class_string() const {
 string WrappedClass::get_jsdoc_name() const {
     auto result = this->get_name_alias();
 
-    if (Regex("[<>]").match(result)) {
+    if (Regex("[<>:]").match(result)) {
         log.error(LogSubjects::Subjects::JSDoc,
-                  "JSDoc type name has < or > in it, must be aliased to a standard name: '{}'", result);
+                  "JSDoc type name '{}' has one of < > : in it, must be aliased to a standard name", result);
     }
 
     return result;
