@@ -61,8 +61,10 @@ struct  Environment : public ::testing::Environment {
                 } else {
                     error_count++;
                 }
+            } else {
+                // if other log levels are being handled, just print it out
+                std::cout << message.string << std::endl;
             }
-            std::cout << message.string << std::endl;
         });
 
         // set defaults if file doesn't exist
