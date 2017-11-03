@@ -354,7 +354,7 @@ void WrappedClass::parse_all_methods() {
     for (Decl * current_decl : this->decl->decls()) {
 
         if (auto using_shadow_decl = dyn_cast<UsingShadowDecl>(current_decl)) {
-            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
+//            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
             auto target_decl = using_shadow_decl->getTargetDecl();
 //            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
 //            std::cerr
@@ -402,7 +402,7 @@ void WrappedClass::parse_all_methods() {
 
             std::string full_method_name(method->getQualifiedNameAsString());
 
-            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
+//            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
 
             if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
@@ -662,7 +662,7 @@ void WrappedClass::parse_members() {
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
         if (this->decl == nullptr) {
-            std::cerr << fmt::format("No decls for {} while parsing members", this->name_alias) << std::endl;
+//            std::cerr << fmt::format("No decls for {} while parsing members", this->name_alias) << std::endl;
             return;
         }
 

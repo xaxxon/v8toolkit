@@ -59,9 +59,9 @@ struct BindingsProviderContainer {
             std::pair("comment", c.comment),
             std::pair("name", c.get_short_name()),
             std::pair("alias", c.get_name_alias()),
-            std::pair("data_members", P::make_provider(c.get_members())),
-            std::pair("member_functions", P::make_provider(c.get_member_functions())),
-            std::pair("static_functions", P::make_provider(c.get_static_functions())),
+            std::pair("data_members", std::ref(c.get_members())),
+            std::pair("member_functions", std::ref(c.get_member_functions())),
+            std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("constructor", c.get_constructors().size() == 0 || c.force_no_constructors ?
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
                                                  c.get_name_alias()) :
@@ -285,6 +285,10 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
             }
         }
     }
+}
+
+string BindingsOutputModule::get_name() {
+    return "BindingsOutputModule";
 }
 
 

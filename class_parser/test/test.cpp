@@ -73,6 +73,7 @@ struct  Environment : public ::testing::Environment {
 Environment * environment = new Environment;
 static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(environment);
 
+v8toolkit::class_parser::PrintFunctionNamesAction * action = nullptr;
 auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}) {
 
 
@@ -90,7 +91,7 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
 
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
-    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
+    action = new v8toolkit::class_parser::PrintFunctionNamesAction();
     for(auto & output_module : output_modules) {
         action->add_output_module(std::move(output_module));
     }
@@ -101,6 +102,8 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
     }
 
 //    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
+
+    // This call calls delete on action
     clang::tooling::runToolOnCodeWithArgs(action,
                                           source_prefix + source,
                                           args);
@@ -386,7 +389,7 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
     EXPECT_TRUE(c2.get_constructors()[0]->js_name == "A" || c2.get_constructors()[0]->js_name == "B");
     EXPECT_NE(c1.get_constructors()[0]->js_name, c2.get_constructors()[0]->js_name);
 
-    (void)c1.get_jsdoc_name();
+    (void)c2.get_jsdoc_name();
     (void)c2.get_jsdoc_name();
 
 
@@ -593,6 +596,11 @@ TEST(ClassParser, ClassComments) {
         /// comment on data_memberC
         int data_memberC;
     };
+
+//    template<typename T>
+//        class D : public v8toolkit::WrappedClassBase {
+//    };
+//    D<int> d;
     )";
 
 
@@ -609,9 +617,34 @@ TEST(ClassParser, ClassComments) {
 
 
 
+TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
+    std::string source = R"(
+    class A : public v8toolkit::WrappedClassBase {
+    public:
+        void operator()(){};
+    };
+    )";
+
+    vector<std::unique_ptr<OutputModule>> output_modules;
+    std::stringstream string_stream;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(string_stream)));
+    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = *pruned_vector[0].get();
+
+    EXPECT_EQ(c.get_member_functions().size(), 1);
+    EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
+
+    std::cerr << fmt::format("TEST TEMPLATE RESULT: {}", string_stream.str()) << std::endl;
+}
+
+
+
 //TEST(ClassParser, ClassComments) {
 //    std::string source = R"(
-//
+//    class A : public v8toolkit::WrappedClassBase {
+//      public:
 //    )";
 //
 //
@@ -620,9 +653,6 @@ TEST(ClassParser, ClassComments) {
 //    EXPECT_EQ(pruned_vector.size(), 1);
 //    WrappedClass const & c = *pruned_vector[0].get();
 //}
-
-
-
 
 
 int main(int argc, char* argv[]) {

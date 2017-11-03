@@ -41,16 +41,19 @@ private:
 public:
     virtual std::ostream & get_class_collection_stream();
     ~JavascriptStubOutputStreamProvider();
+
 };
 
 
 
 
 class JavascriptStubOutputModule : public OutputModule {
-private:
-    JavascriptStubOutputStreamProvider stream_provider;
 public:
+    JavascriptStubOutputModule();
+    JavascriptStubOutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider);
     void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
+
+    string get_name() override;
 };
 
 

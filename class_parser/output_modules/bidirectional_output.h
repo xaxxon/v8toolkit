@@ -54,11 +54,13 @@ public:
 class BidirectionalOutputModule : public OutputModule {
 public:
 
-
-    BidirectionalOutputModule()
+    std::stringstream string_stream;
+    BidirectionalOutputModule() : OutputModule(std::make_unique<StringStreamOutputStreamProvider>(string_stream))
     {}
 
     void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
+
+    string get_name() override;
 };
 
 

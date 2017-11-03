@@ -81,7 +81,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 //        std::cerr << fmt::format("Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass)) << std::endl;
 
         if (!is_good_record_decl(klass)) {
-            cerr << "skipping 'bad' record decl" << endl;
+//            cerr << "skipping 'bad' record decl" << endl;
             return;
         }
         if (klass->isDependentType()) {
@@ -105,11 +105,6 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 
 //        print_specialization_info(klass);
-
-
-        if (!is_good_record_decl(klass)) {
-            cerr << "SKIPPING BAD RECORD DECL" << endl;
-        }
 
 //        cerr << "Storing it for later processing (unless dupe)" << endl;
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE);
@@ -295,7 +290,12 @@ void ClassHandler::onEndOfTranslationUnit() {
     }
 
     for (auto & output_module : this->output_modules) {
+        output_module->_begin();
         output_module->process(std::as_const(should_be_wrapped_classes));
+        output_module->_end();
+        for (auto const & error : output_module->log_watcher.errors) {
+            std::cerr << fmt::format("Error during output module: {}: '{}'", output_module->get_name(), error.string) << std::endl;
+        }
     }
 
 }

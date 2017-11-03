@@ -17,11 +17,11 @@ namespace v8toolkit::class_parser {
 
 struct WrappedClass;
 
-
+template<class LogT>
 struct LogWatcher {
-    vector<LogT::LogMessage> errors;
-    void operator()(LogT::LogMessage const & message) {
-        if (message.level == LogLevelsT::Levels::Error) {
+    vector<typename LogT::LogMessage> errors;
+    void operator()(typename LogT::LogMessage const & message) {
+        if (message.level == LogT::Levels::Levels::Error) {
             this->errors.push_back(message);
         }
     }
@@ -38,7 +38,7 @@ struct ClassFunction {
     bool is_virtual_override = false;
     std::string comment;
 
-    LogWatcher log_watcher;
+    LogWatcher<LogT> log_watcher;
 
     // empty if function isn't a template
     FunctionTemplateDecl const * function_template_decl = nullptr;
@@ -166,6 +166,7 @@ public:
 
     string generate_js_bindings();
 
+    bool is_callable_overload() const;
 
     string generate_bidirectional();
 };

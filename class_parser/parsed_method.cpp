@@ -726,6 +726,7 @@ string ConstructorFunction::generate_js_bindings() {
     return result.str();
 }
 
+
 string MemberFunction::generate_js_bindings() {
     stringstream result;
     if (OO_Call == method_decl->getOverloadedOperator()) {
@@ -743,6 +744,10 @@ string MemberFunction::generate_js_bindings() {
     return result.str();
 }
 
+
+bool MemberFunction::is_callable_overload() const {
+    return OO_Call == this->method_decl->getOverloadedOperator();
+}
 
 
 string MemberFunction::generate_bidirectional() {

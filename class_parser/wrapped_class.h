@@ -61,7 +61,7 @@ private:
     bool name_alias_is_default = true;
 
 public:
-    LogWatcher log_watcher;
+    LogWatcher<LogT> log_watcher;
 
     static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 

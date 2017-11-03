@@ -121,7 +121,7 @@ namespace v8toolkit {
  * Class for Factory to inherit from when no other parent is specified
  * Must be empty
  */
-class EmptyFactoryBase {};
+class EmptyFactoryBase : public v8toolkit::WrappedClassBase {};
 
 
 
@@ -218,7 +218,7 @@ class CppFactory;
 
 // if the constructor wants a reference to the factory, automatically pass it in
  template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase, class Deleter>
-    class CppFactory<Base,
+    class V8TOOLKIT_SKIP CppFactory<Base,
                     Child,
                     TypeList<FixedParams...>,
                     TypeList<ExternalConstructorParams...>,
@@ -294,7 +294,7 @@ template<
 	class... ExternalConstructorParams,
     class FactoryBase,
     class Deleter>
-class JSFactory<
+class V8TOOLKIT_SKIP JSFactory<
 	Base,
 	JSWrapperClass,
 
@@ -303,7 +303,7 @@ class JSFactory<
     FactoryBase,
         Deleter>
 
-	: public virtual FactoryBase, public v8toolkit::WrappedClassBase
+	: public virtual FactoryBase
 { // Begin JSFactory class
 
 	using ThisFactoryType = JSFactory<Base, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, FactoryBase>;
