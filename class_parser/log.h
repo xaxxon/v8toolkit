@@ -10,7 +10,7 @@ namespace v8toolkit::class_parser {
 class LogSubjects {
     inline static std::string subject_names[] = {
         "comments", "class", "methods", "data members", "enums", "constructors", "destructors", "bidirectional output",
-        "bindings output", "javascript stub output", "jsdoc", "should be wrapped"
+        "bindings output", "javascript stub output", "jsdoc", "should be wrapped", "class parser"
     };
 
 public:
@@ -27,6 +27,7 @@ public:
         JavaScriptStubOutput,
         JSDoc,
         ShouldBeWrapped,
+        ClassParser,
 
         LOG_LAST_SUBJECT
 
@@ -45,7 +46,7 @@ using LogT = xl::Log<LogLevelsT, LogSubjects>;
 auto printer = [](LogT::LogMessage const & message){std::cerr << fmt::format("{}", message.string) << std::endl;};
 inline LogT log(printer);
 #else
-inline LogT log;
+extern LogT log;
 #endif
 
 } // end namespace v8toolkit::class_parser

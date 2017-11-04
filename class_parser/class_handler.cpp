@@ -14,7 +14,7 @@ namespace v8toolkit::class_parser {
 
 
 ClassHandler::~ClassHandler() {
-    std::cerr << fmt::format("class handler destructor") << std::endl;
+    log.info(LogSubjects::Subjects::ClassParser, "ClassHandler destructor");
 }
 
 void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
@@ -252,15 +252,14 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 
 void ClassHandler::onStartOfTranslationUnit() {
-std::cerr << fmt::format("on start of translation unit") << std::endl;
+    log.info(LogSubjects::Subjects::ClassParser, "onStartOfTranslationUnit");
 
 }
 
 
 void ClassHandler::onEndOfTranslationUnit() {
 
-    std::cerr << fmt::format("end of translation unit") << std::endl;
-//    cerr << "Done traversing AST" << endl;
+    log.info(LogSubjects::Subjects::ClassParser, "onEndOfTranslationUnit");
 
 
 
@@ -312,7 +311,7 @@ ClassHandler::ClassHandler(CompilerInstance & CI, vector<unique_ptr<OutputModule
     output_modules(output_modules),
     ci(CI)
 {
-    std::cerr << fmt::format("class handler constructor") << std::endl;
+    log.info(LogSubjects::Subjects::ClassParser, "ClassHandler constructor");
 }
 
 

@@ -53,6 +53,10 @@ struct  Environment : public ::testing::Environment {
             EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
         });
 
+        // force error logging on regardless of what is in log status file because it is required for testing
+        v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
+        v8toolkit::class_parser::log.set_level_status(LogT::Levels::Levels::Error, true);
+
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
             if (message.level == LogT::Levels::Levels::Error) {
                 if (!_expect_errors) {

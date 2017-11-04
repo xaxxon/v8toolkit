@@ -14,19 +14,28 @@ namespace v8toolkit::class_parser {
 extern int print_logging;
 
 
+LogT log = []{
+    LogT log;
+    // if status file was already enabled (by test harness, for example), then don't mess with it
+    if (!v8toolkit::class_parser::log.is_status_file_enabled()) {
+        // set defaults if file doesn't exist
+        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
+        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
+        log.enable_status_file("class_parser_plugin.log_status");
+        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
+
+        // all subjects must be enable to watch for errors logged
+        log.set_all_subjects(true);
+    }
+    return log;
+}();
+
+
 bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
-    
-    std::cerr << fmt::format("begin invocation start") << std::endl;
-    
 
-    // set defaults if file doesn't exist
-    v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
-    v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
-    v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
+    log.info(LogSubjects::Subjects::ClassParser, "BeginInvocation");
 
-    v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
-        std::cout << message.string << std::endl;
-    });
+
 
     if (this->output_modules.empty()) {
         cerr << "NO OUTPUT MODULES SPECIFIED - *ABORTING* - did you mean to pass --use-default-output-modules" << endl;
@@ -43,7 +52,7 @@ static FrontendPluginRegistry::Add <PrintFunctionNamesAction>
 
 // This is called when all parsing is done
 void PrintFunctionNamesAction::EndSourceFileAction() {
-std::cerr << fmt::format("end source file action") << std::endl;
+    log.info(LogSubjects::Subjects::ClassParser, "EndSourceFileAction");
 }
 //
 //// takes a file number starting at 1 and incrementing 1 each time
@@ -199,5 +208,57 @@ std::cerr << fmt::format("end source file action") << std::endl;
 //    class_wrapper_file.close();
 //
 //}
+
+void PrintFunctionNamesAction::add_output_module(unique_ptr<OutputModule> output_module) {
+    v8toolkit::class_parser::log.info(LogSubjects::Subjects::ClassParser, "Adding output module {}", output_module->get_name());
+    this->output_modules.push_back(std::move(output_module));
+}
+
+void PrintFunctionNamesAction::PrintHelp(llvm::raw_ostream & ros) {
+    std::cerr << fmt::format("Printing help") << std::endl;
+    ros << "Help for PrintFunctionNames plugin goes here\n";
+}
+
+std::unique_ptr<ASTConsumer> PrintFunctionNamesAction::CreateASTConsumer(CompilerInstance & CI,
+                                               llvm::StringRef) {
+    return llvm::make_unique<ClassHandlerASTConsumer>(CI, this->output_modules);
+}
+
+PrintFunctionNamesAction::PrintFunctionNamesAction() {
+    WrappedClass::wrapped_classes.clear();
+    WrappedClass::used_constructor_names.clear();
+}
+
+PrintFunctionNamesAction::~PrintFunctionNamesAction()
+{}
+
+
+
+bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
+               const std::vector<std::string> & args) {
+    std::cerr << fmt::format("Parsing args") << std::endl;
+    for (unsigned i = 0, e = args.size(); i < e; ++i) {
+        llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
+
+        std::regex declaration_count_regex("^--declaration-count=(\\d+)$");
+        std::smatch match_results;
+        if (std::regex_match(args[i], match_results, declaration_count_regex)) {
+            auto count = std::stoi(match_results[1].str());
+            std::cerr << fmt::format("Set declaration count to {}", count) << std::endl;
+            MAX_DECLARATIONS_PER_FILE = count;
+        }
+            // for "normal" use, the default output modules should be used, instead of others specified
+            //   in code from something such as a test harness
+        else if (args[i] == "--use-default-output-modules") {
+            std::cerr << fmt::format("Using default output modules") << std::endl;
+            output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
+        }
+    }
+    if (args.size() && args[0] == "help")
+        PrintHelp(llvm::errs());
+
+    return true;
+}
+
 
 }

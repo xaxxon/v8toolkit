@@ -9,7 +9,6 @@ ClassHandlerASTConsumer::ClassHandlerASTConsumer(CompilerInstance & ci,
                                                  vector<unique_ptr<OutputModule>> const & output_modules) :
     class_handler(ci, output_modules)
 {
-    std::cerr << fmt::format("class handler ast consumer constructor - creating matchers") << std::endl;
 
 #ifdef TEMPLATE_INFO_ONLY
 

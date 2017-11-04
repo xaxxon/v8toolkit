@@ -30,8 +30,8 @@ std::ostream & JavascriptStubOutputStreamProvider::get_class_collection_stream()
     return *this->output_stream;
 }
 
-JavascriptStubOutputStreamProvider::~JavascriptStubOutputStreamProvider() {
-}
+JavascriptStubOutputStreamProvider::~JavascriptStubOutputStreamProvider()
+{}
 
 
 struct JavascriptStubProviderContainer {
