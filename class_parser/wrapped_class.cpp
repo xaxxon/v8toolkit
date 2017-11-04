@@ -49,6 +49,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     if (contains(never_wrap_class_names, this->class_name)) {
         log.info(LogSubjects::Subjects::ShouldBeWrapped, "{} found in never_wrap_class_names list", this->get_short_name());
         this->found_method = FOUND_METHOD::FOUND_NEVER_WRAP;
+        return;
     }
     log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
     xl::LogCallbackGuard(log, this->log_watcher);
@@ -267,10 +268,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
 
-
-
-
-//    std::cerr << fmt::format("Done creating WrappedClass for {}", this->name_alias) << std::endl;
+    log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->name_alias);
 }
 
 
@@ -710,6 +708,7 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
     valid(true), // explicitly generated, so must be valid
     found_method(FOUND_GENERATED)
 {
+    log.info(LogSubjects::Class, "Created new WrappedClass: '{}'", this->get_name_alias());
 }
 
 

@@ -49,11 +49,13 @@ public:
     enum class Subjects {
         V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
         RUNTIME_EXCEPTION,
-        COMPILATION_EXCEPTION
+        COMPILATION_EXCEPTION,
+
+        LOG_LAST_SUBJECT
     };
 
 
-    std::string const & get_subject_name(Subjects subject) {
+    static std::string const & get_subject_name(Subjects subject) {
         return subject_names[static_cast<std::underlying_type_t<Subjects>>(subject)];
     }
 };

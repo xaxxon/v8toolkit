@@ -42,11 +42,13 @@ protected:
     // The value returned here is used internally to run checks against
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
                                                    llvm::StringRef) override {
+        std::cerr << fmt::format("Creating AST Consumer") << std::endl;
         return llvm::make_unique<ClassHandlerASTConsumer>(CI, this->output_modules);
     }
 
     bool ParseArgs(const CompilerInstance & CI,
                    const std::vector<std::string> & args) override {
+        std::cerr << fmt::format("Parsing args") << std::endl;
         for (unsigned i = 0, e = args.size(); i < e; ++i) {
             llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
@@ -71,12 +73,14 @@ protected:
     }
 
     void PrintHelp(llvm::raw_ostream & ros) {
+        std::cerr << fmt::format("Printing help") << std::endl;
         ros << "Help for PrintFunctionNames plugin goes here\n";
     }
 
 public:
 
     void add_output_module(unique_ptr<OutputModule> output_module) {
+        std::cerr << fmt::format("Adding output module") << std::endl;
         this->output_modules.push_back(std::move(output_module));
     }
 

@@ -19,6 +19,8 @@
 #include "output_modules.h"
 #include "clang_helper_functions.h"
 
+using namespace v8toolkit::class_parser;
+
 namespace v8toolkit::class_parser {
 
 
@@ -215,95 +217,95 @@ std::string get_canonical_name_for_decl(const TypeDecl * decl) {
 //}
 
 
-
-void generate_bindings() {
-
-    // current file number for bindings file so it can be broken down into multiple files
-    int file_count = 1;
-
-    // start at one so they are never considered "empty"
-    int declaration_count_this_file = 1;
-
-    vector<WrappedClass *> classes_for_this_file;
-
-    set<WrappedClass const *> already_wrapped_classes;
-
-    vector<vector<WrappedClass *>> classes_per_file;
-
-    ofstream js_stub;
-
-
-    cerr << fmt::format("About to start writing out wrapped classes with {} potential classes",
-                        WrappedClass::wrapped_classes.size()) << endl;
-
-
-    // go through all the classes until a full pass has been made with nothing new to be written out
-    bool found_match = true;
-    while (found_match) {
-        found_match = false;
-
-        // go through the list to see if there is anything left to write out
-        for (auto & wrapped_class : WrappedClass::wrapped_classes) {
-
-            cerr << fmt::format("considering dumping class: {}", wrapped_class->class_name) << endl;
-
-            if (!wrapped_class->should_be_wrapped()) {
-                cerr << "should_be_wrapped returned false, not dumping" << endl;
-                continue;
-            }
-
-            // if it has unmet dependencies or has already been mapped, skip it
-            if (!wrapped_class->ready_for_wrapping(already_wrapped_classes)) {
-                std::cerr << fmt::format("Skipping {}", wrapped_class->class_name) << std::endl;
-                continue;
-            }
-            already_wrapped_classes.insert(wrapped_class.get());
-            found_match = true;
-
-//            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->get_name_alias(),
-//                                     wrapped_class->declaration_count) << std::endl;
-
-            // if there's room in the current file, add this class
-            auto space_available = declaration_count_this_file == 0 ||
-                                   declaration_count_this_file + wrapped_class->declaration_count <
-                                   MAX_DECLARATIONS_PER_FILE;
-
-            if (!space_available) {
-
-
-//                std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
-                classes_per_file.emplace_back(classes_for_this_file);
-
-                // reset for next file
-                classes_for_this_file.clear();
-                declaration_count_this_file = 0;
-                file_count++;
-            }
-
-            classes_for_this_file.push_back(wrapped_class.get());
-
-            // assert false - this shouldn't alter it
-            declaration_count_this_file += wrapped_class->declaration_count;
-        }
-    }
-
-
-
-
-    // if the last file set isn't empty, add that, too
-    if (!classes_for_this_file.empty()) {
-        classes_per_file.emplace_back(classes_for_this_file);
-    }
-
-    if (already_wrapped_classes.size() != WrappedClass::wrapped_classes.size()) {
-//        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
-//                            already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
-    }
-
-    int total_file_count = classes_per_file.size();
-    for (int i = 0; i < total_file_count; i++) {
-        write_classes(i + 1, classes_per_file[i], i == total_file_count - 1);
-    }
+//
+//void generate_bindings() {
+//
+//    // current file number for bindings file so it can be broken down into multiple files
+//    int file_count = 1;
+//
+//    // start at one so they are never considered "empty"
+//    int declaration_count_this_file = 1;
+//
+//    vector<WrappedClass *> classes_for_this_file;
+//
+//    set<WrappedClass const *> already_wrapped_classes;
+//
+//    vector<vector<WrappedClass *>> classes_per_file;
+//
+//    ofstream js_stub;
+//
+//
+//    cerr << fmt::format("About to start writing out wrapped classes with {} potential classes",
+//                        WrappedClass::wrapped_classes.size()) << endl;
+//
+//
+//    // go through all the classes until a full pass has been made with nothing new to be written out
+//    bool found_match = true;
+//    while (found_match) {
+//        found_match = false;
+//
+//        // go through the list to see if there is anything left to write out
+//        for (auto & wrapped_class : WrappedClass::wrapped_classes) {
+//
+//            cerr << fmt::format("considering dumping class: {}", wrapped_class->class_name) << endl;
+//
+//            if (!wrapped_class->should_be_wrapped()) {
+//                cerr << "should_be_wrapped returned false, not dumping" << endl;
+//                continue;
+//            }
+//
+//            // if it has unmet dependencies or has already been mapped, skip it
+//            if (!wrapped_class->ready_for_wrapping(already_wrapped_classes)) {
+//                std::cerr << fmt::format("Skipping {}", wrapped_class->class_name) << std::endl;
+//                continue;
+//            }
+//            already_wrapped_classes.insert(wrapped_class.get());
+//            found_match = true;
+//
+////            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->get_name_alias(),
+////                                     wrapped_class->declaration_count) << std::endl;
+//
+//            // if there's room in the current file, add this class
+//            auto space_available = declaration_count_this_file == 0 ||
+//                                   declaration_count_this_file + wrapped_class->declaration_count <
+//                                   MAX_DECLARATIONS_PER_FILE;
+//
+//            if (!space_available) {
+//
+//
+////                std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
+//                classes_per_file.emplace_back(classes_for_this_file);
+//
+//                // reset for next file
+//                classes_for_this_file.clear();
+//                declaration_count_this_file = 0;
+//                file_count++;
+//            }
+//
+//            classes_for_this_file.push_back(wrapped_class.get());
+//
+//            // assert false - this shouldn't alter it
+//            declaration_count_this_file += wrapped_class->declaration_count;
+//        }
+//    }
+//
+//
+//
+//
+//    // if the last file set isn't empty, add that, too
+//    if (!classes_for_this_file.empty()) {
+//        classes_per_file.emplace_back(classes_for_this_file);
+//    }
+//
+//    if (already_wrapped_classes.size() != WrappedClass::wrapped_classes.size()) {
+////        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
+////                            already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
+//    }
+//
+//    int total_file_count = classes_per_file.size();
+//    for (int i = 0; i < total_file_count; i++) {
+//        write_classes(i + 1, classes_per_file[i], i == total_file_count - 1);
+//    }
 
 
 //    cerr << "Classes returned from matchers: " << matched_classes_returned << endl;
@@ -319,7 +321,7 @@ void generate_bindings() {
 //            }
 //        }
 //    }
-}
+//}
 
 
 
@@ -334,8 +336,7 @@ void foreach_constructor(const CXXRecordDecl * klass, std::function<void(CXXCons
     }
 
     string class_name = klass->getNameAsString();
-    if (print_logging)
-        cerr << "Enumerating constructors for " << class_name << " with optional annotation: " << annotation << endl;
+    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Enums, "Enumerating constructors for {} with optional annotation: {}", class_name, annotation);
 
     for (CXXMethodDecl * method : klass->methods()) {
         CXXConstructorDecl * constructor = dyn_cast<CXXConstructorDecl>(method);

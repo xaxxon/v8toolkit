@@ -44,7 +44,7 @@ include_directories(${gtest_SOURCE_DIR}/include)
 
 
 
-target_link_libraries(class_parser_plugin fmt pcre)
+target_link_libraries(class_parser_plugin fmt c++experimental pcre)
 
 
 add_custom_target(class_parser_driver

@@ -67,10 +67,6 @@ struct  Environment : public ::testing::Environment {
             }
         });
 
-        // set defaults if file doesn't exist
-        v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
-        v8toolkit::class_parser::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
-        v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}

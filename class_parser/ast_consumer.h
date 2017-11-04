@@ -23,6 +23,8 @@ public:
     ClassHandlerASTConsumer(CompilerInstance & CI, vector<unique_ptr<OutputModule>> const & output_modules);
 
     void HandleTranslationUnit(ASTContext & Context) override {
+        std::cerr << fmt::format("handle translation unit - running matchAST") << std::endl;
+        
         // Run the matchers when we have the whole TU parsed.
         // matchers configured in constructor
         Matcher.matchAST(Context);

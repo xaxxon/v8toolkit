@@ -9,6 +9,7 @@ using namespace xl::templates;
 
 #include "../wrapped_class.h"
 #include "javascript_stub_output.h"
+#include "../log.h"
 
 
 namespace v8toolkit::class_parser::javascript_stub_output {
@@ -39,6 +40,7 @@ struct JavascriptStubProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
 
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for wrapped class: {}", c.get_name_alias());
         return P::make_provider(
             std::pair("comment", c.comment),
             std::pair("name", c.get_jsdoc_name()),
@@ -58,6 +60,8 @@ struct JavascriptStubProviderContainer {
 
 
     static ProviderPtr get_provider(DataMember const & d) {
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for data member: {}", d.long_name);
+
         return P::make_provider(
             std::pair("comment", d.comment),
             std::pair("name", d.js_name),
@@ -67,6 +71,8 @@ struct JavascriptStubProviderContainer {
 
 
     static ProviderPtr get_provider(ConstructorFunction const & f) {
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for constructor: {}", f.name);
+
         return P::make_provider(
             std::pair("comment", f.comment),
             std::pair("parameters", P::make_provider(f.parameters))
@@ -75,6 +81,8 @@ struct JavascriptStubProviderContainer {
 
 
     static ProviderPtr get_provider(MemberFunction const & f) {
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for member function: {}", f.name);
+
         return P::make_provider(
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
@@ -86,6 +94,8 @@ struct JavascriptStubProviderContainer {
 
 
     static ProviderPtr get_provider(StaticFunction const & f) {
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for static function: {}", f.name);
+
         return P::make_provider(
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
@@ -97,6 +107,8 @@ struct JavascriptStubProviderContainer {
 
 
     static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for parameter info: {}", p.name);
+
         return P::make_provider(
             std::pair("type", p.type.get_jsdoc_type_name()),
             std::pair("name", p.name),
@@ -122,7 +134,7 @@ JavascriptStubOutputModule::JavascriptStubOutputModule(std::unique_ptr<OutputStr
 
 
 void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> const & wrapped_classes) {
-//    std::cerr << fmt::format("making js stub output") << std::endl;
+    v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Starting Javascript Stub output module");
 
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), templates);
 //        auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
@@ -159,17 +171,13 @@ Template constructor_template(R"(
 {{<parameters|!!
      * @param \{{{type}}\} {{name}} {{comment}}}}
      */
-    constructor({{parameters%, |!{{name}}}}) {}
-
-)");
+    constructor({{parameters%, |!{{name}}}}) {})");
 
 
 Template file_template(R"(
 {{!header}}
 
 {{classes|class}}
-
-
 )");
 
 
@@ -231,9 +239,7 @@ Template member_function_template(R"(
      * @param \{{{type}}\} {{name}} {{comment}}}}
      * @return \{{{return_type_name}}\} {{return_comment}}
      */
-    {{name}}({{parameters%, |!{{name}}}}) {}
-
-)");
+    {{name}}({{parameters%, |!{{name}}}}) {})");
 
 
 Template static_function_template(R"(
@@ -243,9 +249,7 @@ Template static_function_template(R"(
      * @param \{{{type}}\} {{name}} {{comment}}}}
      * @return \{{{return_type_name}}\} {{return_comment}}
      */
-    static {{name}}({{parameters%, |!{{name}}}}) {}
-
-)");
+    static {{name}}({{parameters%, |!{{name}}}}) {})");
 
 
 std::map<std::string, Template> templates {
