@@ -15,7 +15,7 @@ namespace v8toolkit::class_parser::bindings_output {
 
 // returns whether a WrappedClass object should be part of the JavaScript stub
 struct BindingsCriteria : public OutputCriteria {
-    bool class_filter(WrappedClass const & c) override;
+    bool operator()(WrappedClass const & c);
 };
 
 
@@ -35,7 +35,7 @@ public:
 class BindingsOutputModule : public OutputModule {
 protected:
     size_t max_declarations_per_file = 0; // default to unlimited
-
+    BindingsCriteria criteria;
 public:
     /**
     * Creates a new object for outputing bindings commands for compilation into a v8toolkit program
@@ -51,8 +51,9 @@ public:
         max_declarations_per_file(max_declarations_per_file)
     {}
 
+    OutputCriteria & get_criteria() override;
 
-    void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
+    void process(std::vector<WrappedClass const *> wrapped_classes) override;
 
     string get_name() override;
 };

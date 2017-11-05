@@ -260,6 +260,7 @@ void ClassHandler::onStartOfTranslationUnit() {
 void ClassHandler::onEndOfTranslationUnit() {
 
     log.info(LogSubjects::Subjects::ClassParser, "onEndOfTranslationUnit");
+    log.info(LogSubjects::Subjects::ClassParser, "Processed total of {} classes from ASTMatchers", matched_classes_returned);
 
 
 
@@ -292,9 +293,20 @@ void ClassHandler::onEndOfTranslationUnit() {
         llvm::report_fatal_error("No output modules specified, aborting...");
     }
 
+    std::cerr << fmt::format("right before processing output modules, log status: {}", log.get_status_string()) << std::endl;
+    log.info(LogSubjects::Subjects::ClassParser, "About to run through {} output modules", this->output_modules.size());
+
     for (auto & output_module : this->output_modules) {
+
         output_module->_begin();
-        output_module->process(std::as_const(should_be_wrapped_classes));
+        log.info(LogSubjects::Subjects::ClassParser, "{} processing", output_module->get_name());
+
+        output_module->process(xl::copy_if(
+            should_be_wrapped_classes,
+            [&](WrappedClass const * c){return output_module->get_criteria()(*c);}
+        ));
+        log.info(LogSubjects::Subjects::ClassParser, "{} done processing", output_module->get_name());
+
         output_module->_end();
         for (auto const & error : output_module->log_watcher.errors) {
             std::cerr << fmt::format("Error during output module: {}: '{}'", output_module->get_name(), error.string) << std::endl;

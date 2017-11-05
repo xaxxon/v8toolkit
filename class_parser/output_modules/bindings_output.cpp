@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fmt/ostream.h>
 #include <vector>
+#include <set>
 
 #include <xl/library_extensions.h>
 #include <xl/templates.h>
@@ -24,8 +25,13 @@ extern Template standard_includes_template;
 
 extern std::map<string, Template> bindings_templates;
 
-bool BindingsCriteria::class_filter(WrappedClass const & c) {
-    cerr << "Checking class criteria" << endl;
+bool BindingsCriteria::operator()(WrappedClass const & c) {
+//    cerr << "Checking class criteria" << endl;
+
+    if (c.bidirectional) {
+        std::cerr << fmt::format("Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
+        return false;
+    }
 
     return true;
 }
@@ -55,6 +61,8 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(WrappedClass const & c) {
+        log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
+
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
             std::pair("name", c.get_short_name()),
@@ -73,7 +81,10 @@ struct BindingsProviderContainer {
             std::pair("inheritance",
                       fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias())),
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->get_short_name()),
-            xl::forward_as_pair("derived_types", c.derived_types)
+
+            // treat this differently because it may be a bidirectional type.   Full WrappedClass information isn't
+            //   available for them.
+            xl::forward_as_pair("derived_types", xl::transform_if(c.derived_types, [](WrappedClass * c)->std::optional<std::string>{return c->class_name;}))
         );
 
         return provider;
@@ -81,6 +92,8 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(DataMember const & d) {
+        log.info(LogSubjects::BindingsOutput, "get_provider DataMember: {}", d.long_name);
+
         return P::make_provider(
             std::pair("comment", d.comment),
             std::pair("name", d.js_name),
@@ -92,6 +105,8 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(MemberFunction const & f) {
+        log.info(LogSubjects::BindingsOutput, "get_provider MemberFunction: {}", f.name);
+
         return P::make_provider(
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
@@ -105,6 +120,8 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(StaticFunction const & f) {
+        log.info(LogSubjects::BindingsOutput, "get_provider StaticFunction: {}", f.name);
+
         return P::make_provider(
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
@@ -118,6 +135,8 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
+        log.info(LogSubjects::BindingsOutput, "get_provider ParameterInfo: {}", p.name);
+
         return P::make_provider(
             std::pair("type", p.type.get_jsdoc_type_name()),
             std::pair("name", p.name),
@@ -175,21 +194,20 @@ struct BindingFile {
 
 
         auto base_type_includes = wrapped_class->get_base_type_includes();
+        log.info(LogSubjects::Subjects::BindingsOutput, "Adding base type includes: {}", join(base_type_includes));
 //        std::cerr << fmt::format("adding base type includes: {}", join(base_type_includes)) << std::endl;
         includes.insert(base_type_includes.begin(), base_type_includes.end());
 
         auto derived_type_includes = wrapped_class->get_derived_type_includes();
-//        std::cerr << fmt::format("adding derived type includes: {}", join(derived_type_includes)) << std::endl;
+        log.info(LogSubjects::Subjects::BindingsOutput, "Adding base type includes: {}", join(derived_type_includes));
         includes.insert(derived_type_includes.begin(), derived_type_includes.end());
 
         this->explicit_instantiations.insert(wrapped_class);
-
     }
-
 };
 
 
-void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wrapped_classes)
+void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
 //    std::cerr << fmt::format("file template contents: {}", file_template.c_str()) << std::endl;
 
@@ -241,9 +259,9 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
     }
 
 
-    if (already_wrapped_classes.size() != WrappedClass::wrapped_classes.size()) {
+    if (already_wrapped_classes.size() != wrapped_classes.size()) {
 //        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
-//                            already_wrapped_classes.size(), WrappedClass::wrapped_classes.size()) << endl;
+//                            already_wrapped_classes.size(), wrapped_classes.size()) << endl;
     }
 
 //    std::cerr << fmt::format("about to dump {} binding_files", binding_files.size()) << std::endl;
@@ -294,6 +312,10 @@ string BindingsOutputModule::get_name() {
     return "BindingsOutputModule";
 }
 
+OutputCriteria & BindingsOutputModule::get_criteria() {
+    return this->criteria;
+}
+
 
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
@@ -326,7 +348,7 @@ Template file_template(R"(
 
 // explicit instantiations
 {{<explicit_instantiations|!!
-template class {{<name>}}>}}
+template class {{<name>}};>}}
 // /explicit instantiations
 
 {{<extern_templates|!!

@@ -20,19 +20,19 @@ public:
      * Does the class meet the criteria?
      * @return whether the class meets the criteria of this object or not
      */
-    virtual bool class_filter(WrappedClass const &) {return true;}
+    virtual bool operator()(WrappedClass const &) {return true;}
 
     /**
      * Does the class function meet the criteria?
      * @return whether the class function meets the criteria of this object or not
      */
-    virtual bool class_function_filter(ClassFunction const &) {return true;}
+    virtual bool operator()(ClassFunction const &) {return true;}
 
     /**
      * Does the class data member meet the criteria?
      * @return whether the class data member meets the criteria of this object or not
      */
-    virtual bool class_member_data_filter(DataMember const &) {return true;}
+    virtual bool operator()(DataMember const &) {return true;}
 };
 
 
@@ -85,11 +85,12 @@ public:
     LogWatcher<LogT> log_watcher;
     LogT::CallbackT * callback = nullptr;
     std::unique_ptr<xl::LogCallbackGuard<LogWatcher<LogT>, LogT>> log_callback_guard;
+    virtual OutputCriteria & get_criteria() = 0;
 
     virtual ~OutputModule() = default;
     virtual void begin() {}
     void _begin();
-    virtual void process(std::vector<WrappedClass const *> const & wrapped_classes) = 0;
+    virtual void process(std::vector<WrappedClass const *> wrapped_classes) = 0;
     virtual void end() {}
     void _end();
     virtual string get_name() = 0;

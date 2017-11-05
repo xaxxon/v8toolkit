@@ -81,7 +81,7 @@ static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
 }
 
 
-void BidirectionalOutputModule::process(std::vector < WrappedClass const*> const & wrapped_classes)
+void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
 
 }

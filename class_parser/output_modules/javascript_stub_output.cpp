@@ -133,7 +133,7 @@ JavascriptStubOutputModule::JavascriptStubOutputModule(std::unique_ptr<OutputStr
 {}
 
 
-void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> const & wrapped_classes) {
+void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> wrapped_classes) {
     v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Starting Javascript Stub output module");
 
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), templates);
@@ -145,6 +145,10 @@ void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> const
 
 string JavascriptStubOutputModule::get_name() {
     return "JavascriptStubOutputModule";
+}
+
+OutputCriteria & JavascriptStubOutputModule::get_criteria() {
+    return this->criteria;
 }
 
 

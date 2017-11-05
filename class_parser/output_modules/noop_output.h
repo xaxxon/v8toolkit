@@ -17,10 +17,15 @@ namespace v8toolkit::class_parser::noop_output {
  * a real OutputModule to run
  */
 class NoOpOutputModule : public OutputModule {
+    OutputCriteria criteria;
 public:
     std::stringstream string_stream;
     NoOpOutputModule():OutputModule(std::make_unique<StringStreamOutputStreamProvider>(string_stream)) {}
-    void process(std::vector<WrappedClass const *> const & wrapped_classes) override {};
+    void process(std::vector<WrappedClass const *> wrapped_classes) override {};
+
+    OutputCriteria & get_criteria() override {
+        return criteria;
+    }
 
     string get_name() override {
         return "NoOpOutputModule";

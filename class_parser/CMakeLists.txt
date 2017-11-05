@@ -72,4 +72,4 @@ add_dependencies(class_parser_driver class_parser_plugin copy_driver_resources)
 
 install(TARGETS class_parser_plugin DESTINATION ${INSTALL_LIB_DIR})
 
-add_subdirectory(test)
+add_subdirectory(test EXCLUDE_FROM_ALL)

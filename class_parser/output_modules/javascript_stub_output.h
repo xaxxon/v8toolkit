@@ -15,18 +15,9 @@ namespace v8toolkit::class_parser::javascript_stub_output {
 // returns whether a WrappedClass object should be part of the JavaScript stub
 class JavascriptStubCriteria : public OutputCriteria {
     bool operator()(WrappedClass const & c) {
-        cerr << "Checking class criteria" << endl;
+//        cerr << "Checking class criteria" << endl;
 
-        if (c.get_name_alias().find("<") != std::string::npos) {
-            std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-                                     c.get_name_alias()) << std::endl;
-            return false;
-        } else if (c.base_types.size() > 0 && (*c.base_types.begin())->get_name_alias().find("<") != std::string::npos) {
-            std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-                                     c.get_name_alias(),
-                                     (*c.base_types.begin())->get_name_alias()) << std::endl;
-            return false;
-        } else if (c.bidirectional) {
+        if (c.bidirectional) {
             std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
             return false;
         }
@@ -48,10 +39,14 @@ public:
 
 
 class JavascriptStubOutputModule : public OutputModule {
+private:
+    JavascriptStubCriteria criteria;
 public:
     JavascriptStubOutputModule();
     JavascriptStubOutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider);
-    void process(std::vector<WrappedClass const *> const & wrapped_classes) override;
+    void process(std::vector<WrappedClass const *> wrapped_classes) override;
+
+    OutputCriteria & get_criteria() override;
 
     string get_name() override;
 };
