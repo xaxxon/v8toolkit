@@ -57,6 +57,10 @@ struct  Environment : public ::testing::Environment {
         v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
         v8toolkit::class_parser::log.set_level_status(LogT::Levels::Levels::Error, true);
 
+        // all subjects must be enable to watch for errors logged
+        v8toolkit::class_parser::log.set_all_subjects(true);
+
+
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
             if (message.level == LogT::Levels::Levels::Error) {
                 if (!_expect_errors) {
@@ -70,7 +74,6 @@ struct  Environment : public ::testing::Environment {
                 std::cout << message.string << std::endl;
             }
         });
-
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}

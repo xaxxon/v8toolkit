@@ -84,9 +84,10 @@ struct BindingsProviderContainer {
         return P::make_provider(
             std::pair("comment", d.comment),
             std::pair("name", d.js_name),
-            std::pair("binding_parameters", "BOGUS BINDING PARAMETERS"),
-            std::pair("type", d.type.get_jsdoc_type_name())
+            std::pair("declared_in", d.declared_in.class_name),
+            std::pair("type", d.type.get_name())
         );
+
     }
 
 
@@ -262,12 +263,14 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> const & wr
                 std::pair("classes", P::make_provider(binding_file.get_classes())),
                 std::pair("includes", P::make_provider(std::bind(&BindingFile::get_includes, binding_file))),
                 std::pair("extern_templates", P::make_provider(std::bind(&BindingFile::get_extern_template_instantiations, binding_file))),
-                std::pair("explicit_instantiations", P::make_provider(std::bind(&BindingFile::get_extern_template_instantiations, binding_file))),
+                std::pair("explicit_instantiations", binding_file.get_explicit_instantiations()),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
             ),
             bindings_templates
         );
 
+        log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
+        log.info(LogSubjects::Subjects::BindingsOutput, template_result);
         output_stream << template_result << std::flush;
     }
 
@@ -300,7 +303,7 @@ Template class_template(R"({
 {{<static_functions|!!
     class_wrapper.add_static_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());>}}
 {{<data_members|!!
-    class_wrapper.add_member<{{binding_parameters>}}>("{{name}}");>}}
+    class_wrapper.add_member<{{type}}, {{declared_in}}>("{{name}}");>}}
 
     class_wrapper.set_parent_type<{{<base_type_name>}}>();
 
@@ -323,7 +326,7 @@ Template file_template(R"(
 
 // explicit instantiations
 {{<explicit_instantiations|!!
-template class {{<instantiation>}}>}}
+template class {{<name>}}>}}
 // /explicit instantiations
 
 {{<extern_templates|!!

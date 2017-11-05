@@ -23,9 +23,6 @@ LogT log = []{
         log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
         log.enable_status_file("class_parser_plugin.log_status");
         log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
-
-        // all subjects must be enable to watch for errors logged
-        log.set_all_subjects(true);
     }
     return log;
 }();
