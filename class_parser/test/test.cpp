@@ -617,6 +617,7 @@ TEST(ClassParser, ClassComments) {
     vector<unique_ptr<OutputModule>> output_modules;
     output_modules.push_back(make_unique<JavascriptStubOutputModule>());
     output_modules.push_back(make_unique<BindingsOutputModule>(15));
+    output_modules.push_back(make_unique<BidirectionalOutputModule>());
 //    output_modules.push_back(make_unique<BidirectionalOutputModule>());
 
     auto pruned_vector = run_code(source, std::move(output_modules));

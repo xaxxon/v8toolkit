@@ -391,13 +391,6 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
          wrapped_class_iterator++) {
         auto & wrapped_class = *wrapped_class_iterator;
 
-        // this code wants the actual bidirecitonal class, not the base class it wraps  (e.g. JSFoo, not Foo)
-        if (!wrapped_class->bidirectional) {
-            continue;
-        }
-
-
-        cerr << fmt::format("Building bidirectional class {}", wrapped_class->get_name_alias()) << endl;
 
         assert(wrapped_class->base_types.size() == 1);
         auto base_type = *wrapped_class->base_types.begin();
@@ -434,22 +427,16 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:", // {{ is escaped {
             base_type->get_name_alias(), base_type->get_name_alias(), base_type->get_name_alias()) << endl;
 
-        std::cerr << fmt::format("cc1") << std::endl;
         bidirectional_file
             << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,",
                            base_type->get_name_alias()) << endl;
-        std::cerr << fmt::format("cc2") << std::endl;
         bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by") << endl;
-        std::cerr << fmt::format("cc3") << std::endl;
-        std::cerr << fmt::format("dealing with bidirectional constructor at {} for class {}",
-                                 (void *) base_type->bidirectional_constructor, base_type->get_name_alias()) << std::endl;
         if (base_type->bidirectional_constructor == nullptr) {
             llvm::report_fatal_error(fmt::format("bidirectional constructor: {} for class {}",
                                                  (void *) base_type->bidirectional_constructor,
                                                  base_type->get_name_alias()));
         }
         ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
-        std::cerr << fmt::format("cc3.1") << std::endl;
         int param_position = 1;
         for (auto & parameter : bidirectional_constructor.parameters) {
             std::cerr << fmt::format("cc3.in_loop top") << std::endl;
@@ -458,21 +445,17 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
         }
 
 
-        std::cerr << fmt::format("cc4") << std::endl;
         bidirectional_file << fmt::format(") :") << endl;
 
         //                auto variable_names = generate_variable_names(construtor_parameter_count);
         auto variable_names = generate_variable_names(
             get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);
-        std::cerr << fmt::format("cc5") << std::endl;
         bidirectional_file << fmt::format("      {}({}),", base_type->get_name_alias(), join(variable_names)) << endl;
         bidirectional_file
             << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}", base_type->get_name_alias())
             << endl; // {{}} is escaped {}
         bidirectional_file << endl;
 
-        cerr << fmt::format("bidirectional class has {} methods, looking for virtual ones",
-                            base_type->get_member_functions().size()) << endl;
 
 
         auto * current_inheritance_class = base_type;

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <xl/templates.h>
+#include <xl/library_extensions.h>
 using xl::templates::ProviderPtr;
 
 
@@ -11,6 +12,23 @@ using xl::templates::ProviderPtr;
 #include "bidirectional_output.h"
 
 namespace v8toolkit::class_parser {
+
+bool BidirectionalCriteria::operator()(WrappedClass const & c) {
+    if (!c.bidirectional) {
+        log.info(LogSubjects::Subjects::BidirectionalOutput, "BidirectionalCriteria: skipping {} because not bidirectional", c.get_name_alias());
+        return false;
+    }
+
+    if (c.base_types.size() != 1) {
+        log.error(LogSubjects::Subjects::BidirectionalOutput,
+                  "BidirectionalCriteria: bidirectional class {} must have 1 base type but actually has {} - {}",
+                  c.get_name_alias(), c.base_types.size(), xl::join(c.base_types));
+    }
+
+
+    return true;
+}
+
 
 
 static ProviderPtr get_provider(WrappedClass const & c) {
@@ -88,6 +106,10 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
 
 string BidirectionalOutputModule::get_name() {
     return "BidirectionalOutputModule";
+}
+
+OutputCriteria & BidirectionalOutputModule::get_criteria() {
+    return this->criteria;
 }
 
 
