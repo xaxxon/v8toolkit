@@ -23,40 +23,17 @@ bool BidirectionalCriteria::operator()(WrappedClass const & c) {
         log.error(LogSubjects::Subjects::BidirectionalOutput,
                   "BidirectionalCriteria: bidirectional class {} must have 1 base type but actually has {} - {}",
                   c.get_name_alias(), c.base_types.size(), xl::join(c.base_types));
+        return false;
     }
-
 
     return true;
 }
 
 
-
 static ProviderPtr get_provider(WrappedClass const & c) {
     return xl::templates::make_provider(
-        std::pair("comment", c.comment),
         std::pair("name", c.get_name_alias()),
-        std::pair("data_members", std::ref(c.get_members())),
-        std::pair("constructors", std::ref(c.get_constructors())),
-        std::pair("member_functions", std::ref(c.get_member_functions())),
-        std::pair("static_functions", std::ref(c.get_static_functions())),
-        std::pair("inheritance", fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias()))
-    );
-}
-
-
-static ProviderPtr get_provider(DataMember const & d) {
-    return xl::templates::make_provider(
-        std::pair("comment", d.comment),
-        std::pair("name", d.js_name),
-        std::pair("type", d.type.get_jsdoc_type_name())
-    );
-}
-
-
-static ProviderPtr get_provider(ConstructorFunction const & f) {
-    return xl::templates::make_provider(
-        std::pair("comment", f.comment),
-        std::pair("parameters", xl::templates::make_provider(f.parameters))
+        std::pair("member_functions", std::ref(c.get_member_functions()))
     );
 }
 
@@ -66,29 +43,15 @@ static ProviderPtr get_provider(MemberFunction const & f) {
         std::pair("name", f.js_name),
         std::pair("comment", f.comment),
         std::pair("parameters", xl::templates::make_provider(f.parameters)),
-        std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
-        std::pair("return_comment", f.return_type_comment)
+        std::pair("return_type", f.return_type.get_name())
     );
 }
-
-
-static ProviderPtr get_provider(StaticFunction const & f) {
-    return xl::templates::make_provider(
-        std::pair("name", f.js_name),
-        std::pair("comment", f.comment),
-        std::pair("parameters", xl::templates::make_provider(f.parameters)),
-        std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
-        std::pair("return_comment", f.return_type_comment)
-    );
-}
-
 
 
 static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
     return xl::templates::make_provider(
         std::pair("type", p.type.get_jsdoc_type_name()),
-        std::pair("name", p.name),
-        std::pair("comment", p.description)
+        std::pair("name", p.name)
     );
 }
 

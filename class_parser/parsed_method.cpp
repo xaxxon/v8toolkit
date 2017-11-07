@@ -367,10 +367,10 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                              FunctionTemplateDecl const * function_template_decl,
                              std::string const & preferred_js_name) :
     return_type(method_decl->getReturnType(), template_parameter_types),
-    compiler_instance(wrapped_class.compiler_instance),
     method_decl(method_decl),
-    name(method_decl->getQualifiedNameAsString()),
+    compiler_instance(wrapped_class.compiler_instance),
     wrapped_class(wrapped_class),
+    name(method_decl->getQualifiedNameAsString()),
     js_name(preferred_js_name != "" ? preferred_js_name : method_decl->getNameAsString()),
 
     is_virtual(method_decl->isVirtual()),
