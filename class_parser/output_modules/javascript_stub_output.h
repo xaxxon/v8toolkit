@@ -18,7 +18,7 @@ class JavascriptStubCriteria : public OutputCriteria {
 //        cerr << "Checking class criteria" << endl;
 
         if (c.bidirectional) {
-            std::cerr << fmt::format("Skipping generation of js stub for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
+            log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Skipping generation of js stub for {} because it's a bidirectional type", c.get_name_alias());
             return false;
         }
 

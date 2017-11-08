@@ -17,6 +17,8 @@
 
 #include <xl/library_extensions.h>
 #include <xl/templates.h>
+#include <xl/log.h>
+
 using namespace xl;
 using namespace std;
 
@@ -38,14 +40,31 @@ struct  Environment : public ::testing::Environment {
     bool _expect_errors = false;
     int error_count = 0;
 
-    void expect_errors(){assert(!this->_expect_errors); this->_expect_errors = true;}
+    std::vector<char> subject_status_backup;
+    std::vector<char> level_status_backup;
+
+    void expect_errors() {
+        assert(!this->_expect_errors);
+        this->subject_status_backup = v8toolkit::class_parser::log.get_status_of_subjects();
+        this->level_status_backup = v8toolkit::class_parser::log.get_status_of_levels();
+
+        v8toolkit::class_parser::log.set_all_subjects(true);
+        this->_expect_errors = true;
+    }
+
+
     int expect_no_errors() {
+        v8toolkit::class_parser::log.set_status_of_subjects(this->subject_status_backup);
+        v8toolkit::class_parser::log.set_status_of_levels(this->level_status_backup);
+//        std::cerr << fmt::format("restoring subject status: {}", xl::join(subject_status_backup)) << std::endl;
         assert(this->_expect_errors);
         this->_expect_errors = false;
         int result = error_count;
         error_count = 0;
         return result;
     }
+
+
     // Override this to define how to set up the environment.
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
@@ -56,9 +75,6 @@ struct  Environment : public ::testing::Environment {
         // force error logging on regardless of what is in log status file because it is required for testing
         v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
         v8toolkit::class_parser::log.set_level_status(LogT::Levels::Levels::Error, true);
-
-        // all subjects must be enable to watch for errors logged
-        v8toolkit::class_parser::log.set_all_subjects(true);
 
 
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
@@ -71,7 +87,7 @@ struct  Environment : public ::testing::Environment {
                 }
             } else {
                 // if other log levels are being handled, just print it out
-                std::cout << message.string << std::endl;
+                std::cout << fmt::format("{}: {}", message.log.get_subject_name(message.subject), message.string) << std::endl;
             }
         });
     }
@@ -583,8 +599,12 @@ TEST(ClassParser, ClassComments) {
         /// comment on data_memberB
         int data_memberB;
     };
-    class C : public B {
+    class V8TOOLKIT_BIDIRECTIONAL_CLASS C : public B {
     public:
+
+        V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR
+        C(){}
+
         /**
           * member instance function C comment
           * @param p1 some string parametere
@@ -622,7 +642,8 @@ TEST(ClassParser, ClassComments) {
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 
-    EXPECT_EQ(pruned_vector.size(), 3);
+    // A, B, C, JSC (JSWrapper for C - not actually present in AST, created in class parser code)
+    EXPECT_EQ(pruned_vector.size(), 4);
     (void)*pruned_vector[0].get();
 }
 

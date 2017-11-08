@@ -7,7 +7,7 @@
 
 namespace v8toolkit::class_parser {
 
-class LogSubjects {
+struct LogSubjects {
     inline static std::string subject_names[] = {
         "comments", "class", "methods", "data members", "enums", "constructors", "destructors", "bidirectional output",
         "bindings output", "javascript stub output", "jsdoc", "should be wrapped", "class parser"
@@ -32,10 +32,6 @@ public:
         LOG_LAST_SUBJECT
 
     };
-
-    static std::string const & get_subject_name(Subjects subject) {
-        return subject_names[static_cast<std::underlying_type_t<Subjects>>(subject)];
-    }
 };
 
 using LogLevelsT = xl::log::DefaultLevels;

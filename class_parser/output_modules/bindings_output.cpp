@@ -29,7 +29,7 @@ bool BindingsCriteria::operator()(WrappedClass const & c) {
 //    cerr << "Checking class criteria" << endl;
 
     if (c.bidirectional) {
-        std::cerr << fmt::format("Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias()) << std::endl;
+        log.info(LogSubjects::Subjects::BindingsOutput, "Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias());
         return false;
     }
 

@@ -272,6 +272,7 @@ void ClassHandler::onEndOfTranslationUnit() {
             for (auto const & error : c->data_errors) {
                 std::cerr << fmt::format("ERROR in {}: '{}'", c->get_name_alias(), error) << std::endl;
                 found_data_error = true;
+                continue;
             }
             if (c->should_be_wrapped()) {
                 xl::LogCallbackGuard g(log, c->log_watcher);

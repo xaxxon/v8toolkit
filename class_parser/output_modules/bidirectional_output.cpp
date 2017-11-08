@@ -43,38 +43,40 @@ ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const
 }
 
 
+struct BidirectionalProviderContainer {
 
 
-static ProviderPtr get_provider(WrappedClass const & c) {
-    return xl::templates::make_provider(
-        std::pair("name", c.get_name_alias()),
-        std::pair("member_functions", std::ref(c.get_member_functions()))
-    );
-}
+    static ProviderPtr get_provider(WrappedClass const & c) {
+        return xl::templates::make_provider<BidirectionalProviderContainer>(
+            std::pair("name", c.get_name_alias()),
+            std::pair("member_functions", std::ref(c.get_member_functions()))
+        );
+    }
 
 
-static ProviderPtr get_provider(MemberFunction const & f) {
-    return xl::templates::make_provider(
-        std::pair("name", f.js_name),
-        std::pair("comment", f.comment),
-        std::pair("parameters", xl::templates::make_provider(f.parameters)),
-        std::pair("return_type", f.return_type.get_name())
-    );
-}
+    static ProviderPtr get_provider(MemberFunction const & f) {
+        return xl::templates::make_provider<BidirectionalProviderContainer>(
+            std::pair("name", f.js_name),
+            std::pair("comment", f.comment),
+            std::pair("parameters", f.parameters),
+            std::pair("return_type", f.return_type.get_name())
+        );
+    }
 
 
-static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
-    return xl::templates::make_provider(
-        std::pair("type", p.type.get_jsdoc_type_name()),
-        std::pair("name", p.name)
-    );
-}
+    static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
+        return xl::templates::make_provider<BidirectionalProviderContainer>(
+            std::pair("type", p.type.get_jsdoc_type_name()),
+            std::pair("name", p.name)
+        );
+    }
 
 
-static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
-    return xl::templates::make_provider("Implement me");
+    static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
+        return xl::templates::make_provider<BidirectionalProviderContainer>("Implement me");
 
-}
+    }
+};
 
 
 void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
