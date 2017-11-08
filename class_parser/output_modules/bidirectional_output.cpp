@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <xl/templates.h>
+#include <xl/templates/directory_loader.h>
 #include <xl/library_extensions.h>
 using xl::templates::ProviderPtr;
 
@@ -28,6 +29,20 @@ bool BidirectionalCriteria::operator()(WrappedClass const & c) {
 
     return true;
 }
+
+
+std::ostream & BidirectionalOutputStreamProvider::get_class_collection_stream() {
+    return std::cerr;
+}
+
+ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const & c) {
+    this->output_file.close();
+    this->output_file.open(fmt::format("v8toolkit_generated_bidirectional_{}.h", c.get_name_alias()));
+
+    return this->output_file;
+}
+
+
 
 
 static ProviderPtr get_provider(WrappedClass const & c) {
@@ -64,6 +79,15 @@ static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
 
 void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
+
+
+    log.info(LogSubjects::Subjects::BidirectionalOutput, "Starting Bidirectional output module");
+
+    auto templates = xl::templates::load_templates("bidirectional_templates");
+
+
+
+    log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
 
 }
 

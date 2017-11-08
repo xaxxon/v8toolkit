@@ -18,18 +18,21 @@ class BidirectionalCriteria : public OutputCriteria {
     bool operator()(WrappedClass const & c);
 };
 
+
+
 class BidirectionalOutputStreamProvider : public OutputStreamProvider {
 private:
-    std::stringstream string_stream;
+//    std::stringstream string_stream;
+    std::ofstream output_file;
 public:
-    virtual std::ostream & get_class_collection_stream() {
-//        return this->string_stream;
-        return std::cerr;
-    }
-    ~BidirectionalOutputStreamProvider(){
-    }
-};
+    std::ostream & get_class_collection_stream() override;
 
+    ostream & get_class_stream(WrappedClass const & c) override;
+
+
+    ~BidirectionalOutputStreamProvider()
+    {}
+};
 
 
 

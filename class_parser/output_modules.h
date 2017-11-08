@@ -45,15 +45,15 @@ public:
 
     virtual std::ostream & get_class_collection_stream() = 0;
 
-    virtual std::ostream & get_class_stream(WrappedClass const &) {
+    virtual std::ostream & get_class_stream(WrappedClass const & c) {
         return this->get_class_collection_stream();
     }
 
-    virtual std::ostream & get_class_function_stream() {
+    virtual std::ostream & get_class_function_stream(ClassFunction const & class_function) {
         return this->get_class_collection_stream();
     }
 
-    virtual std::ostream & get_class_member_data_stream() {
+    virtual std::ostream & get_class_member_data_stream(DataMember const & data_member) {
         return this->get_class_collection_stream();
     }
 };

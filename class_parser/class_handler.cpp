@@ -293,7 +293,7 @@ void ClassHandler::onEndOfTranslationUnit() {
         llvm::report_fatal_error("No output modules specified, aborting...");
     }
 
-    std::cerr << fmt::format("right before processing output modules, log status: {}", log.get_status_string()) << std::endl;
+//    std::cerr << fmt::format("right before processing output modules, log status: {}", log.get_status_string()) << std::endl;
     log.info(LogSubjects::Subjects::ClassParser, "About to run through {} output modules", this->output_modules.size());
 
     for (auto & output_module : this->output_modules) {
