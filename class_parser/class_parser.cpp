@@ -905,38 +905,7 @@ vector<string> get_default_argument_values(CompilerInstance & compiler_instance,
     return results;
 }
 
-vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instance,
-                                             const CXXMethodDecl * method,
-                                             string const & annotation) {
-    vector<QualType> results;
-    auto parameter_count = method->getNumParams();
-    for (unsigned int i = 0; i < parameter_count; i++) {
-        auto param_decl = method->getParamDecl(i);
 
-
-        Annotations annotations(param_decl);
-        if (annotation != "" && !annotations.has(annotation)) {
-            if (print_logging)
-                cerr << "Skipping method parameter because it didn't have requested annotation: " << annotation << endl;
-            continue;
-        }
-        auto param_qual_type = param_decl->getType();
-        results.push_back(param_qual_type);
-    }
-    return results;
-}
-
-vector<string> generate_variable_names(vector<QualType> qual_types, bool with_std_move) {
-    vector<string> results;
-    for (std::size_t i = 0; i < qual_types.size(); i++) {
-        if (with_std_move && qual_types[i]->isRValueReferenceType()) {
-            results.push_back(fmt::format("std::move(var{})", i + 1));
-        } else {
-            results.push_back(fmt::format("var{}", i + 1));
-        }
-    }
-    return results;
-}
 
 
 void print_specialization_info(const CXXRecordDecl * decl) {

@@ -68,7 +68,7 @@ struct  Environment : public ::testing::Environment {
     // Override this to define how to set up the environment.
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
-            std::cerr << fmt::format("xl::templates: {}", message.string) << std::endl;
+            std::cout << fmt::format("xl::templates: {}", message.string) << std::endl;
             if (message.level == xl::templates::LogT::Levels::Levels::Error) {
                 EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
             }
@@ -95,7 +95,6 @@ struct  Environment : public ::testing::Environment {
 
         // set up xl::templates logging
         auto & template_log = xl::templates::log;
-        template_log.add_callback(std::cerr, "xl::templates: ");
         template_log.set_level_status(xl::templates::LogT::Levels::Levels::Info, false);
         template_log.enable_status_file("test-class-parser-xl-templates.log_status");
     }

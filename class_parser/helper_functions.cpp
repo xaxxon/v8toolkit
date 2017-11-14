@@ -436,26 +436,26 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
                                                  (void *) base_type->bidirectional_constructor,
                                                  base_type->get_name_alias()));
         }
+
+        // go through all the parameters for the constructor and create variable names for them
         ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
         int param_position = 1;
         for (auto & parameter : bidirectional_constructor.parameters) {
-            std::cerr << fmt::format("cc3.in_loop top") << std::endl;
             bidirectional_file << fmt::format(", {} var{}", parameter.type.get_name(), param_position++);
-            std::cerr << fmt::format("cc3.in_loop bottom") << std::endl;
         }
 
 
-        bidirectional_file << fmt::format(") :") << endl;
-
-        //                auto variable_names = generate_variable_names(construtor_parameter_count);
-        auto variable_names = generate_variable_names(
-            get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);
-        bidirectional_file << fmt::format("      {}({}),", base_type->get_name_alias(), join(variable_names)) << endl;
-        bidirectional_file
-            << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}", base_type->get_name_alias())
-            << endl; // {{}} is escaped {}
-        bidirectional_file << endl;
-
+//        bidirectional_file << fmt::format(") :") << endl;
+//
+//        //                auto variable_names = generate_variable_names(construtor_parameter_count);
+//        auto variable_names = "";/*generate_variable_names(
+//            get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);*/
+//        bidirectional_file << fmt::format("      {}({}),", base_type->get_name_alias(), join(variable_names)) << endl;
+//        bidirectional_file
+//            << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}", base_type->get_name_alias())
+//            << endl; // {{}} is escaped {}
+//        bidirectional_file << endl;
+//
 
 
         auto * current_inheritance_class = base_type;
@@ -507,8 +507,8 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
 
                 if (num_params > 0) {
                     //std::cerr << fmt::format("12") << std::endl;
-                    auto types = get_method_param_qual_types(wrapped_class->compiler_instance,
-                                                             bidirectional_virtual_method);
+                    auto types = vector<QualType>{};/*get_method_param_qual_types(wrapped_class->compiler_instance,
+                                                             bidirectional_virtual_method); */
                     vector<string> type_names;
                     for (auto & type : types) {
                         type_names.push_back(make_macro_safe_comma(type.getAsString()));
