@@ -56,7 +56,11 @@ struct BidirectionalProviderContainer {
             std::pair("name", c.get_name_alias()),
             std::pair("member_functions", std::ref(c.get_member_functions())),
             std::pair("includes", std::ref(c.include_files)),
-            std::pair("base_name", (*c.base_types.begin())->get_name_alias())
+            std::pair("base_name", (*c.base_types.begin())->get_name_alias()),
+            std::pair("internal_params", "TODO"),
+            std::pair("external_params", "TODO"),
+            std::pair("internal_fields", "TODO"),
+            std::pair("external_fields", "TODO")
         );
     }
 
