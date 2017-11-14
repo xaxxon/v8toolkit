@@ -42,8 +42,7 @@ private:
 public:
 
     std::stringstream string_stream;
-    BidirectionalOutputModule() : OutputModule(std::make_unique<StringStreamOutputStreamProvider>(string_stream))
-    {}
+    BidirectionalOutputModule();
 
     void process(std::vector<WrappedClass const *> wrapped_classes) override;
 

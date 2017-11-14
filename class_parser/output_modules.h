@@ -84,7 +84,7 @@ public:
 
     LogWatcher<LogT> log_watcher;
     LogT::CallbackT * callback = nullptr;
-    std::unique_ptr<xl::LogCallbackGuard<LogWatcher<LogT>, LogT>> log_callback_guard;
+    std::unique_ptr<xl::log::LogCallbackGuard<LogWatcher<LogT>, LogT>> log_callback_guard;
     virtual OutputCriteria & get_criteria() = 0;
 
     virtual ~OutputModule() = default;

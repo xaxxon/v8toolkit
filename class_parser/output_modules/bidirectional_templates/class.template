@@ -7,7 +7,7 @@ class {{name}} : public {{base_name}}, public v8toolkit::JSWrapper<{{base_name}}
 public:
 
     JSArea(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
-        v8::Local<v8::FunctionTemplate> created_by, {{internal_params}, {{external_params}}) :
+        v8::Local<v8::FunctionTemplate> created_by, {{internal_params}}, {{external_params}}) :
       Area(var1, std::move(var2)),
       v8toolkit::JSWrapper<Area>(context, object, created_by) {}
 

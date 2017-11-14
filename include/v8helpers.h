@@ -62,7 +62,7 @@ public:
 
 
 
-inline xl::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects> log;
+inline xl::log::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects> log;
 
 
 /**

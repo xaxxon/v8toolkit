@@ -275,7 +275,7 @@ void ClassHandler::onEndOfTranslationUnit() {
                 continue;
             }
             if (c->should_be_wrapped()) {
-                xl::LogCallbackGuard g(log, c->log_watcher);
+                xl::log::LogCallbackGuard g(log, c->log_watcher);
                 c->parse_enums();
                 c->parse_members();
                 c->parse_all_methods();

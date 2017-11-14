@@ -42,6 +42,11 @@ ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const
     return this->output_file;
 }
 
+BidirectionalOutputModule::BidirectionalOutputModule() :
+    OutputModule(std::make_unique<BidirectionalOutputStreamProvider>())
+{}
+
+
 
 struct BidirectionalProviderContainer {
 
@@ -49,7 +54,9 @@ struct BidirectionalProviderContainer {
     static ProviderPtr get_provider(WrappedClass const & c) {
         return xl::templates::make_provider<BidirectionalProviderContainer>(
             std::pair("name", c.get_name_alias()),
-            std::pair("member_functions", std::ref(c.get_member_functions()))
+            std::pair("member_functions", std::ref(c.get_member_functions())),
+            std::pair("includes", std::ref(c.include_files)),
+            std::pair("base_name", (*c.base_types.begin())->get_name_alias())
         );
     }
 
@@ -82,12 +89,17 @@ struct BidirectionalProviderContainer {
 void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
 
+    BidirectionalOutputStreamProvider stream_provider;
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Starting Bidirectional output module");
 
     auto templates = xl::templates::load_templates("bidirectional_templates");
 
+    for(auto c : wrapped_classes) {
+        auto & ostream = this->output_stream_provider->get_class_stream(*c);
 
+        ostream << templates["class"].fill<BidirectionalProviderContainer>(std::ref(*c), &templates);
+    }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
 

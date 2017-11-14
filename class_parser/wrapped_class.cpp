@@ -52,7 +52,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         return;
     }
     log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
-    xl::LogCallbackGuard(log, this->log_watcher);
+    xl::log::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
     string using_name = Annotations::names_for_record_decls[decl];

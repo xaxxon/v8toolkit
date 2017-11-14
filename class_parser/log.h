@@ -35,7 +35,7 @@ public:
 };
 
 using LogLevelsT = xl::log::DefaultLevels;
-using LogT = xl::Log<LogLevelsT, LogSubjects>;
+using LogT = xl::log::Log<LogLevelsT, LogSubjects>;
 
 
 #if 0

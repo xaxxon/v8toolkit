@@ -40,8 +40,8 @@ struct  Environment : public ::testing::Environment {
     bool _expect_errors = false;
     int error_count = 0;
 
-    std::vector<char> subject_status_backup;
-    std::vector<char> level_status_backup;
+    std::vector<bool> subject_status_backup;
+    std::vector<bool> level_status_backup;
 
     void expect_errors() {
         assert(!this->_expect_errors);
@@ -69,7 +69,9 @@ struct  Environment : public ::testing::Environment {
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
             std::cerr << fmt::format("xl::templates: {}", message.string) << std::endl;
-            EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
+            if (message.level == xl::templates::LogT::Levels::Levels::Error) {
+                EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
+            }
         });
 
         // force error logging on regardless of what is in log status file because it is required for testing
@@ -87,9 +89,15 @@ struct  Environment : public ::testing::Environment {
                 }
             } else {
                 // if other log levels are being handled, just print it out
-                std::cout << fmt::format("{}: {}", message.log.get_subject_name(message.subject), message.string) << std::endl;
+                std::cout << fmt::format("class parser: {}: {}", LogT::get_subject_name(message.subject), message.string) << std::endl;
             }
         });
+
+        // set up xl::templates logging
+        auto & template_log = xl::templates::log;
+        template_log.add_callback(std::cerr, "xl::templates: ");
+        template_log.set_level_status(xl::templates::LogT::Levels::Levels::Info, false);
+        template_log.enable_status_file("test-class-parser-xl-templates.log_status");
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}

@@ -284,7 +284,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
                 std::pair("explicit_instantiations", binding_file.get_explicit_instantiations()),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
             ),
-            bindings_templates
+            &bindings_templates
         );
 
         log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
