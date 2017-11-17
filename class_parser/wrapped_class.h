@@ -160,6 +160,7 @@ public:
      * @param callback called on each parameterized type for this template specialization
      */
     void foreach_inheritance_level(function<void(WrappedClass &)> callback);
+    void foreach_inheritance_level(function<void(WrappedClass const &)> callback) const;
 
 
     /**
@@ -237,6 +238,8 @@ public:
 
     // returns true if the found_method on this class means the class will be wrapped
     bool found_method_means_wrapped();
+
+    set<ClassFunction const *> get_all_functions_from_class_hierarchy() const;
 
 }; // end class WrappedClass
 

@@ -13,5 +13,5 @@ public:
     {}
 
     {{virtual_functions|!!
-    JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{name}}{{params%%, |!{{param}}}});}}
+    JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}{{params%%, |!{{param}}}});}}
 }

@@ -167,6 +167,7 @@ public:
     string generate_js_bindings();
 
     bool is_callable_overload() const;
+    bool is_const() const;
 
     string generate_bidirectional();
 };

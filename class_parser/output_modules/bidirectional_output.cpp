@@ -5,7 +5,6 @@
 #include <sstream>
 
 #include <xl/templates.h>
-#include <xl/templates/directory_loader.h>
 #include <xl/library_extensions.h>
 using xl::templates::ProviderPtr;
 
@@ -47,9 +46,8 @@ ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const
     return this->output_file;
 }
 
-BidirectionalOutputModule::BidirectionalOutputModule() :
-    OutputModule(std::make_unique<BidirectionalOutputStreamProvider>())
-{}
+
+
 
 std::string generate_bidirectional_constructor_parameter_list(WrappedClass const & c) {
     auto base_type = *c.base_types.begin();
@@ -104,9 +102,32 @@ struct BidirectionalProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
 
+        std::vector<MemberFunction const *> virtual_functions;
+        c.foreach_inheritance_level([&](auto & c) {
+            std::cerr << fmt::format("Looking at class {}", c.get_name_alias()) << std::endl;
+            for(auto & f : c.get_member_functions()) {
+                std::cerr << fmt::format("Looking at function in {}: {}", c.get_name_alias(), f->name) << std::endl;
+                if (f->is_virtual) {
+                    std::cerr << fmt::format("IS FIRTUAL") << std::endl;
+                    virtual_functions.push_back(f.get());
+                } else {
+                    std::cerr << fmt::format("IS NOT VIRTUAL") << std::endl;
+                }
+            }
+        });
+
+
+        std::cerr << fmt::format("virtual function count for {}: {}", c.get_name_alias(), virtual_functions.size())<< std::endl;
+
+        std::cerr << fmt::format("includes:") << std::endl;
+        for(auto & i : c.include_files) {
+            std::cerr << fmt::format("{}", i) << std::endl;
+        }
+
         return xl::templates::make_provider<BidirectionalProviderContainer>(
             std::pair("name", c.get_name_alias()),
-            std::pair("virtual_functions", xl::erase_if(xl::copy(c.get_member_functions()), [](auto & e){return e.get()->is_virtual;})),
+//            std::pair("virtual_functions", xl::erase_if(xl::copy(c.get_member_functions()), [](auto & e){return e.get()->is_virtual;})),
+            std::pair("virtual_functions", virtual_functions),
             std::pair("includes", std::ref(c.include_files)),
             std::pair("base_name", (*c.base_types.begin())->get_name_alias()),
             std::pair("constructor_parameters", generate_bidirectional_constructor_parameter_list(c)),
@@ -121,8 +142,10 @@ struct BidirectionalProviderContainer {
         return xl::templates::make_provider<BidirectionalProviderContainer>(
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
-            std::pair("parameters", f.parameters),
-            std::pair("return_type", f.return_type.get_name())
+            std::pair("params", f.parameters),
+            std::pair("return_type", f.return_type.get_name()),
+            std::pair("param_count", std::to_string(f.parameters.size())),
+            std::pair("const", std::to_string(f.is_const()))
         );
     }
 
@@ -143,7 +166,6 @@ struct BidirectionalProviderContainer {
 
 
 
-
 void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
 
@@ -153,7 +175,12 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
 
     auto templates = xl::templates::load_templates("bidirectional_templates");
 
+    log.info(LogT::Subjects::Subjects::BidirectionalOutput, "Bidirectional wrapped classes count: {}",
+             wrapped_classes.size());
+
     for(auto c : wrapped_classes) {
+        log.info(LogT::Subjects::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
+                 c->get_name_alias());
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
 
         ostream << templates["class"].fill<BidirectionalProviderContainer>(std::ref(*c), &templates);

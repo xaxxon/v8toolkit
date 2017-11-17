@@ -750,6 +750,11 @@ bool MemberFunction::is_callable_overload() const {
 }
 
 
+bool MemberFunction::is_const() const {
+    return this->method_decl->isConst();
+}
+
+
 string MemberFunction::generate_bidirectional() {
     stringstream result;
 

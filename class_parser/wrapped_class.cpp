@@ -304,7 +304,7 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
-//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
 
         js_wrapped_class.add_base_type(*this);
@@ -603,15 +603,20 @@ void WrappedClass::parse_all_methods() {
 
 
 void WrappedClass::foreach_inheritance_level(function<void(WrappedClass &)> callback) {
-    WrappedClass * current_class = this;
-    while (true) {
 
-        callback(*current_class);
+    callback(*this);
 
-        if (current_class->base_types.empty()) {
-            break;
-        }
-        current_class = *current_class->base_types.begin();
+    for (auto base_type : this->base_types) {
+        base_type->foreach_inheritance_level(callback);
+    }
+}
+
+void WrappedClass::foreach_inheritance_level(function<void(WrappedClass const &)> callback) const {
+
+    callback(*this);
+
+    for (auto const * base_type : this->base_types) {
+        base_type->foreach_inheritance_level(callback);
     }
 }
 
@@ -1173,6 +1178,13 @@ void WrappedClass::update_data() {
     cerr << "Went from " << this->annotations.get().size() << " annotations to ";
     this->annotations = Annotations(this->decl);
     cerr << this->annotations.get().size() << endl;
+}
+
+
+set<ClassFunction const *> WrappedClass::get_all_functions_from_class_hierarchy() const {
+    set<ClassFunction const *> results;
+
+    return results;
 }
 
 

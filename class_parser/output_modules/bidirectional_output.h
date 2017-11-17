@@ -42,7 +42,13 @@ private:
 public:
 
     std::stringstream string_stream;
-    BidirectionalOutputModule();
+
+    template<typename StreamProviderT = BidirectionalOutputStreamProvider>
+    BidirectionalOutputModule(StreamProviderT = {}) :
+        OutputModule(std::make_unique<StreamProviderT>())
+    {
+        std::cerr << fmt::format("HERE") << std::endl;
+    }
 
     void process(std::vector<WrappedClass const *> wrapped_classes) override;
 

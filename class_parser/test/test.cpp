@@ -577,6 +577,29 @@ public:
 
 
 
+
+
+struct BidirectionalTestStreamProvider : public OutputStreamProvider {
+
+    BidirectionalTestStreamProvider() {
+        BidirectionalTestStreamProvider::class_outputs.clear();
+    }
+
+    // static so the data hangs around after the run
+    static inline std::map<std::string, std::stringstream> class_outputs;
+    std::ostream & get_class_collection_stream() override {
+        std::cerr << fmt::format("HI THERE") << std::endl;
+        return std::cerr;
+    }
+
+    ostream & get_class_stream(WrappedClass const & c) override {
+        std::cerr << fmt::format("HI OVER HERE") << std::endl;
+        return this->class_outputs[c.get_name_alias()];
+    }
+
+};
+
+
 TEST(ClassParser, ClassComments) {
     std::string source = R"(
     class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
@@ -632,6 +655,8 @@ TEST(ClassParser, ClassComments) {
 
         /// comment on data_memberC
         int data_memberC;
+
+        virtual void this_is_a_virtual_function();
     };
 
 //    template<typename T>
@@ -641,10 +666,11 @@ TEST(ClassParser, ClassComments) {
     )";
 
 
+
     vector<unique_ptr<OutputModule>> output_modules;
     output_modules.push_back(make_unique<JavascriptStubOutputModule>());
     output_modules.push_back(make_unique<BindingsOutputModule>(15));
-    output_modules.push_back(make_unique<BidirectionalOutputModule>());
+    output_modules.push_back(make_unique<BidirectionalOutputModule>(BidirectionalTestStreamProvider()));
 //    output_modules.push_back(make_unique<BidirectionalOutputModule>());
 
     auto pruned_vector = run_code(source, std::move(output_modules));
@@ -652,6 +678,28 @@ TEST(ClassParser, ClassComments) {
     // A, B, C, JSC (JSWrapper for C - not actually present in AST, created in class parser code)
     EXPECT_EQ(pruned_vector.size(), 4);
     (void)*pruned_vector[0].get();
+
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["A"].str(), "");
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["B"].str(), "");
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["C"].str(), "");
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), R"(#pragma once
+
+#include "v8toolkit_generated_bidirectional_C.h"
+#include <v8toolkit/bidirectional.h>
+
+class JSC : public C, public v8toolkit::JSWrapper<C> {
+public:
+
+    JSC(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
+        v8::Local<v8::FunctionTemplate> created_by, ) :
+      C(),
+      v8toolkit::JSWrapper<C>(context, object, created_by)
+    {}
+
+        JS_ACCESS_00(void, this_is_a_virtual_function);
+})");
+
+    std::cerr << fmt::format("JSC bidir output: {}", BidirectionalTestStreamProvider::class_outputs["JSC"].str()) << std::endl;
 }
 
 
