@@ -1,0 +1,56 @@
+set(FOO_VERSION @XL_VERSION@)
+
+# Include xlTargets.cmake from the same directory
+get_filename_component(
+        TARGETS_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+include("${TARGETS_CMAKE_DIR}/xlTargets.cmake")
+
+
+
+# If libfmt is available, additional functionality is made available.
+# USE_LIB_FMT value: unset or true - use libfmt if available
+#                      "required" - fail if libfmt not available
+#                    false - do not use libfmt even if available
+if (NOT DEFINED xl::USE_LIB_FMT)
+    set(xl::USE_LIB_FMT TRUE)
+endif()
+
+if (NOT xl::USE_LIB_FMT)
+    message("Not using libfmt because xl::USE_LIB_FMT is false")
+else()
+    if(xl::USE_LIB_FMT MATCHES "required")
+        find_package(fmt REQUIRED)
+    else()
+        find_package(fmt)
+    endif()
+    if(fmt_FOUND)
+        add_definitions(-DXL_USE_LIB_FMT)
+    endif()
+endif()
+
+
+
+# If pcre is available, additional functionality is made available.
+# USE_LIB_PCRE value: unset or true - use pcre if available
+#                      "required" - fail if pcre not available
+#                    false - do not use pcre even if available
+if (NOT DEFINED xl::USE_PCRE)
+    set(xl::USE_PCRE TRUE)
+endif()
+
+if (NOT xl::USE_PCRE)
+    message("Not using PCRE because xl::USE_PCRE is false")
+else()
+    FIND_LIBRARY(FOUND_LIB_PCRE pcre)
+    IF(FOUND_LIB_PCRE)
+        add_definitions(-DXL_USE_PCRE)
+    endif()
+endif()
+
+
+
+
+
+@PACKAGE_INIT@
+
+set_and_check(FOO_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
