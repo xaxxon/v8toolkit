@@ -40,11 +40,8 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 
 
 
-class LoggingSubjects {
-private:
+struct LoggingSubjects {
     inline static std::string subject_names[] = {"Object Management", "Runtime Exception", "Compilation Exception"};
-
-public:
 
     enum class Subjects {
         V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
@@ -53,11 +50,6 @@ public:
 
         LOG_LAST_SUBJECT
     };
-
-
-    static std::string const & get_subject_name(Subjects subject) {
-        return subject_names[static_cast<std::underlying_type_t<Subjects>>(subject)];
-    }
 };
 
 

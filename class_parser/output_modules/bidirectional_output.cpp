@@ -15,7 +15,13 @@ using xl::templates::ProviderPtr;
 #include "../parsed_method.h"
 #include "bidirectional_output.h"
 
-namespace v8toolkit::class_parser {
+namespace v8toolkit::class_parser::bidirectional_output {
+
+using namespace xl::templates;
+
+extern xl::templates::Template class_template;
+extern std::map<string, xl::templates::Template> bidirectional_templates;
+
 
 bool BidirectionalCriteria::operator()(WrappedClass const & c) {
     if (!c.bidirectional) {
@@ -104,25 +110,17 @@ struct BidirectionalProviderContainer {
 
         std::vector<MemberFunction const *> virtual_functions;
         c.foreach_inheritance_level([&](auto & c) {
-            std::cerr << fmt::format("Looking at class {}", c.get_name_alias()) << std::endl;
             for(auto & f : c.get_member_functions()) {
-                std::cerr << fmt::format("Looking at function in {}: {}", c.get_name_alias(), f->name) << std::endl;
                 if (f->is_virtual) {
-                    std::cerr << fmt::format("IS FIRTUAL") << std::endl;
                     virtual_functions.push_back(f.get());
-                } else {
-                    std::cerr << fmt::format("IS NOT VIRTUAL") << std::endl;
                 }
             }
         });
 
+//
+        log.info(LogSubjects::BidirectionalOutput, "virtual function count for {}: {}", c.get_name_alias(), virtual_functions.size());
 
-        std::cerr << fmt::format("virtual function count for {}: {}", c.get_name_alias(), virtual_functions.size())<< std::endl;
-
-        std::cerr << fmt::format("includes:") << std::endl;
-        for(auto & i : c.include_files) {
-            std::cerr << fmt::format("{}", i) << std::endl;
-        }
+        log.info(LogSubjects::BidirectionalOutput, "includes for {}, {}", c.get_name_alias(), xl::join(c.include_files));
 
         return xl::templates::make_provider<BidirectionalProviderContainer>(
             std::pair("name", c.get_name_alias()),
@@ -173,17 +171,16 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Starting Bidirectional output module");
 
-    auto templates = xl::templates::load_templates("bidirectional_templates");
 
-    log.info(LogT::Subjects::Subjects::BidirectionalOutput, "Bidirectional wrapped classes count: {}",
+    log.info(LogT::Subjects::BidirectionalOutput, "Bidirectional wrapped classes count: {}",
              wrapped_classes.size());
 
     for(auto c : wrapped_classes) {
-        log.info(LogT::Subjects::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
+        log.info(LogT::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
                  c->get_name_alias());
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
 
-        ostream << templates["class"].fill<BidirectionalProviderContainer>(std::ref(*c), &templates);
+        ostream << bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), &bidirectional_templates);
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
@@ -199,4 +196,32 @@ OutputCriteria & BidirectionalOutputModule::get_criteria() {
 }
 
 
-}
+
+
+
+::xl::templates::Template bidirectional_class_template(R"(#pragma once
+
+{{includes|!!
+#include {{include}}}}
+
+class {{name}} : public {{base_name}}, public v8toolkit::JSWrapper<{{base_name}}> {
+public:
+
+    {{name}}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
+        v8::Local<v8::FunctionTemplate> created_by, {{constructor_parameters}}) :
+      {{base_name}}({{constructor_variables}}),
+      v8toolkit::JSWrapper<{{base_name}}>(context, object, created_by)
+    {}
+
+    {{virtual_functions|!!
+    JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}{{params%%, |!{{type}}}});}}
+})");
+
+
+std::map<string, Template> bidirectional_templates {
+    std::pair("class", bidirectional_class_template),
+};
+
+
+
+} // end namespace v8toolkit::class_parser::bidirectional_output

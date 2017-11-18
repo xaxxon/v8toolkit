@@ -9,13 +9,12 @@
 #include <string>
 #include <map>
 
-using namespace std;
 
 namespace v8toolkit::class_parser {
 
 
 class Annotations {
-    set<string> annotations;
+    std::set<std::string> annotations;
 
     void get_annotations_for_decl(const Decl * decl_to_check);
 
@@ -31,8 +30,8 @@ public:
 
     Annotations() = default;
 
-    const vector<string> get() const {
-        std::vector<string> results;
+    const std::vector<std::string> get() const {
+        std::vector<std::string> results;
 
         for (auto & annotation : annotations) {
             results.push_back(annotation);
@@ -40,9 +39,9 @@ public:
         return results;
     }
 
-    std::vector<string> get_regex(const string & regex_string) const {
+    std::vector<std::string> get_regex(const std::string & regex_string) const {
         auto re = std::regex(regex_string);
-        std::vector<string> results;
+        std::vector<std::string> results;
 
         for (auto & annotation : annotations) {
             std::smatch matches;
@@ -68,15 +67,15 @@ public:
 
     // holds a list of templates and associated annotations.  These annotations will be merged with classes created
     //   from the template.  This allows metadata associated with all instantiations of a template
-    static inline map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
+    static inline std::map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
 
     // any annotations on 'using' statements should be applied to the actual CXXRecordDecl being aliased (the right side)
-    static inline map<const CXXRecordDecl *, Annotations> annotations_for_record_decls;
+    static inline std::map<const CXXRecordDecl *, Annotations> annotations_for_record_decls;
 
 
     // if a template instantiation is named with a 'using' statement, use that alias for the type isntead of the template/class name itself
     //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
-    static inline map<const CXXRecordDecl *, string> names_for_record_decls;
+    static inline std::map<const CXXRecordDecl *, std::string> names_for_record_decls;
 
     Annotations(const CXXRecordDecl * decl_to_check);
 };

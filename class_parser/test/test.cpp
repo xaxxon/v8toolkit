@@ -34,6 +34,7 @@ using ::testing::Return;
 using namespace v8toolkit::class_parser;
 using namespace v8toolkit::class_parser::javascript_stub_output;
 using namespace v8toolkit::class_parser::bindings_output;
+using namespace v8toolkit::class_parser::bidirectional_output;
 
 struct  Environment : public ::testing::Environment {
     ~Environment() override {}
@@ -69,18 +70,18 @@ struct  Environment : public ::testing::Environment {
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
             std::cout << fmt::format("xl::templates: {}", message.string) << std::endl;
-            if (message.level == xl::templates::LogT::Levels::Levels::Error) {
+            if (message.level == xl::templates::LogT::Levels::Error) {
                 EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
             }
         });
 
         // force error logging on regardless of what is in log status file because it is required for testing
         v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
-        v8toolkit::class_parser::log.set_level_status(LogT::Levels::Levels::Error, true);
+        v8toolkit::class_parser::log.set_level_status(LogT::Levels::Error, true);
 
 
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
-            if (message.level == LogT::Levels::Levels::Error) {
+            if (message.level == LogT::Levels::Error) {
                 if (!_expect_errors) {
                     std::cerr << fmt::format("class_parser error message: {}", message.string) << std::endl;
                     EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
@@ -92,11 +93,6 @@ struct  Environment : public ::testing::Environment {
                 std::cout << fmt::format("class parser: {}: {}", LogT::get_subject_name(message.subject), message.string) << std::endl;
             }
         });
-
-        // set up xl::templates logging
-        auto & template_log = xl::templates::log;
-        template_log.set_level_status(xl::templates::LogT::Levels::Levels::Info, false);
-        template_log.enable_status_file("test-class-parser-xl-templates.log_status");
     }
     // Override this to define how to tear down the environment.
     void TearDown() override {}
@@ -593,7 +589,6 @@ struct BidirectionalTestStreamProvider : public OutputStreamProvider {
     }
 
     ostream & get_class_stream(WrappedClass const & c) override {
-        std::cerr << fmt::format("HI OVER HERE") << std::endl;
         return this->class_outputs[c.get_name_alias()];
     }
 
@@ -697,10 +692,7 @@ public:
     {}
 
         JS_ACCESS_00(void, this_is_a_virtual_function);
-})");
-
-    std::cerr << fmt::format("JSC bidir output: {}", BidirectionalTestStreamProvider::class_outputs["JSC"].str()) << std::endl;
-}
+})");}
 
 
 

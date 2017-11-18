@@ -220,7 +220,6 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
 //        }
 //    }
     std::vector<BindingFile> binding_files{BindingFile(this->max_declarations_per_file)};
-    BindingsOutputStreamProvider stream_provider;
 
     std::set<WrappedClass const *> already_wrapped_classes;
 
@@ -272,7 +271,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
         int file_number = i + 1;
 
         // this takes care of providing the correct stream for each subsequent call
-        auto & output_stream = stream_provider.get_class_collection_stream();
+        auto & output_stream = this->output_stream_provider->get_class_collection_stream();
 //        std::cerr << fmt::format("bindings_templates[file] contents: {}", bindings_templates["file"].c_str()) << std::endl;
         auto template_result = bindings_templates["file"].fill<BindingsProviderContainer>(
             P::make_provider(

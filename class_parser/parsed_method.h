@@ -21,7 +21,7 @@ template<class LogT>
 struct LogWatcher {
     vector<typename LogT::LogMessage> errors;
     void operator()(typename LogT::LogMessage const & message) {
-        if (message.level == LogT::Levels::Levels::Error) {
+        if (message.level == LogT::Levels::Error) {
             this->errors.push_back(message);
         }
     }

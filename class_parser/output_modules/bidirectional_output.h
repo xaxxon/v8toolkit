@@ -10,7 +10,7 @@
 #include "../output_modules.h"
 
 
-namespace v8toolkit::class_parser {
+namespace v8toolkit::class_parser::bidirectional_output {
 
 
 // returns whether a WrappedClass object should be part of the JavaScript stub
@@ -46,9 +46,7 @@ public:
     template<typename StreamProviderT = BidirectionalOutputStreamProvider>
     BidirectionalOutputModule(StreamProviderT = {}) :
         OutputModule(std::make_unique<StreamProviderT>())
-    {
-        std::cerr << fmt::format("HERE") << std::endl;
-    }
+    {}
 
     void process(std::vector<WrappedClass const *> wrapped_classes) override;
 

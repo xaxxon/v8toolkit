@@ -11,13 +11,24 @@
 
 #include <fstream>
 
+#include <xl/templates.h>
+
 namespace v8toolkit::class_parser {
 
 extern int print_logging;
 
 
 LogT log = []{
-//    std::cerr << fmt::format("in log initialization lambda") << std::endl;
+
+    // configure xl::templates logging as well
+    if (!xl::templates::log.is_status_file_enabled()) {
+        xl::templates::log.add_callback(std::cout, "xl::templates: ");
+        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
+        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
+        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
+        xl::templates::log.enable_status_file("class_parser_plugin_templates.log_status");
+    }
+
     LogT log;
     // if status file was already enabled (by test harness, for example), then don't mess with it
     if (!v8toolkit::class_parser::log.is_status_file_enabled()) {
@@ -263,6 +274,7 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
             std::cerr << fmt::format("Using default output modules") << std::endl;
             output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
             output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>(MAX_DECLARATIONS_PER_FILE));
+            output_modules.push_back(std::make_unique<bidirectional_output::BidirectionalOutputModule>());
         }
     }
     if (args.size() && args[0] == "help")
