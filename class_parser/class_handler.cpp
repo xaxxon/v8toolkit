@@ -31,11 +31,11 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("not std:: class")) {
         auto class_name = get_canonical_name_for_decl(klass);
 
-//        std::cerr << fmt::format("Looking at: {} - anything not filtered", class_name) << std::endl;
+        log.info(LogSubjects::ClassParser, "Looking at: {} - anything not filtered", class_name);
 
 
         if (klass->isDependentType()) {
-//            cerr << "Skipping 'class with annotation' dependent type: " << class_name << endl;
+            log.info(LogSubjects::ClassParser, "Skipping 'class with annotation' dependent type: {}", class_name);
             return;
         }
 
@@ -57,6 +57,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
 //        cerr << "Storing it for later processing (unless dupe)" << endl;
 
+        log.info(LogSubjects::ClassParser, "class passed checks: {}", class_name);
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_UNSPECIFIED);
     }
 
@@ -65,7 +66,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
         "forward declaration with annotation")) {
 
         auto class_name = get_canonical_name_for_decl(klass);
-//        std::cerr << fmt::format("Looking at: {} - forward declaration with annotation", class_name) << std::endl;
+        log.info(LogSubjects::ClassParser, "Looking at: {} - forward declaration with annotation", class_name);
 
 
         /* check to see if this has any annotations we should associate with its associated template */
@@ -80,35 +81,37 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
     if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("class derived from WrappedClassBase")) {
 
-//        std::cerr << fmt::format("Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass)) << std::endl;
+        log.info(LogSubjects::ClassParser, "Looking at: {} - class derived from WrappedClassBase", get_canonical_name_for_decl(klass));
 
         if (!is_good_record_decl(klass)) {
-//            cerr << "skipping 'bad' record decl" << endl;
+            log.info(LogSubjects::ClassParser, "Skipping 'bad' record decl");
             return;
         }
         if (klass->isDependentType()) {
-//            cerr << "skipping dependent type" << endl;
+            log.info(LogSubjects::ClassParser, "skipping dependent type");
             return;
         }
 
         auto name = get_canonical_name_for_decl(klass);
         if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+            std::cerr << fmt::format("Skipping class in std::") << std::endl;
             return;
         }
         if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+            std::cerr << fmt::format("skipping class starting with double underscore") << std::endl;
             return;
         }
 
 
         if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
-//            cerr << "Skipping class because it's explicitly marked SKIP" << endl;
+            log.info(LogSubjects::ClassParser, "Skipping class because it's explicitly marked SKIP");
             return;
         }
 
 
 //        print_specialization_info(klass);
 
-//        cerr << "Storing it for later processing (unless dupe)" << endl;
+        log.info(LogSubjects::ClassParser, "Class passed tests: {}", get_canonical_name_for_decl(klass));
         WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE);
     }
 
@@ -120,13 +123,16 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
         // not interesting - it's for something like a primitive type like 'long'
         if (!record_decl) {
+            log.info(LogSubjects::ClassParser, "skipping because decl wasn't a CXXRecordDecl");
             return;
         }
         auto name = get_canonical_name_for_decl(record_decl);
         if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?std::.*$"))) {
+            log.info(LogSubjects::ClassParser, "Skipping because class in std::");
             return;
         }
         if (std::regex_match(name, regex("^(class\\s+|struct\\s+)?__.*$"))) {
+            log.info(LogSubjects::ClassParser, "Skipping class starting with double underscore");
             return;
         }
 
@@ -134,12 +140,12 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
         if (Annotations(typedef_decl).has(V8TOOLKIT_NAME_ALIAS_STRING)) {
             string name_alias = typedef_decl->getNameAsString();
-//            std::cerr << fmt::format("Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString()) << std::endl;
+            log.info(LogSubjects::ClassParser, "Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString());
             Annotations::names_for_record_decls[record_decl] = name_alias;
 
             // if the class has already been parsed, update it now
             if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
-//                std::cerr << fmt::format("Setting name alias for {} to {}", wrapped_class->get_name_alias(), name_alias) << std::endl;
+                log.info(LogSubjects::ClassParser, "Setting name alias for {} to {}", wrapped_class->get_name_alias(), name_alias);
                 wrapped_class->set_name_alias(name_alias);
             }
         }
@@ -170,13 +176,14 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
             auto tmpl = klass->getSpecializedTemplate();
             if (print_logging) {
-                cerr << "got specialized template " << tmpl->getQualifiedNameAsString() << endl;
+                log.info(LogSubjects::ClassParser, "got specialized template ", tmpl->getQualifiedNameAsString());
             }
 
 
 
 #ifdef TEMPLATE_FILTER_STD
             if (std::regex_search(tmpl->getQualifiedNameAsString(), std::regex("^std::"))) {
+                log.info(LogSubjects::ClassParser, "Skipping class in std::");
                 return;
             }
 #endif
@@ -192,6 +199,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
             const FunctionDecl * pattern = nullptr;
 
             if (!method->isTemplateInstantiation()) {
+
                 return;
             }
 #ifdef TEMPLATE_FILTER_STD

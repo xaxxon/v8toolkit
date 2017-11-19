@@ -710,8 +710,7 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 //            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
 //        }
     } else {
-//        cerr << fmt::format("for {}, wrapping constructor {}", wrapped_class.get_name_alias(),
-//                            this->js_name) << endl;
+        log.info(LogSubjects::Subjects::Class, "for {}, wrapping constructor {}", wrapped_class.get_name_alias(), this->js_name);
         WrappedClass::used_constructor_names.push_back(this->js_name);
     }
 }

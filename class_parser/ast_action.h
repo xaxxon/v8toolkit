@@ -30,7 +30,7 @@ public:
     // This is called when all parsing is done
     void EndSourceFileAction() override;
 
-    vector<unique_ptr<OutputModule>> output_modules;
+    std::vector<std::unique_ptr<OutputModule>> output_modules;
 
     bool BeginInvocation(CompilerInstance & ci) override;
 

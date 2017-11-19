@@ -2,7 +2,7 @@
 #include <memory>
 #include <v8-debug.h>
 
-#include "debugger.h"
+#include "v8toolkit/debugger.h"
 
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;

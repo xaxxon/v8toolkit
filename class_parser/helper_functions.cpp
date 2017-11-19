@@ -407,9 +407,9 @@ void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
             if (include == "") {
                 continue;
             }
-            std::cerr
-                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->get_name_alias(), include)
-                << std::endl;
+//            std::cerr
+//                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->get_name_alias(), include)
+//                << std::endl;
             bidirectional_file << "#include " << include << "\n";
         }
 

@@ -30,7 +30,7 @@ add_custom_target(copy_test_resources)
 add_custom_command(TARGET copy_test_resources PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_CURRENT_SOURCE_DIR}/../class_parser.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../include/wrapped_class_base.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../include/v8toolkit/wrapped_class_base.h
         ${PROJECT_BINARY_DIR}/
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/javascript_stub_templates/

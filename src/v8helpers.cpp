@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <sstream>
 #include <set>
-#include <v8toolkit.h>
+#include <v8toolkit/v8toolkit.h>
 
-#include "v8helpers.h"
+#include "v8toolkit/v8helpers.h"
 
 namespace v8toolkit {
 

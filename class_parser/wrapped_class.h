@@ -56,6 +56,12 @@ private:
     WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
 
 
+public:
+    // name of type that is guaranteed valid c++ (with appropriate included headers)
+    string class_name;
+
+private:
+
     /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
     string name_alias;
     bool name_alias_is_default = true;
@@ -82,8 +88,6 @@ public:
     void parse_all_methods();
 
 
-    // name of type that is guaranteed valid c++ (with appropriate included headers)
-    string class_name;
 
     std::string const & get_name_alias() const {
         return this->name_alias;
@@ -240,6 +244,9 @@ public:
     bool found_method_means_wrapped();
 
     set<ClassFunction const *> get_all_functions_from_class_hierarchy() const;
+
+    std::string class_or_struct = "";
+    std::string namespace_name = "";
 
 }; // end class WrappedClass
 

@@ -69,28 +69,22 @@ struct  Environment : public ::testing::Environment {
     // Override this to define how to set up the environment.
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
-            std::cout << fmt::format("xl::templates: {}", message.string) << std::endl;
             if (message.level == xl::templates::LogT::Levels::Error) {
                 EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
             }
         });
 
         // force error logging on regardless of what is in log status file because it is required for testing
-        v8toolkit::class_parser::log.enable_status_file("class_parser_plugin.log_status");
         v8toolkit::class_parser::log.set_level_status(LogT::Levels::Error, true);
-
+        xl::templates::log.set_level_status(xl::templates::LogT::Levels::Error, true);
 
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
             if (message.level == LogT::Levels::Error) {
                 if (!_expect_errors) {
-                    std::cerr << fmt::format("class_parser error message: {}", message.string) << std::endl;
                     EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
                 } else {
                     error_count++;
                 }
-            } else {
-                // if other log levels are being handled, just print it out
-                std::cout << fmt::format("class parser: {}: {}", LogT::get_subject_name(message.subject), message.string) << std::endl;
             }
         });
     }
@@ -227,6 +221,19 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 }
 
 
+
+TEST(ClassParser, ClassMatchingJSReservedWord) {
+    std::string source = R"(
+        class Object : public v8toolkit::WrappedClassBase {};
+        class V8TOOLKIT_USE_NAME(TestMap) Map : public v8toolkit::WrappedClassBase {};
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+
+
+}
 
 
 TEST(ClassParser, JSDocTypeNames) {
@@ -606,25 +613,27 @@ TEST(ClassParser, ClassComments) {
         int data_memberA;
     };
 
-    /**
-     * This is a comment on class B
-     */
-    class B : public v8toolkit::WrappedClassBase {
-    public:
-
+    namespace NameSpace {
         /**
-         * Construct a B from a string
-         * @param string_name the name for creating B with
+         * This is a comment on class B
          */
-        B(char const * string_name = "default string name");
+        class B : public v8toolkit::WrappedClassBase {
+        public:
 
-        void member_instance_functionB();
-        static void member_static_functionB();
+            /**
+             * Construct a B from a string
+             * @param string_name the name for creating B with
+             */
+            B(char const * string_name = "default string name");
 
-        /// comment on data_memberB
-        int data_memberB;
-    };
-    class V8TOOLKIT_BIDIRECTIONAL_CLASS C : public B {
+            void member_instance_functionB();
+            static void member_static_functionB();
+
+            /// comment on data_memberB
+            int data_memberB;
+        };
+    } // end namespace NameSpace
+    class V8TOOLKIT_BIDIRECTIONAL_CLASS C : public NameSpace::B {
     public:
 
         V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR
@@ -652,26 +661,39 @@ TEST(ClassParser, ClassComments) {
         int data_memberC;
 
         virtual void this_is_a_virtual_function();
+
+        V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
     };
 
-//    template<typename T>
-//        class D : public v8toolkit::WrappedClassBase {
-//    };
-//    D<int> d;
+    template<typename T>
+        class D : public v8toolkit::WrappedClassBase {
+    };
+    using d_int V8TOOLKIT_NAME_ALIAS = D<int>;
+    D<int> d;
     )";
 
 
-
     vector<unique_ptr<OutputModule>> output_modules;
-    output_modules.push_back(make_unique<JavascriptStubOutputModule>());
-    output_modules.push_back(make_unique<BindingsOutputModule>(15));
-    output_modules.push_back(make_unique<BidirectionalOutputModule>(BidirectionalTestStreamProvider()));
-//    output_modules.push_back(make_unique<BidirectionalOutputModule>());
+    std::stringstream javascript_stub_string_stream;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_string_stream)));
+
+    std::stringstream bindings_string_stream;
+    output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_string_stream)));
+
+    output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 
+    EXPECT_FALSE(javascript_stub_string_stream.str().empty());
+
+    EXPECT_FALSE(bindings_string_stream.str().empty());
+    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
+    EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA\\>").match(bindings_string_stream.str()));
+    EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<A>;").match(bindings_string_stream.str()));
+    EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<NameSpace::B>;").match(bindings_string_stream.str()));
+
     // A, B, C, JSC (JSWrapper for C - not actually present in AST, created in class parser code)
-    EXPECT_EQ(pruned_vector.size(), 4);
+    EXPECT_EQ(pruned_vector.size(), 5); // A, B, C, D<int>, JSC (bidirectional C)
     (void)*pruned_vector[0].get();
 
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["A"].str(), "");
@@ -713,6 +735,7 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
     WrappedClass const & c = *pruned_vector[0].get();
 
     EXPECT_EQ(c.get_member_functions().size(), 1);
+    EXPECT_FALSE(string_stream.str().empty());
     EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 
 }

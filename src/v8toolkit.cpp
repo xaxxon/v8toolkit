@@ -15,8 +15,7 @@
 #include <fmt/format.h>
 #include <boost/format.hpp>
 
-#include "v8_class_wrapper.h"
-#include "./v8toolkit.h"
+#include "v8toolkit/v8_class_wrapper.h"
 
 
 namespace v8toolkit {

@@ -14,6 +14,9 @@
 #include "class_handler.h"
 #include "helper_functions.h"
 
+#define FUNC_NO_RTTI
+#include "v8toolkit/v8helpers.h"
+
 using namespace xl;
 
 namespace v8toolkit::class_parser {
@@ -37,14 +40,22 @@ WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, Compi
 int MAX_DECLARATIONS_PER_FILE = 50;
 
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
-    name_alias(decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()),
+    class_name(xl::Regex("^(?:class|struct)\\s*((?:.*::)?.*)$").replace(get_canonical_name_for_decl(decl), "$1")),
+    name_alias(this->class_name),
     decl(decl),
-    class_name(get_canonical_name_for_decl(decl)),
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
     found_method(found_method)
 {
+    log.info(LogSubjects::Subjects::ClassParser, "converting class_name from {} to {}", get_canonical_name_for_decl(decl), this->class_name);
+
+    auto matches = xl::Regex("^(class|struct)\\s*(.*::)?(.*)$").match(get_canonical_name_for_decl(decl));
+    this->class_or_struct = matches[1];
+    this->namespace_name = matches[2];
+    this->name_alias = matches[3];
+    log.info(LogSubjects::Subjects::ClassParser, "name_alias for {} set to {}", class_name, name_alias);
+
 //    std::cerr << fmt::format("created {}", this->class_name) << std::endl;
     if (contains(never_wrap_class_names, this->class_name)) {
         log.info(LogSubjects::Subjects::ShouldBeWrapped, "{} found in never_wrap_class_names list", this->get_short_name());
@@ -55,6 +66,15 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     xl::log::LogCallbackGuard(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
+
+    // check if there's a custom name directly on this class
+    auto annotated_custom_name = annotations.get_regex(
+        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+    if (!annotated_custom_name.empty()) {
+        this->set_name_alias(annotated_custom_name[0]);
+    }
+
+    // check if there's a typedef telling this class to use a different name
     string using_name = Annotations::names_for_record_decls[decl];
     if (!using_name.empty()) {
         cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
@@ -268,6 +288,10 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
 
+    if (xl::contains(reserved_global_names, this->get_name_alias())) {
+        log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->get_name_alias());
+    }
+
     log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->name_alias);
 }
 
@@ -304,7 +328,7 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
-        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
 
         js_wrapped_class.add_base_type(*this);
@@ -599,6 +623,7 @@ void WrappedClass::parse_all_methods() {
             }
         }
     }
+    log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->get_name_alias());
 }
 
 
@@ -707,8 +732,8 @@ void WrappedClass::parse_members() {
 
 WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
     name_alias(class_name),
+    class_name(xl::Regex("^(class|struct)\\s*(.*)$").replace(class_name, "$1")),
     decl(nullptr),
-    class_name(class_name),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid
     found_method(FOUND_GENERATED)
@@ -1081,7 +1106,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
         }
 
         // if this one matches another class that's already been seen
-        if (wrapped_class->class_name == class_name) {
+        if (wrapped_class->decl && get_canonical_name_for_decl(wrapped_class->decl) == class_name) {
 
             // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
             //   if it is the base of a wrapped type

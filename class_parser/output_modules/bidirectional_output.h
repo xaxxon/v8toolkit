@@ -43,9 +43,9 @@ public:
 
     std::stringstream string_stream;
 
-    template<typename StreamProviderT = BidirectionalOutputStreamProvider>
-    BidirectionalOutputModule(StreamProviderT = {}) :
-        OutputModule(std::make_unique<StreamProviderT>())
+    BidirectionalOutputModule(std::unique_ptr<OutputStreamProvider> output_stream_provider =
+        std::make_unique<BidirectionalOutputStreamProvider>()) :
+        OutputModule(std::move(output_stream_provider))
     {}
 
     void process(std::vector<WrappedClass const *> wrapped_classes) override;

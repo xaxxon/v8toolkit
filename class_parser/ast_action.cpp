@@ -33,9 +33,7 @@ LogT log = []{
     // if status file was already enabled (by test harness, for example), then don't mess with it
     if (!v8toolkit::class_parser::log.is_status_file_enabled()) {
         // set defaults if file doesn't exist
-//        v8toolkit::class_parser::log.add_callback([](LogT::LogMessage const & message) {
-//            std::cerr << fmt::format("ClassParser: {}", message.string) << std::endl;
-//        });
+        v8toolkit::class_parser::log.add_callback(std::cout, "v8toolkit::class_parser: ");
         log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
         log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
         log.enable_status_file("class_parser_plugin.log_status");

@@ -26,8 +26,7 @@ extern Template standard_includes_template;
 extern std::map<string, Template> bindings_templates;
 
 bool BindingsCriteria::operator()(WrappedClass const & c) {
-//    cerr << "Checking class criteria" << endl;
-
+    log.info(LogSubjects::BindingsOutput, "Checking criteria for {}", c.get_name_alias());
     if (c.bidirectional) {
         log.info(LogSubjects::Subjects::BindingsOutput, "Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias());
         return false;
@@ -58,14 +57,13 @@ using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
 
 struct BindingsProviderContainer {
 
-
-
     static ProviderPtr get_provider(WrappedClass const & c) {
-        log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
 
+        log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.get_name_alias());
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
-            std::pair("name", c.get_short_name()),
+            std::pair("name", c.get_name_alias()),
+            std::pair("long_name", c.class_name),
             std::pair("alias", c.get_name_alias()),
             std::pair("data_members", std::ref(c.get_members())),
             std::pair("member_functions", std::ref(c.get_member_functions())),
@@ -75,16 +73,17 @@ struct BindingsProviderContainer {
                                                  c.get_name_alias()) :
                                      fmt::format(
                                          "class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
-                                         c.get_constructors().back()->get_return_and_class_and_parameter_types_string(),
+                                         c.get_constructors().back()->get_parameter_types_string(),
                                          c.get_name_alias(), c.get_constructors().back()->get_default_argument_tuple_string())),
 
             std::pair("inheritance",
                       fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias())),
-            std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->get_short_name()),
+            std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias()),
 
-            // treat this differently because it may be a bidirectional type.   Full WrappedClass information isn't
+            // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
-            xl::forward_as_pair("derived_types", xl::transform_if(c.derived_types, [](WrappedClass * c)->std::optional<std::string>{return c->class_name;}))
+//            xl::forward_as_pair("derived_types", xl::transform_if(c.derived_types, [](WrappedClass * c)->std::optional<std::string>{return c->get_name_alias();}))
+            xl::forward_as_pair("derived_types", xl::transform(c.derived_types, [](WrappedClass * c){return c->get_name_alias();}))
         );
 
         return provider;
@@ -96,9 +95,12 @@ struct BindingsProviderContainer {
 
         return P::make_provider(
             std::pair("comment", d.comment),
-            std::pair("name", d.js_name),
-            std::pair("declared_in", d.declared_in.class_name),
-            std::pair("type", d.type.get_name())
+            std::pair("name", d.long_name),
+            std::pair("js_name", d.js_name),
+            std::pair("declared_in", d.declared_in.get_name_alias()),
+            std::pair("type", d.type.get_name()),
+            std::pair("read_only", d.type.is_const() ? "_readonly" : ""),
+            std::pair("member_pointer", fmt::format("&{}", d.long_name))
         );
 
     }
@@ -108,13 +110,14 @@ struct BindingsProviderContainer {
         log.info(LogSubjects::BindingsOutput, "get_provider MemberFunction: {}", f.name);
 
         return P::make_provider(
-            std::pair("name", f.js_name),
+            std::pair("js_name", f.js_name),
+            std::pair("name", f.name),
             std::pair("comment", f.comment),
             std::pair("binding_parameters", f.get_return_and_class_and_parameter_types_string()),
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_short_name())
+            std::pair("class_name", f.wrapped_class.get_name_alias())
         );
     }
 
@@ -123,13 +126,14 @@ struct BindingsProviderContainer {
         log.info(LogSubjects::BindingsOutput, "get_provider StaticFunction: {}", f.name);
 
         return P::make_provider(
-            std::pair("name", f.js_name),
+            std::pair("name", f.name),
+            std::pair("js_name", f.js_name),
             std::pair("comment", f.comment),
-            std::pair("binding_parameters", f.get_return_and_class_and_parameter_types_string()),
+            std::pair("binding_parameters", f.get_return_and_parameter_types_string()),
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_short_name())
+            std::pair("class_name", f.wrapped_class.get_name_alias())
         );
     }
 
@@ -237,6 +241,8 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
 //                std::cerr << fmt::format("Skipping because not ready_for_wrapping: {}", wrapped_class->class_name) << std::endl;
                 continue;
             }
+
+            log.info(LogSubjects::BindingsOutput, "Processing class: {}", wrapped_class->get_name_alias());
             already_wrapped_classes.insert(wrapped_class);
             found_match = true;
 
@@ -246,7 +252,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
 
             if (!binding_files.back().can_hold(wrapped_class)) {
 
-//                std::cerr << fmt::format("Out of space in file, rotating") << std::endl;
+                log.info(LogSubjects::BindingsOutput, "Bindings File full, rotating");
                 binding_files.emplace_back(this->max_declarations_per_file);
             }
 
@@ -317,19 +323,18 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 
 
 Template class_template(R"({
-    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
+    v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{alias}}");
-{{<member_functions|!!
-    class_wrapper.add_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());>}}
-{{<static_functions|!!
-    class_wrapper.add_static_method<{{binding_parameters}}>("{{name}}", &{{class_name}}::{{name}}, std::tuple<>());>}}
-{{<data_members|!!
-    class_wrapper.add_member<{{type}}, {{declared_in}}>("{{name}}");>}}
+{{<<member_functions|!!
+    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, std::tuple<>());>>}}
+{{<<static_functions|!!
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, std::tuple<>());>>}}
+{{<<data_members|!!
+    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{name}}");>>}}
 
-    class_wrapper.set_parent_type<{{<base_type_name>}}>();
+    class_wrapper.set_parent_type<{{<<base_type_name>>}}>();
 
-
-    class_wrapper.set_compatible_types<{{<derived_types|!name>}}>();
+    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>>}}>();
 
     class_wrapper.finalize(true);
     {{<constructor>}}
@@ -337,8 +342,6 @@ Template class_template(R"({
 
 
 Template file_template(R"(
-#### FILE: {{file_number}} ####
-
 {{!standard_includes}}
 // includes
 {{<includes|!!
@@ -347,19 +350,16 @@ Template file_template(R"(
 
 // explicit instantiations
 {{<explicit_instantiations|!!
-template class {{<name>}};>}}
+template class v8toolkit::V8ClassWrapper<{{<long_name>}}>;>}}
 // /explicit instantiations
 
 {{<extern_templates|!!
 extern template {{class_name}}>}}
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
-void v8toolkit_initialize_class_wrappers(v8toolkit::Isolate & isolate) {
-{
-
+void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
 {{classes|class}}
-
 
 {{call_next_function}}
 
