@@ -6,13 +6,13 @@
 
 #include <websocketpp/endpoint.hpp>
 
-#include <nlohmann/json.hpp>
+//#include <nlohmann/json.hpp>
 
 namespace v8toolkit {
 
 using namespace ::v8toolkit::literals;
 
-using json = nlohmann::json;
+//using json = nlohmann::json;
 
 #if 0
 //RequestMessage::RequestMessage(v8toolkit::DebugContext & context, nlohmann::json const & json) :
@@ -273,20 +273,20 @@ DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate_helper, v
     v8::Debug::SetLiveEditEnabled(this->isolate, true);
 
 }
-
-#if 0
-void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
-    j = {
-        {"id",     response_message.message_id},
-        {"result", response_message.to_json()}
-    };
-}
-
-
-void to_json(nlohmann::json &j, const InformationalMessage & informational_message) {
-    j = informational_message.to_json();
-}
-#endif
+//
+//#if 0
+//void to_json(nlohmann::json &j, const ResponseMessage & response_message) {
+//    j = {
+//        {"id",     response_message.message_id},
+//        {"result", response_message.to_json()}
+//    };
+//}
+//
+//
+//void to_json(nlohmann::json &j, const InformationalMessage & informational_message) {
+//    j = informational_message.to_json();
+//}
+//#endif
 
 
 float WebsocketChannel::seconds_since_message_received() {

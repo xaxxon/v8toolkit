@@ -54,7 +54,7 @@ set(V8_LIB_DIR CACHE PATH "full path containing V8 library files")
 
 # -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
 set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8 public headers directory containing v8.h")
-include_directories(./include ${V8_INCLUDE_DIR})
+include_directories(./include/v8toolkit ${V8_INCLUDE_DIR})
 
 
 # only use this against a shared-object-built V8

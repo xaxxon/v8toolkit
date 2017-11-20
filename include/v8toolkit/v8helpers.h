@@ -47,14 +47,16 @@ struct LoggingSubjects {
         V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
         RUNTIME_EXCEPTION,
         COMPILATION_EXCEPTION,
-
+        WRAPPED_FUNCTION_CALL,
+        WRAPPED_DATA_MEMBER_ACCESS,
+        
         LOG_LAST_SUBJECT
     };
 };
 
 
-
-inline xl::log::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects> log;
+using LogT = xl::log::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects>;
+inline LogT log;
 
 
 /**

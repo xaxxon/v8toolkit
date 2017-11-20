@@ -292,6 +292,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->get_name_alias());
     }
 
+
+
     log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->name_alias);
 }
 
@@ -623,6 +625,18 @@ void WrappedClass::parse_all_methods() {
             }
         }
     }
+    {
+
+        std::set<std::string> function_names;
+        for(auto & f : this->member_functions) {
+//            std::cerr << fmt::format("checking function {}", f->js_name) << std::endl;
+            if (xl::contains(function_names, f->js_name)) {
+                log.error(LogSubjects::Class, "Class '{}' has duplicate function name '{}'",
+                          this->get_name_alias(), f->js_name);
+            }
+            function_names.insert(f->js_name);
+        }
+    }
     log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->get_name_alias());
 }
 
@@ -731,8 +745,8 @@ void WrappedClass::parse_members() {
 
 
 WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
-    name_alias(class_name),
     class_name(xl::Regex("^(class|struct)\\s*(.*)$").replace(class_name, "$1")),
+    name_alias(class_name),
     decl(nullptr),
     compiler_instance(compiler_instance),
     valid(true), // explicitly generated, so must be valid

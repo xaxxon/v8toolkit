@@ -1094,6 +1094,7 @@ public:
 
 					try {
 						function_type_t<Callable> callable_func(callable);
+						log.info(LogT::Subjects::WRAPPED_FUNCTION_CALL, "Calling static function {}::{}", xl::demangle<T>(), method_name);
 						CallCallable<decltype(callable_func)>()(
 							callable_func,
 							info,
@@ -1505,6 +1506,7 @@ public:
 					// V8 does not support C++ exceptions, so all exceptions must be caught before control
 					//   is returned to V8 or the program will instantly terminate
 					try {
+						log.info(LogT::Subjects::WRAPPED_FUNCTION_CALL, "Calling instance member function {}::{}", xl::demangle<T>(), method_name);
 						// make a copy of default_args_tuple so it's non-const - probably better to do this on a per-parameter basis
 						CallCallable<decltype(bound_method)>()(bound_method, info,
 															   std::index_sequence_for<Args...>{},

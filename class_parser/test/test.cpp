@@ -41,13 +41,11 @@ struct  Environment : public ::testing::Environment {
     bool _expect_errors = false;
     int error_count = 0;
 
-    std::vector<bool> subject_status_backup;
-    std::vector<bool> level_status_backup;
+    std::vector<bool> statuses;
 
     void expect_errors() {
         assert(!this->_expect_errors);
-        this->subject_status_backup = v8toolkit::class_parser::log.get_status_of_subjects();
-        this->level_status_backup = v8toolkit::class_parser::log.get_status_of_levels();
+        this->statuses = v8toolkit::class_parser::log.get_statuses();
 
         v8toolkit::class_parser::log.set_all_subjects(true);
         this->_expect_errors = true;
@@ -55,8 +53,7 @@ struct  Environment : public ::testing::Environment {
 
 
     int expect_no_errors() {
-        v8toolkit::class_parser::log.set_status_of_subjects(this->subject_status_backup);
-        v8toolkit::class_parser::log.set_status_of_levels(this->level_status_backup);
+        v8toolkit::class_parser::log.set_statuses(this->statuses);
 //        std::cerr << fmt::format("restoring subject status: {}", xl::join(subject_status_backup)) << std::endl;
         assert(this->_expect_errors);
         this->_expect_errors = false;
@@ -231,8 +228,21 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
     environment->expect_errors();
     auto pruned_vector = run_code(source);
     EXPECT_EQ(environment->expect_no_errors(), 1);
+}
 
 
+TEST(ClassParser, DuplicateMemberFunctionName) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            void duplicated_name(int);
+            void duplicated_name(float);
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
 }
 
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <v8.h>
+
+#include <xl/log.h>
 
 namespace v8toolkit {
 
@@ -19,6 +22,7 @@ public:
     V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {
         std::string str(*v8::String::Utf8Value(this->value.Get(isolate)));
         value_for_what = str == "" ? "unknown error" : str;
+        log.error(LogT::Subjects::RUNTIME_EXCEPTION, "V8Exception: {}", this->value_for_what);
     }
     V8Exception(v8::Isolate * isolate, v8::Local<v8::Value> value) : V8Exception(isolate, v8::Global<v8::Value>(isolate, value)) {}
     V8Exception(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, v8::String::NewFromUtf8(isolate, reason.c_str())) {}
@@ -34,10 +38,16 @@ public:
 class V8AssertionException : public V8Exception {
 public:
     V8AssertionException(v8::Isolate * isolate, v8::Local<v8::Value> value) :
-        V8Exception(isolate, value) {}
+        V8Exception(isolate, value)
+    {}
+
     V8AssertionException(v8::Isolate * isolate, v8::Global<v8::Value>&& value) :
-        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value)) {}
-    V8AssertionException(v8::Isolate * isolate, std::string reason) : V8Exception(isolate, reason) {}
+        V8Exception(isolate, std::forward<v8::Global<v8::Value>>(value))
+    {}
+
+    V8AssertionException(v8::Isolate * isolate, std::string reason) :
+        V8Exception(isolate, reason)
+    {}
 };
 
 
@@ -48,11 +58,13 @@ public:
     V8ExecutionException(v8::Isolate * isolate, v8::TryCatch & tc) :
         V8Exception(isolate, tc.Exception())
     {
-
         auto stacktrace_maybe = tc.StackTrace(isolate->GetCurrentContext());
         if (!stacktrace_maybe.IsEmpty()) {
             stacktrace = *v8::String::Utf8Value(stacktrace_maybe.ToLocalChecked());
+        } else {
+            stacktrace = "No stacktrace available";
         }
+        log.error(LogT::Subjects::RUNTIME_EXCEPTION, "V8ExecutionException: {}", this->stacktrace);
     }
     const std::string & get_stacktrace(){return stacktrace;}
 };
