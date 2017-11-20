@@ -518,11 +518,16 @@ private:
 	static void _getter_helper(v8::Local<v8::Name> property,
 							   v8::PropertyCallbackInfo<v8::Value> const & info) {
 
+
 		auto isolate = info.GetIsolate();
 
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
 
-        // add lvalue ref as to know not to delete the object if the JS object is garbage collected
+		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
+				 "Reading data member of type {} (need to implement having the name available)",
+				 xl::demangle<decltype(cpp_object->*member)>());
+
+		// add lvalue ref as to know not to delete the object if the JS object is garbage collected
         info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<decltype(cpp_object->*member)>>()(isolate, cpp_object->*member));
     }
 
@@ -545,6 +550,11 @@ private:
 
 
 	    T * cpp_object = wrapper.get_cpp_object(info.Holder());
+
+		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
+				 "Setting data member of type {} (need to implement having the name available)",
+				 xl::demangle<decltype(cpp_object->*member)>());
+
 		using MemberT = std::remove_reference_t<decltype(cpp_object->*member)>;
         static_assert(
             std::is_copy_assignable_v<MemberT> ||
