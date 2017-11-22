@@ -93,6 +93,13 @@ add_custom_command(TARGET copy_snapshots PRE_BUILD
 add_subdirectory(googletest EXCLUDE_FROM_ALL)
 add_subdirectory(test EXCLUDE_FROM_ALL)
 
+# turn off adding "d" suffix to debug versions of libraries
+set_target_properties(v8toolkit_shared PROPERTIES
+        DEBUG_POSTFIX "")
+set_target_properties(v8toolkit_static PROPERTIES
+		DEBUG_POSTFIX "")
+
+	
 add_subdirectory(class_parser)
 
 

@@ -117,7 +117,8 @@ struct BindingsProviderContainer {
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_name_alias())
+            std::pair("class_name", f.wrapped_class.get_name_alias()),
+            std::pair("default_arg_tuple", f.get_default_argument_tuple_string())
         );
     }
 
@@ -133,7 +134,8 @@ struct BindingsProviderContainer {
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_name_alias())
+            std::pair("class_name", f.wrapped_class.get_name_alias()),
+            std::pair("default_arg_tuple", f.get_default_argument_tuple_string())
         );
     }
 
@@ -326,11 +328,11 @@ Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{alias}}");
 {{<<member_functions|!!
-    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, std::tuple<>());>>}}
+    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 {{<<static_functions|!!
-    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, std::tuple<>());>>}}
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 {{<<data_members|!!
-    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{name}}");>>}}
+    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
     class_wrapper.set_parent_type<{{<<base_type_name>>}}>();
 

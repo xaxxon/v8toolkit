@@ -665,7 +665,7 @@ TEST(ClassParser, ClassComments) {
           * @param p2 static some number parameter
           * @return static some number returned
           */
-        static void member_static_functionC(char * p1, int p2);
+        static void member_static_functionC(char * p1, int p2=4);
 
         /// comment on data_memberC
         int data_memberC;
@@ -698,9 +698,11 @@ TEST(ClassParser, ClassComments) {
 
     EXPECT_FALSE(bindings_string_stream.str().empty());
     std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
-    EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA\\>").match(bindings_string_stream.str()));
+    EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA>\\(\"data_memberA\"\\)").match(bindings_string_stream.str()));
+    EXPECT_TRUE(xl::Regex("class_wrapper\\.add_static_method<void, char \\*, int>\\(\"member_static_functionC\", &C::member_static_functionC, std::tuple<int>\\(4\\)\\);").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<A>;").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<NameSpace::B>;").match(bindings_string_stream.str()));
+
 
     // A, B, C, JSC (JSWrapper for C - not actually present in AST, created in class parser code)
     EXPECT_EQ(pruned_vector.size(), 5); // A, B, C, D<int>, JSC (bidirectional C)
