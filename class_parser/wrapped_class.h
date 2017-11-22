@@ -87,7 +87,8 @@ public:
      */
     void parse_all_methods();
 
-
+    bool has_errors() const;
+    decltype(log_watcher.errors) const & get_errors() const;
 
     std::string const & get_name_alias() const {
         return this->name_alias;
@@ -124,7 +125,6 @@ public:
 
     set<string> used_member_names;
     set<string> used_static_names;
-    vector<string> data_errors;
     set<WrappedClass *> derived_types;
 
     /// tracked base_types - if it's more than one, that's a data error because javascript only allows one
@@ -139,14 +139,13 @@ public:
 
     string my_include; // the include for getting my type, including "" or <>
     bool done = false;
-    bool valid = false; // guilty until proven innocent - don't delete !valid classes because they may be base classes for valid types
+
+
+
     Annotations annotations;
     set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
     FOUND_METHOD found_method;
     bool force_no_constructors = false;
-
-    // it's ok for types that won't be exposed to javascript to have wrapping errors associated with them
-    void set_error(string const & error_message);
 
     bool bidirectional = false;
     CXXConstructorDecl const * bidirectional_constructor = nullptr;

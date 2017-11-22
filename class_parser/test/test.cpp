@@ -11,6 +11,8 @@
 
 #include "../ast_action.h"
 #include "../log.h"
+#include "../helper_functions.h"
+
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -26,7 +28,6 @@ using namespace std;
 #include "../output_modules/javascript_stub_output.h"
 //#include "../output_modules/bindings_output.h"
 #include "../output_modules/bidirectional_output.h"
-
 
 
 using ::testing::_;
@@ -78,7 +79,8 @@ struct  Environment : public ::testing::Environment {
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
             if (message.level == LogT::Levels::Error) {
                 if (!_expect_errors) {
-                    EXPECT_EQ(message.string, "CLASS PARSER LOG ERROR");
+                    // If this fires, it means no error message was expected
+                    EXPECT_EQ(message.string, "Unexpected error message");
                 } else {
                     error_count++;
                 }
@@ -124,9 +126,13 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
 //    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
 
     // This call calls delete on action
-    clang::tooling::runToolOnCodeWithArgs(action,
-                                          source_prefix + source,
-                                          args);
+    try {
+        clang::tooling::runToolOnCodeWithArgs(action,
+                                              source_prefix + source,
+                                              args);
+    } catch (v8toolkit::class_parser::ClassParserException & e) {
+        // nothing to do here
+    }
 
     return  erase_if(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){return !c->should_be_wrapped();});
 }
@@ -246,6 +252,22 @@ TEST(ClassParser, DuplicateMemberFunctionName) {
 }
 
 
+TEST(ClassParser, DuplicateStaticMemberFunctionName) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            static void duplicated_name(int);
+            static void duplicated_name(float);
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+}
+
+
+
 TEST(ClassParser, JSDocTypeNames) {
     std::string source = R"(
         #include <vector>
@@ -283,7 +305,7 @@ TEST(ClassParser, JSDocTypeNames) {
 
 TEST(ClassParser, CustomExtensions) {
     std::string source = R"(
-    class A : public v8toolkit::WrappedClassBase {
+    class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
     public:
         V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_public();
         V8TOOLKIT_CUSTOM_EXTENSION void custom_extension_public_not_static();
@@ -492,7 +514,7 @@ TEST(ClassParser, ClassAndFunctionComments) {
              * @param input static function input description
              * @return static function return description
              */
-            int static static_function(char* input);
+            static int static_function(char* input);
 
             /**
              * data member description
@@ -771,4 +793,8 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
 int main(int argc, char* argv[]) {
 testing::InitGoogleTest(&argc, argv);
 return RUN_ALL_TESTS();
+}
+
+TEST(ClassParser, DuplicateStaticFunctionName) {
+
 }

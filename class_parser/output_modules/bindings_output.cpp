@@ -75,15 +75,12 @@ struct BindingsProviderContainer {
                                          "class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
                                          c.get_constructors().back()->get_parameter_types_string(),
                                          c.get_name_alias(), c.get_constructors().back()->get_default_argument_tuple_string())),
-
-            std::pair("inheritance",
-                      fmt::format("{}", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias())),
-            std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->get_name_alias()),
+            std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->class_name),
 
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
 //            xl::forward_as_pair("derived_types", xl::transform_if(c.derived_types, [](WrappedClass * c)->std::optional<std::string>{return c->get_name_alias();}))
-            xl::forward_as_pair("derived_types", xl::transform(c.derived_types, [](WrappedClass * c){return c->get_name_alias();}))
+            xl::forward_as_pair("derived_types", xl::transform(c.derived_types, [](WrappedClass * c){return c->class_name;}))
         );
 
         return provider;

@@ -63,7 +63,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         return;
     }
     log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
-    xl::log::LogCallbackGuard(log, this->log_watcher);
+    xl::log::LogCallbackGuard g(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
 
@@ -317,9 +317,8 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
         }, V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR_STRING);
 
         if (this->bidirectional_constructor == nullptr) {
-            this->set_error(
-                fmt::format("Bidirectional class {} doesn't have a bidirectional constructor explicitly set",
-                            this->name_alias));
+            log.error(LogT::Subjects::Class, "Bidirectional class {} doesn't have a bidirectional constructor explicitly set",
+                            this->name_alias);
         }
 
         string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
@@ -370,6 +369,9 @@ void WrappedClass::parse_all_methods() {
     if (this->methods_parsed) {
         return;
     }
+
+    xl::log::LogCallbackGuard g(log, this->log_watcher);
+
 
 
     this->methods_parsed = true;
@@ -625,18 +627,6 @@ void WrappedClass::parse_all_methods() {
             }
         }
     }
-    {
-
-        std::set<std::string> function_names;
-        for(auto & f : this->member_functions) {
-//            std::cerr << fmt::format("checking function {}", f->js_name) << std::endl;
-            if (xl::contains(function_names, f->js_name)) {
-                log.error(LogSubjects::Class, "Class '{}' has duplicate function name '{}'",
-                          this->get_name_alias(), f->js_name);
-            }
-            function_names.insert(f->js_name);
-        }
-    }
     log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->get_name_alias());
 }
 
@@ -670,7 +660,10 @@ void WrappedClass::parse_enums() {
     if (this->enums_parsed) {
         return;
     }
+
     enums_parsed = true;
+    xl::log::LogCallbackGuard g(log, this->log_watcher);
+
 
     if (this->decl == nullptr) {
 //        std::cerr << fmt::format("No decls for {}", this->name_alias) << std::endl;
@@ -709,6 +702,8 @@ void WrappedClass::parse_members() {
     }
     this->members_parsed = true;
 
+    xl::log::LogCallbackGuard g(log, this->log_watcher);
+
 //    std::cerr << fmt::format("parsing members for {} at {}", this->get_name_alias(), (void*)this) << std::endl;
 
     this->foreach_inheritance_level([&](WrappedClass & wrapped_class) {
@@ -716,8 +711,6 @@ void WrappedClass::parse_members() {
 //            std::cerr << fmt::format("No decls for {} while parsing members", this->name_alias) << std::endl;
             return;
         }
-
-
 
 //        std::cerr << fmt::format("getting fields for {} at {} which has {} base types", wrapped_class.get_name_alias(), (void*)&wrapped_class, wrapped_class.base_types.size()) << std::endl;
 //        std::cerr << fmt::format("getting fields for {}", wrapped_class.decl->) << std::endl;
@@ -749,7 +742,6 @@ WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & comp
     name_alias(class_name),
     decl(nullptr),
     compiler_instance(compiler_instance),
-    valid(true), // explicitly generated, so must be valid
     found_method(FOUND_GENERATED)
 {
     log.info(LogSubjects::Class, "Created new WrappedClass: '{}'", this->get_name_alias());
@@ -1007,25 +999,24 @@ std::string WrappedClass::get_bindings() {
 
 void WrappedClass::add_member_name(string const & name) {
     // it's ok to have duplicate names, but then this class can not be wrapped
+    log.info(LogT::Subjects::Class, "Adding non-static member function name: {}", name);
     if (this->used_member_names.count(name) > 0) {
-        this->set_error(fmt::format("duplicate name: {}", name));
+        log.error(LogT::Subjects::Class, "duplicate non-static member function name: {} in {}", name, this->class_name);
     }
     this->used_member_names.insert(name);
 }
 
 void WrappedClass::add_static_name(string const & name) {
+    log.info(LogT::Subjects::Class, "Adding static member function name: {} to class {}", name, this->class_name);
+
     // it's ok to have duplicate names, but then this class can not be wrapped
     if (this->used_static_names.count(name) > 0) {
-        this->set_error(fmt::format("duplicate name: {}", name));
+        log.error(LogT::Subjects::Class, "duplicate static member function name: {} in class", name, this->class_name);
     }
     this->used_static_names.insert(name);
 }
 
 
-void WrappedClass::set_error(string const & error_message) {
-    this->data_errors.push_back(error_message);
-    this->valid = false;
-}
 
 
 // return all the header files for all the types used by this class and all base classes
@@ -1224,6 +1215,16 @@ set<ClassFunction const *> WrappedClass::get_all_functions_from_class_hierarchy(
     set<ClassFunction const *> results;
 
     return results;
+}
+
+
+bool WrappedClass::has_errors() const {
+    return !this->log_watcher.errors.empty();
+}
+
+
+decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() const {
+    return this->log_watcher.errors;
 }
 
 

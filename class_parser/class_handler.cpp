@@ -270,36 +270,37 @@ void ClassHandler::onEndOfTranslationUnit() {
     log.info(LogSubjects::Subjects::ClassParser, "onEndOfTranslationUnit");
     log.info(LogSubjects::Subjects::ClassParser, "Processed total of {} classes from ASTMatchers", matched_classes_returned);
 
-
+    log.info(LogT::Subjects::ClassParser, ",wrapped classes size: {}", WrappedClass::wrapped_classes.size());
 
 
     vector<WrappedClass const *> const should_be_wrapped_classes = [&] {
         vector<WrappedClass const *> results;
         bool found_data_error = false;
         for (auto & c : WrappedClass::wrapped_classes) {
-            for (auto const & error : c->data_errors) {
-                std::cerr << fmt::format("ERROR in {}: '{}'", c->get_name_alias(), error) << std::endl;
-                found_data_error = true;
-                continue;
-            }
             if (c->should_be_wrapped()) {
-                xl::log::LogCallbackGuard g(log, c->log_watcher);
                 c->parse_enums();
                 c->parse_members();
                 c->parse_all_methods();
                 results.push_back(c.get());
             }
+            for (auto const & error : c->get_errors()) {
+
+                // actual log.error was published when the error was discovered,
+                //   this is just an informational summary of those errors
+                log.info(LogT::Subjects::Class, "ERROR SUMMARY: in {}: '{}'", c->get_name_alias(), error.string);
+                found_data_error = true;
+            }
         }
         if (found_data_error) {
-            llvm::report_fatal_error("Aborting due to data errors listed above");
+            throw ClassParserException("Aborting due to data error (shown in log file)");
         }
         return results;
     }();
 
 
     if (this->output_modules.empty()) {
-        cerr << "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules" << endl;
-        llvm::report_fatal_error("No output modules specified, aborting...");
+        log.warn(LogT::Subjects::ClassParser, "NO OUTPUT MODULES SPECIFIED - did you mean to pass --use-default-output-modules");
+        throw ClassParserException("No output modules specified, aborting...");
     }
 
 //    std::cerr << fmt::format("right before processing output modules, log status: {}", log.get_status_string()) << std::endl;

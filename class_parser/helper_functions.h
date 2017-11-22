@@ -17,9 +17,15 @@
 #include "log.h"
 
 
+#include <xl/exceptions.h>
 
 
 namespace v8toolkit::class_parser {
+
+class ClassParserException : public xl::FormattedException {
+public:
+    using xl::FormattedException::FormattedException;
+};
 
 
 extern std::vector<std::pair<std::string, std::string>> cpp_to_js_type_conversions;
