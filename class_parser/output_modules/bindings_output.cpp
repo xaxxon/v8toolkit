@@ -27,10 +27,10 @@ extern std::map<string, Template> bindings_templates;
 
 bool BindingsCriteria::operator()(WrappedClass const & c) {
     log.info(LogSubjects::BindingsOutput, "Checking criteria for {}", c.get_name_alias());
-    if (c.bidirectional) {
-        log.info(LogSubjects::Subjects::BindingsOutput, "Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias());
-        return false;
-    }
+    // if (c.bidirectional) {
+    //     log.info(LogSubjects::Subjects::BindingsOutput, "Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias());
+    //     return false;
+    // }
 
     return true;
 }
