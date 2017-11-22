@@ -17,6 +17,7 @@
 #include <xl/log.h>
 #include <xl/demangle.h>
 
+#include "log.h"
 #include "type_traits.h"
 #include "stdfunctionreplacement.h"
 #include "cast_to_native.h"
@@ -39,24 +40,6 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 }
 
 
-
-struct LoggingSubjects {
-    inline static std::string subject_names[] = {"Object Management", "Runtime Exception", "Compilation Exception"};
-
-    enum class Subjects {
-        V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
-        RUNTIME_EXCEPTION,
-        COMPILATION_EXCEPTION,
-        WRAPPED_FUNCTION_CALL,
-        WRAPPED_DATA_MEMBER_ACCESS,
-        
-        LOG_LAST_SUBJECT
-    };
-};
-
-
-using LogT = xl::log::Log<xl::log::DefaultLevels, v8toolkit::LoggingSubjects>;
-inline LogT log;
 
 
 /**

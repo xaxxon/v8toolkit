@@ -23,9 +23,9 @@ LogT log = []{
     // configure xl::templates logging as well
     if (!xl::templates::log.is_status_file_enabled()) {
         xl::templates::log.add_callback(std::cout, "xl::templates: ");
-        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
-        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
-        xl::templates::log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
+        xl::templates::log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
+        xl::templates::log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
+        xl::templates::log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
         xl::templates::log.enable_status_file("class_parser_plugin_templates.log_status");
     }
 
@@ -34,10 +34,10 @@ LogT log = []{
     if (!v8toolkit::class_parser::log.is_status_file_enabled()) {
         // set defaults if file doesn't exist
         v8toolkit::class_parser::log.add_callback(std::cout, "v8toolkit::class_parser: ");
-        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
-        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
+        log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Info, false);
+        log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Warn, false);
         log.enable_status_file("class_parser_plugin.log_status");
-        log.set_level_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
+        log.set_status(v8toolkit::class_parser::LogLevelsT::Levels::Error, true);
 
         
 //        std::cerr << fmt::format("level status:") << std::endl;

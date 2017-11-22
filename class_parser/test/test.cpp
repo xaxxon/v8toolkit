@@ -41,7 +41,7 @@ struct  Environment : public ::testing::Environment {
     bool _expect_errors = false;
     int error_count = 0;
 
-    std::vector<bool> statuses;
+    decltype(LogT::statuses) statuses;
 
     void expect_errors() {
         assert(!this->_expect_errors);
@@ -72,8 +72,8 @@ struct  Environment : public ::testing::Environment {
         });
 
         // force error logging on regardless of what is in log status file because it is required for testing
-        v8toolkit::class_parser::log.set_level_status(LogT::Levels::Error, true);
-        xl::templates::log.set_level_status(xl::templates::LogT::Levels::Error, true);
+        v8toolkit::class_parser::log.set_status(LogT::Levels::Error, true);
+        xl::templates::log.set_status(xl::templates::LogT::Levels::Error, true);
 
         v8toolkit::class_parser::log.add_callback([this](LogT::LogMessage const & message) {
             if (message.level == LogT::Levels::Error) {

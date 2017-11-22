@@ -1,6 +1,6 @@
 #include "testing.h"
 
-#include "javascript.h"
+#include "v8toolkit/javascript.h"
 
 using namespace testing;
 

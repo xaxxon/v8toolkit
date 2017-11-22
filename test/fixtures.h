@@ -1,8 +1,8 @@
 #pragma once
 
-#include "javascript.h"
-#include "v8toolkit.h"
-#include "v8helpers.h"
+#include "v8toolkit/javascript.h"
+#include "v8toolkit/v8toolkit.h"
+#include "v8toolkit/v8helpers.h"
 #include "testing.h"
 
 class ExampleFixture : public ::testing::Test {
