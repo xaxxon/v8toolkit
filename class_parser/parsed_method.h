@@ -134,7 +134,7 @@ struct ClassFunction {
 
     // returns string containing function name and input parameters - this function is likely not exactly correct
     //   per c++ standard
-    string get_signature_string();
+    virtual string get_signature_string() const;
 
     ClassFunction(WrappedClass & wrapped_class,
                   CXXMethodDecl const * method_decl,
@@ -143,9 +143,6 @@ struct ClassFunction {
                   std::string const & preferred_js_name = "");
 
     ~ClassFunction();
-
-    // returns true if the methods have the same name and input parameters
-    bool compare_signatures(ClassFunction const & other);
 
     string get_parameter_types_string() const;
 
@@ -168,8 +165,14 @@ public:
 
     bool is_callable_overload() const;
     bool is_const() const;
+    bool is_lvalue_qualified() const;
+    bool is_rvalue_qualified() const;
+    bool is_volatile() const;
 
     string generate_bidirectional();
+
+    string get_signature_string() const override;
+
 };
 
 class StaticFunction : public ClassFunction {

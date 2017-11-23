@@ -140,6 +140,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
+
+
     this->include_files.insert(get_include_for_type_decl(this->compiler_instance, this->decl));
 
 
@@ -283,16 +285,12 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
     } // end processing base classes
 
+
     if (print_logging) cerr << "done with base classes" << endl;
+
     if (must_have_base_type && !found_base_type) {
         log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
-
-    if (xl::contains(reserved_global_names, this->get_name_alias())) {
-        log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->get_name_alias());
-    }
-
-
 
     log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->name_alias);
 }
@@ -628,6 +626,7 @@ void WrappedClass::parse_all_methods() {
         }
     }
     log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->get_name_alias());
+
 }
 
 
@@ -997,26 +996,6 @@ std::string WrappedClass::get_bindings() {
 }
 
 
-void WrappedClass::add_member_name(string const & name) {
-    // it's ok to have duplicate names, but then this class can not be wrapped
-    log.info(LogT::Subjects::Class, "Adding non-static member function name: {}", name);
-    if (this->used_member_names.count(name) > 0) {
-        log.error(LogT::Subjects::Class, "duplicate non-static member function name: {} in {}", name, this->class_name);
-    }
-    this->used_member_names.insert(name);
-}
-
-void WrappedClass::add_static_name(string const & name) {
-    log.info(LogT::Subjects::Class, "Adding static member function name: {} to class {}", name, this->class_name);
-
-    // it's ok to have duplicate names, but then this class can not be wrapped
-    if (this->used_static_names.count(name) > 0) {
-        log.error(LogT::Subjects::Class, "duplicate static member function name: {} in class", name, this->class_name);
-    }
-    this->used_static_names.insert(name);
-}
-
-
 
 
 // return all the header files for all the types used by this class and all base classes
@@ -1228,6 +1207,52 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 }
 
 
+void WrappedClass::validate_data() {
+
+
+    if (xl::contains(reserved_global_names, this->get_name_alias())) {
+        log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->class_name);
+    }
+
+    std::map<std::string, std::vector<StaticFunction const *>> static_classes_names;
+    for(auto & static_function : this->static_functions) {
+        static_classes_names[static_function->js_name].push_back(static_function.get());
+    }
+
+    for (auto & name_pair : static_classes_names) {
+        if (name_pair.second.size() > 1) {
+            log.error(LogT::Subjects::ClassParser, "Multiple static functions in {} with the same JavaScript name {}: {}",
+                      this->class_name, name_pair.first,
+                      xl::join(xl::transform(name_pair.second, [](StaticFunction const * static_function){
+                          return static_function->get_signature_string();
+                      })));
+        }
+    }
+
+
+    std::map<std::string, std::vector<std::variant<MemberFunction const *, DataMember const *>>> member_names;
+    for(auto & member_function : this->member_functions) {
+        member_names[member_function->js_name].push_back(member_function.get());
+    }
+    for(auto & data_member : this->members) {
+        member_names[data_member->js_name].push_back(data_member.get());
+    }
+
+    for (auto & name_pair : member_names) {
+        if (name_pair.second.size() > 1) {
+            log.error(LogT::Subjects::ClassParser, "Multiple member functions/data members with the same JavaScript name {}: {}", name_pair.first,
+                      xl::join(xl::transform(name_pair.second, [](std::variant<MemberFunction const *, DataMember const *> member){
+                          if (auto function = std::get_if<MemberFunction const *>(&member)) {
+                              return (*function)->get_signature_string();
+                          } else if (auto data_member = std::get_if<DataMember const *>(&member)) {
+                              return (*data_member)->long_name;
+                          } else {
+                              assert(false); // unexpected type
+                          }
+                      })));
+        }
+    }
+}
 
 
 } // end namespace v8toolkit::class_parser

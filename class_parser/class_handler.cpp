@@ -281,6 +281,7 @@ void ClassHandler::onEndOfTranslationUnit() {
                 c->parse_enums();
                 c->parse_members();
                 c->parse_all_methods();
+                c->validate_data();
                 results.push_back(c.get());
             }
             for (auto const & error : c->get_errors()) {

@@ -122,9 +122,6 @@ public:
     map<string, map<string, int>> const & get_enums() const;
 
     vector<unique_ptr<ConstructorFunction>> const & get_constructors() const;
-
-    set<string> used_member_names;
-    set<string> used_static_names;
     set<WrappedClass *> derived_types;
 
     /// tracked base_types - if it's more than one, that's a data error because javascript only allows one
@@ -166,14 +163,6 @@ public:
     void foreach_inheritance_level(function<void(WrappedClass const &)> callback) const;
 
 
-    /**
-     * Sets a member name as being in use and sets valid = false if it was already in use
-     * For member functions and data members (not constructors or static methods)
-     * @param name name to add
-     */
-    void add_member_name(string const & name);
-
-    void add_static_name(string const & name);
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
     void update_data();
@@ -246,6 +235,10 @@ public:
 
     std::string class_or_struct = "";
     std::string namespace_name = "";
+
+    // validates class data in preparation for wrapping it for JavaScript
+    //   Requirements here aren't important for classes not being wrapped
+    void validate_data();
 
 }; // end class WrappedClass
 

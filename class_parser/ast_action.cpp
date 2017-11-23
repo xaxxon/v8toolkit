@@ -12,6 +12,8 @@
 #include <fstream>
 
 #include <xl/templates.h>
+#include <xl/regexer.h>
+#include <xl/json.h>
 
 namespace v8toolkit::class_parser {
 
@@ -252,6 +254,9 @@ PrintFunctionNamesAction::~PrintFunctionNamesAction()
 {}
 
 
+void parse_config(xl::json::Json & json);
+
+
 
 bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
                const std::vector<std::string> & args) {
@@ -259,7 +264,8 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
     for (unsigned i = 0, e = args.size(); i < e; ++i) {
         llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
-        std::regex declaration_count_regex("^--declaration-count=(\\d+)$");
+        static std::regex declaration_count_regex("^--declaration-count=(\\d+)$");
+        static xl::Regex config_file_regex("^--config-file=(.*)$");
         std::smatch match_results;
         if (std::regex_match(args[i], match_results, declaration_count_regex)) {
             auto count = std::stoi(match_results[1].str());
@@ -273,12 +279,120 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
             output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
             output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>(MAX_DECLARATIONS_PER_FILE));
             output_modules.push_back(std::make_unique<bidirectional_output::BidirectionalOutputModule>());
+        } else if (auto matches = config_file_regex.match(args[i])) {
+            auto filename = matches[1];
+            log.info(LogT::Subjects::ClassParser, "Config file specified as: '{}'", filename);
+            ifstream config_file(filename);
+            if (!config_file) {
+                throw ClassParserException("Couldn't open config file: {}", filename);
+            }
+            std::string configuration((std::istreambuf_iterator<char>(config_file)),
+                                      std::istreambuf_iterator<char>());
+
+            xl::json::Json config_json(configuration);
+            if (!config_json.is_valid()) {
+                throw ClassParserException("Invalid JSON in config file: {}", filename);
+            }
+            parse_config(config_json);
+
         }
     }
     if (args.size() && args[0] == "help")
         PrintHelp(llvm::errs());
 
     return true;
+}
+
+
+void parse_config(xl::json::Json & json) {
+
+    for (auto const & [class_name, class_json] : json["classes"]) {
+        log.info(LogT::Subjects::ClassParser, "Looking at class {}", class_name);
+        for (auto const & [member_function_name, member_function_json] : class_json["member_functions"]) {
+            for (auto const & [attribute_name, attribute_json] : member_function_json.as_object()) {
+
+                if (attribute_name == "skip") {
+                    if (auto skip = attribute_json.get_boolean()) {
+                        log.info(LogT::Subjects::ClassParser,
+                                 "Config file says skip {}: {}", member_function_name,
+                                 *skip);
+                    } else {
+                        throw ClassParserException(
+                            "Skip attribute must be boolean value, not '{}'",
+                            attribute_json.get_source());
+                    }
+                } else if (attribute_name == "name") {
+                    if (auto name = attribute_json.get_string()) {
+                        log.info(LogT::Subjects::ClassParser,
+                                 "Config file says use name {} for {}", *name,
+                                 member_function_name);
+                    } else {
+                        throw ClassParserException(
+                            "Name attribute must be string value, not '{}'",
+                            attribute_json.get_source());
+                    }
+                }
+            }
+        }
+    }
+//
+//    if (auto top_level = json.get_object()) {
+//
+//        if (auto classes = (*top_level)["classes"].get_object()) {
+//            for (auto const &[class_name, class_json] : *classes) {
+//
+//                if (auto const & class_attributes = class_json.get_object()) {
+//                    for (auto const &[class_attribute_name, class_attribute_json] : *class_attributes) {
+//
+//                        if (class_attribute_name == "member_functions") {
+//                            if (auto member_functions = class_attribute_json.get_object()) {
+//                                for (auto const &[member_function_name, member_function_json] : *member_functions) {
+//                                    if (auto attributes = member_function_json.get_object()) {
+//                                        for (auto const &[attribute_name, attribute_json] : *attributes) {
+//
+//                                            if (attribute_name == "skip") {
+//                                                auto skip = attribute_json.get_boolean();
+//                                                if (skip) {
+//                                                    log.info(LogT::Subjects::ClassParser,
+//                                                             "Config file says skip {}: {}", member_function_name,
+//                                                             *skip);
+//                                                } else {
+//                                                    throw ClassParserException(
+//                                                        "Skip attribute must be boolean value, not '{}'",
+//                                                        attribute_json.get_source());
+//                                                }
+//                                            } else if (attribute_name == "name") {
+//                                                auto name = attribute_json.get_string();
+//                                                if (name) {
+//                                                    log.info(LogT::Subjects::ClassParser,
+//                                                             "Config file says use name {} for {}", *name,
+//                                                             member_function_name);
+//                                                } else {
+//                                                    throw ClassParserException(
+//                                                        "Name attribute must be string value, not '{}'",
+//                                                        attribute_json.get_source());
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//
+//                            } else {
+//                                throw ClassParserException("Member functions should be an object, not '{}'",
+//                                                           class_attribute_json.get_source());
+//                            }
+//
+//                        }
+////                    for (auto const &[member_function_name, member_function_json] : (*member_functions)["static_functions"]) {
+////
+////                    }
+//                    }
+//                }
+//            }
+//        }
+//    } else {
+//        throw ClassParserException("In JSON config file, top-level entity wasn't an object");
+//    }
 }
 
 

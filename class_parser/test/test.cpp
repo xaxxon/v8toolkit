@@ -68,6 +68,7 @@ struct  Environment : public ::testing::Environment {
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
             if (message.level == xl::templates::LogT::Levels::Error) {
+                std::cerr << message.string << std::endl;
                 EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
             }
         });
@@ -108,7 +109,8 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
     std::vector<std::string> args{
         "-std=c++17",
         "-I" CLANG_HOME "/include/c++/v1/",
-        "-I" CLANG_HOME "/lib/clang/5.0.0/include/"
+        "-I" CLANG_HOME "/lib/clang/5.0.0/include/",
+        "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
     };
 
 
@@ -241,8 +243,8 @@ TEST(ClassParser, DuplicateMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
-            void duplicated_name(int);
-            void duplicated_name(float);
+            void duplicated_name(int) const &;
+            void duplicated_name(float) volatile &&;
         };
     )";
 
@@ -258,6 +260,34 @@ TEST(ClassParser, DuplicateStaticMemberFunctionName) {
         public:
             static void duplicated_name(int);
             static void duplicated_name(float);
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+}
+
+TEST(ClassParser, DuplicateDataMemberFunctionName) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            V8TOOLKIT_USE_NAME(duplicated_name) int name_one;
+            V8TOOLKIT_USE_NAME(duplicated_name) int name_two;
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+}
+
+TEST(ClassParser, DuplicateMixedMemberFunctionName) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            V8TOOLKIT_USE_NAME(duplicated_name) int name_one;
+            void duplicated_name(int) const volatile &&;
         };
     )";
 

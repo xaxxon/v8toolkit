@@ -262,7 +262,6 @@ DataMember::DataMember(WrappedClass & wrapped_class,
         this->js_name = annotated_custom_name[0];
 //        std::cerr << fmt::format("short name is now {}", this->js_name) << std::endl;
     }
-    wrapped_class.add_member_name(this->short_name);
     wrapped_class.declaration_count++;
 
     update_wrapped_class_for_type(wrapped_class, *this->type.get_plain_type());
@@ -631,8 +630,9 @@ string ClassFunction::get_js_input_parameter_string() const {
 }
 
 
-string ClassFunction::get_signature_string() {
+string ClassFunction::get_signature_string() const {
     stringstream result;
+    result << this->return_type.get_name() << " ";
     result << this->name << "(";
 
     bool first = true;
@@ -645,13 +645,48 @@ string ClassFunction::get_signature_string() {
     }
 
     result << ")";
+    std::cerr << fmt::format("Returning signature: {}", result.str()) << std::endl;
     return result.str();
 }
+
+
+
+string MemberFunction::get_signature_string() const {
+    auto result = this->ClassFunction::get_signature_string();
+
+    if (this->is_const()) {
+        result += " const";
+    }
+    if (this->is_volatile()) {
+        result += " volatile";
+    }
+    if (this->is_lvalue_qualified()) {
+        result += " &";
+    } else if (this->is_rvalue_qualified()) {
+        result += " &&";
+    }
+    return result;
+}
+
+
+bool MemberFunction::is_volatile() const {
+    return this->method_decl->isVolatile();
+}
+
+
+bool MemberFunction::is_lvalue_qualified() const {
+    return this->method_decl->getRefQualifier() == RefQualifierKind::RQ_LValue;
+}
+
+
+bool MemberFunction::is_rvalue_qualified() const {
+    return this->method_decl->getRefQualifier() == RefQualifierKind::RQ_RValue;
+}
+
 
 MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                                map<string, QualTypeWrapper> const & map, FunctionTemplateDecl const * function_template_decl) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
-    wrapped_class.add_member_name(this->js_name);
 
     for (auto a = method_decl->attr_begin(); a != method_decl->attr_end(); a++) {
 //        std::cerr << fmt::format("on function {} looking at attribute {}", this->name, (*a)->getSpelling())
@@ -671,7 +706,6 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                                map<string, QualTypeWrapper> const & map, FunctionTemplateDecl const * function_template_decl) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
-    wrapped_class.add_static_name(this->js_name);
 
     if (static_method_renames.find(this->js_name) != static_method_renames.end()) {
         this->js_name = static_method_renames[this->js_name];
