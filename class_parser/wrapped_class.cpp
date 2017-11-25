@@ -13,6 +13,7 @@
 #include "parsed_method.h"
 #include "class_handler.h"
 #include "helper_functions.h"
+#include "ast_action.h"
 
 #define FUNC_NO_RTTI
 #include "v8toolkit/v8helpers.h"
@@ -22,8 +23,8 @@ using namespace xl;
 namespace v8toolkit::class_parser {
 
 std::vector<std::string> never_wrap_class_names = {
-    "class v8toolkit::WrappedClassBase",
-    "class v8toolkit::EmptyFactoryBase"
+    "v8toolkit::WrappedClassBase",
+    "v8toolkit::EmptyFactoryBase"
 };
 
 WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance,
@@ -40,8 +41,7 @@ WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, Compi
 int MAX_DECLARATIONS_PER_FILE = 50;
 
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
-    class_name(xl::Regex("^(?:class|struct)\\s*((?:.*::)?.*)$").replace(get_canonical_name_for_decl(decl), "$1")),
-    name_alias(this->class_name),
+    class_name(xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "")),
     decl(decl),
     compiler_instance(compiler_instance),
     my_include(get_include_for_type_decl(compiler_instance, decl)),
@@ -50,40 +50,24 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 {
     log.info(LogSubjects::Subjects::ClassParser, "converting class_name from {} to {}", get_canonical_name_for_decl(decl), this->class_name);
 
-    auto matches = xl::Regex("^(class|struct)\\s*(.*::)?(.*)$").match(get_canonical_name_for_decl(decl));
+    auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name);
     this->class_or_struct = matches[1];
     this->namespace_name = matches[2];
-    this->name_alias = matches[3];
-    log.info(LogSubjects::Subjects::ClassParser, "name_alias for {} set to {}", class_name, name_alias);
+    this->short_name = matches[3];
+    log.info(LogSubjects::Subjects::ClassParser, "js_name for {} set to {}", class_name, get_js_name());
 
 //    std::cerr << fmt::format("created {}", this->class_name) << std::endl;
     if (contains(never_wrap_class_names, this->class_name)) {
-        log.info(LogSubjects::Subjects::ShouldBeWrapped, "{} found in never_wrap_class_names list", this->get_short_name());
+//        log.info(LogSubjects::Subjects::ShouldBeWrapped, "{} found in never_wrap_class_names list", this->class_name);
         this->found_method = FOUND_METHOD::FOUND_NEVER_WRAP;
         return;
+    } else {
+//        std::cerr << fmt::format("{} not found in never wrap class names list", this->class_name) << std::endl;
     }
-    log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->get_name_alias(), (void*)this);
+    log.info(LogSubjects::Class, "Created new WrappedClass: {} {}", this->class_name, (void*)this);
     xl::log::LogCallbackGuard g(log, this->log_watcher);
 //    cerr << fmt::format("*** Creating WrappedClass for {} with found_method = {}", this->name_alias, this->found_method) << endl;
 //    fprintf(stderr, "Creating WrappedClass for record decl ptr: %p\n", (void *) decl);
-
-    // check if there's a custom name directly on this class
-    auto annotated_custom_name = annotations.get_regex(
-        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
-    if (!annotated_custom_name.empty()) {
-        this->set_name_alias(annotated_custom_name[0]);
-    }
-
-    // check if there's a typedef telling this class to use a different name
-    string using_name = Annotations::names_for_record_decls[decl];
-    if (!using_name.empty()) {
-        cerr << fmt::format("Setting name alias for {} to {} because of a 'using' statement", class_name, using_name) << endl;
-        this->set_name_alias(using_name);
-
-    }
-
-    // strip off any leading "class " or "struct " off the type name
-    this->name_alias = regex_replace(name_alias, std::regex("^(struct|class) "), "");
 
 
 //    cerr << "Top of WrappedClass constructor body" << endl;
@@ -222,20 +206,21 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
         auto base_type_canonical_name_without_class_or_struct = regex_replace(base_type_canonical_name, std::regex("^(struct|class) "), "");
 
+//        std::cerr << fmt::format("annotation base types to ignore list: {}", xl::join(annotation_base_types_to_ignore)) << std::endl;
         if (std::find(annotation_base_types_to_ignore.begin(), annotation_base_types_to_ignore.end(),
                       base_type_canonical_name_without_class_or_struct) !=
             annotation_base_types_to_ignore.end()) {
-//            cerr << "Skipping base type because it was explicitly excluded in annotation on class: " << base_type_name << endl;
+            v8toolkit::class_parser::log.info(LogT::Subjects::Class, "Skipping base type because it was explicitly excluded in annotation on class: '{}'", base_type_canonical_name_without_class_or_struct);
             continue;
         } else {
-//            cerr << "Base type was not explicitly excluded via annotation" << endl;
+//            cerr << "Base type was not explicitly excluded via annotation: " << base_type_canonical_name_without_class_or_struct << endl;
         }
         if (std::find(base_types_to_ignore.begin(), base_types_to_ignore.end(), base_type_canonical_name) !=
             base_types_to_ignore.end()) {
-//            cerr << "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: " << base_type_name << endl;
+            v8toolkit::class_parser::log.info(LogT::Subjects::Class, "Skipping base type because it was explicitly excluded in plugin base_types_to_ignore: '{}'", base_type_name);
             continue;
         } else {
-//            cerr << "Base type was not explicitly excluded via global ignore list" << endl;
+//            cerr << "Base type was not explicitly excluded via global ignore list" << base_type_name << endl;
         }
         if (!annotation_base_type_to_use.empty() && annotation_base_type_to_use[0] != base_type_name) {
 //            cerr << "Skipping base type because it was not the one specified to use via annotation: " << base_type_name << endl;
@@ -292,7 +277,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         log.error(LogSubjects::Class, "base_type_to_use specified but no base type found: {}", this->class_name);
     }
 
-    log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->name_alias);
+    log.info(LogSubjects::Subjects::Class, "Done creating WrappedClass for {}", this->class_name);
 }
 
 
@@ -308,7 +293,7 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 // iterate through all constructors with the specified annotation
         foreach_constructor(this->decl, [&](auto constructor_decl) {
             if (bidirectional_constructor) {
-                log.error(LogSubjects::Constructors, "ERROR: Got more than one bidirectional constructor for {}", this->name_alias);
+                log.error(LogSubjects::Constructors, "ERROR: Got more than one bidirectional constructor for {}", this->class_name);
                 return;
             }
             this->bidirectional_constructor = constructor_decl;
@@ -316,17 +301,17 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
 
         if (this->bidirectional_constructor == nullptr) {
             log.error(LogT::Subjects::Class, "Bidirectional class {} doesn't have a bidirectional constructor explicitly set",
-                            this->name_alias);
+                            this->class_name);
         }
 
-        string bidirectional_class_name = fmt::format("JS{}", this->name_alias);
+        string bidirectional_class_name = fmt::format("JS{}", this->get_js_name());
 
 // created a WrappedClass for the non-AST JSWrapper class
         WrappedClass & js_wrapped_class = *WrappedClass::wrapped_classes.emplace_back(new WrappedClass(bidirectional_class_name,
                                                                                      this->compiler_instance));
 
         js_wrapped_class.bidirectional = true;
-        js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->name_alias);
+        js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->get_js_name());
 //        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
 
 
@@ -381,7 +366,7 @@ void WrappedClass::parse_all_methods() {
     }
 
 
-    log.info(LogSubjects::Methods, "Parsing class methods for {}", this->get_name_alias());
+    log.info(LogSubjects::Methods, "Parsing class methods for {}", this->class_name);
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
@@ -625,7 +610,7 @@ void WrappedClass::parse_all_methods() {
             }
         }
     }
-    log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->get_name_alias());
+    log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->class_name);
 
 }
 
@@ -737,13 +722,12 @@ void WrappedClass::parse_members() {
 
 
 WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
-    class_name(xl::Regex("^(class|struct)\\s*(.*)$").replace(class_name, "$1")),
-    name_alias(class_name),
+    class_name(class_name),
     decl(nullptr),
     compiler_instance(compiler_instance),
     found_method(FOUND_GENERATED)
 {
-    log.info(LogSubjects::Class, "Created new WrappedClass: '{}'", this->get_name_alias());
+    log.info(LogSubjects::Class, "Created new (no-decl) WrappedClass: '{}'", this->class_name);
 }
 
 
@@ -831,11 +815,11 @@ bool WrappedClass::should_be_wrapped() const {
     }
 
     if (found_method == FOUND_BASE_CLASS) {
-        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found base class (YES)", this->name_alias);
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found base class (YES)", this->class_name);
         return true;
     }
     if (found_method == FOUND_GENERATED) {
-        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found generated (YES)", this->name_alias);
+        log.info(LogSubjects::Subjects::ShouldBeWrapped, "should be wrapped {}- found generated (YES)", this->class_name);
         return true;
     }
 
@@ -919,83 +903,83 @@ bool WrappedClass::ready_for_wrapping(set<WrappedClass const *> dumped_classes) 
     return true;
 }
 
-
-std::string WrappedClass::get_bindings() {
-    stringstream result;
-    string indentation = "  ";
-
-    result << indentation << "{\n";
-    result << fmt::format("{}  // {}", indentation, class_name) << "\n";
-    result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
-                          indentation, this->class_name, this->class_name);
-    result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
-
-    for (auto & method : this->get_member_functions()) {
-        result << method->generate_js_bindings();
-    }
-
-    for (auto & method : this->get_static_functions()) {
-        result << method->generate_js_bindings();
-    }
-
-    for (auto & member : members) {
-        result << member->get_bindings();
-    }
-
-    // go through each enum
-    for (auto & enumeration : this->get_enums()) {
-        std::cerr << fmt::format("writing enum to output file: {}", enumeration.first) << std::endl;
-        std::stringstream values;
-        values << "{";
-        auto first_element = true;
-
-        // go through each value in the enum
-        for (auto const & pair : enumeration.second) {
-            if (!first_element) {
-                values << ", ";
-            }
-            first_element = false;
-            values << "{\"" << pair.first << "\", " << pair.second << "}";
-        }
-        values << "}";
-
-        result << fmt::format("{}  class_wrapper.add_enum(\"{}\", {});\n", indentation, enumeration.first, values.str());
-    };
-
-    for (auto & wrapper_extension_method : wrapper_extension_methods) {
-        result << fmt::format("{}  {}\n", indentation, wrapper_extension_method);
-    }
-    for (auto & wrapper_custom_extension : wrapper_custom_extensions) {
-        result << fmt::format("{}  {}\n", indentation, wrapper_custom_extension);
-    }
-
-    if (!derived_types.empty()) {
-        result << fmt::format("{}  class_wrapper.set_compatible_types<{}>();\n", indentation,
-                              get_derived_classes_string());
-    }
-    if (get_base_class_string() != "") {
-        result << fmt::format("{}  class_wrapper.set_parent_type<{}>();\n", indentation,
-                              get_base_class_string());
-    }
-    result << fmt::format("{}  class_wrapper.finalize(true);\n", indentation);
-
-    // if there are no constructors but there are static methods, expose the static methods with this non-constructor name
-    if (this->get_constructors().empty() && this->has_static_method()) {
-        result
-            << fmt::format("{} class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, this->name_alias);
-    }
-        // otherwise just create any constructors that may need wrapping (none is fine)
-    else {
-        for (auto & constructor : this->get_constructors()) {
-            result << constructor->generate_js_bindings();
-        }
-    }
-
-    result << indentation << "}\n\n";
-    return result.str();
-}
-
-
+//
+//std::string WrappedClass::get_bindings() {
+//    stringstream result;
+//    string indentation = "  ";
+//
+//    result << indentation << "{\n";
+//    result << fmt::format("{}  // {}", indentation, class_name) << "\n";
+//    result << fmt::format("{}  v8toolkit::V8ClassWrapper<{}> & class_wrapper = isolate.wrap_class<{}>();\n",
+//                          indentation, this->class_name, this->class_name);
+//    result << fmt::format("{}  class_wrapper.set_class_name(\"{}\");\n", indentation, name_alias);
+//
+//    for (auto & method : this->get_member_functions()) {
+//        result << method->generate_js_bindings();
+//    }
+//
+//    for (auto & method : this->get_static_functions()) {
+//        result << method->generate_js_bindings();
+//    }
+//
+//    for (auto & member : members) {
+//        result << member->get_bindings();
+//    }
+//
+//    // go through each enum
+//    for (auto & enumeration : this->get_enums()) {
+//        std::cerr << fmt::format("writing enum to output file: {}", enumeration.first) << std::endl;
+//        std::stringstream values;
+//        values << "{";
+//        auto first_element = true;
+//
+//        // go through each value in the enum
+//        for (auto const & pair : enumeration.second) {
+//            if (!first_element) {
+//                values << ", ";
+//            }
+//            first_element = false;
+//            values << "{\"" << pair.first << "\", " << pair.second << "}";
+//        }
+//        values << "}";
+//
+//        result << fmt::format("{}  class_wrapper.add_enum(\"{}\", {});\n", indentation, enumeration.first, values.str());
+//    };
+//
+//    for (auto & wrapper_extension_method : wrapper_extension_methods) {
+//        result << fmt::format("{}  {}\n", indentation, wrapper_extension_method);
+//    }
+//    for (auto & wrapper_custom_extension : wrapper_custom_extensions) {
+//        result << fmt::format("{}  {}\n", indentation, wrapper_custom_extension);
+//    }
+//
+//    if (!derived_types.empty()) {
+//        result << fmt::format("{}  class_wrapper.set_compatible_types<{}>();\n", indentation,
+//                              get_derived_classes_string());
+//    }
+//    if (get_base_class_string() != "") {
+//        result << fmt::format("{}  class_wrapper.set_parent_type<{}>();\n", indentation,
+//                              get_base_class_string());
+//    }
+//    result << fmt::format("{}  class_wrapper.finalize(true);\n", indentation);
+//
+//    // if there are no constructors but there are static methods, expose the static methods with this non-constructor name
+//    if (this->get_constructors().empty() && this->has_static_method()) {
+//        result
+//            << fmt::format("{} class_wrapper.expose_static_methods(\"{}\", isolate);\n", indentation, this->name_alias);
+//    }
+//        // otherwise just create any constructors that may need wrapping (none is fine)
+//    else {
+//        for (auto & constructor : this->get_constructors()) {
+//            result << constructor->generate_js_bindings();
+//        }
+//    }
+//
+//    result << indentation << "}\n\n";
+//    return result.str();
+//}
+//
+//
 
 
 // return all the header files for all the types used by this class and all base classes
@@ -1052,7 +1036,7 @@ bool WrappedClass::found_method_means_wrapped() {
 }
 
 WrappedClass::~WrappedClass() {
-    log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->get_name_alias(), (void*)this);
+    log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->class_name, (void*)this);
 }
 
 
@@ -1141,12 +1125,12 @@ std::string WrappedClass::get_derived_classes_string(int level, const std::strin
 
 void WrappedClass::add_base_type(WrappedClass & base_type) {
     if (xl::contains(base_types_to_ignore, base_type.class_name)) {
-        log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.name_alias, this->name_alias);
+        log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.class_name, this->class_name);
         return;
     }
 
     log.info(LogSubjects::Class, "adding base type {} {} to derived type: {} {}",
-             base_type.get_name_alias(), (void*)&base_type, this->get_name_alias(), (void*)this);
+             base_type.class_name, (void*)&base_type, this->class_name, (void*)this);
 
     this->base_types.insert(&base_type);
 }
@@ -1162,32 +1146,6 @@ std::string WrappedClass::get_base_class_string() const {
 }
 
 
-string WrappedClass::get_jsdoc_name() const {
-    auto result = this->get_name_alias();
-
-    if (Regex("[<>:]").match(result)) {
-        log.error(LogSubjects::Subjects::JSDoc,
-                  "JSDoc type name '{}' has one of < > : in it, must be aliased to a standard name", result);
-    }
-
-    return result;
-}
-
-
-// not sure it's necessary to call this from anywhere but not deleting it yet
-void WrappedClass::update_data() {
-    cerr << "Updating wrapped class data for " << class_name << endl;
-    string new_name = Annotations::names_for_record_decls[decl];
-    if (!new_name.empty()) {
-        cerr << "Got type alias: " << new_name << endl;
-        this->set_name_alias(new_name);
-    } else {
-        cerr << "no type alias" << endl;
-    }
-    cerr << "Went from " << this->annotations.get().size() << " annotations to ";
-    this->annotations = Annotations(this->decl);
-    cerr << this->annotations.get().size() << endl;
-}
 
 
 set<ClassFunction const *> WrappedClass::get_all_functions_from_class_hierarchy() const {
@@ -1209,8 +1167,9 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 
 void WrappedClass::validate_data() {
 
+    xl::log::LogCallbackGuard g(log, this->log_watcher);
 
-    if (xl::contains(reserved_global_names, this->get_name_alias())) {
+    if (xl::contains(reserved_global_names, this->get_js_name())) {
         log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->class_name);
     }
 
@@ -1252,7 +1211,57 @@ void WrappedClass::validate_data() {
                       })));
         }
     }
+
+    if (Regex("(?:[<>:]|^$)").match(this->get_js_name())) {
+        log.error(LogSubjects::Subjects::Class,
+                  "JavaScript type name '{}' is either empty or has one of < > : in it, must be aliased to a standard name", this->get_js_name());
+    }
+
 }
+
+
+
+std::string const & WrappedClass::get_js_name() const {
+
+//    std::cerr << fmt::format("getting js name for {} with existing js_name = {}", this->class_name, this->js_name) << std::endl;
+    if (this->js_name.empty()) {
+
+        // first check the config file for overrides
+        auto class_config =
+            PrintFunctionNamesAction::get_config_data()["classes"]
+            [this->class_name];
+
+
+        // first try config file
+        if (auto name_config_override = class_config["name"].get_string()) {
+            log.info(LogT::Subjects::ConfigFile, "Got name JavaScript name from config file: {} => {}", this->class_name, *name_config_override);
+            this->js_name = *name_config_override;
+        } // then try typedef annotations
+        else if (!Annotations::names_for_record_decls[this->decl].empty()) {
+            this->js_name = Annotations::names_for_record_decls[this->decl];
+        } // then try class annotations
+        else {
+            // then check code annotations
+            auto annotated_custom_name = annotations.get_regex("^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+            if (!annotated_custom_name.empty()) {
+//                std::cout << fmt::format("found annotated name {}", annotated_custom_name[0] ) << std::endl;
+                this->js_name = annotated_custom_name[0];
+            } else  {
+                auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name);
+                assert(matches);
+//                std::cout << fmt::format("got regex name: {} against {}", matches[3], this->class_name) << std::endl;
+                this->js_name = matches[3];
+
+
+            }
+        } // last just use the C++ class name
+
+    }
+
+
+    return this->js_name;
+}
+
 
 
 } // end namespace v8toolkit::class_parser

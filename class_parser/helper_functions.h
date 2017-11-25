@@ -29,7 +29,9 @@ public:
 
 
 extern std::vector<std::pair<std::string, std::string>> cpp_to_js_type_conversions;
-extern std::vector<std::string> base_types_to_ignore;
+
+// Any base types you want to always ignore -- v8toolkit::WrappedClassBase must remain, others may be added/changed
+inline std::vector<std::string> base_types_to_ignore = {"v8toolkit::WrappedClassBase", "v8toolkit::EmptyFactoryBase"};
 
 struct WrappedClass;
 
@@ -38,7 +40,6 @@ inline int print_logging = 0;
 // if a static method has a name matching the key, change it to the value
 extern std::map<std::string, std::string> static_method_renames;
 extern std::map<std::string, int> template_instantiations;
-extern std::vector<std::string> base_types_to_ignore;
 extern std::vector<std::string> types_to_ignore_regex;
 extern int matched_classes_returned;
 extern std::vector<std::string> never_include_for_any_file;

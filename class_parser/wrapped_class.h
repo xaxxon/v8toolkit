@@ -58,13 +58,15 @@ private:
 
 public:
     // name of type that is guaranteed valid c++ (with appropriate included headers)
-    string class_name;
+    std::string class_name;
+
+    // without class/struct or namespace
+    std::string short_name = class_name;
 
 private:
 
     /// this is the possibly shortened javascript name of the type - not necessarily valid in generated c++
-    string name_alias;
-    bool name_alias_is_default = true;
+    mutable std::string js_name;
 
 public:
     LogWatcher<LogT> log_watcher;
@@ -90,18 +92,12 @@ public:
     bool has_errors() const;
     decltype(log_watcher.errors) const & get_errors() const;
 
-    std::string const & get_name_alias() const {
-        return this->name_alias;
-    };
-    void set_name_alias(std::string const & new_name_alias) {
-        this->name_alias = new_name_alias;
-        this->name_alias_is_default = false;
-    }
-    bool is_name_alias_default() const {
-        return this->name_alias_is_default;
-    }
+    std::string const & get_js_name() const;
 
-    string get_jsdoc_name() const;
+
+    void force_recache_js_name() {
+        this->js_name = "";
+    }
 
     set<string> include_files;
 
@@ -240,7 +236,8 @@ public:
     //   Requirements here aren't important for classes not being wrapped
     void validate_data();
 
-}; // end class WrappedClass
+
+    }; // end class WrappedClass
 
 
 }

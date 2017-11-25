@@ -20,6 +20,7 @@
 #include <xl/library_extensions.h>
 #include <xl/templates.h>
 #include <xl/log.h>
+#include <xl/json.h>
 
 using namespace xl;
 using namespace std;
@@ -47,7 +48,7 @@ struct  Environment : public ::testing::Environment {
     void expect_errors() {
         assert(!this->_expect_errors);
         this->statuses = v8toolkit::class_parser::log.get_statuses();
-
+        v8toolkit::class_parser::log.set_regex_filter(""); // must clear regex filter so expected error messages aren't filtered
         v8toolkit::class_parser::log.set_all_subjects(true);
         this->_expect_errors = true;
     }
@@ -97,7 +98,7 @@ Environment * environment = new Environment;
 static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(environment);
 
 v8toolkit::class_parser::PrintFunctionNamesAction * action = nullptr;
-auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}) {
+auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}, xl::json::Json json = xl::json::Json{}) {
 
 
     static std::string source_prefix = R"(
@@ -110,12 +111,15 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
         "-std=c++17",
         "-I" CLANG_HOME "/include/c++/v1/",
         "-I" CLANG_HOME "/lib/clang/5.0.0/include/",
+
+        // why doesn't this seem to get passed to the plugin?
         "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
     };
 
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
     action = new v8toolkit::class_parser::PrintFunctionNamesAction();
+    action->config_data = json;
     for(auto & output_module : output_modules) {
         action->add_output_module(std::move(output_module));
     }
@@ -124,8 +128,6 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
     if (action->output_modules.empty()) {
         action->add_output_module(std::make_unique<noop_output::NoOpOutputModule>());
     }
-
-//    std::cerr << fmt::format("STARTING A NEW RUN") << std::endl;
 
     // This call calls delete on action
     try {
@@ -268,6 +270,34 @@ TEST(ClassParser, DuplicateStaticMemberFunctionName) {
     EXPECT_EQ(environment->expect_no_errors(), 1);
 }
 
+TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            static void duplicated_name(int);
+            static void duplicated_name(float);
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source, {}, xl::json::Json(R"JSON(
+{
+    "classes": {
+        "DuplicateFunctionNameClass": {
+            "static_functions": {
+                "void DuplicateFunctionNameClass::duplicated_name(int)": {
+                    "name": "different name"
+                }
+            }
+        }
+    }
+}
+)JSON"));
+    EXPECT_EQ(environment->expect_no_errors(), 0);
+}
+
+
+
 TEST(ClassParser, DuplicateDataMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
@@ -315,6 +345,7 @@ TEST(ClassParser, JSDocTypeNames) {
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
 
+    EXPECT_EQ(c.class_name, "A");
     EXPECT_EQ(c.get_member_functions().size(), 2);
     auto & mf = *c.get_member_functions()[0];
     auto & mf2 = *c.get_member_functions()[1];
@@ -438,27 +469,21 @@ TEST(ClassParser, TemplatedClassInstantiations) {
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 1);
+    EXPECT_EQ(environment->expect_no_errors(), 2);
 
     EXPECT_EQ(pruned_vector.size(), 2);
     WrappedClass const & c1 = *pruned_vector[0].get();
     WrappedClass const & c2 = *pruned_vector[1].get();
 
     EXPECT_EQ(c1.get_constructors().size(), 1);
-    EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass");
+    EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass<int>");
     EXPECT_EQ(c2.get_constructors().size(), 1);
-    EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass");
+    EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass<char>");
 
-    environment->expect_errors();
-    (void)c1.get_jsdoc_name();
-    (void)c2.get_jsdoc_name();
-    EXPECT_EQ(environment->expect_no_errors(), 2);
+    EXPECT_EQ(c1.log_watcher.errors.size(), 1);
+    EXPECT_EQ(c2.log_watcher.errors.size(), 1);
 
-
-    // expecting error because both instantiations of TemplatedClass will have the same constructor name
-    //   but the error only shows up on the second class because it's still unique when the first one is
-    //   processed
-    EXPECT_EQ(c1.log_watcher.errors.size() + c2.log_watcher.errors.size(), 1);
+    EXPECT_EQ(c1.log_watcher.errors.size() + c2.log_watcher.errors.size(), 2);
 
 }
 
@@ -487,8 +512,8 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
     EXPECT_TRUE(c2.get_constructors()[0]->js_name == "A" || c2.get_constructors()[0]->js_name == "B");
     EXPECT_NE(c1.get_constructors()[0]->js_name, c2.get_constructors()[0]->js_name);
 
-    (void)c2.get_jsdoc_name();
-    (void)c2.get_jsdoc_name();
+    (void)c2.get_js_name();
+    (void)c2.get_js_name();
 
 
     // no conflicting constructor name because the name_alias on each type will rename the constructor of each
@@ -563,6 +588,9 @@ TEST(ClassParser, ClassAndFunctionComments) {
         template<class T, int i>
         class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS TemplatedClassWithComments : public v8toolkit::WrappedClassBase {};
 
+        using TI5 V8TOOLKIT_NAME_ALIAS = TemplatedClassWithComments<int, 5>;
+        using TC6 V8TOOLKIT_NAME_ALIAS = TemplatedClassWithComments<char, 6>;
+
         TemplatedClassWithComments<int, 5> a;
         TemplatedClassWithComments<char, 6> b;
     )";
@@ -576,7 +604,7 @@ TEST(ClassParser, ClassAndFunctionComments) {
     (void) *pruned_vector.at(2).get();
     (void) *pruned_vector.at(3).get();
 
-    EXPECT_EQ(c1.get_name_alias(), "ClassWithComments");
+    EXPECT_EQ(c1.get_js_name(), "ClassWithComments");
     EXPECT_EQ(c1.get_member_functions().size(), 1);
     EXPECT_EQ(c1.comment, "Class Description and more class description");
     MemberFunction const & member_function = *c1.get_member_functions()[0];
@@ -658,7 +686,7 @@ struct BidirectionalTestStreamProvider : public OutputStreamProvider {
     }
 
     ostream & get_class_stream(WrappedClass const & c) override {
-        return this->class_outputs[c.get_name_alias()];
+        return this->class_outputs[c.get_js_name()];
     }
 
 };
@@ -805,26 +833,10 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
 }
 
 
-
-//TEST(ClassParser, ClassComments) {
-//    std::string source = R"(
-//    class A : public v8toolkit::WrappedClassBase {
-//      public:
-//    )";
-//
-//
-//    auto pruned_vector = run_code(source);
-//
-//    EXPECT_EQ(pruned_vector.size(), 1);
-//    WrappedClass const & c = *pruned_vector[0].get();
-//}
-
-
 int main(int argc, char* argv[]) {
 testing::InitGoogleTest(&argc, argv);
 return RUN_ALL_TESTS();
 }
 
-TEST(ClassParser, DuplicateStaticFunctionName) {
 
-}
+// test parsing class, setting typedef name, then parisng methods (incuding constructors) to make sure constructor picks up typedef name

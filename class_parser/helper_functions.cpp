@@ -381,178 +381,179 @@ void foreach_constructor(const CXXRecordDecl * klass, std::function<void(CXXCons
 //    cerr << fmt::format("Done enumerating constructors for {}", class_name) << endl;
 }
 
-
-void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
-    cerr << "Generating bidirectional classes..." << endl;
-
-    // use this style loop because entries will be added inside the loop
-    for (auto wrapped_class_iterator = WrappedClass::wrapped_classes.begin();
-         wrapped_class_iterator != WrappedClass::wrapped_classes.end();
-         wrapped_class_iterator++) {
-        auto & wrapped_class = *wrapped_class_iterator;
-
-
-        assert(wrapped_class->base_types.size() == 1);
-        auto base_type = *wrapped_class->base_types.begin();
-
-        // create the file for the include, stripping off any "" or <> (should only be "'s)
-        ofstream bidirectional_file(regex_replace(wrapped_class->my_include, std::regex("[<>\"]"), ""));
-
-        bidirectional_file << endl << "#pragma once\n\n";
-
-
-        // need to include all the includes from the parent types because the implementation of this bidirectional
-        //   type may need the types for things the parent type .h files don't need (like unique_ptr contained types)
-        for (auto & include : wrapped_class->get_base_type_includes()) {
-            if (include == "") {
-                continue;
-            }
-//            std::cerr
-//                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->get_name_alias(), include)
-//                << std::endl;
-            bidirectional_file << "#include " << include << "\n";
-        }
-
-        // std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
-        for (auto & include : wrapped_class->include_files) {
-            if (include == "") {
-                continue;
-            }
-            bidirectional_file << "#include " << include << "\n";
-        }
-        bidirectional_file << endl; // blank line between includes and class definition
-
-        std::cerr << fmt::format("done with includes, building class and constructor") << std::endl;
-        bidirectional_file << fmt::format(
-            "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:", // {{ is escaped {
-            base_type->get_name_alias(), base_type->get_name_alias(), base_type->get_name_alias()) << endl;
-
-        bidirectional_file
-            << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,",
-                           base_type->get_name_alias()) << endl;
-        bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by") << endl;
-        if (base_type->bidirectional_constructor == nullptr) {
-            llvm::report_fatal_error(fmt::format("bidirectional constructor: {} for class {}",
-                                                 (void *) base_type->bidirectional_constructor,
-                                                 base_type->get_name_alias()));
-        }
-
-        // go through all the parameters for the constructor and create variable names for them
-        ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
-        int param_position = 1;
-        for (auto & parameter : bidirectional_constructor.parameters) {
-            bidirectional_file << fmt::format(", {} var{}", parameter.type.get_name(), param_position++);
-        }
-
-
-//        bidirectional_file << fmt::format(") :") << endl;
 //
-//        //                auto variable_names = generate_variable_names(construtor_parameter_count);
-//        auto variable_names = "";/*generate_variable_names(
-//            get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);*/
-//        bidirectional_file << fmt::format("      {}({}),", base_type->get_name_alias(), join(variable_names)) << endl;
+//void generate_bidirectional_classes(CompilerInstance & compiler_instance) {
+//    cerr << "Generating bidirectional classes..." << endl;
+//
+//    // use this style loop because entries will be added inside the loop
+//    for (auto wrapped_class_iterator = WrappedClass::wrapped_classes.begin();
+//         wrapped_class_iterator != WrappedClass::wrapped_classes.end();
+//         wrapped_class_iterator++) {
+//        auto & wrapped_class = *wrapped_class_iterator;
+//
+//
+//        assert(wrapped_class->base_types.size() == 1);
+//        auto base_type = *wrapped_class->base_types.begin();
+//
+//        // create the file for the include, stripping off any "" or <> (should only be "'s)
+//        ofstream bidirectional_file(regex_replace(wrapped_class->my_include, std::regex("[<>\"]"), ""));
+//
+//        bidirectional_file << endl << "#pragma once\n\n";
+//
+//
+//        // need to include all the includes from the parent types because the implementation of this bidirectional
+//        //   type may need the types for things the parent type .h files don't need (like unique_ptr contained types)
+//        for (auto & include : wrapped_class->get_base_type_includes()) {
+//            if (include == "") {
+//                continue;
+//            }
+////            std::cerr
+////                << fmt::format("for bidirectional {}, adding base type include {}", wrapped_class->get_name_alias(), include)
+////                << std::endl;
+//            bidirectional_file << "#include " << include << "\n";
+//        }
+//
+//        // std::cerr << fmt::format("done adding base type includes now adding wrapped_class include files") << std::endl;
+//        for (auto & include : wrapped_class->include_files) {
+//            if (include == "") {
+//                continue;
+//            }
+//            bidirectional_file << "#include " << include << "\n";
+//        }
+//        bidirectional_file << endl; // blank line between includes and class definition
+//
+//        std::cerr << fmt::format("done with includes, building class and constructor") << std::endl;
+//        bidirectional_file << fmt::format(
+//            "class JS{} : public {}, public v8toolkit::JSWrapper<{}> {{\npublic:", // {{ is escaped {
+//            base_type->get_js_name(), base_type->get_name_alias(), base_type->get_name_alias()) << endl;
+//
 //        bidirectional_file
-//            << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}", base_type->get_name_alias())
-//            << endl; // {{}} is escaped {}
-//        bidirectional_file << endl;
+//            << fmt::format("    JS{}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,",
+//                           base_type->get_name_alias()) << endl;
+//        bidirectional_file << fmt::format("        v8::Local<v8::FunctionTemplate> created_by") << endl;
+//        if (base_type->bidirectional_constructor == nullptr) {
+//            llvm::report_fatal_error(fmt::format("bidirectional constructor: {} for class {}",
+//                                                 (void *) base_type->bidirectional_constructor,
+//                                                 base_type->get_name_alias()));
+//        }
 //
-
-
-        auto * current_inheritance_class = base_type;
-        set<string> js_access_virtual_methods_added;
-
-        cerr << fmt::format("building virtual method list for {}", wrapped_class->get_name_alias());
-        while (current_inheritance_class) {
-            cerr << fmt::format(" ** Inheritance hierarchy class: {} with {} base types",
-                                current_inheritance_class->get_name_alias(), current_inheritance_class->base_types.size())
-                 << endl;
-
-            for (auto & method : current_inheritance_class->get_member_functions()) {
-                if (!method->is_virtual) {
-                    std::cerr << fmt::format("Skipping method {} because it's either not virtual",
-                                             method->name) << std::endl;
-                    continue;
-                }
-
-                // this is done correctly lower down, so I think this is not needed but signature includes the class name
-                // so it doesn't dedupe virtuals across inheritance hierarchy
-//                auto added_method = js_access_virtual_methods_added.find(method->get_signature_string());
+//        // go through all the parameters for the constructor and create variable names for them
+//        ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
+//        int param_position = 1;
+//        for (auto & parameter : bidirectional_constructor.parameters) {
+//            bidirectional_file << fmt::format(", {} var{}", parameter.type.get_name(), param_position++);
+//        }
 //
-//                // check if it's already been added at a more derived type
-//                if (added_method != js_access_virtual_methods_added.end()) {
-//                    std::cerr << fmt::format("skipping {} because it's already been added", method->name) << std::endl;
+//
+////        bidirectional_file << fmt::format(") :") << endl;
+////
+////        //                auto variable_names = generate_variable_names(construtor_parameter_count);
+////        auto variable_names = "";/*generate_variable_names(
+////            get_method_param_qual_types(compiler_instance, base_type->bidirectional_constructor), true);*/
+////        bidirectional_file << fmt::format("      {}({}),", base_type->get_name_alias(), join(variable_names)) << endl;
+////        bidirectional_file
+////            << fmt::format("      v8toolkit::JSWrapper<{}>(context, object, created_by) {{}}", base_type->get_name_alias())
+////            << endl; // {{}} is escaped {}
+////        bidirectional_file << endl;
+////
+//
+//
+//        auto * current_inheritance_class = base_type;
+//        set<string> js_access_virtual_methods_added;
+//
+//        cerr << fmt::format("building virtual method list for {}", wrapped_class->get_name_alias());
+//        while (current_inheritance_class) {
+//            cerr << fmt::format(" ** Inheritance hierarchy class: {} with {} base types",
+//                                current_inheritance_class->get_name_alias(), current_inheritance_class->base_types.size())
+//                 << endl;
+//
+//            for (auto & method : current_inheritance_class->get_member_functions()) {
+//                if (!method->is_virtual) {
+//                    std::cerr << fmt::format("Skipping method {} because it's either not virtual",
+//                                             method->name) << std::endl;
 //                    continue;
 //                }
-//                std::cerr << fmt::format("adding {} as having been added", method->get_signature_string()) << std::endl;
-//                js_access_virtual_methods_added.insert(method->get_signature_string());
-
-
-
-
-                auto bidirectional_virtual_method = method->method_decl;
-                auto num_params = bidirectional_virtual_method->getNumParams();
-//            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
-
-
-                stringstream js_access_virtual_method_string;
-
-                //std::cerr << fmt::format("10") << std::endl;
-                js_access_virtual_method_string << "  JS_ACCESS_" << num_params
-                                                << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
-
-                js_access_virtual_method_string << make_macro_safe_comma(method->return_type.get_name()) << ", ";
-
-                //std::cerr << fmt::format("11 - num_params: {}", num_params) << std::endl;
-                js_access_virtual_method_string << bidirectional_virtual_method->getName().str();
-
-                if (num_params > 0) {
-                    //std::cerr << fmt::format("12") << std::endl;
-                    auto types = vector<QualType>{};/*get_method_param_qual_types(wrapped_class->compiler_instance,
-                                                             bidirectional_virtual_method); */
-                    vector<string> type_names;
-                    for (auto & type : types) {
-                        type_names.push_back(make_macro_safe_comma(type.getAsString()));
-                    }
-
-                    js_access_virtual_method_string << join(type_names, ", ", true);
-                }
-
-
-                //std::cerr << fmt::format("13") << std::endl;
-                js_access_virtual_method_string << ");\n";
-
-
-                if (js_access_virtual_methods_added.count(js_access_virtual_method_string.str())) {
-                    continue;
-                }
-                std::cerr << fmt::format("marking as added: {}", js_access_virtual_method_string.str()) << std::endl;
-                js_access_virtual_methods_added.insert(js_access_virtual_method_string.str());
-
-                // do this after marking it as added so if it doesn't get added when found in a parent type of
-                //   the current class where it wouldn't be marked as final
-                if (method->is_virtual_final) {
-                    std::cerr << fmt::format("Skipping method {} because it's marked as final",
-                                             method->name) << std::endl;
-                    continue;
-                }
-
-                bidirectional_file << js_access_virtual_method_string.str();
-
-            }
-
-            current_inheritance_class = *current_inheritance_class->base_types.begin();
-        }
-
-        bidirectional_file << endl << "};" << endl << endl;
-
-
-        bidirectional_file.close();
-
-    }
-}
+//
+//                // this is done correctly lower down, so I think this is not needed but signature includes the class name
+//                // so it doesn't dedupe virtuals across inheritance hierarchy
+////                auto added_method = js_access_virtual_methods_added.find(method->get_signature_string());
+////
+////                // check if it's already been added at a more derived type
+////                if (added_method != js_access_virtual_methods_added.end()) {
+////                    std::cerr << fmt::format("skipping {} because it's already been added", method->name) << std::endl;
+////                    continue;
+////                }
+////                std::cerr << fmt::format("adding {} as having been added", method->get_signature_string()) << std::endl;
+////                js_access_virtual_methods_added.insert(method->get_signature_string());
+//
+//
+//
+//
+//                auto bidirectional_virtual_method = method->method_decl;
+//                auto num_params = bidirectional_virtual_method->getNumParams();
+////            printf("Dealing with %s\n", method->getQualifiedNameAsString().c_str());
+//
+//
+//                stringstream js_access_virtual_method_string;
+//
+//                //std::cerr << fmt::format("10") << std::endl;
+//                js_access_virtual_method_string << "  JS_ACCESS_" << num_params
+//                                                << (bidirectional_virtual_method->isConst() ? "_CONST(" : "(");
+//
+//                js_access_virtual_method_string << make_macro_safe_comma(method->return_type.get_name()) << ", ";
+//
+//                //std::cerr << fmt::format("11 - num_params: {}", num_params) << std::endl;
+//                js_access_virtual_method_string << bidirectional_virtual_method->getName().str();
+//
+//                if (num_params > 0) {
+//                    //std::cerr << fmt::format("12") << std::endl;
+//                    auto types = vector<QualType>{};/*get_method_param_qual_types(wrapped_class->compiler_instance,
+//                                                             bidirectional_virtual_method); */
+//                    vector<string> type_names;
+//                    for (auto & type : types) {
+//                        type_names.push_back(make_macro_safe_comma(type.getAsString()));
+//                    }
+//
+//                    js_access_virtual_method_string << join(type_names, ", ", true);
+//                }
+//
+//
+//                //std::cerr << fmt::format("13") << std::endl;
+//                js_access_virtual_method_string << ");\n";
+//
+//
+//                if (js_access_virtual_methods_added.count(js_access_virtual_method_string.str())) {
+//                    continue;
+//                }
+//                std::cerr << fmt::format("marking as added: {}", js_access_virtual_method_string.str()) << std::endl;
+//                js_access_virtual_methods_added.insert(js_access_virtual_method_string.str());
+//
+//                // do this after marking it as added so if it doesn't get added when found in a parent type of
+//                //   the current class where it wouldn't be marked as final
+//                if (method->is_virtual_final) {
+//                    std::cerr << fmt::format("Skipping method {} because it's marked as final",
+//                                             method->name) << std::endl;
+//                    continue;
+//                }
+//
+//                bidirectional_file << js_access_virtual_method_string.str();
+//
+//            }
+//
+//            current_inheritance_class = *current_inheritance_class->base_types.begin();
+//        }
+//
+//        bidirectional_file << endl << "};" << endl << endl;
+//
+//
+//        bidirectional_file.close();
+//
+//    }
+//}
 
 std::string trim_doxygen_comment_whitespace(std::string const & comment) {
-    return std::regex_replace(comment, std::regex("\\s*([^\\n]*?)\\s*(?:[\n]|$)\\s*[*]*\\s*?(\\s?)"), "$1$2");
+    static xl::RegexPcre comment_regex("\\s*([^\\n]*?)\\s*(?:[\n]|$)\\s*[*]*\\s*?(\\s?)");
+    return comment_regex.replace(comment, "$1$2", true);
 }
 
 

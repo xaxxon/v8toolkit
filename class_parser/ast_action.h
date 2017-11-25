@@ -8,6 +8,8 @@
 #include "clang/Frontend/FrontendAction.h"
 #pragma clang diagnostic pop
 
+#include <xl/json.h>
+
 #include "wrapped_class.h"
 
 #include "ast_consumer.h"
@@ -21,7 +23,22 @@ namespace v8toolkit::class_parser {
 
 // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
 class PrintFunctionNamesAction : public clang::PluginASTAction {
+
+protected:
+    // The value returned here is used internally to run checks against
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
+                                                   llvm::StringRef) override;
+
+    bool ParseArgs(const CompilerInstance & CI,
+                   const std::vector<std::string> & args) override;
+
+    void PrintHelp(llvm::raw_ostream & ros);
+
+
 public:
+
+    static inline xl::json::Json config_data;
+
 
     // open up output files
     PrintFunctionNamesAction();
@@ -34,19 +51,13 @@ public:
 
     bool BeginInvocation(CompilerInstance & ci) override;
 
-protected:
-    // The value returned here is used internally to run checks against
-    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance & CI,
-                                                   llvm::StringRef) override;
-
-    bool ParseArgs(const CompilerInstance & CI,
-                   const std::vector<std::string> & args) override;
-
-    void PrintHelp(llvm::raw_ostream & ros);
-
-public:
-
     void add_output_module(unique_ptr<OutputModule> output_module);
+
+    /**
+     * Returns Json object
+     * @return
+     */
+    static xl::json::Json get_config_data();
 
 };
 

@@ -40,10 +40,10 @@ struct JavascriptStubProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
 
-        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for wrapped class: {}", c.get_name_alias());
+        v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Making provider for wrapped class: {}", c.class_name);
         return P::make_provider(
             std::pair("comment", c.comment),
-            std::pair("name", c.get_jsdoc_name()),
+            std::pair("name", c.get_js_name()),
             std::pair("data_members", std::ref(c.get_members())),
             std::pair("constructors", std::ref(c.get_constructors())),
 
@@ -54,7 +54,7 @@ struct JavascriptStubProviderContainer {
 
             std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("inheritance", fmt::format("{}", c.base_types.empty() ? "" : " extends " +
-                                                                                   (*c.base_types.begin())->get_jsdoc_name()))
+                                                                                   (*c.base_types.begin())->get_js_name()))
         );
     }
 

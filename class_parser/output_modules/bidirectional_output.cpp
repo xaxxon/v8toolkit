@@ -8,7 +8,10 @@
 #include <xl/library_extensions.h>
 using xl::templates::ProviderPtr;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
 #include "clang/AST/DeclCXX.h"
+#pragma clang diagnostic pop
 
 
 #include "../wrapped_class.h"
@@ -26,14 +29,14 @@ extern std::map<string, xl::templates::Template> bidirectional_templates;
 bool BidirectionalCriteria::operator()(WrappedClass const & c) {
     if (!c.bidirectional) {
         log.info(LogSubjects::Subjects::BidirectionalOutput,
-                 "BidirectionalCriteria: skipping {} because not bidirectional", c.get_name_alias());
+                 "BidirectionalCriteria: skipping {} because not bidirectional", c.class_name);
         return false;
     }
 
     if (c.base_types.size() != 1) {
         log.error(LogSubjects::Subjects::BidirectionalOutput,
                   "BidirectionalCriteria: bidirectional class {} must have 1 base type but actually has {} - {}",
-                  c.get_name_alias(), c.base_types.size(), xl::join(c.base_types));
+                  c.get_js_name(), c.base_types.size(), xl::join(c.base_types));
         return false;
     }
 
@@ -47,7 +50,7 @@ std::ostream & BidirectionalOutputStreamProvider::get_class_collection_stream() 
 
 ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const & c) {
     this->output_file.close();
-    this->output_file.open(fmt::format("v8toolkit_generated_bidirectional_{}.h", c.get_name_alias()));
+    this->output_file.open(fmt::format("v8toolkit_generated_bidirectional_{}.h", c.get_js_name()));
 
     return this->output_file;
 }
@@ -118,16 +121,16 @@ struct BidirectionalProviderContainer {
         });
 
 //
-        log.info(LogSubjects::BidirectionalOutput, "virtual function count for {}: {}", c.get_name_alias(), virtual_functions.size());
+        log.info(LogSubjects::BidirectionalOutput, "virtual function count for {}: {}", c.get_js_name(), virtual_functions.size());
 
-        log.info(LogSubjects::BidirectionalOutput, "includes for {}, {}", c.get_name_alias(), xl::join(c.include_files));
+        log.info(LogSubjects::BidirectionalOutput, "includes for {}, {}", c.get_js_name(), xl::join(c.include_files));
 
         return xl::templates::make_provider<BidirectionalProviderContainer>(
-            std::pair("name", c.get_name_alias()),
+            std::pair("name", c.get_js_name()),
 //            std::pair("virtual_functions", xl::erase_if(xl::copy(c.get_member_functions()), [](auto & e){return e.get()->is_virtual;})),
             std::pair("virtual_functions", virtual_functions),
             std::pair("includes", std::ref(c.include_files)),
-            std::pair("base_name", (*c.base_types.begin())->get_name_alias()),
+            std::pair("base_name", (*c.base_types.begin())->class_name),
             std::pair("constructor_parameters", generate_bidirectional_constructor_parameter_list(c)),
             std::pair("constructor_variables",
                       xl::join(generate_variable_names(get_method_param_qual_types(c.compiler_instance,
@@ -177,7 +180,7 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
 
     for(auto c : wrapped_classes) {
         log.info(LogT::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
-                 c->get_name_alias());
+                 c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
 
         ostream << bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), &bidirectional_templates);

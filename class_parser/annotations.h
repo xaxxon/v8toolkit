@@ -40,18 +40,20 @@ public:
     }
 
     std::vector<std::string> get_regex(const std::string & regex_string) const {
+//        std::cerr << fmt::format("running annotation regex {}", regex_string) << std::endl;
         auto re = std::regex(regex_string);
         std::vector<std::string> results;
 
         for (auto & annotation : annotations) {
             std::smatch matches;
+//            std::cerr << fmt::format("on annotation {}", annotation) << std::endl;
             if (std::regex_match(annotation, matches, re)) {
-                // printf("GOT %d MATCHES\n", (int)matches.size());
                 if (matches.size() > 1) {
                     results.emplace_back(matches[1]);
                 }
             }
         }
+//        std::cerr << fmt::format("done with annotations") << std::endl;
         return results;
     }
 

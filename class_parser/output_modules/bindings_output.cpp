@@ -26,7 +26,7 @@ extern Template standard_includes_template;
 extern std::map<string, Template> bindings_templates;
 
 bool BindingsCriteria::operator()(WrappedClass const & c) {
-    log.info(LogSubjects::BindingsOutput, "Checking criteria for {}", c.get_name_alias());
+    log.info(LogSubjects::BindingsOutput, "Checking criteria for {}", c.class_name);
     // if (c.bidirectional) {
     //     log.info(LogSubjects::Subjects::BindingsOutput, "Skipping generation of bindings for {} because it's a bidirectional type", c.get_name_alias());
     //     return false;
@@ -59,22 +59,22 @@ struct BindingsProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
 
-        log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.get_name_alias());
+        log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
-            std::pair("name", c.get_name_alias()),
+            std::pair("name", c.class_name),
             std::pair("long_name", c.class_name),
-            std::pair("alias", c.get_name_alias()),
+            std::pair("js_name", c.get_js_name()),
             std::pair("data_members", std::ref(c.get_members())),
             std::pair("member_functions", std::ref(c.get_member_functions())),
             std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("constructor", c.get_constructors().size() == 0 || c.force_no_constructors ?
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
-                                                 c.get_name_alias()) :
+                                                 c.get_js_name()) :
                                      fmt::format(
                                          "class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
                                          c.get_constructors().back()->get_parameter_types_string(),
-                                         c.get_name_alias(), c.get_constructors().back()->get_default_argument_tuple_string())),
+                                         c.get_js_name(), c.get_constructors().back()->get_default_argument_tuple_string())),
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->class_name),
 
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
@@ -94,7 +94,7 @@ struct BindingsProviderContainer {
             std::pair("comment", d.comment),
             std::pair("name", d.long_name),
             std::pair("js_name", d.js_name),
-            std::pair("declared_in", d.declared_in.get_name_alias()),
+            std::pair("declared_in", d.declared_in.class_name),
             std::pair("type", d.type.get_name()),
             std::pair("read_only", d.type.is_const() ? "_readonly" : ""),
             std::pair("member_pointer", fmt::format("&{}", d.long_name))
@@ -114,7 +114,7 @@ struct BindingsProviderContainer {
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_name_alias()),
+            std::pair("class_name", f.wrapped_class.class_name),
             std::pair("default_arg_tuple", f.get_default_argument_tuple_string())
         );
     }
@@ -131,7 +131,7 @@ struct BindingsProviderContainer {
             std::pair("parameters", P::make_provider(f.parameters)),
             std::pair("return_type_name", f.return_type.get_jsdoc_type_name()),
             std::pair("return_comment", f.return_type_comment),
-            std::pair("class_name", f.wrapped_class.get_name_alias()),
+            std::pair("class_name", f.wrapped_class.class_name),
             std::pair("default_arg_tuple", f.get_default_argument_tuple_string())
         );
     }
@@ -241,7 +241,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
                 continue;
             }
 
-            log.info(LogSubjects::BindingsOutput, "Processing class: {}", wrapped_class->get_name_alias());
+            log.info(LogSubjects::BindingsOutput, "Processing class: {}", wrapped_class->class_name);
             already_wrapped_classes.insert(wrapped_class);
             found_match = true;
 
@@ -304,8 +304,8 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
         if (!xl::contains(already_wrapped_classes, wrapped_class)) {
             for (auto used_class : wrapped_class->used_classes) {
                 if (already_wrapped_classes.count(used_class) == 0) {
-                    log.error(LogSubjects::Class, "Could not dump '{}' because it uses type '{}' that wasn't dumped", wrapped_class->get_name_alias(),
-                                        used_class->get_name_alias());
+                    log.error(LogSubjects::Class, "Could not dump '{}' because it uses type '{}' that wasn't dumped", wrapped_class->class_name,
+                                        used_class->class_name);
                 }
             }
         }
@@ -323,7 +323,7 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
-    class_wrapper.set_class_name("{{alias}}");
+    class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
     class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 {{<<static_functions|!!

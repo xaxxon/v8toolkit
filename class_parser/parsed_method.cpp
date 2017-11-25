@@ -14,6 +14,7 @@
 #include "wrapped_class.h"
 #include "clang_helper_functions.h"
 
+#include "ast_action.h"
 
 using namespace xl;
 
@@ -94,7 +95,7 @@ string ClassFunction::TypeInfo::convert_simple_typename_to_jsdoc(string simple_t
     simple_type_name = regex_replace(simple_type_name, regex("std::__(cxx\\d\\d|\\d)::"), "std::");
 
     // clang generates type names with class/struct prefixes, remove them
-    simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)\\s*"), "");
+    simple_type_name = regex_replace(simple_type_name, regex("^(class|struct)?\\s*"), "");
 
     // remove const/volatile
     simple_type_name = regex_replace(simple_type_name, regex("^(?:const\\s*|volatile\\s*)*\\s*(.*?)\\s*&?&?$"), "$1");
@@ -253,15 +254,9 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     js_name(short_name),
     type(field_decl->getType()),
     field_decl(field_decl),
-    annotations(this->field_decl) {
-    auto annotated_custom_name = annotations.get_regex(
-        "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
-    if (!annotated_custom_name.empty()) {
-//        std::cerr << fmt::format("Overriding data member name {} => {}", this->js_name, annotated_custom_name[0])
-//                  << std::endl;
-        this->js_name = annotated_custom_name[0];
-//        std::cerr << fmt::format("short name is now {}", this->js_name) << std::endl;
-    }
+    annotations(this->field_decl)
+{
+
     wrapped_class.declaration_count++;
 
     update_wrapped_class_for_type(wrapped_class, *this->type.get_plain_type());
@@ -277,6 +272,8 @@ DataMember::DataMember(WrappedClass & wrapped_class,
             this->wrapped_class.compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
         this->comment = trim_doxygen_comment_whitespace(comment_text);
     }
+
+    this->js_name = this->look_up_js_name();
 }
 
 string DataMember::get_js_stub() {
@@ -328,7 +325,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
 
         // if the parameter has no name, then no comment can be associated with it
         log.warn(LogSubjects::Comments, "class {} method {} parameter index {} has no variable name",
-                                 this->method.wrapped_class.get_name_alias(), this->method.name, this->position);
+                                 this->method.wrapped_class.class_name, this->method.name, this->position);
     }
 
     // set default argument or "" if none
@@ -366,15 +363,15 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                              FunctionTemplateDecl const * function_template_decl,
                              std::string const & preferred_js_name) :
     wrapped_class(wrapped_class),
+    method_decl(method_decl),
+    annotations(this->method_decl),
     is_virtual(method_decl->isVirtual()),
     function_template_decl(function_template_decl),
     template_parameter_types(template_parameter_types),
     return_type(method_decl->getReturnType(), template_parameter_types),
-    method_decl(method_decl),
     name(method_decl->getQualifiedNameAsString()),
     js_name(preferred_js_name != "" ? preferred_js_name : method_decl->getNameAsString()),
-    compiler_instance(wrapped_class.compiler_instance),
-    annotations(this->method_decl)
+    compiler_instance(wrapped_class.compiler_instance)
 {
 
 //    std::cerr << fmt::format("classfunction: preferred name: '{}' vs default name: '{}'", preferred_js_name, method_decl->getNameAsString()) << std::endl;
@@ -645,7 +642,7 @@ string ClassFunction::get_signature_string() const {
     }
 
     result << ")";
-    std::cerr << fmt::format("Returning signature: {}", result.str()) << std::endl;
+//    std::cerr << fmt::format("Returning signature: {}", result.str()) << std::endl;
     return result.str();
 }
 
@@ -701,7 +698,10 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
             this->is_virtual_override = true;
         }
     };
+
+    this->js_name = this->look_up_js_name();
 }
+
 
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                                map<string, QualTypeWrapper> const & map, FunctionTemplateDecl const * function_template_decl) :
@@ -710,11 +710,13 @@ StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const
     if (static_method_renames.find(this->js_name) != static_method_renames.end()) {
         this->js_name = static_method_renames[this->js_name];
     }
+
+    this->js_name = this->look_up_js_name();
 }
 
 
 ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstructorDecl const * constructor_decl) :
-    ClassFunction(wrapped_class, constructor_decl, {}, nullptr, wrapped_class.is_name_alias_default() ? "" : wrapped_class.get_name_alias()),
+    ClassFunction(wrapped_class, constructor_decl, {}, nullptr, wrapped_class.get_js_name()),
     constructor_decl(constructor_decl)
 {
 //    std::cerr << fmt::format("in constructor function constructor body, {} vs {}  -- and {}", wrapped_class.get_name_alias(), wrapped_class.get_short_name(), wrapped_class.decl->getTypeForDecl()->getCanonicalTypeInternal().getAsString()) << std::endl;
@@ -739,12 +741,12 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
         WrappedClass::used_constructor_names.end()) {
         log.error(LogSubjects::Constructors,
                   "Error: duplicate JS constructor function name: {} in class {}",
-                        this->js_name.c_str(), wrapped_class.get_name_alias());
+                        this->js_name.c_str(), this->wrapped_class.get_js_name());
 //        for (auto & name : used_constructor_names) {
 //            cerr << (fmt::format("Already used constructor name: {}", name)) << endl;
 //        }
     } else {
-        log.info(LogSubjects::Subjects::Class, "for {}, wrapping constructor {}", wrapped_class.get_name_alias(), this->js_name);
+        log.info(LogSubjects::Subjects::Class, "for {}, wrapping constructor {}", wrapped_class.class_name, this->js_name);
         WrappedClass::used_constructor_names.push_back(this->js_name);
     }
 }
@@ -805,21 +807,84 @@ string StaticFunction::generate_js_bindings() {
 
 }
 
-//
-//string ConstructorFunction::generate_js_stub() {
-//    stringstream result;
-//
-//    result << fmt::format("    /**") << endl;
-//    for (auto & parameter : this->parameters) {
-//        result << parameter.generate_js_stub();
-//    }
-//    result << fmt::format("     */") << endl;
-//
-//    result << fmt::format("    constructor({}){{}}\n\n", this->get_js_input_parameter_string());
-//
-//    return result.str();
-//
-//}
 
+std::string MemberFunction::look_up_js_name() const {
 
+    // first check the config file for overrides
+    auto member_function_config =
+        PrintFunctionNamesAction::get_config_data()["classes"]
+            [this->wrapped_class.class_name]["member_functions"][this->get_signature_string()];
+
+    log.info(LogT::Subjects::ConfigFile, "Looking up member function: {} - {}", this->wrapped_class.class_name,
+    this->get_signature_string());
+    if (auto name_config_override = member_function_config["name"].get_string()) {
+        log.info(LogT::Subjects::ConfigFile, "matched");
+        return *name_config_override;
+    } else {
+        log.info(LogT::Subjects::ConfigFile, "no match");
+
+        // then check code annotations
+        auto annotated_custom_name = annotations.get_regex(
+            "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+        if (!annotated_custom_name.empty()) {
+            return annotated_custom_name[0];
+        } else {
+            return method_decl->getNameAsString();
+        }
+    }
 }
+
+std::string DataMember::look_up_js_name() const {
+    // first check the config file for overrides
+    auto member_function_config =
+        PrintFunctionNamesAction::get_config_data()["classes"]
+        [this->wrapped_class.class_name]["data_members"][this->long_name];
+    log.info(LogT::Subjects::ConfigFile, "Looking up data member: {} - {}", this->wrapped_class.class_name,
+             this->long_name);
+
+    if (auto name_config_override = member_function_config["name"].get_string()) {
+        log.info(LogT::Subjects::ConfigFile, "matched");
+
+        return *name_config_override;
+    } else {
+
+        log.info(LogT::Subjects::ConfigFile, "no match");
+
+        // then check code annotations
+        auto annotated_custom_name = annotations.get_regex(
+            "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+        if (!annotated_custom_name.empty()) {
+            return annotated_custom_name[0];
+        } else {
+            return this->field_decl->getNameAsString();
+        }
+    }
+}
+
+std::string StaticFunction::look_up_js_name() const {
+    // first check the config file for overrides
+    auto member_function_config =
+        PrintFunctionNamesAction::get_config_data()["classes"]
+        [this->wrapped_class.class_name]["static_functions"][this->get_signature_string()];
+
+    log.info(LogT::Subjects::ConfigFile, "Looking up static function: {} - {}", this->wrapped_class.class_name,
+             this->get_signature_string());
+
+    if (auto name_config_override = member_function_config["name"].get_string()) {
+        log.info(LogT::Subjects::ConfigFile, "match");
+        return *name_config_override;
+    } else {
+        log.info(LogT::Subjects::ConfigFile, "no match");
+        // then check code annotations
+        auto annotated_custom_name = annotations.get_regex(
+            "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
+        if (!annotated_custom_name.empty()) {
+            return annotated_custom_name[0];
+        } else {
+            return method_decl->getNameAsString();
+        }
+    }
+}
+
+
+} // end namespace v8toolkit::class_parser

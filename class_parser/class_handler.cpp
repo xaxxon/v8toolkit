@@ -143,10 +143,11 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
             log.info(LogSubjects::ClassParser, "Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString());
             Annotations::names_for_record_decls[record_decl] = name_alias;
 
+
             // if the class has already been parsed, update it now
             if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
-                log.info(LogSubjects::ClassParser, "Setting name alias for {} to {}", wrapped_class->get_name_alias(), name_alias);
-                wrapped_class->set_name_alias(name_alias);
+                log.info(LogSubjects::ClassParser, "Setting typedef name alias for class {} to {}", wrapped_class->class_name, name_alias);
+                wrapped_class->force_recache_js_name();
             }
         }
     }
@@ -158,7 +159,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
             bool print_logging = false;
 
-            if (std::regex_search(class_name, std::regex("^(class|struct)\\s+v8toolkit"))) {
+            if (std::regex_search(class_name, std::regex("^(class|struct)?\\s+v8toolkit"))) {
             //		if (std::regex_search(class_name, std::regex("remove_reference"))) {
                 print_logging = true;
                 cerr << fmt::format("Got class {}", class_name) << endl;
@@ -288,7 +289,7 @@ void ClassHandler::onEndOfTranslationUnit() {
 
                 // actual log.error was published when the error was discovered,
                 //   this is just an informational summary of those errors
-                log.info(LogT::Subjects::Class, "ERROR SUMMARY: in {}: '{}'", c->get_name_alias(), error.string);
+                log.info(LogT::Subjects::Class, "ERROR SUMMARY: in {}: '{}'", c->class_name, error.string);
                 found_data_error = true;
             }
         }

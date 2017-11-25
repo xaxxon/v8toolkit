@@ -32,6 +32,11 @@ struct ClassFunction {
 
     // class the method is in
     WrappedClass & wrapped_class;
+    CXXMethodDecl const * method_decl;
+
+    Annotations annotations;
+
+
     bool is_static;
     bool is_virtual;
     bool is_virtual_final = false;
@@ -52,6 +57,7 @@ struct ClassFunction {
     struct TypeInfo {
 
     private:
+
         static string convert_simple_typename_to_jsdoc(string simple_type_name, std::string const & = "");
 
         map<string, QualTypeWrapper> template_parameter_types;
@@ -120,7 +126,6 @@ struct ClassFunction {
     TypeInfo return_type;
     string return_type_comment;
     vector<ParameterInfo> parameters;
-    CXXMethodDecl const * method_decl;
 
     // c++ name
     string name;
@@ -128,7 +133,6 @@ struct ClassFunction {
     // name used in javascript
     string js_name;
     CompilerInstance & compiler_instance;
-    Annotations annotations;
 
     string get_default_argument_tuple_string() const;
 
@@ -152,10 +156,15 @@ struct ClassFunction {
 
     string get_js_input_parameter_string() const;
 
+
 };
 
 
 class MemberFunction : public ClassFunction {
+
+    // finds any name JavaScript name override if present
+    std::string look_up_js_name() const;
+
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                    map<string, QualTypeWrapper> const & map = {},
@@ -176,6 +185,10 @@ public:
 };
 
 class StaticFunction : public ClassFunction {
+
+    // finds any name JavaScript name override if present
+    std::string look_up_js_name() const;
+
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                    map<string, QualTypeWrapper> const & map = {},
@@ -199,6 +212,13 @@ public:
 struct WrappedClass;
 
 struct DataMember {
+
+private:
+    // finds any name JavaScript name override if present
+    std::string look_up_js_name() const;
+
+
+public:
     WrappedClass & wrapped_class;
     WrappedClass & declared_in; // level in the hierarchy the member is actually declared at - may match wrapped_class
     string short_name;
