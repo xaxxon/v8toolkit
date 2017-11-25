@@ -389,6 +389,8 @@ void WrappedClass::parse_all_methods() {
             current_decl = target_decl;
         }
 
+
+
         Annotations decl_annotations(current_decl);
         if (decl_annotations.has(V8TOOLKIT_NONE_STRING)) {
             if (auto named_decl = dyn_cast<NamedDecl>(current_decl)) {
@@ -423,11 +425,11 @@ void WrappedClass::parse_all_methods() {
 //            std::cerr << fmt::format("templated member function: {}", full_method_name) << std::endl;
 
 
+
             if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
-//                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
+    //                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
                 continue;
             }
-
 
 
             // store mapping of templated types to default types
@@ -473,142 +475,171 @@ void WrappedClass::parse_all_methods() {
         }
 
 
-        if (method) {
 
-            Annotations method_annotations(method);
 
-            std::string full_method_name(method->getQualifiedNameAsString());
-            log.info(LogSubjects::Methods, "looking at {}", full_method_name);
 
-            // this is handled now
+        Annotations method_annotations(method);
+
+        std::string full_method_name = method->getQualifiedNameAsString();
+        log.info(LogSubjects::Methods, "looking at {}", full_method_name);
+
+
+
+        std::cerr << fmt::format("canonical name for decl in parse_all_methods: {}", full_method_name) << std::endl;
+
+        // if the config file has an entry for whether to skip this, use that
+        auto member_function_config =
+            PrintFunctionNamesAction::get_config_data()["classes"]
+            [this->class_name]["members"][full_method_name];
+
+        if (auto skip = member_function_config["skip"].get_boolean()) {
+            v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}",
+                                              full_method_name, *skip);
+            if (*skip) {
+                continue;
+            } else {
+                // else it was marked as skip = false, so ignore whether it has an annotation or not
+            }
+        }
+            // else no config entry was found, so check for annotation
+        else {
+
+            if (Annotations(method).has(V8TOOLKIT_NONE_STRING)) {
+//                std::cerr << fmt::format("SKIPPING TEMPLATE FUNCTION WITH V8TOOLKIT_NONE_STRING") << std::endl;
+                continue;
+            }
+        }
+
+
+        // this is handled now
 //            if (method->isTemplateDecl()) {
 //                std::cerr << fmt::format("{} is template decl", full_method_name) << std::endl;
 //            }
 
-            if (method->hasInheritedPrototype()) {
-                log.info(LogSubjects::Methods, "Skipping method {} because it has inherited prototype", full_method_name);
+        if (method->hasInheritedPrototype()) {
+            log.info(LogSubjects::Methods, "Skipping method {} because it has inherited prototype", full_method_name);
+            continue;
+        }
+
+        auto export_type = get_export_type(method, LogSubjects::Methods, EXPORT_ALL);
+
+        if (export_type != EXPORT_ALL) {
+            log.info(LogSubjects::Methods, "Skipping method {} because not supposed to be exported %d",
+                       full_method_name, export_type);
+            continue;
+        }
+
+        // only deal with public methods
+        if (method->getAccess() != AS_public) {
+            log.info(LogSubjects::Methods, "{} is not public, skipping\n", full_method_name);
+            continue;
+        }
+
+        // list of overloaded operator enumerated values
+        // http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
+        if (method->isOverloadedOperator()) {
+
+            // if it's a call operator (operator()), grab it
+            if (OO_Call == method->getOverloadedOperator()) {
+                // nothing specific to do, just don't skip it only because it's an overloaded operator
+            } else {
+
+                // otherwise skip overloaded operators
+                log.info(LogSubjects::Methods, "skipping overloaded operator {}", full_method_name.c_str());
                 continue;
             }
-
-            auto export_type = get_export_type(method, LogSubjects::Methods, EXPORT_ALL);
-
-            if (export_type != EXPORT_ALL) {
-                log.info(LogSubjects::Methods, "Skipping method {} because not supposed to be exported %d",
-                           full_method_name, export_type);
+        }
+        if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
+            // don't deal with constructors on abstract types
+            if (this->decl->isAbstract()) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping abstract class constructor");
                 continue;
             }
-
-            // only deal with public methods
-            if (method->getAccess() != AS_public) {
-                log.info(LogSubjects::Methods, "{} is not public, skipping\n", full_method_name);
+            if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping constructor because DO_NOT_WRAP_CONSTRUCTORS");
                 continue;
             }
-
-            // list of overloaded operator enumerated values
-            // http://llvm.org/reports/coverage/tools/clang/include/clang/Basic/OperatorKinds.def.gcov.html
-            if (method->isOverloadedOperator()) {
-
-                // if it's a call operator (operator()), grab it
-                if (OO_Call == method->getOverloadedOperator()) {
-                    // nothing specific to do, just don't skip it only because it's an overloaded operator
-                } else {
-
-                    // otherwise skip overloaded operators
-                    log.info(LogSubjects::Methods, "skipping overloaded operator {}", full_method_name.c_str());
-                    continue;
-                }
-            }
-            if (auto constructor_decl = dyn_cast<CXXConstructorDecl>(method)) {
-                // don't deal with constructors on abstract types
-                if (this->decl->isAbstract()) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping abstract class constructor");
-                    continue;
-                }
-                if (this->annotations.has(V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS_STRING)) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping constructor because DO_NOT_WRAP_CONSTRUCTORS");
-                    continue;
-                }
-                if (this->force_no_constructors) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping because force no constructors");
-                    continue;
-                }
-
-
-                if (constructor_decl->isCopyConstructor()) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping copy constructor");
-                    continue;
-                } else if (constructor_decl->isMoveConstructor()) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping move constructor");
-                    continue;
-                } else if (constructor_decl->isDeleted()) {
-                    v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping deleted constructor");
-                    continue;
-                }
-
-                // make sure there's no duplicate constructor names
-                auto new_constructor = std::make_unique<ConstructorFunction>(*this, constructor_decl);
-                for (auto & existing_constructor : this->constructors) {
-                    if (new_constructor->js_name == existing_constructor->js_name) {
-                        llvm::report_fatal_error(
-                            fmt::format("Duplicate constructor javascript name: {}", new_constructor->js_name));
-                    }
-                }
-                this->constructors.push_back(std::move(new_constructor));
-                continue;
-            }
-
-            if (dyn_cast<CXXDestructorDecl>(method)) {
-                log.info(LogSubjects::Destructors, "skipping destructor {}", full_method_name);
-                continue;
-            }
-
-            if (dyn_cast<CXXConversionDecl>(method)) {
-                log.info(LogSubjects::Methods, "skipping conversion operator {}", full_method_name);
+            if (this->force_no_constructors) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping because force no constructors");
                 continue;
             }
 
 
-            if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
-                // cerr << "has extend wrapper string" << endl;
-                if (!method->isStatic()) {
-                    log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static",
-                                           full_method_name.c_str());
-
-                }
-                log.info(LogSubjects::Methods, "skipping static method '{}' marked as v8 class wrapper extension method, but will call it during class wrapping", full_method_name);
-                this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
-                continue; // don't wrap the method as a normal method
+            if (constructor_decl->isCopyConstructor()) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping copy constructor");
+                continue;
+            } else if (constructor_decl->isMoveConstructor()) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping move constructor");
+                continue;
+            } else if (constructor_decl->isDeleted()) {
+                v8toolkit::class_parser::log.info(LogSubjects::Subjects::Constructors, "skipping deleted constructor");
+                continue;
             }
 
-            // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
-            if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
-                if (!method->isStatic()) {
-                    log.error(LogSubjects::Methods, "method '{}' annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
-                                           full_method_name);
-                    continue;
-                } else if (method->getAccess() != AS_public) {
-                    log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be public", full_method_name);
-                    continue;
+            // make sure there's no duplicate constructor names
+            auto new_constructor = std::make_unique<ConstructorFunction>(*this, constructor_decl);
+            for (auto & existing_constructor : this->constructors) {
+                if (new_constructor->js_name == existing_constructor->js_name) {
+                    llvm::report_fatal_error(
+                        fmt::format("Duplicate constructor javascript name: {}", new_constructor->js_name));
                 }
-                log.info(LogSubjects::Methods, "skipping static method '{}' marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping", full_method_name);
-
-                // TODO: don't put the text here, just store the method in WrappedClass
-                this->wrapper_custom_extensions.insert(
-                    fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});",
-                                full_method_name));
-                continue; // don't wrap the method as a normal method
             }
+            this->constructors.push_back(std::move(new_constructor));
+            continue;
+        }
+
+        if (dyn_cast<CXXDestructorDecl>(method)) {
+            log.info(LogSubjects::Destructors, "skipping destructor {}", full_method_name);
+            continue;
+        }
+
+        if (dyn_cast<CXXConversionDecl>(method)) {
+            log.info(LogSubjects::Methods, "skipping conversion operator {}", full_method_name);
+            continue;
+        }
+
+
+        if (method_annotations.has(V8TOOLKIT_EXTEND_WRAPPER_STRING)) {
+            // cerr << "has extend wrapper string" << endl;
+            if (!method->isStatic()) {
+                log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_EXTEND_WRAPPER must be static",
+                                       full_method_name.c_str());
+
+            }
+            log.info(LogSubjects::Methods, "skipping static method '{}' marked as v8 class wrapper extension method, but will call it during class wrapping", full_method_name);
+            this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
+            continue; // don't wrap the method as a normal method
+        }
+
+        // this is VERY similar to the one above and both probably aren't needed, but they do allow SLIGHTLY different capabilities
+        if (method_annotations.has(V8TOOLKIT_CUSTOM_EXTENSION_STRING)) {
+            if (!method->isStatic()) {
+                log.error(LogSubjects::Methods, "method '{}' annotated with V8TOOLKIT_CUSTOM_EXTENSION must be static",
+                                       full_method_name);
+                continue;
+            } else if (method->getAccess() != AS_public) {
+                log.error(LogSubjects::Methods, "method {} annotated with V8TOOLKIT_CUSTOM_EXTENSION must be public", full_method_name);
+                continue;
+            }
+            log.info(LogSubjects::Methods, "skipping static method '{}' marked as V8TOOLKIT_CUSTOM_EXTENSION, but will call it during class wrapping", full_method_name);
+
+            // TODO: don't put the text here, just store the method in WrappedClass
+            this->wrapper_custom_extensions.insert(
+                fmt::format("class_wrapper.add_new_constructor_function_template_callback(&{});",
+                            full_method_name));
+            continue; // don't wrap the method as a normal method
+        }
 
 //            std::cerr << fmt::format("Creating ParsedMethod...") << std::endl;
 
-            if (method->isStatic()) {
-                this->static_functions.push_back(
-                    make_unique<StaticFunction>(*this, method, template_parameter_types, function_template_decl));
-            } else {
-                this->member_functions.push_back(
-                    make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl));
-            }
+        if (method->isStatic()) {
+            this->static_functions.push_back(
+                make_unique<StaticFunction>(*this, method, template_parameter_types, function_template_decl));
+        } else {
+            this->member_functions.push_back(
+                make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl));
         }
+
     }
     log.info(LogSubjects::ClassParser, "Done parsing methods on {}", this->class_name);
 
@@ -702,6 +733,29 @@ void WrappedClass::parse_members() {
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
             string field_name = field->getQualifiedNameAsString();
+
+            // if the config file has an entry for whether to skip this, use that
+            auto member_function_config =
+                PrintFunctionNamesAction::get_config_data()["classes"]
+                [this->class_name]["members"][field_name];
+
+            if (auto skip = member_function_config["skip"].get_boolean()) {
+                v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}", field_name, *skip);
+                if (*skip) {
+                    continue;
+                } else {
+                    // else it was marked as skip = false, so ignore whether it has an annotation or not
+                }
+            } // else no config entry was found, so check for annotation
+            else {
+                if (Annotations(field).has(V8TOOLKIT_NONE_STRING)) {
+                    continue;
+                }
+            }
+
+
+
+
 
             auto export_type = get_export_type(field, LogSubjects::DataMembers, EXPORT_ALL);
             if (export_type == EXPORT_NONE) {

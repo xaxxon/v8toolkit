@@ -813,7 +813,7 @@ std::string MemberFunction::look_up_js_name() const {
     // first check the config file for overrides
     auto member_function_config =
         PrintFunctionNamesAction::get_config_data()["classes"]
-            [this->wrapped_class.class_name]["member_functions"][this->get_signature_string()];
+            [this->wrapped_class.class_name]["members"][this->get_signature_string()];
 
     log.info(LogT::Subjects::ConfigFile, "Looking up member function: {} - {}", this->wrapped_class.class_name,
     this->get_signature_string());
@@ -838,7 +838,7 @@ std::string DataMember::look_up_js_name() const {
     // first check the config file for overrides
     auto member_function_config =
         PrintFunctionNamesAction::get_config_data()["classes"]
-        [this->wrapped_class.class_name]["data_members"][this->long_name];
+        [this->wrapped_class.class_name]["members"][this->long_name];
     log.info(LogT::Subjects::ConfigFile, "Looking up data member: {} - {}", this->wrapped_class.class_name,
              this->long_name);
 
@@ -865,7 +865,7 @@ std::string StaticFunction::look_up_js_name() const {
     // first check the config file for overrides
     auto member_function_config =
         PrintFunctionNamesAction::get_config_data()["classes"]
-        [this->wrapped_class.class_name]["static_functions"][this->get_signature_string()];
+        [this->wrapped_class.class_name]["members"][this->get_signature_string()];
 
     log.info(LogT::Subjects::ConfigFile, "Looking up static function: {} - {}", this->wrapped_class.class_name,
              this->get_signature_string());

@@ -24,7 +24,25 @@ namespace v8toolkit::class_parser {
 
 class ClassParserException : public xl::FormattedException {
 public:
-    using xl::FormattedException::FormattedException;
+    ClassParserException(xl::zstring_view format_string) :
+        FormattedException(format_string)
+    {
+        v8toolkit::class_parser::log.error(LogT::Subjects::Exception, this->what());
+    }
+
+
+    /**
+     * If more than one parameter provided, the first will be used as a formatting string and the other
+     * parameters will be used as substitution arguments for that formatting string
+     * @param format_string format string for libfmt
+     * @param args substitutions for the format string
+     */
+    template<typename... Args>
+    ClassParserException(xl::zstring_view format_string, Args&&... args) :
+        FormattedException(fmt::format(format_string.c_str(), std::forward<Args>(args)...))
+    {
+        v8toolkit::class_parser::log.error(LogT::Subjects::Exception, this->what());
+    }
 };
 
 

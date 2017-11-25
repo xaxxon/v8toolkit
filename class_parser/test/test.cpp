@@ -50,6 +50,7 @@ struct  Environment : public ::testing::Environment {
         this->statuses = v8toolkit::class_parser::log.get_statuses();
         v8toolkit::class_parser::log.set_regex_filter(""); // must clear regex filter so expected error messages aren't filtered
         v8toolkit::class_parser::log.set_all_subjects(true);
+        v8toolkit::class_parser::log.set_status(LogT::Subjects::ShouldBeWrapped, false);
         this->_expect_errors = true;
     }
 
@@ -84,7 +85,11 @@ struct  Environment : public ::testing::Environment {
                     // If this fires, it means no error message was expected
                     EXPECT_EQ(message.string, "Unexpected error message");
                 } else {
-                    error_count++;
+                    // every error will subsequently cause an exception to be thrown, which in turn logs another error
+                    //   don't count that final error
+                    if (message.subject != LogT::Subjects::Exception) {
+                        error_count++;
+                    }
                 }
             }
         });
@@ -284,7 +289,7 @@ TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
 {
     "classes": {
         "DuplicateFunctionNameClass": {
-            "static_functions": {
+            "members": {
                 "void DuplicateFunctionNameClass::duplicated_name(int)": {
                     "name": "different name"
                 }
@@ -311,6 +316,68 @@ TEST(ClassParser, DuplicateDataMemberFunctionName) {
     auto pruned_vector = run_code(source);
     EXPECT_EQ(environment->expect_no_errors(), 1);
 }
+
+
+TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfig) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            int name_one;
+            int name_two;
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source, {}, xl::json::Json(R"JSON(
+{
+    "classes": {
+        "DuplicateFunctionNameClass": {
+            "members": {
+                "DuplicateFunctionNameClass::name_one": {
+                    "name": "duplicate_name"
+                },
+                "DuplicateFunctionNameClass::name_two": {
+                    "name": "duplicate_name"
+                }
+            }
+        }
+    }
+}
+)JSON"));
+    EXPECT_EQ(environment->expect_no_errors(), 1);
+}
+
+TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfigButOneSkipped) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            int name_one;
+            int name_two;
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source, {}, xl::json::Json(R"JSON(
+{
+    "classes": {
+        "DuplicateFunctionNameClass": {
+            "members": {
+                "DuplicateFunctionNameClass::name_one": {
+                    "name": "duplicate_name",
+                    "skip": true
+                },
+                "DuplicateFunctionNameClass::name_two": {
+                    "name": "duplicate_name"
+                }
+            }
+        }
+    }
+}
+)JSON"));
+    EXPECT_EQ(environment->expect_no_errors(), 0);
+}
+
+
 
 TEST(ClassParser, DuplicateMixedMemberFunctionName) {
     std::string source = R"(

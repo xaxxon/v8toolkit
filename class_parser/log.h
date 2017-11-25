@@ -10,7 +10,8 @@ namespace v8toolkit::class_parser {
 struct LogSubjects {
     inline static std::string subject_names[] = {
         "comments", "class", "methods", "data members", "enums", "constructors", "destructors", "bidirectional output",
-        "bindings output", "javascript stub output", "jsdoc", "should be wrapped", "class parser", "config file"
+        "bindings output", "javascript stub output", "jsdoc", "should be wrapped", "class parser", "config file",
+        "exception"
     };
 
 public:
@@ -29,6 +30,7 @@ public:
         ShouldBeWrapped,
         ClassParser,
         ConfigFile,
+        Exception,
 
         LOG_LAST_SUBJECT
 
