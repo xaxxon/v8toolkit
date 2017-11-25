@@ -27,6 +27,18 @@ struct LogWatcher {
     }
 };
 
+
+
+struct Enum {
+    struct Element {
+        std::string name;
+        int value;
+    };
+
+    std::string name;
+    std::vector<Element> elements;
+};
+
 struct ClassFunction {
 
 

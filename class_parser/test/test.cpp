@@ -236,13 +236,15 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 
 TEST(ClassParser, ClassMatchingJSReservedWord) {
     std::string source = R"(
-        class Object : public v8toolkit::WrappedClassBase {};
+        class Object : public v8toolkit::WrappedClassBase {
+            static void name(); // name is reserved property on functions
+        };
         class V8TOOLKIT_USE_NAME(TestMap) Map : public v8toolkit::WrappedClassBase {};
     )";
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 1);
+    EXPECT_EQ(environment->expect_no_errors(), 2); // one for Object, another for name()
 }
 
 
@@ -458,6 +460,27 @@ TEST(ClassParser, JSDocTypeNames) {
 }
 
 
+
+struct BidirectionalTestStreamProvider : public OutputStreamProvider {
+
+    BidirectionalTestStreamProvider() {
+        BidirectionalTestStreamProvider::class_outputs.clear();
+    }
+
+    // static so the data hangs around after the run
+    static inline std::map<std::string, std::stringstream> class_outputs;
+    std::ostream & get_class_collection_stream() override {
+        std::cerr << fmt::format("HI THERE") << std::endl;
+        return std::cerr;
+    }
+
+    ostream & get_class_stream(WrappedClass const & c) override {
+        return this->class_outputs[c.get_js_name()];
+    }
+
+};
+
+
 TEST(ClassParser, CustomExtensions) {
     std::string source = R"(
     class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
@@ -468,7 +491,11 @@ TEST(ClassParser, CustomExtensions) {
         V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_protected();
     private:
         V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_private();
-    };)";
+    };
+
+)";
+
+
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
@@ -482,10 +509,79 @@ TEST(ClassParser, CustomExtensions) {
     EXPECT_EQ(c.get_member_functions().size(), 0);
     EXPECT_EQ(c.get_static_functions().size(), 0);
 
+
     // only the public static entry should actually make it through
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
     EXPECT_EQ(c.log_watcher.errors.size(), 1);
 }
+
+
+TEST(ClassParser, CustomExtensionInheritance) {
+    std::string source = R"(
+    class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
+    public:
+        V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_public();
+    };
+    class B : public A {
+
+    };
+
+)";
+
+
+
+    vector<unique_ptr<OutputModule>> output_modules;
+    std::stringstream javascript_stub_string_stream;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_string_stream)));
+
+    std::stringstream bindings_string_stream;
+    output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_string_stream)));
+
+    output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
+
+    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
+    EXPECT_TRUE(xl::Regex("\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}.*?\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}", xl::RegexFlags::DOTALL).match(
+        bindings_string_stream.str()
+    ));
+
+}
+
+
+TEST(ClassParser, Enums) {
+    std::string source = R"(
+    class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
+    public:
+        enum class MyEnum{A = 0, B, C, D, E, F};
+        enum class MyNonZeroBasedEnum{ G = 10, H = 15, I = 20, J = 25};
+    };
+
+)";
+
+    vector<unique_ptr<OutputModule>> output_modules;
+    std::stringstream javascript_stub_string_stream;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_string_stream)));
+
+    std::stringstream bindings_string_stream;
+    output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_string_stream)));
+
+    output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
+
+    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
+    EXPECT_TRUE(xl::Regex("class_wrapper\\.add_enum\\(\"MyEnum\", \\{A, 0\\}, \\{B, 1\\}, \\{C, 2\\}, \\{D, 3\\}, \\{E, 4\\}, \\{F, 5\\}\\);", xl::RegexFlags::DOTALL).match(
+        bindings_string_stream.str()
+    ));
+    EXPECT_TRUE(xl::Regex("class_wrapper.add_enum\\(\"MyNonZeroBasedEnum\", \\{G, 10\\}, \\{H, 15\\}, \\{I, 20\\}, \\{J, 25\\}\\);", xl::RegexFlags::DOTALL).match(
+        bindings_string_stream.str()
+    ));
+
+
+}
+
+
 
 
 TEST(ClassParser, ClassElements) {
@@ -765,25 +861,6 @@ public:
 
 
 
-
-struct BidirectionalTestStreamProvider : public OutputStreamProvider {
-
-    BidirectionalTestStreamProvider() {
-        BidirectionalTestStreamProvider::class_outputs.clear();
-    }
-
-    // static so the data hangs around after the run
-    static inline std::map<std::string, std::stringstream> class_outputs;
-    std::ostream & get_class_collection_stream() override {
-        std::cerr << fmt::format("HI THERE") << std::endl;
-        return std::cerr;
-    }
-
-    ostream & get_class_stream(WrappedClass const & c) override {
-        return this->class_outputs[c.get_js_name()];
-    }
-
-};
 
 
 TEST(ClassParser, ClassComments) {

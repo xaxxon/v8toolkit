@@ -483,15 +483,21 @@ void WrappedClass::parse_all_methods() {
         std::string full_method_name = method->getQualifiedNameAsString();
         log.info(LogSubjects::Methods, "looking at {}", full_method_name);
 
-
-
-        std::cerr << fmt::format("canonical name for decl in parse_all_methods: {}", full_method_name) << std::endl;
-        auto signature = ClassFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
+        std::string const signature = [&] {
+            if (method->isStatic()) {
+                return StaticFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
+            } else {
+                return MemberFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
+            }
+        }();
+        std::cerr << fmt::format("canonical name for decl in parse_all_methods: {} - {}", this->class_name, signature) << std::endl;
 
         // if the config file has an entry for whether to skip this, use that
         auto member_function_config =
             PrintFunctionNamesAction::get_config_data()["classes"]
             [this->class_name]["members"][signature];
+
+
 
 
         if (auto skip = member_function_config["skip"].get_boolean()) {
@@ -648,26 +654,8 @@ void WrappedClass::parse_all_methods() {
 }
 
 
-void WrappedClass::foreach_inheritance_level(function<void(WrappedClass &)> callback) {
 
-    callback(*this);
-
-    for (auto base_type : this->base_types) {
-        base_type->foreach_inheritance_level(callback);
-    }
-}
-
-void WrappedClass::foreach_inheritance_level(function<void(WrappedClass const &)> callback) const {
-
-    callback(*this);
-
-    for (auto const * base_type : this->base_types) {
-        base_type->foreach_inheritance_level(callback);
-    }
-}
-
-
-map<string, map<string, int>> const & WrappedClass::get_enums() const {
+std::vector<Enum> const & WrappedClass::get_enums() const {
     assert(this->enums_parsed);
     return this->enums;
 };
@@ -695,13 +683,16 @@ void WrappedClass::parse_enums() {
             if (enum_decl == nullptr) {
 //                std::cerr << fmt::format("enumdecl is nullptr") << std::endl;
             }
-            std::map<std::string, int> enum_class;
+            Enum enum_class;
+            enum_class.name = enum_decl->getNameAsString();
 //            std::cerr << fmt::format("enum name: {}", enum_decl->getNameAsString()) << std::endl;
             for (EnumConstantDecl * constant_decl : enum_decl->enumerators()) {
-//                std::cerr << fmt::format("enum constant name: {} => {}", constant_decl->getNameAsString(), constant_decl->getInitVal().getExtValue()) << std::endl;
-                enum_class[constant_decl->getNameAsString()] = constant_decl->getInitVal().getExtValue();
+                Enum::Element element;
+                element.name = constant_decl->getNameAsString();
+                element.value = constant_decl->getInitVal().getExtValue();
+                enum_class.elements.push_back(std::move(element));
             }
-            this->enums[enum_decl->getNameAsString()] = enum_class;
+            this->enums.push_back(std::move(enum_class));
         }
     }
 };

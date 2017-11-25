@@ -103,6 +103,25 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
         }
 
 
+//        auto class_name = xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "");
+//        auto class_config =
+//            PrintFunctionNamesAction::get_config_data()["classes"]
+//            [this->class_name];
+//
+//        if (auto skip = member_function_config["skip"].get_boolean()) {
+//            v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}", field_name, *skip);
+//            if (*skip) {
+//                continue;
+//            } else {
+//                // else it was marked as skip = false, so ignore whether it has an annotation or not
+//            }
+//        } // else no config entry was found, so check for annotation
+//        else {
+//            if (Annotations(field).has(V8TOOLKIT_NONE_STRING)) {
+//                continue;
+//            }
+//        }
+
         if (Annotations(klass).has(V8TOOLKIT_NONE_STRING)) {
             log.info(LogSubjects::ClassParser, "Skipping class because it's explicitly marked SKIP");
             return;

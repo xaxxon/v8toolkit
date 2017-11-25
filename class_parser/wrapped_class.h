@@ -46,8 +46,8 @@ private:
     bool members_parsed = false;
     vector<unique_ptr<DataMember>> members;
 
+    std::vector<Enum> enums;
     bool enums_parsed = false;
-    map<string, map<string, int>> enums;
 
     vector<unique_ptr<ConstructorFunction>> constructors;
 
@@ -115,7 +115,7 @@ public:
     void parse_members();
 
     void parse_enums();
-    map<string, map<string, int>> const & get_enums() const;
+    std::vector<Enum> const & get_enums() const;
 
     vector<unique_ptr<ConstructorFunction>> const & get_constructors() const;
     set<WrappedClass *> derived_types;
@@ -155,10 +155,44 @@ public:
     /**
      * @param callback called on each parameterized type for this template specialization
      */
-    void foreach_inheritance_level(function<void(WrappedClass &)> callback);
-    void foreach_inheritance_level(function<void(WrappedClass const &)> callback) const;
+    template <typename T = void>
+    T foreach_inheritance_level(function<T(WrappedClass &, T)> callback) {
+        assert(this->base_types.size() <= 1);
 
+        if (!this->base_types.empty()) {
+            return callback(*this, (*base_types.begin())->foreach_inheritance_level(callback));
+        } else {
+            return callback(*this, T());
+        }
+    }
 
+    void foreach_inheritance_level(function<void(WrappedClass &)> callback) {
+        assert(this->base_types.size() <= 1);
+
+        if (!this->base_types.empty()) {
+            (*base_types.begin())->foreach_inheritance_level(callback);
+        }
+        return callback(*this);
+    }
+
+    template <typename T = void>
+    T foreach_inheritance_level(function<T(WrappedClass const &, T)> callback) const {
+        assert(this->base_types.size() <= 1);
+        if (!this->base_types.empty()) {
+            return callback(*this, (*base_types.begin())->foreach_inheritance_level(callback));
+        } else {
+            return callback(*this, T());
+        }
+    }
+
+    void foreach_inheritance_level(function<void(WrappedClass const &)> callback) const {
+        assert(this->base_types.size() <= 1);
+
+        if (!this->base_types.empty()) {
+            ((WrappedClass const *)(*base_types.begin()))->foreach_inheritance_level(callback);
+        }
+        return callback(*this);
+    }
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created
     void update_data();

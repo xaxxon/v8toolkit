@@ -870,20 +870,36 @@ std::string StaticFunction::look_up_js_name() const {
     log.info(LogT::Subjects::ConfigFile, "Looking up static function: {} - {}", this->wrapped_class.class_name,
              this->get_signature_string());
 
+    std::string js_name = "";
+
     if (auto name_config_override = member_function_config["name"].get_string()) {
         log.info(LogT::Subjects::ConfigFile, "match");
-        return *name_config_override;
+        js_name = *name_config_override;
     } else {
         log.info(LogT::Subjects::ConfigFile, "no match");
         // then check code annotations
         auto annotated_custom_name = annotations.get_regex(
             "^" V8TOOLKIT_USE_NAME_PREFIX "(.*)$");
         if (!annotated_custom_name.empty()) {
-            return annotated_custom_name[0];
+            js_name = annotated_custom_name[0];
         } else {
-            return method_decl->getNameAsString();
+            js_name = method_decl->getNameAsString();
         }
     }
+
+    // these properties are already used on JavaScript Function objects.
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
+    static std::vector<std::string> javascript_reserved_static_names{
+        "name", "arguments", "caller", "length", "displayName", "constructor", "arity"
+    };
+
+    if (xl::contains(javascript_reserved_static_names, js_name)) {
+        log.error(LogT::Subjects::Methods, "Static function has invalid name: '{}' - static functions cannot be named any of: {}", js_name,
+                xl::join(javascript_reserved_static_names));
+    }
+
+    return js_name;
+
 }
 
 

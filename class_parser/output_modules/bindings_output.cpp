@@ -57,8 +57,25 @@ using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
 
 struct BindingsProviderContainer {
 
-    static ProviderPtr get_provider(WrappedClass const & c) {
+    static ProviderPtr get_provider(Enum::Element const & e) {
+        return P::make_provider(
+            std::pair("name", e.name),
+            std::pair("value", fmt::format("{}", e.value))
+        );
+    }
 
+    static ProviderPtr get_provider(Enum const & e) {
+        return P::make_provider(
+            std::pair("name", e.name)
+            ,std::pair("elements", e.elements)
+        );
+    }
+
+
+
+
+
+    static ProviderPtr get_provider(WrappedClass const & c) {
         log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
@@ -68,6 +85,7 @@ struct BindingsProviderContainer {
             std::pair("data_members", std::ref(c.get_members())),
             std::pair("member_functions", std::ref(c.get_member_functions())),
             std::pair("static_functions", std::ref(c.get_static_functions())),
+            std::pair("enums", c.get_enums()),
             std::pair("constructor", c.get_constructors().size() == 0 || c.force_no_constructors ?
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
                                                  c.get_js_name()) :
@@ -76,6 +94,14 @@ struct BindingsProviderContainer {
                                          c.get_constructors().back()->get_parameter_types_string(),
                                          c.get_js_name(), c.get_constructors().back()->get_default_argument_tuple_string())),
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->class_name),
+            std::pair("custom_extensions", c.foreach_inheritance_level<std::vector<std::string>>(
+                [](auto & c, auto extensions){
+                    std::cerr << fmt::format("my extensions size: {}: {}", c.class_name, c.wrapper_custom_extensions.size()) << std::endl;
+                    extensions.insert(extensions.end(), c.wrapper_custom_extensions.begin(), c.wrapper_custom_extensions.end());
+                    std::cerr << fmt::format("custom extensions size: {}", extensions.size()) << std::endl;
+                    return extensions;
+                })
+            ),
 
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
@@ -137,6 +163,8 @@ struct BindingsProviderContainer {
     }
 
 
+
+
     static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
         log.info(LogSubjects::BindingsOutput, "get_provider ParameterInfo: {}", p.name);
 
@@ -153,6 +181,7 @@ struct BindingsProviderContainer {
     }
 
 }; // end BindingsProviderContainer
+
 
 
 
@@ -208,6 +237,7 @@ struct BindingFile {
         this->explicit_instantiations.insert(wrapped_class);
     }
 };
+
 
 
 void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
@@ -331,9 +361,17 @@ Template class_template(R"({
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
+{{<<enums|!!
+    class_wrapper.add_enum("{{name}}", {{elements%, |!\{{{name}}, {{value}}\}}});>>}}
+
+{{<<custom_extensions|!!
+    {{}}>>}}
+
+
     class_wrapper.set_parent_type<{{<<base_type_name>>}}>();
 
     class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>>}}>();
+
 
     class_wrapper.finalize(true);
     {{<constructor>}}
