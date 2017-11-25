@@ -10,6 +10,7 @@ using xl::templates::ProviderPtr;
 
 
 #include "../wrapped_class.h"
+#include "../ast_action.h"
 
 #include "../helper_functions.h"
 #include "bindings_output.h"
@@ -96,9 +97,7 @@ struct BindingsProviderContainer {
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->class_name),
             std::pair("custom_extensions", c.foreach_inheritance_level<std::vector<std::string>>(
                 [](auto & c, auto extensions){
-                    std::cerr << fmt::format("my extensions size: {}: {}", c.class_name, c.wrapper_custom_extensions.size()) << std::endl;
                     extensions.insert(extensions.end(), c.wrapper_custom_extensions.begin(), c.wrapper_custom_extensions.end());
-                    std::cerr << fmt::format("custom extensions size: {}", extensions.size()) << std::endl;
                     return extensions;
                 })
             ),
@@ -191,7 +190,9 @@ struct BindingFile {
 
     BindingFile(size_t max_declaration_count) :
         max_declaration_count(max_declaration_count)
-    {}
+    {
+
+    }
 
     /**
      * Whether this binding file can hold the specified WrappedClass
@@ -326,9 +327,6 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
         output_stream << template_result << std::flush;
     }
 
-
-
-
 //    cerr << "Classes used that were not wrapped:" << endl;
     for (auto & wrapped_class : wrapped_classes) {
         if (!xl::contains(already_wrapped_classes, wrapped_class)) {
@@ -341,6 +339,24 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
         }
     }
 }
+
+
+
+BindingsOutputModule::BindingsOutputModule(size_t max_declarations_per_file,
+                                           unique_ptr<OutputStreamProvider> output_stream_provider) :
+    OutputModule(std::move(output_stream_provider))
+{
+    // prefer the config file
+    if (auto maybe_max_declarations_per_file = PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"].get_number()) {
+        if (*maybe_max_declarations_per_file < 0) {
+            throw ClassParserException("Config file BindingsOutputModule max_declarations_per_file must be non-negative");
+        }
+        this->max_declarations_per_file = *maybe_max_declarations_per_file;
+    } else if (max_declarations_per_file != -1) {
+        this->max_declarations_per_file = max_declarations_per_file;
+    }
+}
+
 
 string BindingsOutputModule::get_name() {
     return "BindingsOutputModule";

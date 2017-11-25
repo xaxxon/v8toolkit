@@ -56,8 +56,6 @@ bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
 
     log.info(LogSubjects::Subjects::ClassParser, "BeginInvocation");
 
-
-
     if (this->output_modules.empty()) {
         cerr << "NO OUTPUT MODULES SPECIFIED - *ABORTING* - did you mean to pass --use-default-output-modules" << endl;
         return false;
@@ -245,13 +243,17 @@ std::unique_ptr<ASTConsumer> PrintFunctionNamesAction::CreateASTConsumer(Compile
     return llvm::make_unique<ClassHandlerASTConsumer>(CI, this->output_modules);
 }
 
-PrintFunctionNamesAction::PrintFunctionNamesAction() {
+PrintFunctionNamesAction::PrintFunctionNamesAction()
+
+{
     WrappedClass::wrapped_classes.clear();
     WrappedClass::used_constructor_names.clear();
+
 }
 
 PrintFunctionNamesAction::~PrintFunctionNamesAction()
-{}
+{
+}
 
 
 void parse_config(xl::json::Json & json);
@@ -264,20 +266,12 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
     for (unsigned i = 0, e = args.size(); i < e; ++i) {
         llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
 
-        static std::regex declaration_count_regex("^--declaration-count=(\\d+)$");
         static xl::Regex config_file_regex("^--config-file=(.*)$");
         std::smatch match_results;
-        if (std::regex_match(args[i], match_results, declaration_count_regex)) {
-            auto count = std::stoi(match_results[1].str());
-            std::cerr << fmt::format("Set declaration count to {}", count) << std::endl;
-            MAX_DECLARATIONS_PER_FILE = count;
-        }
-            // for "normal" use, the default output modules should be used, instead of others specified
-            //   in code from something such as a test harness
-        else if (args[i] == "--use-default-output-modules") {
+        if (args[i] == "--use-default-output-modules") {
             std::cerr << fmt::format("Using default output modules") << std::endl;
             output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
-            output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>(MAX_DECLARATIONS_PER_FILE));
+            output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>());
             output_modules.push_back(std::make_unique<bidirectional_output::BidirectionalOutputModule>());
         } else if (auto matches = config_file_regex.match(args[i])) {
             auto filename = matches[1];

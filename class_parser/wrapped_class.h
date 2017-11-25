@@ -15,8 +15,6 @@
 namespace v8toolkit::class_parser {
 
 
-extern int MAX_DECLARATIONS_PER_FILE;
-
 // should be named "ParsedClass" or something, since both classes that will and will not be wrapped
 //   are put into this data structure
 class MemberFunction;

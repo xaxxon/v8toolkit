@@ -36,10 +36,6 @@ WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, Compi
 }
 
 
-// Having this too high can lead to VERY memory-intensive compilation units
-// Single classes (+base classes) with more than this number of declarations will still be in one file.
-int MAX_DECLARATIONS_PER_FILE = 50;
-
 WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
     class_name(xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "")),
     decl(decl),
@@ -490,7 +486,6 @@ void WrappedClass::parse_all_methods() {
                 return MemberFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
             }
         }();
-        std::cerr << fmt::format("canonical name for decl in parse_all_methods: {} - {}", this->class_name, signature) << std::endl;
 
         // if the config file has an entry for whether to skip this, use that
         auto member_function_config =

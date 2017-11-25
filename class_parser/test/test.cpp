@@ -582,6 +582,14 @@ TEST(ClassParser, Enums) {
 }
 
 
+TEST(ClassParser, BindingsOutputModuleConfigFileMaxDeclarationCount) {
+    PrintFunctionNamesAction::config_data = xl::json::Json("{\"output_modules\": {\"BindingsOutputModule\":{\"max_declarations_per_file\":23}}}");
+    BindingsOutputModule bindings_module;
+    PrintFunctionNamesAction::config_data = xl::json::Json{};
+
+    EXPECT_EQ(bindings_module.get_max_declarations_per_file(), 23);
+}
+
 
 
 TEST(ClassParser, ClassElements) {

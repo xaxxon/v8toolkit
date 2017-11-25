@@ -41,21 +41,19 @@ public:
     * Creates a new object for outputing bindings commands for compilation into a v8toolkit program
     * @param max_declarations_per_file how many declaration "points" go into one file before the next one is started
     */
-    BindingsOutputModule(size_t max_declarations_per_file) :
-        OutputModule(std::make_unique<BindingsOutputStreamProvider>()),
-        max_declarations_per_file(max_declarations_per_file)
-    {}
-
-    BindingsOutputModule(size_t max_declarations_per_file, std::unique_ptr<OutputStreamProvider> output_stream_provider) :
-        OutputModule(std::move(output_stream_provider)),
-        max_declarations_per_file(max_declarations_per_file)
-    {}
+    BindingsOutputModule(size_t max_declarations_per_file = -1,
+                         std::unique_ptr<OutputStreamProvider> output_stream_provider =
+                         std::make_unique<BindingsOutputStreamProvider>());
 
     OutputCriteria & get_criteria() override;
 
     void process(std::vector<WrappedClass const *> wrapped_classes) override;
 
     string get_name() override;
+
+    size_t get_max_declarations_per_file() const {
+        return this->max_declarations_per_file;
+    }
 };
 
 
