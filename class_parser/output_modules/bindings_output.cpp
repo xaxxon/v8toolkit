@@ -193,7 +193,7 @@ struct BindingFile {
 //        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
-        assert(this->declaration_count <= this->max_declaration_count);
+        assert(this->declaration_count <= this->max_declaration_count || this->classes.size() == 1);
 
 
         auto base_type_includes = wrapped_class->get_base_type_includes();

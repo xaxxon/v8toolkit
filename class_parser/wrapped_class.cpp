@@ -486,15 +486,17 @@ void WrappedClass::parse_all_methods() {
 
 
         std::cerr << fmt::format("canonical name for decl in parse_all_methods: {}", full_method_name) << std::endl;
+        auto signature = ClassFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
 
         // if the config file has an entry for whether to skip this, use that
         auto member_function_config =
             PrintFunctionNamesAction::get_config_data()["classes"]
-            [this->class_name]["members"][full_method_name];
+            [this->class_name]["members"][signature];
+
 
         if (auto skip = member_function_config["skip"].get_boolean()) {
             v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}",
-                                              full_method_name, *skip);
+                                              signature, *skip);
             if (*skip) {
                 continue;
             } else {

@@ -301,6 +301,33 @@ TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
     EXPECT_EQ(environment->expect_no_errors(), 0);
 }
 
+TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfigBySkipping) {
+    std::string source = R"(
+        class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
+        public:
+            static void duplicated_name(int);
+            static void duplicated_name(float);
+        };
+    )";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source, {}, xl::json::Json(R"JSON(
+{
+    "classes": {
+        "DuplicateFunctionNameClass": {
+            "members": {
+                "void DuplicateFunctionNameClass::duplicated_name(int)": {
+                    "skip": true
+                }
+            }
+        }
+    }
+}
+)JSON"));
+    EXPECT_EQ(environment->expect_no_errors(), 0);
+}
+
+
 
 
 TEST(ClassParser, DuplicateDataMemberFunctionName) {
