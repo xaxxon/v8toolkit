@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-export BUILD_COMMAND="time -l clang++ -g0 -I${V8_INCLUDES} compilation_timing_sample.cpp -I../include -std=c++14 -c"
+export BUILD_COMMAND="time clang++ -g0 -DXL_USE_PCRE -DXL_USE_LIB_FMT -I${V8_INCLUDES} compilation_timing_sample.cpp -I../include -std=c++1z -c"
 
 
  echo ${BUILD_COMMAND} -DV8HELPERS

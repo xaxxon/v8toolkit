@@ -244,6 +244,9 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
+
+    // this should be 2 because there shouldn't be any hard coded renames in the plugin, only in config
+    //   but right now name => get_name so there's only 1 error
     EXPECT_EQ(environment->expect_no_errors(), 2); // one for Object, another for name()
 }
 
@@ -571,10 +574,10 @@ TEST(ClassParser, Enums) {
     auto pruned_vector = run_code(source, std::move(output_modules));
 
     std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
-    EXPECT_TRUE(xl::Regex("class_wrapper\\.add_enum\\(\"MyEnum\", \\{A, 0\\}, \\{B, 1\\}, \\{C, 2\\}, \\{D, 3\\}, \\{E, 4\\}, \\{F, 5\\}\\);", xl::RegexFlags::DOTALL).match(
+    EXPECT_TRUE(xl::Regex("class_wrapper\\.add_enum\\(\"MyEnum\", \\{\\{\"A\", 0\\}, \\{\"B\", 1\\}, \\{\"C\", 2\\}, \\{\"D\", 3\\}, \\{\"E\", 4\\}, \\{\"F\", 5\\}\\}\\);", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
     ));
-    EXPECT_TRUE(xl::Regex("class_wrapper.add_enum\\(\"MyNonZeroBasedEnum\", \\{G, 10\\}, \\{H, 15\\}, \\{I, 20\\}, \\{J, 25\\}\\);", xl::RegexFlags::DOTALL).match(
+    EXPECT_TRUE(xl::Regex("class_wrapper.add_enum\\(\"MyNonZeroBasedEnum\", \\{\\{\"G\", 10\\}, \\{\"H\", 15\\}, \\{\"I\", 20\\}, \\{\"J\", 25\\}\\}\\);", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
     ));
 
@@ -970,7 +973,8 @@ TEST(ClassParser, ClassComments) {
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["A"].str(), "");
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["B"].str(), "");
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["C"].str(), "");
-    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), R"(#pragma once
+
+    auto ExpectedJscResult = R"(#pragma once
 
 #include "v8toolkit_generated_bidirectional_C.h"
 #include <v8toolkit/bidirectional.h>
@@ -984,8 +988,9 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-        JS_ACCESS_00(void, this_is_a_virtual_function);
-})");}
+        JS_ACCESS_0(void, this_is_a_virtual_function);
+})";
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);}
 
 
 

@@ -50,7 +50,7 @@ std::ostream & BidirectionalOutputStreamProvider::get_class_collection_stream() 
 
 ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const & c) {
     this->output_file.close();
-    this->output_file.open(fmt::format("v8toolkit_generated_bidirectional_{}.h", c.get_js_name()));
+    this->output_file.open(c.my_include);
 
     return this->output_file;
 }
@@ -85,8 +85,7 @@ vector<string> generate_variable_names(vector<QualType> qual_types, bool with_st
 }
 
 
-vector<QualType> get_method_param_qual_types(CompilerInstance & compiler_instance,
-                                             const CXXMethodDecl * method,
+vector<QualType> get_method_param_qual_types(const CXXMethodDecl * method,
                                              string const & annotation = "") {
     vector<QualType> results;
     auto parameter_count = method->getNumParams();
@@ -125,6 +124,7 @@ struct BidirectionalProviderContainer {
 
         log.info(LogSubjects::BidirectionalOutput, "includes for {}, {}", c.get_js_name(), xl::join(c.include_files));
 
+
         return xl::templates::make_provider<BidirectionalProviderContainer>(
             std::pair("name", c.get_js_name()),
 //            std::pair("virtual_functions", xl::erase_if(xl::copy(c.get_member_functions()), [](auto & e){return e.get()->is_virtual;})),
@@ -133,8 +133,7 @@ struct BidirectionalProviderContainer {
             std::pair("base_name", (*c.base_types.begin())->class_name),
             std::pair("constructor_parameters", generate_bidirectional_constructor_parameter_list(c)),
             std::pair("constructor_variables",
-                      xl::join(generate_variable_names(get_method_param_qual_types(c.compiler_instance,
-                                                                          (*c.base_types.begin())->bidirectional_constructor), true)))
+                      xl::join(generate_variable_names(get_method_param_qual_types((*c.base_types.begin())->bidirectional_constructor), true)))
         );
     }
 
@@ -146,7 +145,7 @@ struct BidirectionalProviderContainer {
             std::pair("params", f.parameters),
             std::pair("return_type", f.return_type.get_name()),
             std::pair("param_count", std::to_string(f.parameters.size())),
-            std::pair("const", std::to_string(f.is_const()))
+            std::pair("const", f.is_const() ? "_CONST" : "")
         );
     }
 
@@ -159,7 +158,7 @@ struct BidirectionalProviderContainer {
     }
 
 
-    static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
+    static ProviderPtr get_provider(TypeInfo const & t) {
         return xl::templates::make_provider<BidirectionalProviderContainer>("Implement me");
 
     }

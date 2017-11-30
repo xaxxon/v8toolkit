@@ -65,15 +65,13 @@ struct BindingsProviderContainer {
         );
     }
 
+
     static ProviderPtr get_provider(Enum const & e) {
         return P::make_provider(
-            std::pair("name", e.name)
-            ,std::pair("elements", e.elements)
+            std::pair("name", e.name),
+            std::pair("elements", e.elements)
         );
     }
-
-
-
 
 
     static ProviderPtr get_provider(WrappedClass const & c) {
@@ -87,6 +85,7 @@ struct BindingsProviderContainer {
             std::pair("member_functions", std::ref(c.get_member_functions())),
             std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("enums", c.get_enums()),
+            std::pair("wrapper_extension_methods", c.wrapper_extension_methods),
             std::pair("constructor", c.get_constructors().size() == 0 || c.force_no_constructors ?
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
                                                  c.get_js_name()) :
@@ -162,8 +161,6 @@ struct BindingsProviderContainer {
     }
 
 
-
-
     static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
         log.info(LogSubjects::BindingsOutput, "get_provider ParameterInfo: {}", p.name);
 
@@ -175,7 +172,7 @@ struct BindingsProviderContainer {
     }
 
 
-    static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
+    static ProviderPtr get_provider(TypeInfo const & t) {
         return P::make_provider("Implement me");
     }
 
@@ -187,6 +184,8 @@ struct BindingsProviderContainer {
 struct BindingFile {
     size_t max_declaration_count;
     size_t declaration_count = 0;
+    std::set<std::string> includes;
+
 
     BindingFile(size_t max_declaration_count) :
         max_declaration_count(max_declaration_count)
@@ -211,48 +210,31 @@ struct BindingFile {
     std::set<WrappedClass const *> extern_templates;
 
     std::set<WrappedClass const *> explicit_instantiations;
+    std::set<WrappedClass const *> explicit_instantiations_for_const_types;
 
-    std::set<std::string> includes;
 
     std::vector<WrappedClass const *> const & get_classes() const {return this->classes;}
-    auto & get_includes() const {return includes;}
-    auto & get_explicit_instantiations()        const { return this->explicit_instantiations; }
-    auto & get_extern_template_instantiations() const { return this->extern_templates; }
 
     void add_class(WrappedClass const * wrapped_class) {
 //        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
-        assert(this->declaration_count <= this->max_declaration_count || this->classes.size() == 1);
-
-
-        auto base_type_includes = wrapped_class->get_base_type_includes();
-        log.info(LogSubjects::Subjects::BindingsOutput, "Adding base type includes: {}", join(base_type_includes));
-//        std::cerr << fmt::format("adding base type includes: {}", join(base_type_includes)) << std::endl;
-        includes.insert(base_type_includes.begin(), base_type_includes.end());
-
-        auto derived_type_includes = wrapped_class->get_derived_type_includes();
-        log.info(LogSubjects::Subjects::BindingsOutput, "Adding base type includes: {}", join(derived_type_includes));
-        includes.insert(derived_type_includes.begin(), derived_type_includes.end());
+        assert(this->max_declaration_count == 0 ||  // unlimited
+                   this->declaration_count <= this->max_declaration_count || // 1 or more classes fit under the limit
+                   this->classes.size() == 1); // if a single class doesn't fit, then force it through
 
         this->explicit_instantiations.insert(wrapped_class);
+        if (!wrapped_class.wrapper_extension_methods.empty()) {
+            this->explicit_instantiations_for_const_types.insert(wrapped_class);          
+        }        
+        this->includes.insert(wrapped_class->include_files.begin(), wrapped_class->include_files.end());
     }
 };
 
 
 
-void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
+void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_classes)
 {
-//    std::cerr << fmt::format("file template contents: {}", file_template.c_str()) << std::endl;
-
-//    std::cerr << fmt::format("making bindings output") << std::endl;
-//    std::cerr << fmt::format("all binding classes:") << std::endl;
-//    for (auto c : wrapped_classes) {
-//        std::cerr << fmt::format("{}: {}, derived_types: {}", c->get_short_name(), (void*)c, (void*)&c->derived_types) << std::endl;
-//        for(auto d : c->derived_types) {
-//            std::cerr << fmt::format(" - derived: {}", (void*)d) << std::endl;
-//        }
-//    }
     std::vector<BindingFile> binding_files{BindingFile(this->max_declarations_per_file)};
 
     std::set<WrappedClass const *> already_wrapped_classes;
@@ -299,7 +281,7 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
 //                            already_wrapped_classes.size(), wrapped_classes.size()) << endl;
     }
 
-//    std::cerr << fmt::format("about to dump {} binding_files", binding_files.size()) << std::endl;
+
     for (int i = 0; i < binding_files.size(); i++) {
 
         auto & binding_file = binding_files[i];
@@ -314,9 +296,10 @@ void BindingsOutputModule::process(std::vector < WrappedClass const*> wrapped_cl
                 std::pair("file_number", fmt::format("{}", file_number)),
                 std::pair("next_file_number", fmt::format("{}", file_number + 1)), // ok if it won't actually exist
                 std::pair("classes", P::make_provider(binding_file.get_classes())),
-                std::pair("includes", P::make_provider(std::bind(&BindingFile::get_includes, binding_file))),
-                std::pair("extern_templates", P::make_provider(std::bind(&BindingFile::get_extern_template_instantiations, binding_file))),
-                std::pair("explicit_instantiations", binding_file.get_explicit_instantiations()),
+                std::pair("includes", P::make_provider(binding_file.includes)),
+                std::pair("extern_templates", binding_file.extern_templates),
+                std::pair("explicit_instantiations", binding_file.explicit_instantiations),
+                std::pair("explicit_instantiations_for_const_types", binding_file.explicit_instantiations_for_const_types),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
             ),
             &bindings_templates
@@ -346,15 +329,24 @@ BindingsOutputModule::BindingsOutputModule(size_t max_declarations_per_file,
                                            unique_ptr<OutputStreamProvider> output_stream_provider) :
     OutputModule(std::move(output_stream_provider))
 {
+
+    std::cerr << fmt::format("Looking at config: {}", PrintFunctionNamesAction::get_config_data().get_source()) << std::endl;
+    std::cerr << fmt::format("valid?  {}, {}, {}, {} ,{}",
+                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"],
+                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"],
+                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"],
+                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"].get_number(),
+                             (bool)PrintFunctionNamesAction::get_config_data());
     // prefer the config file
     if (auto maybe_max_declarations_per_file = PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"].get_number()) {
         if (*maybe_max_declarations_per_file < 0) {
-            throw ClassParserException("Config file BindingsOutputModule max_declarations_per_file must be non-negative");
+            throw ClassParserException("Config file BindingsOutputModule max_declarations_per_file ({}) must be non-negative", *maybe_max_declarations_per_file);
         }
         this->max_declarations_per_file = *maybe_max_declarations_per_file;
     } else if (max_declarations_per_file != -1) {
         this->max_declarations_per_file = max_declarations_per_file;
     }
+    std::cerr << fmt::format("max declarations set to: {}", this->max_declarations_per_file) << std::endl;
 }
 
 
@@ -378,7 +370,10 @@ Template class_template(R"({
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
 {{<<enums|!!
-    class_wrapper.add_enum("{{name}}", {{elements%, |!\{{{name}}, {{value}}\}}});>>}}
+    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
+
+{{<<wrapper_extension_methods|!!
+    {{method_name}}(class_wrapper);>>}}
 
 {{<<custom_extensions|!!
     {{}}>>}}
@@ -404,6 +399,9 @@ Template file_template(R"(
 // explicit instantiations
 {{<explicit_instantiations|!!
 template class v8toolkit::V8ClassWrapper<{{<long_name>}}>;>}}
+{{<explicit_instantiations_for_const_types|!!
+template class v8toolkit::V8ClassWrapper<{{<long_name>}} const>;>}}
+
 // /explicit instantiations
 
 {{<extern_templates|!!

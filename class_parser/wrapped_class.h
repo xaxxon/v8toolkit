@@ -51,7 +51,7 @@ private:
 
 
     // can't call this directly, must use factory
-    WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
+    WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method);
 
 
 public:
@@ -69,7 +69,7 @@ private:
 public:
     LogWatcher<LogT> log_watcher;
 
-    static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method);
+    static WrappedClass & make_wrapped_class(const CXXRecordDecl * decl, FOUND_METHOD found_method);
 
     ~WrappedClass();
 
@@ -97,7 +97,8 @@ public:
         this->js_name = "";
     }
 
-    set<string> include_files;
+    string my_include; // the include for getting my type, including "" or <>
+    set<string> include_files; // everything this types needs to be wrapped
 
     // value here is the "compilation cost" of creating the class itself even if it's empty.
     // increase if too many empty classes end up in one file and make the compilation too big/take too long
@@ -123,15 +124,11 @@ public:
 
     set<string> wrapper_extension_methods;
     set<string> wrapper_custom_extensions;
-    CompilerInstance & compiler_instance;
 
     /// doxygen-style comment associated with the class
     std::string comment;
 
-    string my_include; // the include for getting my type, including "" or <>
     bool done = false;
-
-
 
     Annotations annotations;
     set<WrappedClass *> used_classes; // classes this class uses in its wrapped functions/members/etc
@@ -211,19 +208,13 @@ public:
 
     bool ready_for_wrapping(set<WrappedClass const *> dumped_classes) const;
 
-    // return all the header files for all the types used by all the base types of the specified type
-    std::set<string> get_base_type_includes() const;
-
-    std::set<string> get_derived_type_includes() const;
-
-
     WrappedClass(const WrappedClass &) = delete;
     WrappedClass(WrappedClass &&) = default;
 
     WrappedClass & operator=(const WrappedClass &) = delete;
 
     // for newly created classes --- used for bidirectional classes that don't actually exist in the AST
-    WrappedClass(const std::string class_name, CompilerInstance & compiler_instance);
+    explicit WrappedClass(const std::string class_name);
 
     std::string get_derived_classes_string(int level = 0, const std::string indent = "") const;
 
@@ -253,7 +244,6 @@ public:
     void make_bidirectional_wrapped_class_if_needed();
 
     static WrappedClass & get_or_insert_wrapped_class(const CXXRecordDecl * decl,
-                                                      CompilerInstance & compiler_instance,
                                                       FOUND_METHOD found_method);
 
     // returns true if the found_method on this class means the class will be wrapped

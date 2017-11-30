@@ -7,8 +7,7 @@
 #include "clang_fwd.h"
 #include "annotations.h"
 #include "log.h"
-
-#include "qual_type_wrapper.h"
+#include "type.h"
 
 using namespace std;
 
@@ -61,55 +60,17 @@ struct ClassFunction {
     FunctionTemplateDecl const * function_template_decl = nullptr;
 
     // default template type mapping - empty if not templated
-    map<string, QualTypeWrapper> template_parameter_types;
+    map<string, QualType> template_parameter_types;
 
     // if this virtual function doesn't exist in a parent class
     bool new_virtual;
 
-    struct TypeInfo {
 
-    private:
-
-        static string convert_simple_typename_to_jsdoc(string simple_type_name, std::string const & = "");
-
-        map<string, QualTypeWrapper> template_parameter_types;
-
-        // the type cannot be gotten because after template substitution there may not be an actual
-        //   Type object for the resulting type.  It is only available as a string.  However, the "plain type"
-        //   is guaranteed to exist as a Type object
-        QualTypeWrapper type;
-
-    public:
-        TypeInfo(QualType const & type, map<string, QualTypeWrapper> template_parameter_types = {});
-        ~TypeInfo();
-
-        CXXRecordDecl const * get_plain_type_decl() const;
-
-        QualTypeWrapper get_plain_type() const;
-
-        /// name of actual type
-        string get_name() const;
-
-        /// name of type without reference or pointers
-        string get_plain_name() const;
-
-        /// corresponding javascript type
-        string get_jsdoc_type_name(std::string const & = "") const;
-
-
-        // return if the type (or the type being pointed/referred to) is const (not is the pointer const)
-        // double * const => false
-        // double const * => true
-        bool is_const() const;
-
-        TypeInfo plain_without_const() const;
-
-        bool is_templated() const;
-
-        void for_each_templated_type(std::function<void(QualType const &)>) const;
-
-        bool is_void() const;
-    };
+    /**
+     * Returns the includes for the type of this member function
+     * @return all includes needed to use generate code involving this member function
+     */
+    std::set<std::string> get_includes() const;
 
 
     /* PARAMETER INFO */
@@ -118,7 +79,6 @@ struct ClassFunction {
 
     public:
         ClassFunction & method;
-        CompilerInstance & compiler_instance;
         ParmVarDecl const * parameter_decl;
         int position;
         string name;
@@ -127,8 +87,7 @@ struct ClassFunction {
         // description of parameter pulled from doxygen comment
         string description = "";
 
-        ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl,
-                      CompilerInstance & compiler_instance);
+        ParameterInfo(ClassFunction & method, int position, ParmVarDecl const * parameter_decl);
 
 
         TypeInfo const type;
@@ -144,7 +103,6 @@ struct ClassFunction {
 
     // name used in javascript
     string js_name;
-    CompilerInstance & compiler_instance;
 
     string get_default_argument_tuple_string() const;
 
@@ -154,7 +112,7 @@ struct ClassFunction {
 
     ClassFunction(WrappedClass & wrapped_class,
                   CXXMethodDecl const * method_decl,
-                  std::map<string, QualTypeWrapper> const & template_parameter_types = {},
+                  std::map<string, QualType> const & template_parameter_types = {},
                   FunctionTemplateDecl const * function_template_decl = nullptr,
                   std::string const & preferred_js_name = "");
 
@@ -179,7 +137,7 @@ class MemberFunction : public ClassFunction {
 
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualTypeWrapper> const & map = {},
+                   map<string, QualType> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr);
 
     string generate_js_bindings();
@@ -203,7 +161,7 @@ class StaticFunction : public ClassFunction {
 
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualTypeWrapper> const & map = {},
+                   map<string, QualType> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr);
 
     string generate_js_bindings();
@@ -236,7 +194,7 @@ public:
     string short_name;
     string long_name;
     string js_name;
-    ClassFunction::TypeInfo type;
+    TypeInfo type;
     FieldDecl const * field_decl;
     Annotations annotations;
 
@@ -245,9 +203,11 @@ public:
 
     DataMember(WrappedClass & wrapped_class, WrappedClass & declared_in, FieldDecl * field_decl);
 
-    string get_js_stub();
-
-    string get_bindings();
+    /**
+     * Returns the includes for the type of this data member
+     * @return
+     */
+    std::set<std::string> get_includes() const;
 
     /**
      * Doxygen-style comment associated with the data member

@@ -11,7 +11,10 @@ struct LoggingSubjects {
                                                  "Runtime Exception",
                                                  "Compilation Exception",
                                                  "wrapped function call",
-                                                 "wrapped data member access"};
+                                                 "wrapped data member access",
+                                                 "debug websocket"
+
+    };
 
     enum class Subjects {
         V8_OBJECT_MANAGEMENT, // when core V8 objects are created or town down
@@ -19,6 +22,7 @@ struct LoggingSubjects {
         COMPILATION_EXCEPTION,
         WRAPPED_FUNCTION_CALL,
         WRAPPED_DATA_MEMBER_ACCESS,
+        DebugWebSocket,
 
         LOG_LAST_SUBJECT
     };

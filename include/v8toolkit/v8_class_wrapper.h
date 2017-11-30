@@ -58,6 +58,8 @@ namespace v8toolkit {
 */
 struct DestructorBehavior
 {
+    virtual ~DestructorBehavior(){}
+
 	virtual void operator()(v8::Isolate * isolate, const void * object) const = 0;
 
 	// wehther this destructor is actually destructive to memory it is given.  Does it "own" the memory or not.
@@ -252,7 +254,7 @@ struct TypeChecker<T, v8toolkit::TypeList<Head, Tail...>,
  */
 class V8ClassWrapperInstanceRegistry {
 private:
-	std::map<v8::Isolate *, std::vector<func::function<void()>>> isolate_to_callback_map;
+	MapT<v8::Isolate *, std::vector<func::function<void()>>> isolate_to_callback_map;
 
 public:
 	void add_callback(v8::Isolate * isolate, func::function<void()> callback) {
@@ -282,7 +284,7 @@ extern V8ClassWrapperInstanceRegistry wrapper_registery;
 /**
  * Constructor names already used, including things reserved by JavaScript like "Object" and "Number"
  */
-inline std::map<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
+inline MapT<v8::Isolate *, std::vector<std::string>> used_constructor_name_list_map;
 
 
 
@@ -416,7 +418,7 @@ private:
 	TypeCheckerBase<T> * type_checker = new TypeChecker<T, TypeList<std::remove_const_t<T>, std::add_const_t<T>>>(this->isolate); // std::unique_ptr adds too much compilation time
 	WrapAsMostDerivedBase<T> * wrap_as_most_derived_object = new WrapAsMostDerived<T, TypeList<>>(this->isolate); // std::unique_ptr adds too much compilation time
 
-	std::map<std::string, std::map<std::string, double>> enums;
+	MapT<std::string, MapT<std::string, double>> enums;
 
     /****** METHODS *******/
 
@@ -654,9 +656,9 @@ public:
 	}
 
 
-	// these probably shouldn't be public, but they are for now
-	std::unique_ptr<DestructorBehavior> destructor_behavior_delete = std::make_unique<DestructorBehavior_Delete<T>>();
-	std::unique_ptr<DestructorBehavior> destructor_behavior_leave_alone = std::make_unique<DestructorBehavior_LeaveAlone>();
+
+	DestructorBehavior * destructor_behavior_delete = new DestructorBehavior_Delete<T>(); // unique_ptr too expensive to compile
+	DestructorBehavior * destructor_behavior_leave_alone = new DestructorBehavior_LeaveAlone(); // unique_ptr too expensive to compile
 
 
 	/**
@@ -892,7 +894,8 @@ public:
 		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<ConstT>) {
 			V8ClassWrapper<ConstT>::get_instance(this->isolate).template set_deleter<Deleter>();
 		}
-		this->destructor_behavior_delete = std::make_unique<Deleter<T>>();
+        delete this->destructor_behavior_delete;
+		this->destructor_behavior_delete = new Deleter<T>();
 	}
 
 
@@ -1542,7 +1545,7 @@ public:
 	}
 
 
-	using EnumValueMap = std::map<std::string, double>;
+	using EnumValueMap = MapT<std::string, double>;
 	struct EnumData {
 		EnumValueMap enum_value_map;
 

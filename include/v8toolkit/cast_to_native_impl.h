@@ -501,5 +501,4 @@ struct CastToNative<std::function<ReturnT(Args...)>> {
 };
 
 
-
 } // end v8toolkit namespace

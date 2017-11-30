@@ -34,3 +34,34 @@ Classes are run through Criteria object to select only classes intended to be wr
 
 
 
+
+
+
+
+Debug Context System:
+----------------------
+
+Channel?
+ - WebSocketChannel - presumably it's the communication layer.  Implemented via websocketpp to connect to chrome debugger
+  - poll/poll_one
+
+
+DebugContext - inherits from both v8toolkit::Context and v8_inspector::V8InspectorClient
+
+What is a V8InspectorClient?
+ - runMessageLoopOnPause
+ - quitMessageLoopOnPause
+ - Contains the channel object
+ - What does reset_session do?  it's called but has empty implementation...
+ - v8_inspector::StringView has is8Bit() call
+  - when is it 8 bit?  when is it not?  what is it when it's not? 16 bit?
+    - I'm just throwing away every other bit.  Is that bad?
+
+
+
+
+
+class DebugContext : public v8_inspector::V8InspectorClient, public v8toolkit::Context
+
+
+class WebsocketChannel : public v8_inspector::V8Inspector::Channel

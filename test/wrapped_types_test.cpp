@@ -113,6 +113,11 @@ public:
         takes_and_returns_enum_called = true;
         return TestEnum::TEST_ENUM_B;
     }
+
+
+    enum class EnumClass{enum1, enum2, enum3};
+
+    void function_takes_enum(EnumClass enum_value);
 };
 
 class WrappedClassChild : public WrappedClass {

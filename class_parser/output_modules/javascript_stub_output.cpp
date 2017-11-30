@@ -117,7 +117,7 @@ struct JavascriptStubProviderContainer {
     }
 
 
-    static ProviderPtr get_provider(ClassFunction::TypeInfo const & t) {
+    static ProviderPtr get_provider(TypeInfo const & t) {
         return P::make_provider("Implement me");
 
     }

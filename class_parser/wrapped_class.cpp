@@ -27,20 +27,18 @@ std::vector<std::string> never_wrap_class_names = {
     "v8toolkit::EmptyFactoryBase"
 };
 
-WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl, CompilerInstance & compiler_instance,
+WrappedClass& WrappedClass::make_wrapped_class(const CXXRecordDecl * decl,
                                                FOUND_METHOD found_method) {
 
-    auto & new_wrapped_class = WrappedClass::wrapped_classes.emplace_back(new WrappedClass(decl, compiler_instance, found_method));
+    auto & new_wrapped_class = WrappedClass::wrapped_classes.emplace_back(new WrappedClass(decl, found_method));
     new_wrapped_class->make_bidirectional_wrapped_class_if_needed();
     return *new_wrapped_class;
 }
 
 
-WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compiler_instance, FOUND_METHOD found_method) :
+WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method) :
     class_name(xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "")),
     decl(decl),
-    compiler_instance(compiler_instance),
-    my_include(get_include_for_type_decl(compiler_instance, decl)),
     annotations(decl),
     found_method(found_method)
 {
@@ -91,8 +89,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
     }
 
 
-    update_wrapped_class_for_type(*this,
-                                  this->decl->getTypeForDecl()->getCanonicalTypeInternal());
 
 
     const ClassTemplateSpecializationDecl * specialization = nullptr;
@@ -119,24 +115,15 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
         must_have_base_type = true;
     }
 
-
-
-
-    this->include_files.insert(get_include_for_type_decl(this->compiler_instance, this->decl));
-
-
 //    print_vector(annotation_base_types_to_ignore, "base types to ignore");
 //    print_vector(annotation_base_type_to_use, "base type to use");
 
 
 
     // if a comment is directly attached to this class, get it
-    FullComment * full_comment = get_full_comment_for_decl(this->compiler_instance, this->decl, false);
+    FullComment * full_comment = get_full_comment_for_decl(this->decl, false);
 
     if (full_comment != nullptr) {
-
-//        auto comment_text = get_source_for_source_range(
-//            this->compiler_instance.getPreprocessor().getSourceManager(), full_comment->getSourceRange());
 
 
         // go through each portion (child) of the full comment
@@ -146,7 +133,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
             if (child_comment_source_range.isValid()) {
 
                 auto child_comment_text = get_source_for_source_range(
-                    this->compiler_instance.getPreprocessor().getSourceManager(),
+                    compiler_instance->getPreprocessor().getSourceManager(),
                     child_comment_source_range);
 
                 log.info(LogSubjects::Comments, "Child comment - kind: {} - '{}'", (*i)->getCommentKind(), child_comment_text);
@@ -163,7 +150,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
                 } else if (auto paragraph_comment = dyn_cast<ParagraphComment>(*i)) {
                     auto paragraph_comment_text = get_source_for_source_range(
-                        this->compiler_instance.getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
+                        compiler_instance->getPreprocessor().getSourceManager(), paragraph_comment->getSourceRange());
 
                     this->comment = trim_doxygen_comment_whitespace(paragraph_comment_text);
 
@@ -246,17 +233,12 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 //        cerr << "getting base type wrapped class object" << endl;
         WrappedClass & current_base = WrappedClass::get_or_insert_wrapped_class(base_record_decl,
-                                                                                this->compiler_instance,
                                                                                 this->found_method_means_wrapped()
                                                                                 ? FOUND_BASE_CLASS : FOUND_UNSPECIFIED);
 
 
-        auto current_base_include = get_include_for_type_decl(this->compiler_instance, current_base.decl);
-        auto current_include = get_include_for_type_decl(this->compiler_instance, this->decl);
         //                printf("For %s, include %s -- for %s, include %s\n", current_base->class_name.c_str(), current_base_include.c_str(), current->class_name.c_str(), current_include.c_str());
 
-        this->include_files.insert(current_base_include);
-        current_base.include_files.insert(current_include);
         this->add_base_type(current_base);
         current_base.derived_types.insert(this);
 
@@ -265,6 +247,18 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, CompilerInstance & compil
 
 
     } // end processing base classes
+
+
+
+    if (auto maybe_root_include = get_root_include_for_decl(this->decl)) {
+        this->my_include = *maybe_root_include;
+    } else {
+        throw ClassParserException("Unable to get root include for {} - unexpected except in testing", this->class_name);
+    }
+
+    std::cerr << fmt::format("Root include for {} is {}", this->class_name, this->my_include) << std::endl;
+
+
 
 
     if (print_logging) cerr << "done with base classes" << endl;
@@ -303,24 +297,19 @@ void WrappedClass::make_bidirectional_wrapped_class_if_needed() {
         string bidirectional_class_name = fmt::format("JS{}", this->get_js_name());
 
 // created a WrappedClass for the non-AST JSWrapper class
-        WrappedClass & js_wrapped_class = *WrappedClass::wrapped_classes.emplace_back(new WrappedClass(bidirectional_class_name,
-                                                                                     this->compiler_instance));
+        WrappedClass & js_wrapped_class = *WrappedClass::wrapped_classes.emplace_back(new WrappedClass(bidirectional_class_name));
 
         js_wrapped_class.bidirectional = true;
         js_wrapped_class.my_include = fmt::format("\"v8toolkit_generated_bidirectional_{}.h\"", this->get_js_name());
-//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
+
 
 
         js_wrapped_class.add_base_type(*this);
 
-//        cerr << fmt::format("Adding derived bidirectional type {} to base type: {}", js_wrapped_class.class_name, this->name_alias) << endl;
-
-// set the bidirectional class as being a subclass of the non-bidirectional type
+        // set the bidirectional class as being a subclass of the non-bidirectional type
         this->derived_types.insert(&js_wrapped_class);
 
         js_wrapped_class.include_files.insert("<v8toolkit/bidirectional.h>");
-        js_wrapped_class.include_files.insert(js_wrapped_class.my_include);
-//        cerr << fmt::format("my_include for bidirectional class: {}", js_wrapped_class.my_include) << endl;
     }
 }
 
@@ -401,7 +390,7 @@ void WrappedClass::parse_all_methods() {
         }
 
         CXXMethodDecl const * method = dyn_cast<CXXMethodDecl>(current_decl);
-        map<string, QualTypeWrapper> template_parameter_types;
+        map<string, QualType> template_parameter_types;
         FunctionTemplateDecl const * function_template_decl = nullptr;
 
 
@@ -610,7 +599,7 @@ void WrappedClass::parse_all_methods() {
 
             }
             log.info(LogSubjects::Methods, "skipping static method '{}' marked as v8 class wrapper extension method, but will call it during class wrapping", full_method_name);
-            this->wrapper_extension_methods.insert(full_method_name + "(class_wrapper);");
+            this->wrapper_extension_methods.insert(full_method_name);
             continue; // don't wrap the method as a normal method
         }
 
@@ -763,10 +752,9 @@ void WrappedClass::parse_members() {
 }
 
 
-WrappedClass::WrappedClass(const std::string class_name, CompilerInstance & compiler_instance) :
+WrappedClass::WrappedClass(const std::string class_name) :
     class_name(class_name),
     decl(nullptr),
-    compiler_instance(compiler_instance),
     found_method(FOUND_GENERATED)
 {
     log.info(LogSubjects::Class, "Created new (no-decl) WrappedClass: '{}'", this->class_name);
@@ -1022,42 +1010,15 @@ bool WrappedClass::ready_for_wrapping(set<WrappedClass const *> dumped_classes) 
 //}
 //
 //
-
-
-// return all the header files for all the types used by this class and all base classes
-std::set<string> WrappedClass::get_base_type_includes() const {
-    set<string> results{this->my_include};
-    results.insert(this->include_files.begin(), this->include_files.end());
-
-    for (WrappedClass * base_class : this->base_types) {
-        //cerr << fmt::format("...base type: {}", base_class->name_alias) << endl;
-        auto base_results = base_class->get_base_type_includes();
-        results.insert(base_results.begin(), base_results.end());
-    }
-
-    return results;
-}
-
-std::set<string> WrappedClass::get_derived_type_includes() const {
-//    cerr << fmt::format("Getting derived type includes for {}", name_alias) << endl;
-    set<string> results;
-    results.insert(my_include);
-    for (auto derived_type : derived_types) {
-
-//        std::cerr << fmt::format("1 - derived type loop for {}", derived_type->name_alias) << std::endl;
-        results.insert(derived_type->include_files.begin(), derived_type->include_files.end());
-        //std::cerr << fmt::format("2") << std::endl;
-        auto derived_includes = derived_type->get_derived_type_includes();
-        //std::cerr << fmt::format("3") << std::endl;
-        results.insert(derived_includes.begin(), derived_includes.end());
-        //std::cerr << fmt::format("4") << std::endl;
-//        cerr << fmt::format("{}: Derived type includes for subclass {} and all its derived classes: {}", name_alias,
-//                            derived_type->class_name, join(derived_includes)) << endl;
-
-    }
-    //std::cerr << fmt::format("aaa") << std::endl;
-    return results;
-}
+//
+//
+//TODO:
+//Get the hierarchy of classes and go to the most derived type and find the include that brings that in.
+// - that's the only include that's needed
+// - make sure it originates from the TU's .cpp file (file id 1?)
+// - possible to work backwards using get_include_string_for_fileid
+//   - find where the definition is, then find what included that, what included that, etc until
+//     back at fileid 1 then include that first file
 
 
 bool WrappedClass::is_template_specialization() {
@@ -1084,7 +1045,6 @@ WrappedClass::~WrappedClass() {
 
 
 WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * decl,
-                                                         CompilerInstance & compiler_instance,
                                                          FOUND_METHOD found_method) {
 
     if (decl->isDependentType()) {
@@ -1131,7 +1091,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
                 // if a type was adjusted, make sure to adjust it's base types as well
                 for(auto & base : wrapped_class->base_types) {
 //                    std::cerr << fmt::format("running through parent classes of {}", wrapped_class->name_alias) << std::endl;
-                    get_or_insert_wrapped_class(base->decl, compiler_instance, FOUND_BASE_CLASS);
+                    get_or_insert_wrapped_class(base->decl, FOUND_BASE_CLASS);
                 }
             }
             //fprintf(stderr, "returning existing object: %p\n", (void *)wrapped_class.get());
@@ -1140,7 +1100,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
     }
 
 
-    return WrappedClass::make_wrapped_class(decl, compiler_instance, found_method);
+    return WrappedClass::make_wrapped_class(decl, found_method);
 }
 
 
@@ -1209,6 +1169,7 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 
 void WrappedClass::validate_data() {
 
+    std::cerr << fmt::format("validating {}", this->class_name) << std::endl;
     xl::log::LogCallbackGuard g(log, this->log_watcher);
 
     if (xl::contains(reserved_global_names, this->get_js_name())) {
@@ -1259,6 +1220,73 @@ void WrappedClass::validate_data() {
                   "JavaScript type name '{}' is either empty or has one of < > : in it, must be aliased to a standard name", this->get_js_name());
     }
 
+    if (!this->my_include.empty()) {
+        this->include_files.insert(this->my_include);
+    }
+
+
+    // for when the type itself is templated - this picks up the other types that compose this type
+    if (this->decl != nullptr) {
+        auto my_includes = TypeInfo(this->decl->getTypeForDecl()->getCanonicalTypeInternal()).get_root_includes();
+        this->include_files.insert(my_includes.begin(), my_includes.end());
+    }
+
+    for(auto base_type : this->base_types) {
+        std::cerr << fmt::format("adding base type include for {} inherits from {}", this->class_name, base_type->class_name) << std::endl;
+//        assert(base_type->my_include != ""); // the ordering should preclude this
+        if (!base_type->my_include.empty()) {
+            this->include_files.insert(base_type->my_include);
+        }
+    }
+
+    // get all the types for all the data members in the inheritance hierarchy
+    std::cerr << fmt::format("adding data member include files for {}", this->class_name) << std::endl;
+    auto data_member_includes = this->foreach_inheritance_level<std::set<std::string>>(
+        [&](WrappedClass const & c, std::set<std::string> includes) {
+            std::cerr << fmt::format("getting data members from {}", c.class_name) << std::endl;
+            for (auto const & data_member : c.members) {
+                std::cerr << fmt::format("looking at data member {}", data_member->long_name) << std::endl;
+                auto data_member_includes = data_member->get_includes();
+                includes.insert(data_member_includes.begin(), data_member_includes.end());
+            }
+            return includes;
+        });
+
+    this->include_files.insert(data_member_includes.begin(), data_member_includes.end());
+
+    for(WrappedClass * derived_type : this->derived_types) {
+        std::cerr << fmt::format("adding derived type include for {} inherits from {}", this->class_name,
+                                 derived_type->class_name) << std::endl;
+
+        if (derived_type->decl != nullptr) {
+            auto derived_type_includes = TypeInfo(
+                derived_type->decl->getTypeForDecl()->getCanonicalTypeInternal()).get_root_includes();
+            this->include_files.insert(derived_type_includes.begin(), derived_type_includes.end());
+        }
+
+        // need to have this in the case of bidirectional types that can't compute their actual include requirements
+        if (!derived_type->my_include.empty()) {
+            this->include_files.insert(derived_type->my_include);
+        }
+    }
+
+    for (auto const & member_function : this->get_member_functions()) {
+        std::cerr << fmt::format("Looking at member function: {}", member_function->name) << std::endl;
+        auto member_function_includes = member_function->get_includes();
+        this->include_files.insert(member_function_includes.begin(), member_function_includes.end());
+    }
+
+    for (auto const & static_function : this->get_static_functions()) {
+        std::cerr << fmt::format("Looking at statuc function: {}", static_function->name) << std::endl;
+        auto static_function_includes = static_function->get_includes();
+        this->include_files.insert(static_function_includes.begin(), static_function_includes.end());
+    }
+
+    for (auto const & constructor : this->get_constructors()) {
+        std::cerr << fmt::format("Looking at constructor {}", constructor->name) << std::endl;
+        auto constructor_includes = constructor->get_includes();
+        this->include_files.insert(constructor_includes.begin(), constructor_includes.end());
+    }
 }
 
 
@@ -1300,9 +1328,11 @@ std::string const & WrappedClass::get_js_name() const {
 
     }
 
-
     return this->js_name;
 }
+
+
+
 
 
 

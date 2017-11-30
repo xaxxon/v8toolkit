@@ -169,15 +169,14 @@ bool is_good_record_decl(const CXXRecordDecl * decl) {
 
 // Finds where file_id is included, how it was included, and returns the string to duplicate
 //   that inclusion
-std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, FileID & file_id) {
-    auto include_source_location = compiler_instance.getPreprocessor().getSourceManager().getIncludeLoc(file_id);
+std::string get_include_string_for_fileid(FileID & file_id) {
+    auto include_source_location = compiler_instance->getPreprocessor().getSourceManager().getIncludeLoc(file_id);
 
     // If it's in the "root" file (file id 1), then there's no include for it
     if (include_source_location.isValid()) {
         auto header_file = include_source_location.printToString(
-            compiler_instance.getPreprocessor().getSourceManager());
-//            if (print_logging) cerr << "include source location: " << header_file << endl;
-        //            wrapped_class.include_files.insert(header_file);
+            compiler_instance->getPreprocessor().getSourceManager());
+            cerr << "include source location: " << header_file << endl;
     } else {
 //            if (print_logging) cerr << "No valid source location" << endl;
         return "";
@@ -185,31 +184,119 @@ std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, 
 
     bool invalid;
     // This gets EVERYTHING after the start of the filename in the include.  "asdf.h"..... or <asdf.h>.....
-    const char * text = compiler_instance.getPreprocessor().getSourceManager().getCharacterData(include_source_location,
+    const char * text = compiler_instance->getPreprocessor().getSourceManager().getCharacterData(include_source_location,
                                                                                                 &invalid);
     const char * text_end = text + 1;
     while (*text_end != '>' && *text_end != '"') {
         text_end++;
     }
 
-    return string(text, (text_end - text) + 1);
+    auto result = string(text, (text_end - text) + 1);
+    std::cerr << fmt::format("returning {}", result) << std::endl;
+    return result;
 
 }
 
 
 std::string
-get_include_for_source_location(CompilerInstance & compiler_instance, const SourceLocation & source_location) {
-    auto full_source_loc = FullSourceLoc(source_location, compiler_instance.getPreprocessor().getSourceManager());
+get_include_for_source_location(const SourceLocation & source_location) {
+    auto full_source_loc = FullSourceLoc(source_location, compiler_instance->getPreprocessor().getSourceManager());
 
     auto file_id = full_source_loc.getFileID();
-    return get_include_string_for_fileid(compiler_instance, file_id);
+    return get_include_string_for_fileid(file_id);
 }
 
-std::string get_include_for_type_decl(CompilerInstance & compiler_instance, const TypeDecl * type_decl) {
+std::string get_include_for_type_decl(const TypeDecl * type_decl) {
     if (type_decl == nullptr) {
         return "";
     }
-    return get_include_for_source_location(compiler_instance, type_decl->getLocStart());
+    return get_include_for_source_location(type_decl->getLocStart());
+}
+
+// finds the include from the TU's .cpp file (fileid 1) that includes a file that eventually includes the type decl
+std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl) {
+
+
+    if (type_decl == nullptr) {
+        std::cerr << fmt::format("get root include for decl got null type_decl, returning failing") << std::endl;
+        return {};
+    }
+    
+    bool invalid;
+
+    auto full_source_loc_for_type_decl = FullSourceLoc(type_decl->getLocStart(), compiler_instance->getPreprocessor().getSourceManager());
+    if (full_source_loc_for_type_decl.isInvalid()) {
+        std::cerr << fmt::format("no source lookup available for {} - maybe this is common for primitive types?", type_decl->getNameAsString()) << std::endl;
+        return {};
+    }
+    const char * text = compiler_instance->getPreprocessor().getSourceManager().getCharacterData(full_source_loc_for_type_decl,
+                                                                                                &invalid);
+
+
+    std::cerr << fmt::format("first try invalid? {}", invalid) << std::endl;
+    auto file_id = full_source_loc_for_type_decl.getFileID();
+    std::cerr << fmt::format("first try file id: {}", file_id.getHashValue()) << std::endl;
+    std::vector<std::string> include_path;
+    include_path.reserve(20);
+
+    std::string result;
+    // file id 1 is going to be the generated universal TU, it includes all the .cpp files
+    while(!invalid && file_id.getHashValue() > 1) {
+
+        auto include_source_location = compiler_instance->getPreprocessor().getSourceManager().getIncludeLoc(file_id);
+        auto full_source_location = FullSourceLoc(include_source_location, compiler_instance->getPreprocessor().getSourceManager());
+        text = compiler_instance->getPreprocessor().getSourceManager().getCharacterData(include_source_location,
+                                                                                       &invalid);
+
+        auto text_end = text + 1;
+        while (*text_end != '>' && *text_end != '"') {
+            text_end++;
+        }
+        result = string(text, (text_end - text) + 1);
+
+
+        std::cerr << fmt::format("next try invalid? {}", invalid) << std::endl;
+
+        file_id = full_source_location.getFileID();
+        std::cerr << fmt::format("next try source: {}", result) << std::endl;
+        std::cerr << fmt::format("next try file id: {}", file_id.getHashValue()) << std::endl;
+
+        // working towards the beginning so insert at the front
+        include_path.insert(include_path.begin(), result);
+    }
+
+
+    // look for either the first angle-bracket include or use the very last quotation mark include
+    std::string root_include;
+    bool found_angle_bracket_include = false;
+    for (auto const & include : include_path) {
+        static xl::Regex include_regex("^(?:(<[^>]*>)|(\"[^\"]*\"))$");
+        if (auto match = include_regex.match(include)) {
+            // look for angle brackets - keep the first ones found
+            if (match.has(1)) {
+                found_angle_bracket_include = true;
+            } else {
+                // if a quoted include is found after an angle bracket, return the last angle bracket
+                if (found_angle_bracket_include) {
+                    break;
+                }
+                // otherwise just keep looking for an angle bracket include, or return the last quoted include
+                //   if no angle bracket include is ever found
+            }
+            root_include = match[0];
+
+        } else {
+            // this may happen when there is a macro involved in the include like BOOST_PLATFORM_CONFIG
+            // Looking up the macro definition isn't implemented, so just see if there's a previous option to return
+            if (!root_include.empty()) {
+                return root_include;
+            }
+            v8toolkit::class_parser::log.error(LogT::Subjects::Class,
+                                               "Got unexpected include format (not <..> or \"..\"): {}", include);
+        }
+    }
+
+    return root_include;
 }
 
 
@@ -661,7 +748,7 @@ std::string get_type_string(QualType const & input_qual_type,
 }
 
 
-QualType get_substitution_type_for_type(QualType original_type, map<string, QualTypeWrapper> const & template_types) {
+QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> const & template_types) {
 
     if (!original_type->isDependentType()) {
         return original_type;
@@ -703,12 +790,12 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
         // if this is being called, a stripped down type is fine, so ship back the stripped down original type
         return current_type;
     } else {
-        return *i->second;
+        return i->second;
     }
 }
 
 
-std::string substitute_type(QualType const & original_type, map<string, QualTypeWrapper> template_types) {
+std::string substitute_type(QualType const & original_type, map<string, QualType> template_types) {
 
     if (!original_type->isDependentType()) {
         auto result = get_type_string(original_type);
@@ -882,8 +969,7 @@ std::string substitute_type(QualType const & original_type, map<string, QualType
  * parameter, an empty string is returned in that position (which is different than a default parameter of
  * an empty string which would be returned as the string '""'
  */
-vector<string> get_default_argument_values(CompilerInstance & compiler_instance,
-                                           const CXXMethodDecl * method,
+vector<string> get_default_argument_values(const CXXMethodDecl * method,
                                            const string & annotation = "") {
     vector<string> results;
     auto parameter_count = method->getNumParams();
@@ -893,7 +979,7 @@ vector<string> get_default_argument_values(CompilerInstance & compiler_instance,
         if (param_decl->hasDefaultArg()) {
             auto default_argument = param_decl->getDefaultArg();
             auto source_range = default_argument->getSourceRange();
-            auto source = get_source_for_source_range(compiler_instance.getSourceManager(), source_range);
+            auto source = get_source_for_source_range(compiler_instance->getSourceManager(), source_range);
             results.push_back(source);
         } else {
             results.push_back("");

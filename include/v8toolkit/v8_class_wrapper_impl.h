@@ -279,6 +279,9 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::~V8ClassWrapper() 
 	// this was happening when it wasn't supposed to, like when making temp copies.   need to disable copying or something
 	//   if this line is to be added back
 	// isolate_to_wrapper_map.erase(this->isolate);
+
+	delete destructor_behavior_delete;
+	delete destructor_behavior_leave_alone;
 }
 
 

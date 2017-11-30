@@ -11,6 +11,7 @@
 #include <xl/json.h>
 
 #include "wrapped_class.h"
+#include "helper_functions.h"
 
 #include "ast_consumer.h"
 #include "output_modules/javascript_stub_output.h"
@@ -19,6 +20,9 @@
 
 
 namespace v8toolkit::class_parser {
+
+// this doesn't change during the running of the plugin, so may as well just keep one copy of it for all to use
+inline CompilerInstance * compiler_instance = nullptr;
 
 
 // This is the class that is registered with LLVM.  PluginASTAction is-a ASTFrontEndAction
@@ -38,7 +42,6 @@ protected:
 public:
 
     static inline xl::json::Json config_data;
-
 
     // open up output files
     PrintFunctionNamesAction();

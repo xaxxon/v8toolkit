@@ -436,6 +436,7 @@ struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
 };
 
 
+
 /** IF YOU GET AN ERROR ABOUT RESULT_OF::TYPE NOT EXISTING, MAKE SURE YOUR LAMBDA PARAMETER TYPE IS EXACTLY RIGHT,
  * ESPECTIALLY RE; CONST
  * @param container input container

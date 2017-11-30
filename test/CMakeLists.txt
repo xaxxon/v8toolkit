@@ -16,6 +16,9 @@ file(GLOB TEST_SRC
 
 add_definitions(-DGOOGLE_TEST)
 
+set(CLANG_HOME $ENV{CLANG_HOME})
+link_directories(. ${CLANG_HOME}/lib)
+
 
 add_executable(test-v8toolkit ${TEST_SRC})
 add_dependencies(test-v8toolkit copy_snapshots)

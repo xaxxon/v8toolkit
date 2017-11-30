@@ -12,6 +12,8 @@ ucm_set_runtime(STATIC)
 set(V8TOOLKIT_VERSION 0.1.0)
 
 include(v8)
+
+set(CLANG_HOME $ENV{CLANG_HOME})
 link_directories(. ${CLANG_HOME}/lib)
 
 

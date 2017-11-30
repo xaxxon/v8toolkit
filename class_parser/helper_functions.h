@@ -83,17 +83,16 @@ std::string remove_reference_from_type_string(std::string const & type_string);
 
 std::string remove_local_const_from_type_string(std::string const & type_string);
 
-std::string substitute_type(QualType const & original_type, std::map<std::string, QualTypeWrapper> template_types);
+std::string substitute_type(QualType const & original_type, std::map<std::string, QualType> template_types);
 
-void update_wrapped_class_for_type(WrappedClass & wrapped_class,
-                                   QualType const & qual_type);
 
 
 template<class T>
 std::string join(const T & source, const std::string & between = ", ", bool leading_between = false);
 
 
-std::string get_include_for_type_decl(CompilerInstance & compiler_instance, const TypeDecl * type_decl);
+std::string get_include_for_type_decl(const TypeDecl * type_decl);
+std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl);
 
 void print_vector(const std::vector<std::string> & vec, const std::string & header = "", const std::string & indentation = "",
                   bool ignore_empty = true);
@@ -106,37 +105,24 @@ std::string get_canonical_name_for_decl(const TypeDecl * decl);
 
 bool is_good_record_decl(const CXXRecordDecl * decl);
 
-std::string get_include_string_for_fileid(CompilerInstance & compiler_instance, FileID & file_id);
+std::string get_include_string_for_fileid(FileID & file_id);
 
-std::string get_method_parameters(CompilerInstance & compiler_instance,
-                                  WrappedClass & wrapped_class,
+std::string get_method_parameters(WrappedClass & wrapped_class,
                                   const CXXMethodDecl * method,
                                   bool add_leading_comma = false,
                                   bool insert_variable_names = false,
                                   const std::string & annotation = "");
 
 
-// takes a file number starting at 1 and incrementing 1 each time
-// a list of WrappedClasses to print
-// and whether or not this is the last file to be written
-void write_classes(int file_count, std::vector<WrappedClass *> & classes, bool last_one);
-
-
-
-
 void print_specialization_info(const CXXRecordDecl * decl);
 
 
 
-std::string get_method_string(CompilerInstance & compiler_instance,
-                              WrappedClass & wrapped_class,
+std::string get_method_string(WrappedClass & wrapped_class,
                               const CXXMethodDecl * method);
 
-void generate_javascript_stub(std::string const &);
 
-void generate_bidirectional_classes(CompilerInstance & compiler_instance);
 
-void generate_bindings();
 
 class PrintLoggingGuard {
     bool logging = false;
@@ -191,6 +177,6 @@ std::string trim_doxygen_comment_whitespace(std::string const & comment);
 
 
 
-FullComment * get_full_comment_for_decl(CompilerInstance & ci, Decl const * decl, bool any = false);
+FullComment * get_full_comment_for_decl(Decl const * decl, bool any = false);
 
 }

@@ -58,7 +58,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 //        cerr << "Storing it for later processing (unless dupe)" << endl;
 
         log.info(LogSubjects::ClassParser, "class passed checks: {}", class_name);
-        WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_UNSPECIFIED);
+        WrappedClass::get_or_insert_wrapped_class(klass, FOUND_UNSPECIFIED);
     }
 
     // Store any annotations on templates so the annotations can be merged later with types instantiated from the template
@@ -131,7 +131,7 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 //        print_specialization_info(klass);
 
         log.info(LogSubjects::ClassParser, "Class passed tests: {}", get_canonical_name_for_decl(klass));
-        WrappedClass::get_or_insert_wrapped_class(klass, this->ci, FOUND_INHERITANCE);
+        WrappedClass::get_or_insert_wrapped_class(klass, FOUND_INHERITANCE);
     }
 
     // Store annotations associated with a "using" statement to be merged with the "real" type

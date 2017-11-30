@@ -2,12 +2,13 @@
 
 #include "stdlib.h"
 #include "debugger.h"
+#include "log.h"
 
 using namespace v8toolkit;
 
 int main(int argc, char** argv) {
 
-    v8toolkit::Platform::init(argc, argv, argv[0]);
+    v8toolkit::Platform::init(argc, argv, argv[1]);
     auto isolate = v8toolkit::Platform::create_isolate();
     isolate->add_print();
     auto context = isolate->create_debug_context(9002);
