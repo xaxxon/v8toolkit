@@ -224,7 +224,7 @@ struct BindingFile {
                    this->classes.size() == 1); // if a single class doesn't fit, then force it through
 
         this->explicit_instantiations.insert(wrapped_class);
-        if (!wrapped_class.wrapper_extension_methods.empty()) {
+        if (!wrapped_class->wrapper_extension_methods.empty()) {
             this->explicit_instantiations_for_const_types.insert(wrapped_class);          
         }        
         this->includes.insert(wrapped_class->include_files.begin(), wrapped_class->include_files.end());
