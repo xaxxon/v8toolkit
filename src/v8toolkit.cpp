@@ -841,7 +841,12 @@ std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> conte
 
 
     // if the current object's prototype is null, then this is the Object object, and we don't want it's properties
-     while (!current_object.IsEmpty() && !current_object->IsNull() && !current_object->GetPrototype()->IsNull()) {
+     while (!current_object.IsEmpty() &&
+         !current_object->IsNull() &&
+         !current_object->IsUndefined() &&
+         !current_object->GetPrototype()->IsNull()) {
+
+         v8toolkit::print_v8_value_details(current_object);
 
          // for some reason, requesting all properties crashes on constructor function objects like `Object`
          auto maybe_own_property_names = current_object->GetOwnPropertyNames(context, v8::PropertyFilter::ONLY_CONFIGURABLE);
