@@ -102,7 +102,6 @@ void WebSocketService::on_message(websocketpp::connection_hdl hdl, WebSocketServ
 
 
 void WebSocketService::on_open(websocketpp::connection_hdl connection) {
-    std::cerr << fmt::format("Got websocket connection") << std::endl;
     log.info(LogT::Subjects::DebugWebSocket, "Got websocket connection");
     assert(this->connections.size() == 0);
     this->connections.emplace(connection, WebSocketChannel(*this, connection));
@@ -202,11 +201,8 @@ using namespace std::literals::chrono_literals;
 
 void WebSocketService::wait_for_connection(std::chrono::duration<float> sleep_between_polls) {
         auto logger = log.to(LogT::Levels::Info, LogT::Subjects::DebugWebSocket)("Waiting indefinitely for websocket connection");
-    std::cerr << fmt::format("waiting for connection") << std::endl;
     while(this->connections.empty()) {
-        std::cerr << fmt::format("calling poll_one") << std::endl;
         this->poll_one();
-        std::cerr << fmt::format("back from poll_one") << std::endl;
         if (this->connections.empty()) {
             // don't suck up 100% cpu while waiting for connection
             std::this_thread::sleep_for(sleep_between_polls);

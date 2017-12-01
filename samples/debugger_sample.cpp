@@ -1,3 +1,12 @@
+
+/*
+
+ clang++ -std=c++17 debugger_sample.cpp  -I ../../v8/include/ -I ../include/v8toolkit/ -I /usr/local/include -DXL_USE_PCRE -DXL_USE_LIB_FMT -lv8toolkit_shared -lboost_system -lpcre -L /Users/xaxxon/v8libs/x64.debug.shared/ -licui18n -licuuc -lv8 -lv8_libbase -lv8_libplatform  -g
+
+*/
+
+
+
 #include <regex>
 
 #include "stdlib.h"

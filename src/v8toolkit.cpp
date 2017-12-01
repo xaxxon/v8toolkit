@@ -835,8 +835,26 @@ AnyBase::~AnyBase() {}
 std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> context, v8::Local<v8::Object> object)
 {
     auto isolate = context->GetIsolate();
-    auto names = object->GetPropertyNames(context).ToLocalChecked();
-    return CastToNative<std::vector<std::string>>()(isolate, names);
+    auto current_object = object;
+
+    std::vector<std::string> results;
+
+
+    // if the current object's prototype is null, then this is the Object object, and we don't want it's properties
+     while (!current_object.IsEmpty() && !current_object->IsNull() && !current_object->GetPrototype()->IsNull()) {
+
+         // for some reason, requesting all properties crashes on constructor function objects like `Object`
+         auto maybe_own_property_names = current_object->GetOwnPropertyNames(context, v8::PropertyFilter::ONLY_CONFIGURABLE);
+         if (maybe_own_property_names.IsEmpty()) {
+             return results;
+         }
+         auto own_property_names = CastToNative<std::vector<std::string>>()(isolate, maybe_own_property_names.ToLocalChecked());
+         results.insert(results.end(), own_property_names.begin(), own_property_names.end());
+         current_object = current_object->GetPrototype().As<v8::Object>();
+     }
+
+
+    return results;
 }
 
 
