@@ -76,6 +76,12 @@ struct BindingsProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
         log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
+
+        std::vector<MemberFunction const *> call_operator_vector;
+        if (c.call_operator_member_function) {
+            call_operator_vector.push_back(c.call_operator_member_function.get());
+        }
+
         auto provider = P::make_provider(
             std::pair("comment", c.comment),
             std::pair("name", c.class_name),
@@ -83,6 +89,7 @@ struct BindingsProviderContainer {
             std::pair("js_name", c.get_js_name()),
             std::pair("data_members", std::ref(c.get_members())),
             std::pair("member_functions", std::ref(c.get_member_functions())),
+            std::pair("call_operator", call_operator_vector), // either empty vector or contains 1 element
             std::pair("static_functions", std::ref(c.get_static_functions())),
             std::pair("enums", c.get_enums()),
             std::pair("wrapper_extension_methods", c.wrapper_extension_methods),
@@ -364,6 +371,10 @@ Template class_template(R"({
     class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
     class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+
+{{<<call_operator|!!
+    class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
+
 {{<<static_functions|!!
     class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 {{<<data_members|!!

@@ -108,6 +108,9 @@ public:
 
     vector<unique_ptr<MemberFunction>> const & get_member_functions() const;
 
+    // stores an operator() member function - more than one not skipped in a class is an error
+    unique_ptr<MemberFunction> call_operator_member_function;
+
     vector<unique_ptr<StaticFunction>> const & get_static_functions() const;
 
     vector<unique_ptr<DataMember>> const & get_members() const;

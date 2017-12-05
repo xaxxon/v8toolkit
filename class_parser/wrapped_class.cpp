@@ -628,8 +628,12 @@ void WrappedClass::parse_all_methods() {
             this->static_functions.push_back(
                 make_unique<StaticFunction>(*this, method, template_parameter_types, function_template_decl));
         } else {
-            this->member_functions.push_back(
-                make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl));
+            auto member_function = make_unique<MemberFunction>(*this, method, template_parameter_types, function_template_decl);
+            if (member_function->is_callable_overload()) {
+                this->call_operator_member_function = std::move(member_function);
+            } else {
+                this->member_functions.push_back(std::move(member_function));
+            }
         }
 
     }
@@ -1210,6 +1214,7 @@ void WrappedClass::validate_data() {
                               return (*data_member)->long_name;
                           } else {
                               assert(false); // unexpected type
+                              throw ClassParserException("Unexpected variant type");
                           }
                       })));
         }

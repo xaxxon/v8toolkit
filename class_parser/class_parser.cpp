@@ -233,9 +233,7 @@ std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl)
                                                                                                 &invalid);
 
 
-    std::cerr << fmt::format("first try invalid? {}", invalid) << std::endl;
     auto file_id = full_source_loc_for_type_decl.getFileID();
-    std::cerr << fmt::format("first try file id: {}", file_id.getHashValue()) << std::endl;
     std::vector<std::string> include_path;
     include_path.reserve(20);
 
@@ -254,12 +252,7 @@ std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl)
         }
         result = string(text, (text_end - text) + 1);
 
-
-        std::cerr << fmt::format("next try invalid? {}", invalid) << std::endl;
-
         file_id = full_source_location.getFileID();
-        std::cerr << fmt::format("next try source: {}", result) << std::endl;
-        std::cerr << fmt::format("next try file id: {}", file_id.getHashValue()) << std::endl;
 
         // working towards the beginning so insert at the front
         include_path.insert(include_path.begin(), result);

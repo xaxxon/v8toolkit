@@ -147,15 +147,16 @@ class EmptyFactoryBase : public v8toolkit::WrappedClassBase {};
 *   returned can be used as a class T regardless of whether it is a pure C++ type 
 *   or if it has been extended in javascript
 */
-template<class Base, // The common base class type of object to be returned
-         class = TypeList<>, // List of parameters that may change per-instance created
-         class FactoryBase = EmptyFactoryBase, // base class of this factory class
-    class Deleter = std::default_delete<Base>>
+template<typename Base, // The common base class type of object to be returned
+    typename = TypeList<>, // List of parameters that may change per-instance created
+    typename FactoryBase = EmptyFactoryBase, // base class of this factory class
+    typename Deleter = std::default_delete<Base>>
 class Factory;
 
 
- template<class Base, class... ConstructorArgs, class FactoryBase, class Deleter>
-     class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase, Deleter> : public virtual FactoryBase {
+ template<typename Base, typename... ConstructorArgs, typename FactoryBase, typename Deleter>
+   class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase, Deleter> : public virtual FactoryBase
+{
 public:
 //     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
 //     {}
@@ -178,17 +179,17 @@ public:
     /**
      * Returns a unique_ptr to a new object inheriting from type Base
      */
-    template <class U = Base>
-    std::unique_ptr<U> get_unique(ConstructorArgs&&... args) const {
+    template <typename U = Base>
+    std::unique_ptr<U, Deleter> get_unique(ConstructorArgs&&... args) const {
 
 	    // call operator() on the factory and put the results in a unique pointer
-        return std::unique_ptr<U>((*this)(std::forward<ConstructorArgs>(args)...));
+        return std::unique_ptr<U, Deleter>((*this)(std::forward<ConstructorArgs>(args)...));
     }
 
     /**
      * Helper to quickly turn a Base type into another type if allowed
      */
-    template<class U, class... Args>
+    template<typename U, typename... Args>
     U * as(Args&&...  args) const {
         // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
         auto result = this->operator()(std::forward<Args>(args)...);
@@ -207,17 +208,17 @@ public:
 *   but v8toolkit::Factory must be in the inheritance chain somewhere
 */
 template<
-	class Base,
-	class Child,
-        class FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
-	class ExternalTypeList,
-    class FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
-    class Deleter = std::default_delete<Child> >
+    typename Base,
+    typename Child,
+    typename FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
+    typename ExternalTypeList,
+    typename FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
+    typename Deleter = std::default_delete<Child> >
 class CppFactory;
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
- template<class Base, class Child, class... ExternalConstructorParams, class... FixedParams, class FactoryBase, class Deleter>
+ template<typename Base, typename Child, typename... ExternalConstructorParams, typename... FixedParams, typename FactoryBase, typename Deleter>
     class V8TOOLKIT_SKIP CppFactory<Base,
                     Child,
                     TypeList<FixedParams...>,
@@ -275,25 +276,25 @@ class CppFactory;
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
     template<
-	class Base,
-	class JSWrapperClass,
+        typename Base,
+        typename JSWrapperClass,
 
-	class Internal,
-	class External,
-    class FactoryBase = Factory<Base, External, EmptyFactoryBase>,
-    class Deleter = std::default_delete<JSWrapperClass>>
+        typename Internal,
+        typename External,
+        typename FactoryBase = Factory<Base, External, EmptyFactoryBase>,
+        typename Deleter = std::default_delete<JSWrapperClass>>
 class JSFactory; // instance of undefined template means your inheritance is wrong and failing sfinae check
     // sfinae check is almost certainly good
 
 // Begin real specialization
 template<
-	class Base,
-	class JSWrapperClass,
+	typename Base,
+    typename JSWrapperClass,
 
-	class... InternalConstructorParams,
-	class... ExternalConstructorParams,
-    class FactoryBase,
-    class Deleter>
+    typename... InternalConstructorParams,
+    typename... ExternalConstructorParams,
+    typename FactoryBase,
+    typename Deleter>
 class V8TOOLKIT_SKIP JSFactory<
 	Base,
 	JSWrapperClass,
@@ -375,13 +376,13 @@ protected:
                                 ExternalConstructorParams&&... constructor_args,
                                 std::index_sequence<Is...>) const {
 
-        return std::make_unique<JSWrapperClass>(this->global_context.Get(isolate),
+        return std::unique_ptr<JSWrapperClass, Deleter>(new JSWrapperClass(this->global_context.Get(isolate),
 						new_js_object,
 						this->js_base_constructor_function.Get(isolate), // the v8::FunctionTemplate that created the js object
 
 						// must const cast it since this method is const, so the tuple becomes const
 						std::forward<InternalConstructorParams>(std::get<Is>(const_cast<TupleType &>(this->internal_param_tuple)))...,
-						std::forward<ExternalConstructorParams>(constructor_args)...);
+						std::forward<ExternalConstructorParams>(constructor_args)...));
     }
 
 public:

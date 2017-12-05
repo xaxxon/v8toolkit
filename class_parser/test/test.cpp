@@ -237,6 +237,7 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 TEST(ClassParser, ClassMatchingJSReservedWord) {
     std::string source = R"(
         class Object : public v8toolkit::WrappedClassBase {
+        public:
             static void name(); // name is reserved property on functions
         };
         class V8TOOLKIT_USE_NAME(TestMap) Map : public v8toolkit::WrappedClassBase {};
@@ -247,7 +248,7 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
 
     // this should be 2 because there shouldn't be any hard coded renames in the plugin, only in config
     //   but right now name => get_name so there's only 1 error
-    EXPECT_EQ(environment->expect_no_errors(), 2); // one for Object, another for name()
+    EXPECT_EQ(environment->expect_no_errors(), /** SEE NOTE ABOVE **/ 2); // one for Object, another for name()
 }
 
 
@@ -1010,7 +1011,8 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
 
-    EXPECT_EQ(c.get_member_functions().size(), 1);
+    EXPECT_EQ(c.get_member_functions().size(), 0);
+    EXPECT_TRUE(c.call_operator_member_function);
     EXPECT_FALSE(string_stream.str().empty());
     EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 
