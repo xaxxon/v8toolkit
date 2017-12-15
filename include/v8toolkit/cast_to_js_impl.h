@@ -533,8 +533,10 @@ struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::set, T>>> {
 template<typename T>
 struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
+        using NoRefT = std::remove_reference_t<T>;
+        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
         if (optional) {
-            return CastToJS<typename T::value_type>()(isolate, *optional);
+            return CastToJS<ConstMatchedValueType>()(isolate, *optional);
         } else {
             return v8::Undefined(isolate);
         }

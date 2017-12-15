@@ -101,8 +101,8 @@ std::enable_if_t<!std::is_base_of<JSWrapperBase, T>::value, v8::Local<v8::Object
 /*     } */
 /* }; */
 template<class T>
-struct CastToJS<JSWrapper<T>> {
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, const JSWrapper<T> &js_wrapper) {
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<v8toolkit::JSWrapper, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate *isolate, T const & js_wrapper) {
 //        printf("Using custom JSWrapper CastToJS method");
         return js_wrapper.get_javascript_object();
     }

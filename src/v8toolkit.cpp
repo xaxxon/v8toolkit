@@ -216,9 +216,8 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
         // print_v8_value_details(result);
 
         bool default_value = false;
-        bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
 //        print_v8_value_details(result);
-        assert(assert_result);
+        assert(result->BooleanValue(context).FromMaybe(default_value));
     });
 }
 

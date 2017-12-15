@@ -42,8 +42,8 @@ class WrappedClass : public WrappedClassBase {
 public:
     // class is not default constructible
     WrappedClass(int i) : constructor_i(i) {};
-    WrappedClass(WrappedClass const &) = delete;
     WrappedClass(WrappedClass &&) = default;
+    WrappedClass(WrappedClass const &){}
     virtual ~WrappedClass(){}
 
     int constructor_i;
@@ -93,6 +93,10 @@ public:
 
     CopyableWrappedClass copyable_wrapped_class;
     std::unique_ptr<WrappedClass> up_wrapped_class;
+
+    WrappedClass const returns_const_ref_to_own_type() {
+        return WrappedClass(5);
+    }
 
     void takes_const_wrapped_ref(WrappedClass const &) {}
     bool takes_const_unwrapped_ref(std::string_view const & name) { return false; }
@@ -168,6 +172,8 @@ public:
             w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
             w.add_method("returns_uncopyable_type_by_value", &WrappedClass::returns_uncopyable_type_by_value);
             w.add_method("returns_unique_ptr_wrapped_class", &WrappedClass::returns_unique_ptr_wrapped_class);
+            w.add_method("returns_const_ref_to_own_type", &WrappedClass::returns_const_ref_to_own_type);
+
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
                              int,

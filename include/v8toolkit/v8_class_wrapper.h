@@ -1841,19 +1841,25 @@ struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<
 
 
 template<class T>
-struct CastToJS<T *, std::enable_if_t<is_wrapped_type_v<T>>> {
+struct CastToJS<T, std::enable_if_t<
+	std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<T>>> && // must be a pointer
+	!std::is_pointer_v<std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>> && // no multi-pointers
+	is_wrapped_type_v<std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>>
+>> {
+
+	using WrappedType = std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>;
 
     // An lvalue is presented, so the memory will not be cleaned up by JavaScript
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const cpp_object) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T cpp_object) {
         if (cpp_object == nullptr) {
             return v8::Undefined(isolate);
         }
 
         assert(cpp_object != (void *) 0xbebebebebebebebe);
 
-        V8TOOLKIT_DEBUG("CastToJS from T* %s\n",  xl::demangle<_typeid_name(typeid(T).name()).c_str());
+        V8TOOLKIT_DEBUG("CastToJS from T %s\n",  xl::demangle<_typeid_name(typeid(T).name()).c_str());
         auto context = isolate->GetCurrentContext();
-        V8ClassWrapper <T> & class_wrapper = V8ClassWrapper<T>::get_instance(isolate);
+        V8ClassWrapper<WrappedType> & class_wrapper = V8ClassWrapper<WrappedType>::get_instance(isolate);
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
         using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
@@ -1865,7 +1871,8 @@ struct CastToJS<T *, std::enable_if_t<is_wrapped_type_v<T>>> {
                 return CastToJS<const JSWrapperType>()(isolate, *js_wrapper);
             }
         } else {
-            auto js_wrapper = safe_dynamic_cast<JSWrapperType *>(cpp_object);
+
+            auto js_wrapper = safe_dynamic_cast<xl::match_const_of_t<JSWrapperType, WrappedType> *>(cpp_object);
             if (js_wrapper) {
                 return CastToJS<JSWrapperType>()(isolate, *js_wrapper);
             }
