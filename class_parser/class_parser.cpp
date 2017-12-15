@@ -218,7 +218,7 @@ std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl)
 
 
     if (type_decl == nullptr) {
-        std::cerr << fmt::format("get root include for decl got null type_decl, returning failing") << std::endl;
+//        std::cerr << fmt::format("get root include for decl got null type_decl, returning failing") << std::endl;
         return {};
     }
     
@@ -289,6 +289,9 @@ std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl)
         }
     }
 
+    if (root_include == "") {
+        return {}; // return empty optional
+    }
     return root_include;
 }
 

@@ -33,7 +33,7 @@ TypeInfo::TypeInfo(QualType const & type,
 //    name = regex_replace(name, std::regex("^(struct|class) "), "");
 //    std::cerr << fmt::format("TypeInfo for {} stored {} template parameter types", this->type.getAsString(),
 //                             this->template_parameter_types.size()) << std::endl;
-    std::cerr << fmt::format("Created typeinfo for {}", type.getAsString()) << std::endl;
+//    std::cerr << fmt::format("Created typeinfo for {}", type.getAsString()) << std::endl;
 
 }
 
@@ -201,11 +201,7 @@ TypeInfo TypeInfo::without_const() const {
 
 
 CXXRecordDecl const * TypeInfo::get_plain_type_decl() const {
-    auto decl = this->get_plain_type().type->getAsCXXRecordDecl();
-    if (decl == nullptr) {
-        return nullptr;
-    }
-    return decl;
+    return this->get_plain_type().type->getAsCXXRecordDecl();
 }
 
 
@@ -270,6 +266,12 @@ DataMember::DataMember(WrappedClass & wrapped_class,
 
     // the member will be wrapped as const if the actual data type is const or there's an attribute saying it should be const
     this->is_const = this->type.is_const() || annotations.has(V8TOOLKIT_READONLY_STRING);
+
+    // check any typedef annotations as well
+    if (auto plain_type_decl = this->type.type->getAsCXXRecordDecl()) {
+        this->is_const |= Annotations::annotations_for_record_decls[plain_type_decl].has(V8TOOLKIT_READONLY_STRING);
+        std::cerr << fmt::format("done with annotations on typedef, final readonly value: {}", this->is_const) << std::endl;
+    }
 
 
     FullComment * full_comment = compiler_instance->getASTContext().getCommentForDecl(this->field_decl,
@@ -912,10 +914,9 @@ std::set<std::string> TypeInfo::get_root_includes() const {
         if (FunctionProtoType const * function_prototype = dyn_cast<FunctionProtoType>(function_type)) {
 
             std::set<std::string> results;
-            std::cerr << fmt::format("treating as function type: {}", this->get_name()) << std::endl;
+//            std::cerr << fmt::format("treating as function type: {}", this->get_name()) << std::endl;
 
-            std::cerr << fmt::format("Getting root includes for return type {}",
-                                     function_prototype->getReturnType().getAsString()) << std::endl;
+//            std::cerr << fmt::format("Getting root includes for return type {}", function_prototype->getReturnType().getAsString()) << std::endl;
             if (auto return_type_include = get_root_include_for_decl(
                 TypeInfo(function_prototype->getReturnType()).get_plain_type_decl())) {
                 results.insert(*return_type_include);
@@ -923,20 +924,20 @@ std::set<std::string> TypeInfo::get_root_includes() const {
 
             for (QualType const & param : function_prototype->param_types()) {
 
-                std::cerr << fmt::format("Getting root includes for param type {}", param.getAsString()) << std::endl;
+//                std::cerr << fmt::format("Getting root includes for param type {}", param.getAsString()) << std::endl;
                 if (auto param_include = get_root_include_for_decl(TypeInfo(param).get_plain_type_decl())) {
                     results.insert(*param_include);
                 }
             }
-            std::cerr << fmt::format("returning function root includes") << std::endl;
+//            std::cerr << fmt::format("returning function root includes") << std::endl;
             return results;
         } else {
-            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
+//            cerr << "IS NOT A FUNCTION PROTOTYPE" << endl;
         }
     }
 
 
-    std::cerr << fmt::format("getting root includes for type ({}) which has {} template parameter types", this->get_name(), this->template_parameter_types.size()) << std::endl;
+//    std::cerr << fmt::format("getting root includes for type ({}) which has {} template parameter types", this->get_name(), this->template_parameter_types.size()) << std::endl;
 
     if (auto root_include = get_root_include_for_decl(this->get_plain_type_decl())) {
         std::cerr << fmt::format("primary root include for {} is {}", this->get_name(), *root_include) << std::endl;
@@ -947,14 +948,13 @@ std::set<std::string> TypeInfo::get_root_includes() const {
        auto templated_type_includes = TypeInfo(qual_type).get_root_includes();
         includes.insert(templated_type_includes.begin(), templated_type_includes.end());
     });
-    std::cerr << fmt::format("done with all includes for {}", this->get_name()) << std::endl;
+//    std::cerr << fmt::format("done with all includes for {}", this->get_name()) << std::endl;
     return includes;
 }
 
 
 std::set<std::string> ClassFunction::get_includes() const {
-    std::set<std::string> results;
-    results = this->return_type.get_root_includes();
+    std::set<std::string> results = this->return_type.get_root_includes();
 
     for (auto const & param : this->parameters) {
         auto param_includes = param.type.get_root_includes();

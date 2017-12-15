@@ -877,6 +877,10 @@ public:
 
 TEST(ClassParser, ClassComments) {
     std::string source = R"(
+    template<typename T>
+    class MyTemplate{};
+
+    using IntPtrReadOnly V8TOOLKIT_READONLY = MyTemplate<int>;
     class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
     public:
         void member_instance_functionA();
@@ -936,6 +940,8 @@ TEST(ClassParser, ClassComments) {
         virtual void this_is_a_virtual_function();
 
         V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
+
+        IntPtrReadOnly int_ptr_read_only;
     };
 
     template<typename T>
@@ -963,6 +969,7 @@ TEST(ClassParser, ClassComments) {
     std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
     EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA>\\(\"data_memberA\"\\)").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("class_wrapper\\.add_static_method<void, char \\*, int>\\(\"member_static_functionC\", &C::member_static_functionC, std::tuple<int>\\(4\\)\\);").match(bindings_string_stream.str()));
+    EXPECT_TRUE(xl::Regex("class_wrapper\\.add_member_readonly<&C::int_ptr_read_only>\\(\"int_ptr_read_only\"\\);").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<A>;").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("template class v8toolkit::V8ClassWrapper<NameSpace::B>;").match(bindings_string_stream.str()));
 

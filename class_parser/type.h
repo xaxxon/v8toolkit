@@ -30,9 +30,11 @@ private:
     // the type cannot be gotten because after template substitution there may not be an actual
     //   Type object for the resulting type.  It is only available as a string.  However, the "plain type"
     //   is guaranteed to exist as a Type object
-    QualType type;
 
 public:
+
+    QualType const type;
+
     explicit TypeInfo(QualType const & type,
              std::map <std::string, QualType> const & template_parameter_types = {});
 

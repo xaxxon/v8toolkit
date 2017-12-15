@@ -99,6 +99,9 @@ struct FlaggedDeleter {
     }
 };
 
+
+
+
 template<class T>
 bool FlaggedDeleter<T>::deleted = false;
 
@@ -117,7 +120,6 @@ TEST_F(JavaScriptFixture, UniquePointer_UnwrappedTypes) {
 
             // string should have been moved out of
             EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
-
         }
         {
             FlaggedDeleter<std::string>::deleted = false;

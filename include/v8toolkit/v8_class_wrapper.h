@@ -978,7 +978,7 @@ public:
 
 	    auto non_constructor_template =
 		make_wrapping_function_template([](const v8::FunctionCallbackInfo<v8::Value>& args)->void{
-			throw V8Exception(args.GetIsolate(), "You cannot create an object of this type");
+			throw V8Exception(args.GetIsolate(), "You cannot create an object of type: " + xl::demangle<T>());
 		    },
 		    v8::Local<v8::Value>());
 
@@ -1433,10 +1433,10 @@ public:
 				auto fake_method = *(func::function<R(Head, Tail...)>*)v8::External::Cast(*(info.Data()))->Value();
 				auto isolate = info.GetIsolate();
 
-				auto holder = info.Holder();
+				// auto holder = info.Holder();
 
                 // it should not be 0, and right now there is no known way for it being more than 1.
-                assert(holder->InternalFieldCount() == 1);
+                //assert(holder->InternalFieldCount() == 1);
 
                 // a crash here may have something to do with a native override of toString
 				auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());

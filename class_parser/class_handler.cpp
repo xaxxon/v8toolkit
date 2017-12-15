@@ -162,7 +162,6 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
             log.info(LogSubjects::ClassParser, "Annotated type name: {} => {}", record_decl->getQualifiedNameAsString(), typedef_decl->getNameAsString());
             Annotations::names_for_record_decls[record_decl] = name_alias;
 
-
             // if the class has already been parsed, update it now
             if (auto wrapped_class = WrappedClass::get_if_exists(record_decl)) {
                 log.info(LogSubjects::ClassParser, "Setting typedef name alias for class {} to {}", wrapped_class->class_name, name_alias);
@@ -282,10 +281,20 @@ void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 void ClassHandler::onStartOfTranslationUnit() {
     log.info(LogSubjects::Subjects::ClassParser, "onStartOfTranslationUnit");
 
+    auto & ast_context = this->ci.getASTContext();
+    auto & diagnostics_engine = ast_context.getDiagnostics();
+    auto diagnostic_consumer = diagnostics_engine.getClient();
+    auto error_count = diagnostic_consumer->getNumErrors();
+    if (error_count > 0) {
+        llvm::report_fatal_error("Errors during compilation, plugin aborting");
+    }
+
 }
 
 
 void ClassHandler::onEndOfTranslationUnit() {
+
+
 
     log.info(LogSubjects::Subjects::ClassParser, "onEndOfTranslationUnit");
     log.info(LogSubjects::Subjects::ClassParser, "Processed total of {} classes from ASTMatchers", matched_classes_returned);

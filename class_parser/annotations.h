@@ -79,7 +79,9 @@ public:
     //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
     static inline std::map<const CXXRecordDecl *, std::string> names_for_record_decls;
 
+
     Annotations(const CXXRecordDecl * decl_to_check);
 };
+
 
 }

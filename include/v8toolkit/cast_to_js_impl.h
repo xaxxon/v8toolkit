@@ -292,18 +292,18 @@ struct CastToJS<std::array<T, N>> {
  * These functions are not const because they call unique_ptr::release
  */
 template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<!is_wrapped_type_v < T>>> {
+struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<T>>> {
 
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-    return CastToJS<T>()(isolate, *unique_ptr.get());
-}
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
+        return CastToJS<T>()(isolate, *unique_ptr.get());
+    }
 
 
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-    auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
-    unique_ptr.reset();
-    return result;
-}
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+        auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
+        unique_ptr.reset();
+        return result;
+    }
 
 };
 
@@ -313,7 +313,7 @@ v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest..
  * its memory.  This is treated just as if the call were returning a T* instead of a unique_ptr<T>
  */
 template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...> &, std::enable_if_t<!is_wrapped_type_v < std::unique_ptr<T, Rest...>>>> {
+struct CastToJS<std::unique_ptr<T, Rest...> &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...>>>> {
 v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
 //    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
     if (unique_ptr.get() == nullptr) {

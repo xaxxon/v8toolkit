@@ -52,6 +52,8 @@ public:
     std::unique_ptr<float> upf = std::make_unique<float>(3.5);
     std::unique_ptr<float> cupf = std::make_unique<float>(4.5);
 
+    std::unique_ptr<WrappedClass> unique_ptr_wrapped_class;
+
     std::string string = "string value";
 
     int takes_int_5(int x) {
@@ -118,6 +120,10 @@ public:
     enum class EnumClass{enum1, enum2, enum3};
 
     void function_takes_enum(EnumClass enum_value);
+
+    std::unique_ptr<WrappedClass> returns_unique_ptr_wrapped_class() {
+        return std::unique_ptr<WrappedClass>();
+    }
 };
 
 class WrappedClassChild : public WrappedClass {
@@ -161,6 +167,7 @@ public:
             w.add_method("returns_wrapped_class_lvalue", &WrappedClass::returns_wrapped_class_lvalue);
             w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
             w.add_method("returns_uncopyable_type_by_value", &WrappedClass::returns_uncopyable_type_by_value);
+            w.add_method("returns_unique_ptr_wrapped_class", &WrappedClass::returns_unique_ptr_wrapped_class);
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
                              int,
@@ -170,6 +177,7 @@ public:
                              CopyableWrappedClass,
                              CopyableWrappedClass*>(1, "asdf", {}, {}, {}, nullptr));
             w.add_method("takes_and_returns_enum", &WrappedClass::takes_and_returns_enum);
+            w.add_member<&WrappedClass::unique_ptr_wrapped_class>("unique_ptr_wrapped_class");
             w.add_static_method("static_method", &WrappedClass::static_method, std::make_tuple(5, "asdf"));
             w.add_static_method("inline_static_method", [](int i){
                 EXPECT_EQ(i, 7);

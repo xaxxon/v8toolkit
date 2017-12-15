@@ -127,7 +127,7 @@ struct BindingsProviderContainer {
             std::pair("js_name", d.js_name),
             std::pair("declared_in", d.declared_in.class_name),
             std::pair("type", d.type.get_name()),
-            std::pair("read_only", d.type.is_const() ? "_readonly" : ""),
+            std::pair("read_only", d.is_const ? "_readonly" : ""),
             std::pair("member_pointer", fmt::format("&{}", d.long_name))
         );
 

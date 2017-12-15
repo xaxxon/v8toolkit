@@ -252,11 +252,11 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
 
     if (auto maybe_root_include = get_root_include_for_decl(this->decl)) {
         this->my_include = *maybe_root_include;
+//        std::cerr << fmt::format("Root include for {} is {}", this->class_name, this->my_include) << std::endl;
     } else {
-        throw ClassParserException("Unable to get root include for {} - unexpected except in testing", this->class_name);
+//        std::cerr << fmt::format("no root include for type {}", this->class_name) << std::endl;
     }
 
-    std::cerr << fmt::format("Root include for {} is {}", this->class_name, this->my_include) << std::endl;
 
 
 
@@ -1173,7 +1173,7 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 
 void WrappedClass::validate_data() {
 
-    std::cerr << fmt::format("validating {}", this->class_name) << std::endl;
+//    std::cerr << fmt::format("validating {}", this->class_name) << std::endl;
     xl::log::LogCallbackGuard g(log, this->log_watcher);
 
     if (xl::contains(reserved_global_names, this->get_js_name())) {
@@ -1237,7 +1237,7 @@ void WrappedClass::validate_data() {
     }
 
     for(auto base_type : this->base_types) {
-        std::cerr << fmt::format("adding base type include for {} inherits from {}", this->class_name, base_type->class_name) << std::endl;
+//        std::cerr << fmt::format("adding base type include for {} inherits from {}", this->class_name, base_type->class_name) << std::endl;
 //        assert(base_type->my_include != ""); // the ordering should preclude this
         if (!base_type->my_include.empty()) {
             this->include_files.insert(base_type->my_include);
@@ -1245,12 +1245,12 @@ void WrappedClass::validate_data() {
     }
 
     // get all the types for all the data members in the inheritance hierarchy
-    std::cerr << fmt::format("adding data member include files for {}", this->class_name) << std::endl;
+//    std::cerr << fmt::format("adding data member include files for {}", this->class_name) << std::endl;
     auto data_member_includes = this->foreach_inheritance_level<std::set<std::string>>(
         [&](WrappedClass const & c, std::set<std::string> includes) {
-            std::cerr << fmt::format("getting data members from {}", c.class_name) << std::endl;
+//            std::cerr << fmt::format("getting data members from {}", c.class_name) << std::endl;
             for (auto const & data_member : c.members) {
-                std::cerr << fmt::format("looking at data member {}", data_member->long_name) << std::endl;
+//                std::cerr << fmt::format("looking at data member {}", data_member->long_name) << std::endl;
                 auto data_member_includes = data_member->get_includes();
                 includes.insert(data_member_includes.begin(), data_member_includes.end());
             }
@@ -1260,8 +1260,7 @@ void WrappedClass::validate_data() {
     this->include_files.insert(data_member_includes.begin(), data_member_includes.end());
 
     for(WrappedClass * derived_type : this->derived_types) {
-        std::cerr << fmt::format("adding derived type include for {} inherits from {}", this->class_name,
-                                 derived_type->class_name) << std::endl;
+//        std::cerr << fmt::format("adding derived type include for {} inherits from {}", this->class_name, derived_type->class_name) << std::endl;
 
         if (derived_type->decl != nullptr) {
             auto derived_type_includes = TypeInfo(
@@ -1276,19 +1275,19 @@ void WrappedClass::validate_data() {
     }
 
     for (auto const & member_function : this->get_member_functions()) {
-        std::cerr << fmt::format("Looking at member function: {}", member_function->name) << std::endl;
+//        std::cerr << fmt::format("Looking at member function: {}", member_function->name) << std::endl;
         auto member_function_includes = member_function->get_includes();
         this->include_files.insert(member_function_includes.begin(), member_function_includes.end());
     }
 
     for (auto const & static_function : this->get_static_functions()) {
-        std::cerr << fmt::format("Looking at statuc function: {}", static_function->name) << std::endl;
+//        std::cerr << fmt::format("Looking at static function: {}", static_function->name) << std::endl;
         auto static_function_includes = static_function->get_includes();
         this->include_files.insert(static_function_includes.begin(), static_function_includes.end());
     }
 
     for (auto const & constructor : this->get_constructors()) {
-        std::cerr << fmt::format("Looking at constructor {}", constructor->name) << std::endl;
+//        std::cerr << fmt::format("Looking at constructor {}", constructor->name) << std::endl;
         auto constructor_includes = constructor->get_includes();
         this->include_files.insert(constructor_includes.begin(), constructor_includes.end());
     }

@@ -18,11 +18,10 @@ namespace v8toolkit::class_parser {
 void Annotations::get_annotations_for_decl(const Decl * decl_to_check) {
     if (!decl_to_check) { return; }
     for (auto attr : decl_to_check->getAttrs()) {
-        AnnotateAttr * annotation = dyn_cast<AnnotateAttr>(attr);
-        if (annotation) {
+        if (AnnotateAttr * annotation = dyn_cast<AnnotateAttr>(attr)) {
             auto attribute_attr = dyn_cast<AnnotateAttr>(attr);
             auto annotation_string = attribute_attr->getAnnotation().str();
-            //if (print_logging) cerr << "Got annotation " << annotation_string << endl;
+//            std::cerr << "Got annotation " << annotation_string << std::endl;
             annotations.emplace(annotation->getAnnotation().str());
         }
     }
@@ -31,15 +30,16 @@ void Annotations::get_annotations_for_decl(const Decl * decl_to_check) {
 
 Annotations::Annotations(const CXXRecordDecl * decl_to_check) {
     auto name = get_canonical_name_for_decl(decl_to_check);
+//    std::cerr << "Making annotations object for " << name << std::endl;
+
+
     get_annotations_for_decl(decl_to_check);
-//    cerr << "Making annotations object for " << name << endl;
     if (auto spec_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl_to_check)) {
-//        cerr << fmt::format("{} is a template, getting any tmeplate annotations available", name) << endl;
-//        cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size()
-//             << " annotations available" << endl;
+//        std::cerr << fmt::format("{} is a template, getting any template annotations available", name) << std::endl;
+//        std::cerr << annotations_for_class_templates[spec_decl->getSpecializedTemplate()].get().size() << " annotations available" << std::endl;
         merge(annotations_for_class_templates[spec_decl->getSpecializedTemplate()]);
     } else {
-//        cerr << "Not a template" << endl;
+//        std::cerr << "Not a template" << std::endl;
     }
 }
 

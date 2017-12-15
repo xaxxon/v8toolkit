@@ -1,3 +1,12 @@
+
+
+#include <unistd.h>
+
+#include <fstream>
+
+
+
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshadow"
 #include "clang/Frontend/FrontendPluginRegistry.h"
@@ -9,7 +18,7 @@
 
 #include "output_modules/bindings_output.h"
 
-#include <fstream>
+
 
 #include <xl/templates.h>
 #include <xl/regexer.h>
@@ -54,7 +63,7 @@ LogT log = []{
 
 bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
     compiler_instance = &ci;
-    std::cerr << fmt::format("setting global compiler instance to {}", (void*)compiler_instance) << std::endl;
+//    std::cerr << fmt::format("setting global compiler instance to {}", (void*)compiler_instance) << std::endl;
 
     log.info(LogSubjects::Subjects::ClassParser, "BeginInvocation");
 
@@ -130,7 +139,9 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
             log.info(LogT::Subjects::ClassParser, "Config file specified as: '{}'", filename);
             ifstream config_file(filename);
             if (!config_file) {
-                throw ClassParserException("Couldn't open config file: {}", filename);
+                constexpr size_t buffer_size = 1024;
+                char buffer[buffer_size];
+                throw ClassParserException("Couldn't open config file: {} from current directory {}", filename, getcwd(buffer, buffer_size));
             }
             std::string configuration((std::istreambuf_iterator<char>(config_file)),
                                       std::istreambuf_iterator<char>());
