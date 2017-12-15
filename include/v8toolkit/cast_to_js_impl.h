@@ -16,19 +16,14 @@
 namespace v8toolkit {
 
 
+/**
+ * For all pointers that aren't char (const) * strings
+ */
 template<class T>
-struct CastToJS<T &, std::enable_if_t<!is_wrapped_type_v < T>>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
-        return CastToJS<T>()(isolate, value);
-    }
-};
-
-
-template<class T>
-struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v<T>>> {
+struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v<T> && !std::is_same_v<std::remove_const_t<T>, char>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T * const value) const {
         if (value == nullptr) {
-         return v8::Undefined(isolate);
+            return v8::Undefined(isolate);
         } else {
             return CastToJS<T>()(isolate, *value);
         }
@@ -36,6 +31,9 @@ struct CastToJS<T *, std::enable_if_t<!is_wrapped_type_v<T>>> {
 };
 
 
+/**
+ * For all enum types
+ */
 template<class T>
 struct CastToJS<T, std::enable_if_t<std::is_enum_v<T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const value) const {
@@ -45,26 +43,12 @@ struct CastToJS<T, std::enable_if_t<std::is_enum_v<T>>> {
 
 
 
-/**
- * For non-wrapped types, the result of casting to a const type is the same as casting to the non-const type.  A copy.
- * @tparam T
- */
-template<class T>
-struct CastToJS<T const, std::enable_if_t<!is_wrapped_type_v<T>>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
-        return v8toolkit::CastToJS<T>()(isolate, value);
-    }
-};
-
-
 CAST_TO_JS(bool, { return v8::Boolean::New(isolate, value); });
 
-//TODO: Should all these operator()'s be const?
 // integers
 CAST_TO_JS(char, { return v8::Integer::New(isolate, value); });
 
-CAST_TO_JS(unsigned
-               char, { return v8::Integer::New(isolate, value); });
+CAST_TO_JS(unsigned char, { return v8::Integer::New(isolate, value); });
 
 CAST_TO_JS(wchar_t, { return v8::Number::New(isolate, value); });
 
@@ -74,26 +58,20 @@ CAST_TO_JS(char32_t, { return v8::Integer::New(isolate, value); });
 
 CAST_TO_JS(short, { return v8::Integer::New(isolate, value); });
 
-CAST_TO_JS(unsigned
-               short, { return v8::Integer::New(isolate, value); });
+CAST_TO_JS(unsigned short, { return v8::Integer::New(isolate, value); });
 
 
 CAST_TO_JS(int, { return v8::Number::New(isolate, value); });
 
-CAST_TO_JS(unsigned
-               int, { return v8::Number::New(isolate, value); });
+CAST_TO_JS(unsigned int, { return v8::Number::New(isolate, value); });
 
 CAST_TO_JS(long, { return v8::Number::New(isolate, value); });
 
-CAST_TO_JS(unsigned
-               long, { return v8::Number::New(isolate, value); });
+CAST_TO_JS(unsigned long, { return v8::Number::New(isolate, value); });
 
-CAST_TO_JS(long
-               long, { return v8::Number::New(isolate, static_cast<double>(value)); });
+CAST_TO_JS(long long, { return v8::Number::New(isolate, static_cast<double>(value)); });
 
-CAST_TO_JS(unsigned
-               long
-               long, { return v8::Number::New(isolate, static_cast<double>(value)); });
+CAST_TO_JS(unsigned long long, { return v8::Number::New(isolate, static_cast<double>(value)); });
 
 
 
@@ -102,12 +80,10 @@ CAST_TO_JS(float, { return v8::Number::New(isolate, value); });
 
 CAST_TO_JS(double, { return v8::Number::New(isolate, value); });
 
-CAST_TO_JS(long
-               double, { return v8::Number::New(isolate, value); });
+CAST_TO_JS(long double, { return v8::Number::New(isolate, value); });
 
 
-CAST_TO_JS(std::string,
-           { return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length()); });
+CAST_TO_JS(std::string, { return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length()); });
 
 CAST_TO_JS(char *, { return v8::String::NewFromUtf8(isolate, value); });
 
@@ -159,25 +135,33 @@ struct CastToJS<v8::Global<T>> {
 
 
 // CastToJS<std::pair<>>
-template<class T1, class T2>
-struct CastToJS<std::pair<T1, T2>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T1, T2> const & pair);
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::pair, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & pair) const {
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::pair<T1, T2> && pair) {
-        return this->operator()(isolate, pair);
+        using T1 = typename T::first_type;
+        using T2 = typename T::second_type;
+
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        (void) array->Set(context, 0, CastToJS<T1 &>()(isolate, pair.first));
+        (void) array->Set(context, 1, CastToJS<T2 &>()(isolate, pair.second));
+        return array;
     }
 };
 
 
-template<template<class, class, class...> class MapTemplate, class KeyType, class ValueType, class ReferenceTypeIndicator, class... Rest>
-v8::Local<v8::Value>
-cast_to_js_map_helper(v8::Isolate * isolate, MapTemplate<KeyType, ValueType, Rest...> const & map) {
+template<typename T>
+v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, T map) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
 
-    using KeyForwardT = std::conditional_t<std::is_rvalue_reference_v<ReferenceTypeIndicator>, std::add_rvalue_reference_t<KeyType>, std::add_lvalue_reference_t<KeyType>>;
-    using ValueForwardT = std::conditional_t<std::is_rvalue_reference_v<ReferenceTypeIndicator>, std::add_rvalue_reference_t<ValueType>, std::add_lvalue_reference_t<ValueType>>;
+    using KeyType = typename T::key_type;
+    using ValueType = typename T::mapped_type;
+    using KeyForwardT = std::conditional_t<std::is_rvalue_reference_v<T>, std::add_rvalue_reference_t<KeyType>, std::add_lvalue_reference_t<KeyType>>;
+    using ValueForwardT = std::conditional_t<std::is_rvalue_reference_v<T>, std::add_rvalue_reference_t<ValueType>, std::add_lvalue_reference_t<ValueType>>;
 
 
     for (auto & pair : map) {
@@ -192,18 +176,19 @@ cast_to_js_map_helper(v8::Isolate * isolate, MapTemplate<KeyType, ValueType, Res
 }
 
 
-template<template<class...> class VectorTemplate, class ValueType, class... Rest>
-v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate,
-                                              VectorTemplate<std::remove_reference_t<ValueType>, Rest...> const & vector) {
+template<typename T>
+v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, T vector) {
 
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
 
+    using RefMatchedValueType = std::conditional_t<std::is_lvalue_reference_v<T>, typename T::value_type &, typename T::value_type &&>;
+
     int i = 0;
     for (auto & element : vector) {
-        (void) array->Set(context, i, CastToJS<std::remove_reference_t<ValueType>>()(isolate, std::forward<ValueType>(
-            const_cast<ValueType>(element))));
+        (void) array->Set(context, i, CastToJS<std::remove_reference_t<typename T::value_type>>()(isolate,
+            const_cast<RefMatchedValueType>(element)));
         i++;
     }
     return array;
@@ -211,11 +196,31 @@ v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate,
 
 
 // CastToJS<std::vector<>>
-template<class T, class... Rest>
-struct CastToJS<std::vector<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<T, Rest...> const & vector);
+template<class T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::vector, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && vector) const {
+        return cast_to_js_vector_helper<T>(isolate, vector);
+    }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::vector<T, Rest...> && vector);
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & vector) const {
+        return cast_to_js_vector_helper<T>(isolate, vector);
+    }
+
+
+//
+//
+//    template<class T, class... Rest>
+//    v8::Local<v8::Value>
+//    CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> const & vector) {
+//        return cast_to_js_vector_helper<std::vector, T &, Rest...>(isolate, vector);
+//    }
+//
+//    template<class T, class... Rest>
+//    v8::Local<v8::Value>
+//    CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> && vector) {
+//        return cast_to_js_vector_helper<std::vector, T &&, Rest...>(isolate, vector);
+//    }
+
 };
 
 
@@ -230,14 +235,14 @@ struct CastToJS<std::list<U, Rest...>> {
 };
 
 // CastToJS<std::map>
-template<class KeyType, class ValueType, class... Rest>
-struct CastToJS<std::map<KeyType, ValueType, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> const & map) {
-        return cast_to_js_map_helper<std::map, KeyType, ValueType, int &, Rest...>(isolate, map);
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::map, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & map) {
+        return cast_to_js_map_helper<T>(isolate, map);
     }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::map<KeyType, ValueType, Rest...> && map) {
-        return cast_to_js_map_helper<std::map, KeyType, ValueType, int &&, Rest...>(isolate, map);
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && map) {
+        return cast_to_js_map_helper<T>(isolate, map);
     }
 
 };
@@ -347,18 +352,6 @@ struct CastToJS<std::shared_ptr<T>> {
 };
 
 
-template<class T, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> const & vector) {
-    return cast_to_js_vector_helper<std::vector, T &, Rest...>(isolate, vector);
-}
-
-template<class T, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> && vector) {
-    return cast_to_js_vector_helper<std::vector, T &&, Rest...>(isolate, vector);
-}
-
 
 /**
 * supports lists containing any type also supported by CastToJS to javascript arrays
@@ -421,17 +414,6 @@ CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::m
 }
 
 
-template<class T1, class T2>
-v8::Local<v8::Value>
-CastToJS<std::pair<T1, T2>>::operator()(v8::Isolate * isolate, std::pair<T1, T2> const & pair) {
-
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto array = v8::Array::New(isolate);
-    (void) array->Set(context, 0, CastToJS<T1 &>()(isolate, pair.first));
-    (void) array->Set(context, 1, CastToJS<T2 &>()(isolate, pair.second));
-    return array;
-}
 
 
 template<int position, class T>
@@ -536,14 +518,26 @@ CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> &
 
 
 
-template<class T, class... Rest>
-struct CastToJS<std::set<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::set<T, Rest...> const & set) {
-        return cast_to_js_vector_helper<std::set, T &, Rest...>(isolate, set);
+template<class T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::set, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & set) {
+        return cast_to_js_vector_helper<T>(isolate, set);
     }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::set<T, Rest...> && set) {
-        return cast_to_js_vector_helper<std::set, T &&, Rest...>(isolate, set);
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && set) {
+        return cast_to_js_vector_helper<T>(isolate, set);
+    }
+};
+
+
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
+        if (optional) {
+            return CastToJS<typename T::value_type>()(isolate, *optional);
+        } else {
+            return v8::Undefined(isolate);
+        }
     }
 };
 

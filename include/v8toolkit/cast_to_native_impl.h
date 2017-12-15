@@ -500,5 +500,16 @@ struct CastToNative<std::function<ReturnT(Args...)>> {
     }
 };
 
+template <typename T>
+struct CastToNative<T, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+        if (value->IsUndefined()) {
+            return {};
+        } else {
+            return CastToNative<typename T::value_type>()(isolate, value);
+        }
+    }
+};
+
 
 } // end v8toolkit namespace

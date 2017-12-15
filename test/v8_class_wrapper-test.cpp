@@ -29,6 +29,17 @@ TEST_F(JavaScriptFixture, NumberTypes) {
     });
 }
 
+
+
+TEST_F(JavaScriptFixture, StdOptionalConversions) {
+    this->create_context();
+
+    (*c)([&]{
+        EXPECT_FALSE(CastToNative<std::optional<int>>()(*i, CastToJS<std::optional<int>>()(*i, std::optional<int>{})));
+        EXPECT_EQ(CastToNative<std::optional<int>>()(*i, CastToJS<std::optional<int>>()(*i, std::optional<int>{5})), 5);
+    });
+}
+
 TEST_F(JavaScriptFixture, ParameterBuilder) {
     this->create_context();
 

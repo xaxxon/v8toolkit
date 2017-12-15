@@ -16,8 +16,8 @@ struct CastToJS {
 
 
 #define CAST_TO_JS(TYPE, FUNCTION_BODY)                    \
-template<> \
- struct v8toolkit::CastToJS<TYPE> {                    \
+template<typename T> \
+ struct v8toolkit::CastToJS<T, std::enable_if_t<std::is_same_v<std::decay_t<T>, TYPE>>> {                    \
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, TYPE const & value) const FUNCTION_BODY \
 };
 
