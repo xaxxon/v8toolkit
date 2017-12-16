@@ -158,8 +158,10 @@ v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, T map) {
     auto context = isolate->GetCurrentContext();
     auto object = v8::Object::New(isolate);
 
-    using KeyType = typename T::key_type;
-    using ValueType = typename T::mapped_type;
+    using NoRefT = std::remove_reference_t<T>;
+
+    using KeyType = typename NoRefT::key_type;
+    using ValueType = typename NoRefT::mapped_type;
     using KeyForwardT = std::conditional_t<std::is_rvalue_reference_v<T>, std::add_rvalue_reference_t<KeyType>, std::add_lvalue_reference_t<KeyType>>;
     using ValueForwardT = std::conditional_t<std::is_rvalue_reference_v<T>, std::add_rvalue_reference_t<ValueType>, std::add_lvalue_reference_t<ValueType>>;
 
@@ -179,15 +181,17 @@ v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, T map) {
 template<typename T>
 v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, T vector) {
 
+    using NoRefT = std::remove_reference_t<T>;
+
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     auto array = v8::Array::New(isolate);
 
-    using RefMatchedValueType = std::conditional_t<std::is_lvalue_reference_v<T>, typename T::value_type &, typename T::value_type &&>;
+    using RefMatchedValueType = std::conditional_t<std::is_lvalue_reference_v<T>, typename NoRefT::value_type &, typename NoRefT::value_type &&>;
 
     int i = 0;
     for (auto & element : vector) {
-        (void) array->Set(context, i, CastToJS<std::remove_reference_t<typename T::value_type>>()(isolate,
+        (void) array->Set(context, i, CastToJS<std::remove_reference_t<typename NoRefT::value_type>>()(isolate,
             const_cast<RefMatchedValueType>(element)));
         i++;
     }
@@ -198,12 +202,13 @@ v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, T vector) {
 // CastToJS<std::vector<>>
 template<class T>
 struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::vector, T>>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && vector) const {
-        return cast_to_js_vector_helper<T>(isolate, vector);
+    using NoRefT = std::remove_reference_t<T>;
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && vector) const {
+        return cast_to_js_vector_helper<NoRefT &&>(isolate, std::move(vector));
     }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & vector) const {
-        return cast_to_js_vector_helper<T>(isolate, vector);
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & vector) const {
+        return cast_to_js_vector_helper<NoRefT const &>(isolate, vector);
     }
 
 
