@@ -1770,6 +1770,10 @@ public:
 	 */
 	void add_new_constructor_function_template_callback(FunctionTemplateCallback const & callback) {
 		assert(!this->finalized);
+		if constexpr(!std::is_const_v<T>) {
+			V8ClassWrapper<ConstT>::get_instance(this->isolate).add_new_constructor_function_template_callback(callback);
+		}
+
 		function_template_callbacks.push_back(callback);
 	}
 
