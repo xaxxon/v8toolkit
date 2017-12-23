@@ -20,6 +20,11 @@ struct AnyBase {
     AnyBase(const std::string type_name)
         : type_name(std::move(type_name)) {}
 
+    template <typename T>
+    T const * get() const;
+
+    template <typename T>
+    T * get();
 
 };
 
@@ -45,7 +50,7 @@ public:
      * Returns the stored pointer to the object of type T
      * @return
      */
-    T * get() {
+    T * get() const {
         return this->data;
     }
 
@@ -58,6 +63,22 @@ public:
          return dynamic_cast<T *>(any_base);
     }
 };
+
+
+template <typename T>
+T const * AnyBase::get() const {
+    if (auto any = dynamic_cast<AnyPtr<T*> const *>(this)) {
+        return any->get();
+    }
+}
+
+template <typename T>
+T * AnyBase::get() {
+    if (auto any = dynamic_cast<AnyPtr<T*> *>(this)) {
+        return any->get();
+    }
+}
+
 
 
 } // end namespace v8toolkit

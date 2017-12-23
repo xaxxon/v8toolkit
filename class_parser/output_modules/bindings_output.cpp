@@ -101,12 +101,17 @@ struct BindingsProviderContainer {
                                          c.get_constructors().back()->get_parameter_types_string(),
                                          c.get_js_name(), c.get_constructors().back()->get_default_argument_tuple_string())),
             std::pair("base_type_name", c.base_types.empty() ? "" : (*c.base_types.begin())->class_name),
-            std::pair("custom_extensions", c.foreach_inheritance_level<std::vector<std::string>>(
-                [](auto & c, auto extensions){
-                    extensions.insert(extensions.end(), c.wrapper_custom_extensions.begin(), c.wrapper_custom_extensions.end());
-                    return extensions;
-                })
-            ),
+
+//            std::pair("custom_extensions", c.foreach_inheritance_level<std::vector<std::string>>(
+//                [](auto & c, auto extensions){
+//                    extensions.insert(extensions.end(), c.wrapper_custom_extensions.begin(), c.wrapper_custom_extensions.end());
+//                    return extensions;
+//                })
+//            ),
+
+            // if you want the custom extension on the derived type, just "using" it in - this allows for
+            //   more flexibility in times when you may not want it
+            std::pair("custom_extensions", c.wrapper_custom_extensions.empty() ? "" : *c.wrapper_custom_extensions.begin()),
 
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
