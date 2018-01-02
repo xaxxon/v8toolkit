@@ -96,7 +96,8 @@ public:
 
     WrappedClass const &
     returns_const_ref_to_own_type() {
-        return WrappedClass(5);
+        static WrappedClass static_wrapped_class_object(5);
+        return static_wrapped_class_object;
     }
 
     void takes_const_wrapped_ref(WrappedClass const &) {}

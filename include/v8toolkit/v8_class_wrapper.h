@@ -40,6 +40,9 @@ using namespace v8toolkit::literals;
 #define V8_CLASS_WRAPPER_HAS_BIDIRECTIONAL_SUPPORT
 #endif
 
+class Target;
+
+
 namespace v8toolkit {
 
 
@@ -1923,7 +1926,11 @@ template<typename T>
 struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
 {
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		return T(*CastToNative<T*>()(isolate, value));
+		auto pointer_result = CastToNative<T*>()(isolate, value);
+		if (pointer_result == nullptr) {
+			throw CastException("Javascript Value could not be converted to {} to use for copy constructor", xl::demangle<T>());
+		}
+		return T(*pointer_result);
 	}
 	static constexpr bool callable(){return true;}
 };
@@ -1935,7 +1942,8 @@ struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value &&
 	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 		//static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
-		return T(CastToNative<T&&>()(isolate, value));
+		auto && result = CastToNative<T&&>()(isolate, value);
+		return T(std::move(result));
 	}
 	static constexpr bool callable(){return false;}
 
@@ -2102,7 +2110,6 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<Head, Tail...>,
 }
 
 
-
 template <class T>
 struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped_type_v<std::remove_reference_t<T>>> > {
 
@@ -2148,7 +2155,8 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 			}
 			if constexpr(std::is_move_constructible_v<NoConstRefT> && CastToNative<NoConstRefT>::callable())
 			{
-				stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(CastToNative<NoConstRefT>()(isolate, value)));
+				auto result = CastToNative<NoConstRefT>()(isolate, value);
+				stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(std::move(result)));
 				return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
 			}
 			throw CastException("Could not create requested object of type: {} {}.  Maybe you don't 'own' your memory?",
@@ -2156,7 +2164,6 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 								std::is_rvalue_reference_v<T> ? "&&" : "&");
 		}
 	}
-
 };
 
 

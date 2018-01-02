@@ -82,6 +82,7 @@ EXPORT_TYPE get_export_type(const NamedDecl * decl, LogSubjects::Subjects log_su
 std::string remove_reference_from_type_string(std::string const & type_string);
 
 std::string remove_local_const_from_type_string(std::string const & type_string);
+std::string make_macro_safe_comma(std::string const & input);
 
 std::string substitute_type(QualType const & original_type, std::map<std::string, QualType> template_types);
 

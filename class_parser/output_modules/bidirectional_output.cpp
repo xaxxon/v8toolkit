@@ -17,6 +17,12 @@ using xl::templates::ProviderPtr;
 #include "../wrapped_class.h"
 #include "../parsed_method.h"
 #include "bidirectional_output.h"
+#include "../helper_functions.h"
+
+//NEED V8TOOLKIT_COMMA
+//MAY BE OTHER ISSUES WITH CONSTRUCTOR PARAMETERS
+// using javascript types instead of c++ types in generated bidirectional header
+
 
 namespace v8toolkit::class_parser::bidirectional_output {
 
@@ -50,9 +56,12 @@ std::ostream & BidirectionalOutputStreamProvider::get_class_collection_stream() 
 
 ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const & c) {
     this->output_file.close();
-    this->output_file.open(c.my_include);
-
-    return this->output_file;
+    if (auto results = xl::RegexPcre("^\"([^\"]+)\"$").match(c.my_include)) {
+        this->output_file.open(results[1]);
+        return this->output_file;
+    } else {
+        llvm::report_fatal_error("bidirectional type my_include field not in expected format");
+    }
 }
 
 
@@ -143,7 +152,7 @@ struct BidirectionalProviderContainer {
             std::pair("name", f.js_name),
             std::pair("comment", f.comment),
             std::pair("params", f.parameters),
-            std::pair("return_type", f.return_type.get_name()),
+            std::pair("return_type", make_macro_safe_comma(f.return_type.get_name())),
             std::pair("param_count", std::to_string(f.parameters.size())),
             std::pair("const", f.is_const() ? "_CONST" : "")
         );
@@ -152,7 +161,7 @@ struct BidirectionalProviderContainer {
 
     static ProviderPtr get_provider(ClassFunction::ParameterInfo const & p) {
         return xl::templates::make_provider<BidirectionalProviderContainer>(
-            std::pair("type", p.type.get_jsdoc_type_name()),
+            std::pair("type", make_macro_safe_comma(p.type.get_name())),
             std::pair("name", p.name)
         );
     }
@@ -160,7 +169,6 @@ struct BidirectionalProviderContainer {
 
     static ProviderPtr get_provider(TypeInfo const & t) {
         return xl::templates::make_provider<BidirectionalProviderContainer>("Implement me");
-
     }
 };
 
@@ -217,7 +225,7 @@ public:
 
     {{virtual_functions|!!
     JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}{{params%%, |!{{type}}}});}}
-})");
+};)");
 
 
 std::map<string, Template> bidirectional_templates {

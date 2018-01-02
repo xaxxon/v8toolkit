@@ -877,6 +877,7 @@ public:
 
 TEST(ClassParser, ClassComments) {
     std::string source = R"(
+    #include <map>
     template<typename T>
     class MyTemplate{};
 
@@ -937,7 +938,8 @@ TEST(ClassParser, ClassComments) {
         /// comment on data_memberC
         int data_memberC;
 
-        virtual void this_is_a_virtual_function();
+        // it's important that the return type and a parameter type have a comma in them
+        virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
 
         V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
 
@@ -996,8 +998,8 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-        JS_ACCESS_0(void, this_is_a_virtual_function);
-})";
+        JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
+};)";
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);}
 
 

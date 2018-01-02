@@ -192,6 +192,10 @@ T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::get_cpp_object
 
 	T * result = this->cast(wrapped_data->native_object);
 
+	if (result == nullptr) {
+		// TODO: Put logging in here - this isn't always bad but it may be
+	}
+
 	return result;
 }
 
