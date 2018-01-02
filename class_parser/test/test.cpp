@@ -527,7 +527,7 @@ TEST(ClassParser, CustomExtensionInheritance) {
         V8TOOLKIT_CUSTOM_EXTENSION static void custom_extension_public();
     };
     class B : public A {
-
+        using A::custom_extension_public;
     };
 
 )";
