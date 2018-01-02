@@ -43,7 +43,7 @@ public:
     // class is not default constructible
     WrappedClass(int i) : constructor_i(i) {};
     WrappedClass(WrappedClass &&) = default;
-    WrappedClass(WrappedClass const &){}
+    WrappedClass(WrappedClass const &) = delete;
     virtual ~WrappedClass(){}
 
     int constructor_i;
@@ -94,7 +94,8 @@ public:
     CopyableWrappedClass copyable_wrapped_class;
     std::unique_ptr<WrappedClass> up_wrapped_class;
 
-    WrappedClass const returns_const_ref_to_own_type() {
+    WrappedClass const &
+    returns_const_ref_to_own_type() {
         return WrappedClass(5);
     }
 

@@ -363,6 +363,7 @@ private:
 
     // Callbacks for adding members to an ObjectTemplate
 	std::vector<AttributeAdder> member_adders;
+//    std::vector<StaticAttributeAdder> static_member_adders;
 	std::vector<EnumAdder> enum_adders;
 
     // Callbacks for adding static methods to an ObjectTemplate
@@ -725,11 +726,18 @@ public:
     static bool does_object_own_memory(v8::Local<v8::Object> object) {
         WrappedData<T> & wrapped_data = get_wrapped_data(object);
 
-//		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}", (void*) wrapped_data->original_pointer, (void*)wrapped_data->weak_callback_data,  xl::demangle<T>(), (void*)wrapped_data) << std::endl;
+//		std::cerr << fmt::format("Does object own memory?  ptr: {}, weak callback data: {} type: {}, wrapped_data: {}",
+//                                 (void*)wrapped_data.native_object,
+//                                 (void*)wrapped_data.weak_callback_data,
+//                                 xl::demangle<T>(),
+//                                 (void*)&wrapped_data) << std::endl;
+//
 //		if (wrapped_data.weak_callback_data) {
-//			std::cerr << fmt::format("callback data destructive? {}", wrapped_data->weak_callback_data->destructive) << std::endl;
+//			std::cerr << fmt::format("callback data destructive? {}", wrapped_data.weak_callback_data->destructive) << std::endl;
 //		}
-        return wrapped_data.weak_callback_data != nullptr && wrapped_data.weak_callback_data->destructive;
+        bool result =  wrapped_data.weak_callback_data != nullptr && wrapped_data.weak_callback_data->destructive;
+
+        return result;
     }
 
     /**
