@@ -915,7 +915,7 @@ TEST(ClassParser, ClassComments) {
     public:
 
         V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR
-        C(){}
+        C(int, char* &&){}
 
         /**
           * member instance function C comment
@@ -993,8 +993,8 @@ class JSC : public C, public v8toolkit::JSWrapper<C> {
 public:
 
     JSC(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
-        v8::Local<v8::FunctionTemplate> created_by, ) :
-      C(),
+        v8::Local<v8::FunctionTemplate> created_by, int var1, char *&& var2) :
+      C(var1, std::move(var2)),
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 

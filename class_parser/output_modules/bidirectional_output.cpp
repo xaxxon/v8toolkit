@@ -19,9 +19,7 @@ using xl::templates::ProviderPtr;
 #include "bidirectional_output.h"
 #include "../helper_functions.h"
 
-//NEED V8TOOLKIT_COMMA
 //MAY BE OTHER ISSUES WITH CONSTRUCTOR PARAMETERS
-// using javascript types instead of c++ types in generated bidirectional header
 
 
 namespace v8toolkit::class_parser::bidirectional_output {
@@ -218,7 +216,7 @@ class {{name}} : public {{base_name}}, public v8toolkit::JSWrapper<{{base_name}}
 public:
 
     {{name}}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
-        v8::Local<v8::FunctionTemplate> created_by, {{constructor_parameters}}) :
+        v8::Local<v8::FunctionTemplate> created_by{{constructor_parameters}}) :
       {{base_name}}({{constructor_variables}}),
       v8toolkit::JSWrapper<{{base_name}}>(context, object, created_by)
     {}
