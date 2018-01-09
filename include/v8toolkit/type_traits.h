@@ -188,7 +188,7 @@ using function_type_t = typename function_type<T>::type;
  */
 template<class R, class... Args>
 auto get_index_sequence_for_func_function(func::function<R(Args...)>) {
-    return std::index_sequence_for<Args...>{};
+    return std::make_integer_sequence<int, sizeof...(Args)>{};
 };
 
 template<typename T, typename = void>

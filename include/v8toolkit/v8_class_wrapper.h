@@ -612,7 +612,7 @@ private:
 		try {
 			CallCallable<decltype(constructor)>()(constructor,
 												  info,
-												  std::index_sequence_for<CONSTRUCTOR_PARAMETER_TYPES...>{},
+												  std::make_integer_sequence<int, sizeof...(CONSTRUCTOR_PARAMETER_TYPES)>{},
 												  DefaultArgsTupleType(*default_args_tuple_ptr));
 
 		} catch(std::exception & e) {
@@ -1433,7 +1433,8 @@ public:
 		fake_method_adders.emplace_back([this, default_args, method_name, method](v8::Local<v8::ObjectTemplate> prototype_template) {
 
 			using CopyFunctionType = func::function<R(Head, Tail...)>;
-			CopyFunctionType * copy = new func::function<R(Head, Tail...)>(method);
+			using FakeType = std::conditional_t<std::is_const_v<T>, Head, std::remove_const_t<Head>>;
+			CopyFunctionType * copy = new func::function<R(FakeType, Tail...)>(method);
 
 
 			// This is the actual code associated with "method_name" and called when javascript calls the method
@@ -1456,7 +1457,8 @@ public:
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
 				//   is returned to V8 or the program will instantly terminate
 				try {
-                    CallCallable<CopyFunctionType, Head>()(*copy, info, cpp_object, std::index_sequence_for<Tail...>(), default_args); // just Tail..., not Head, Tail...
+                    //
+				    CallCallable<CopyFunctionType, FakeType>().template operator()(*copy, info, cpp_object, std::make_integer_sequence<int, sizeof...(Tail)>(), default_args); // just Tail..., not Head, Tail...
 				} catch(std::exception & e) {
 					log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running 'fake method' {}::{}: {}",
 							    xl::demangle<T>(), method_name, e.what());
@@ -1533,7 +1535,7 @@ public:
 						log.info(LogT::Subjects::WRAPPED_FUNCTION_CALL, "Calling instance member function {}::{}", xl::demangle<T>(), method_name);
 						// make a copy of default_args_tuple so it's non-const - probably better to do this on a per-parameter basis
 						CallCallable<decltype(bound_method)>()(bound_method, info,
-															   std::index_sequence_for<Args...>{},
+															   std::make_integer_sequence<int, sizeof...(Args)>{},
 															   std::tuple<DefaultArgTypes...>(
 																   default_args_tuple));
 					} catch (std::exception & e) {

@@ -166,7 +166,11 @@ public:
             w.add_member<&WrappedClass::copyable_wrapped_class>("copyable_wrapped_class");
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
-            w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+	    
+	    w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
+	    w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
+
+	    w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
             w.add_method("takes_const_wrapped_ref", &WrappedClass::takes_const_wrapped_ref);
             w.add_static_method("takes_isolate_and_int", &WrappedClass::takes_isolate_and_int, std::tuple<int>(3));
             w.add_method("takes_this", &WrappedClass::takes_this);
@@ -269,7 +273,10 @@ TEST_F(WrappedClassFixture, SimpleFunctions) {
             c->run("EXPECT_TRUE(new WrappedClass(6).takes_const_int_6(6) == 6)");
 
             c->run("EXPECT_TRUE(WrappedClass.static_method() == `static_method`)");
-
+            c->run("EXPECT_TRUE(new WrappedClass(5).fake_method() == 5)");
+            c->run("EXPECT_TRUE(new WrappedClass(6).const_fake_method(1, true) == 6)");
+            c->run("EXPECT_TRUE(new WrappedClass(6).const_fake_method(1, false) == 0)");
+            c->run("EXPECT_TRUE(new WrappedClass(6).const_fake_method(1) == 0)");
             c->run("EXPECT_TRUE(new WrappedClass(7).takes_and_returns_enum(2) == 1)");
             EXPECT_TRUE(takes_and_returns_enum_called);
             takes_and_returns_enum_called = false; // reset for any future use

@@ -101,7 +101,7 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
         FunctionTemplateData<R, Args...> & data = *(FunctionTemplateData<R, Args...> *)v8::External::Cast(*(info.Data()))->Value();
 
         try {
-            CallCallable<decltype(data.callable)>()(data.callable, info, std::index_sequence_for<Args...>{});
+            CallCallable<decltype(data.callable)>()(data.callable, info, std::make_integer_sequence<int, sizeof...(Args)>{});
 
         } catch (std::exception & e) {
 

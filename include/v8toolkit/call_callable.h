@@ -47,25 +47,24 @@ private:
 
 public:
 
-    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    // clang has strange errors if ArgIndexes is std::size_t
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, int... ArgIndexes>
     void operator()(func::function<ReturnType(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg,
-                    std::index_sequence<ArgIndexes...>,
+                    std::integer_sequence<int, ArgIndexes...>,
                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
 
         constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
-
         std::vector<std::unique_ptr<StuffBase>> stuff;
         info.GetReturnValue().
             Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
                                                   run_function(function, info, std::forward<InitialArg>(initial_arg),
                                                                std::forward<Args>(
                                                                    ParameterBuilder<
-                                                                       Args>().template operator()<
-                                                                       ArgIndexes - default_arg_count>(info, i, stuff,
+                                                                       Args>().template operator()<ArgIndexes - default_arg_count>(info, i, stuff,
                                                                                                        default_args_tuple))...)));
     }
 };
@@ -77,11 +76,11 @@ public:
 template<class InitialArg, class... Args>
 struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
-    template<int default_arg_position, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
     void operator()(func::function<void(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg,
-                    std::index_sequence<ArgIndexes...>,
+                    std::integer_sequence<int, ArgIndexes...>,
                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
@@ -107,10 +106,10 @@ private:
     using NonConstReturnType = std::remove_const_t<ReturnType>;
 
 public:
-    template<class... Ts, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    template<class... Ts, class DefaultArgsTuple = std::tuple<>, int... ArgIndexes>
     void operator()(func::function<ReturnType(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
-                    std::index_sequence<ArgIndexes...>,
+                    std::integer_sequence<int, ArgIndexes...>,
                     DefaultArgsTuple && default_args_tuple = DefaultArgsTuple(),
                     bool return_most_derived = false) {
 
@@ -148,10 +147,10 @@ public:
 template<class... Args>
 struct CallCallable<func::function<void(Args...)>> {
 
-    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, int... ArgIndexes>
     void operator()(func::function<void(Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
-                    std::index_sequence<ArgIndexes...>,
+                    std::integer_sequence<int, ArgIndexes...>,
                     DefaultArgsTuple && default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
@@ -186,10 +185,10 @@ struct CallCallable<func::function<void(Args...)>> {
 template<>
 struct CallCallable<func::function<void(const v8::FunctionCallbackInfo<v8::Value>&)>> {
 
-    template<class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, int... ArgIndexes>
     void operator()(func::function<void(const v8::FunctionCallbackInfo<v8::Value> &)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
-                    std::index_sequence<ArgIndexes...>,
+                    std::integer_sequence<int, ArgIndexes...>,
                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
         static_assert(std::is_same<DefaultArgsTuple, std::tuple<>>::value,
                       "function taking a v8::FunctionCallbackInfo object cannot have default parameters");
