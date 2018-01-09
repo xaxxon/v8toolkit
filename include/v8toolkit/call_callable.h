@@ -76,7 +76,7 @@ public:
 template<class InitialArg, class... Args>
 struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
 
-    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, std::size_t... ArgIndexes>
+    template<int default_arg_position = -1, class DefaultArgsTuple = std::tuple<>, int... ArgIndexes>
     void operator()(func::function<void(InitialArg, Args...)> & function,
                     const v8::FunctionCallbackInfo<v8::Value> & info,
                     InitialArg initial_arg,
@@ -84,7 +84,7 @@ struct CallCallable<func::function<void(InitialArg, Args...)>, InitialArg> {
                     DefaultArgsTuple const & default_args_tuple = DefaultArgsTuple()) {
 
         int i = 0;
-        constexpr auto default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
+        constexpr int default_arg_count = std::tuple_size<DefaultArgsTuple>::value;
 
         std::vector<std::unique_ptr<StuffBase>> stuff;
         run_function(function, info, std::forward<InitialArg>(initial_arg),
