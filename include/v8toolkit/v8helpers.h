@@ -769,6 +769,8 @@ auto scoped_run(v8::Isolate * isolate, const v8::Global<v8::Context> & context, 
     return scoped_run(isolate, local_context, callable);
 }
 
+bool is_reserved_word_in_static_context(std::string const & name);
+
 
 
 

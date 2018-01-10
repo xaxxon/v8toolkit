@@ -130,6 +130,8 @@ public:
     std::unique_ptr<WrappedClass> returns_unique_ptr_wrapped_class() {
         return std::unique_ptr<WrappedClass>();
     }
+
+    static inline int static_int = 1;
 };
 
 class WrappedClassChild : public WrappedClass {
@@ -194,6 +196,7 @@ public:
             w.add_static_method("inline_static_method", [](int i){
                 EXPECT_EQ(i, 7);
             }, std::tuple<int>(7));
+            w.add_static_member("static_int", &WrappedClass::static_int);
             w.add_enum("enum_test", {{"A", 1}, {"B", 2}, {"C", 3}});
             w.set_compatible_types<WrappedClassChild>();
             w.finalize(true);
@@ -578,6 +581,10 @@ TEST_F(WrappedClassFixture, StaticMethodDefaultValue) {
     c->run("WrappedClass.inline_static_method(7);");
     c->run("WrappedClass.inline_static_method();");
     c->run("WrappedClass.inline_static_method();");
+
+    c->run("print(WrappedClass.static_int)");
+
+    c->run("EXPECT_TRUE(WrappedClass.static_int == 1)");
 }
 
 

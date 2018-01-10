@@ -69,7 +69,7 @@ void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::check_if_stat
 				  name) != used_static_attribute_name_list.end()) {
 
 		throw DuplicateNameException(
-			fmt::format("Cannot add static method named '{}' to class '{}', name already in use", name, class_name));
+			fmt::format("Cannot add static entity named '{}' to class '{}', name already in use", name, class_name));
 	}
 	used_static_attribute_name_list.push_back(name);
 }
@@ -127,7 +127,7 @@ V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::make_wrapping_func
 //		auto signature = v8::Signature::New(this->isolate, function_template);
 	init_instance_object_template(function_template->InstanceTemplate());
 	init_prototype_object_template(function_template->PrototypeTemplate());
-	for (auto & adder : this->static_method_adders) {
+	for (auto & adder : this->static_adders) {
 		adder(function_template);
 	}
 

@@ -236,12 +236,8 @@ void _variable_getter(v8::Local<v8::String> property,
 {
     auto isolate = info.GetIsolate();
     T * variable = (T*)v8::External::Cast(*(info.Data()))->Value();
-//    if (return_most_derived) {
-//        //TODO: ME
-//        assert(false);
-//    } else {
-        info.GetReturnValue().Set(CastToJS<T>()(isolate, *variable));
-//    }
+//    std::cerr << fmt::format("_variable_getter got pointer: {}", (void*)variable) << std::endl;
+    info.GetReturnValue().Set(CastToJS<T>()(isolate, *variable));
 }
 
 

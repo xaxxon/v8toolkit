@@ -345,8 +345,8 @@ private:
 	using AttributeAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
 	using EnumAdder = func::function<void(v8::Local<v8::ObjectTemplate> &)>;
 
-    // Callback type to add a static method to an ObjectTemplate
-	using StaticMethodAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
+    // Callback type to add a static method or member to a FunctionTemplate
+	using StaticAdder = func::function<void(v8::Local<v8::FunctionTemplate>)>;
 
     // Callback type for notifying when a property has been changed
 	using PropertyChangedCallback = func::function<void(v8::Isolate * isolate,
@@ -366,11 +366,10 @@ private:
 
     // Callbacks for adding members to an ObjectTemplate
 	std::vector<AttributeAdder> member_adders;
-//    std::vector<StaticAttributeAdder> static_member_adders;
 	std::vector<EnumAdder> enum_adders;
 
     // Callbacks for adding static methods to an ObjectTemplate
-	std::vector<StaticMethodAdder> static_method_adders;
+	std::vector<StaticAdder> static_adders;
 
 
 	/// List of callbacks for when attributes change
@@ -653,7 +652,7 @@ public:
 		result << fmt::format("finalized: {}", this->finalized) << std::endl;
 		result << fmt::format("Constructing FunctionTemplates created: {}", this->this_class_function_templates.size()) << std::endl;
 		result << fmt::format("methods added: {}", this->method_adders.size()) << std::endl;
-		result << fmt::format("static methods added: {}", this->static_method_adders.size()) << std::endl;
+		result << fmt::format("static elements added: {}", this->static_adders.size()) << std::endl;
 		result << fmt::format("data members added: {}", this->member_adders.size()) << std::endl;
 		result << fmt::format("property changed callbacks registered: {}", this->property_changed_callbacks.size()) << std::endl;
 		return result.str();
@@ -1080,6 +1079,37 @@ public:
 		return add_static_method(method_name, function_type_t<decltype(function)>(function), default_args_tuple);
 	};
 
+	static inline std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
+															 "length", "name", "prototype"};
+
+
+
+	template <typename MemberType>
+    void add_static_member(const std::string & name,
+                           MemberType * member) {
+
+		// must be set before finalization
+		assert(!this->finalized);
+
+		if (is_reserved_word_in_static_context(name)) {
+			throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static name", name));
+		}
+		this->check_if_static_name_used(name);
+
+		auto static_adder = [this, name, member](v8::Local<v8::FunctionTemplate> constructor_function_template) {
+
+			constructor_function_template->
+				SetNativeDataProperty(v8::String::NewFromUtf8(isolate, name.c_str()),
+									  _variable_getter<MemberType>,
+									  _variable_setter<MemberType>,
+									  v8::External::New(isolate, member));
+
+		};
+		this->static_adders.emplace_back(static_adder);
+
+
+	}
+
 
 	/**
 	 * Exposes the given function as a method on the JavaScript constructor function.
@@ -1093,19 +1123,18 @@ public:
 						   Callable callable,
 						   DefaultArgs const default_args_tuple = DefaultArgs{}) {
 
-		static std::vector<std::string> reserved_names = {"arguments", "arity", "caller", "displayName",
-														  "length", "name", "prototype"};
-
-		if (std::find(reserved_names.begin(), reserved_names.end(), method_name) != reserved_names.end()) {
-			throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static method name", method_name));
-		}
-
-		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
-		}
-
-		// must be set before finalization
 		assert(!this->finalized);
+
+
+		if (is_reserved_word_in_static_context(method_name)) {
+			throw InvalidCallException(fmt::format("The name: '{}' is a reserved property in javascript functions, so it cannot be used as a static name", method_name));
+		}
+
+		// Does it make sense to add static stuff to the const version?   there's no JavaScript const constructor function to add it to
+//		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
+//			V8ClassWrapper<ConstT>::get_instance(isolate).add_static_method(method_name, callable);
+//		}
+
 
 		this->check_if_static_name_used(method_name);
 
@@ -1139,7 +1168,7 @@ public:
 											   static_method_function_template);
 		};
 
-		this->static_method_adders.emplace_back(static_method_adder);
+		this->static_adders.emplace_back(static_method_adder);
 
 	}
 

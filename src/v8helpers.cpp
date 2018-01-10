@@ -345,5 +345,14 @@ bool global_name_conflicts(const std::string & name) {
     return false;
 }
 
+static std::vector<std::string> reserved_static_names = {"arguments", "arity", "caller", "displayName",
+                                                  "length", "name", "prototype"};
 
+bool is_reserved_word_in_static_context(std::string const & name) {
+    return std::find(reserved_static_names.begin(), reserved_static_names.end(), name) != reserved_static_names.end();
 }
+
+
+
+
+} // end namespace v8toolkit
