@@ -200,6 +200,7 @@ void add_print(const v8::Local<v8::Context> context, func::function<void(const s
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template)
 {
     add_function(isolate, object_template, "assert", [](const v8::FunctionCallbackInfo<v8::Value>& info) {
+#ifndef NDEBUG
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
         if (V8_TOOLKIT_DEBUG) printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
@@ -215,9 +216,9 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
         auto result = result_maybe.ToLocalChecked();
         // print_v8_value_details(result);
 
-        bool default_value = false;
 //        print_v8_value_details(result);
-        assert(result->BooleanValue(context).FromMaybe(default_value));
+        assert(result->BooleanValue(context).FromMaybe(false));
+#endif
     });
 }
 
@@ -844,8 +845,6 @@ std::vector<std::string> get_interesting_properties(v8::Local<v8::Context> conte
          !current_object->IsNull() &&
          !current_object->IsUndefined() &&
          !current_object->GetPrototype()->IsNull()) {
-
-         // v8toolkit::print_v8_value_details(current_object);
 
          // for some reason, requesting all properties crashes on constructor function objects like `Object`
          auto maybe_own_property_names = current_object->GetOwnPropertyNames(context, v8::PropertyFilter::ONLY_CONFIGURABLE);

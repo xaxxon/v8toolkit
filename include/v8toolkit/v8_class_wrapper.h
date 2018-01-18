@@ -2060,7 +2060,6 @@ template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-		HANDLE_FUNCTION_VALUES;
 
 		auto object = get_value_as<v8::Object>(isolate, value);
 

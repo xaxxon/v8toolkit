@@ -46,29 +46,29 @@ struct CastToNative<void> {
 };
 
 
-CAST_TO_NATIVE(bool, {HANDLE_FUNCTION_VALUES; return static_cast<bool>(value->ToBoolean()->Value());});
+CAST_TO_NATIVE(bool, {return static_cast<bool>(value->ToBoolean()->Value());});
 
 
 // integers
-CAST_TO_NATIVE(long long, {HANDLE_FUNCTION_VALUES; return static_cast<long long>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned long long, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned long long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(long long, {return static_cast<long long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long long, {return static_cast<unsigned long long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(long, {HANDLE_FUNCTION_VALUES; return static_cast<long>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned long, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(long, {return static_cast<long>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned long, {return static_cast<unsigned long>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(int, {HANDLE_FUNCTION_VALUES; return static_cast<int>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned int, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned int>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(int, {return static_cast<int>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned int, {return static_cast<unsigned int>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(short, {HANDLE_FUNCTION_VALUES; return static_cast<short>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned short, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned short>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(short, {return static_cast<short>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned short, {return static_cast<unsigned short>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(char, {HANDLE_FUNCTION_VALUES; return static_cast<char>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(unsigned char, {HANDLE_FUNCTION_VALUES; return static_cast<unsigned char>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char, {return static_cast<char>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(unsigned char, {return static_cast<unsigned char>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(wchar_t, {HANDLE_FUNCTION_VALUES; return static_cast<wchar_t>(value->ToInteger()->Value());});
-CAST_TO_NATIVE(char16_t, {HANDLE_FUNCTION_VALUES; return static_cast<char16_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(wchar_t, {return static_cast<wchar_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char16_t, {return static_cast<char16_t>(value->ToInteger()->Value());});
 
-CAST_TO_NATIVE(char32_t, {HANDLE_FUNCTION_VALUES; return static_cast<char32_t>(value->ToInteger()->Value());});
+CAST_TO_NATIVE(char32_t, {return static_cast<char32_t>(value->ToInteger()->Value());});
 
 
 
@@ -122,7 +122,6 @@ static constexpr bool callable(){return true;}
 
 template<template<class,class> class ContainerTemplate, class FirstT, class SecondT>
 ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-    HANDLE_FUNCTION_VALUES;
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
@@ -153,9 +152,9 @@ std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value
 };
 
 
-CAST_TO_NATIVE(float, {HANDLE_FUNCTION_VALUES; return static_cast<float>(value->ToNumber()->Value());});
-CAST_TO_NATIVE(double, {HANDLE_FUNCTION_VALUES; return static_cast<double>(value->ToNumber()->Value());});
-CAST_TO_NATIVE(long double, {HANDLE_FUNCTION_VALUES; return static_cast<long double>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(float, {return static_cast<float>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(double, {return static_cast<double>(value->ToNumber()->Value());});
+CAST_TO_NATIVE(long double, {return static_cast<long double>(value->ToNumber()->Value());});
 
 
 
@@ -179,7 +178,6 @@ static constexpr bool callable(){return true;}
 template<>
 struct CastToNative<char *> {
     std::unique_ptr<char[]> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        HANDLE_FUNCTION_VALUES;
         return std::unique_ptr<char[]>(strdup(*v8::String::Utf8Value(value)));
     }
     static constexpr bool callable(){return true;}
@@ -190,7 +188,7 @@ struct CastToNative<char *> {
 template<>
 struct CastToNative<const char *> {
     std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        HANDLE_FUNCTION_VALUES;
+
         return CastToNative<char *>()(isolate, value);
     }
     static constexpr bool callable(){return true;}
@@ -200,7 +198,7 @@ struct CastToNative<const char *> {
 template<class CharT, class Traits>
 struct CastToNative<std::basic_string_view<CharT, Traits>> {
     std::unique_ptr<char[]>  operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        HANDLE_FUNCTION_VALUES;
+
         return CastToNative<char *>()(isolate, value);
     }
     static constexpr bool callable(){return true;}
@@ -211,8 +209,14 @@ struct CastToNative<std::basic_string_view<CharT, Traits>> {
 template<class CharT, class Traits, class Allocator>
 struct CastToNative<std::basic_string<CharT, Traits, Allocator>> {
     std::string operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        HANDLE_FUNCTION_VALUES;
-        return std::string(*v8::String::Utf8Value(value));
+//        std::cerr << fmt::format("in cast to native string:") << std::endl;
+//        print_v8_value_details(value);
+
+        if (value->IsSymbol()) {
+            return std::string(*v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(value)->Name()));
+        } else {
+            return std::string(*v8::String::Utf8Value(value));
+        }
     }
     static constexpr bool callable(){return true;}
 };
@@ -226,7 +230,7 @@ auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
 using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
 static_assert(!std::is_reference<ValueType>::value, "vector-like value type cannot be reference");
 using ResultType = VectorTemplate<ValueType, Rest...>;
-HANDLE_FUNCTION_VALUES;
+
 auto context = isolate->GetCurrentContext();
 ResultType v;
 if (value->IsArray()) {
@@ -252,7 +256,7 @@ SetTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate
     using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
     static_assert(!std::is_reference<ValueType>::value, "Set-like value type cannot be reference");
     using ResultType = SetTemplate<ValueType, Rest...>;
-    HANDLE_FUNCTION_VALUES;
+
     auto context = isolate->GetCurrentContext();
     ResultType set;
     if (value->IsArray()) {
@@ -282,7 +286,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_array_v<T> && std::is_copy_con
     T operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         using ValueT = typename T::value_type;
         static_assert(!std::is_reference<ValueT>::value, "vector-like value type cannot be reference");
-        HANDLE_FUNCTION_VALUES;
+
         auto context = isolate->GetCurrentContext();
         NonConstT a;
         if (value->IsArray()) {
@@ -327,7 +331,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_set_v<T> && !is_wrapped_type_v
     T operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         using ValueT = typename T::value_type;
         static_assert(!std::is_reference<ValueT>::value, "Set-like value type cannot be reference");
-        HANDLE_FUNCTION_VALUES;
+
         auto context = isolate->GetCurrentContext();
         NonConstT set;
         if (value->IsArray()) {

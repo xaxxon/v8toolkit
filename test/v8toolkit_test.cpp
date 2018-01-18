@@ -31,4 +31,13 @@ TEST_F(JavaScriptFixture, ReleaseRequiredModulesBeforeIsolateGoesAway) {
     // NO CODE AFTER THIS
 }
 
+TEST_F(JavaScriptFixture, PropertiesOfArrays) {
+    this->create_context();
+
+    auto array = c->run("[1,2,3]");
+    GLOBAL_CONTEXT_SCOPED_RUN(c->get_isolate(), c->get_global_context());
+    auto properties = get_interesting_properties(c->get_context(), array.Get(c->get_isolate()).As<v8::Object>());
+    EXPECT_NE(xl::find(properties, "forEach"s), properties.end());
+}
+
 

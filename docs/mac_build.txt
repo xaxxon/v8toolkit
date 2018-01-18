@@ -13,3 +13,8 @@ May require 10.12 SDK - may be able to edit that in mac_sdk_overrides.gni
 
 
 
+To see available build flags:
+gn args out.gn/x64.release --list
+
+https://github.com/v8/v8/wiki/Building-with-GN
+

@@ -28,13 +28,6 @@ template<class T> constexpr bool cast_to_native_supports_default_value_v = cast_
 #define V8TOOLKIT_COMMA ,
 
 
-// add inside CastToNative::operator() to have it handle values that are functions
-#define HANDLE_FUNCTION_VALUES \
-    { \
-	if (value->IsFunction()) { \
-	    value = v8toolkit::call_simple_javascript_function(isolate, v8::Local<v8::Function>::Cast(value)); \
-	} \
-    }
 
 
 #define CAST_TO_NATIVE_CLASS_ONLY(TYPE) \
