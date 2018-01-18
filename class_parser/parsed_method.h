@@ -138,7 +138,7 @@ class MemberFunction : public ClassFunction {
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                    map<string, QualType> const & map = {},
-                   FunctionTemplateDecl const * function_template_decl = nullptr);
+                   FunctionTemplateDecl const * function_template_decl = nullptr, bool skip_name_check = false);
 
     string generate_js_bindings();
 
@@ -162,7 +162,8 @@ class StaticFunction : public ClassFunction {
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                    map<string, QualType> const & map = {},
-                   FunctionTemplateDecl const * function_template_decl = nullptr);
+                   FunctionTemplateDecl const * function_template_decl = nullptr,
+                   bool skip_name_check = false);
 
     string generate_js_bindings();
 

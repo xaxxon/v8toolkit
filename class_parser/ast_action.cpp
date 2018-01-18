@@ -113,9 +113,6 @@ PrintFunctionNamesAction::~PrintFunctionNamesAction()
 }
 
 
-void parse_config(xl::json::Json & json);
-
-
 
 bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
                const std::vector<std::string> & args) {
@@ -151,57 +148,26 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
                 throw ClassParserException("Invalid JSON in config file: {}", filename);
             }
             this->config_data = std::move(config_json);
+            this->config_data_initialized = true;
 
             v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Loaded config file:\n{}\n", this->config_data.get_source());
 
         }
         first_argument = false;
     }
-    if (args.size() && args[0] == "help")
+    if (args.size() && args[0] == "help") {
         PrintHelp(llvm::errs());
+    }
 
     return true;
 }
 
-//
-//void parse_config(xl::json::Json & json) {
-//
-//    // need to load this into a data structure and query it at runtime.. or maybe just query the json each time..
-//    //   but that could be pretty slow
-//    for (auto const & [class_name, class_json] : json["classes"].as_object()) {
-//        log.info(LogT::Subjects::ClassParser, "Looking at class {}", class_name);
-//        for (auto const & [member_function_name, member_function_json] : class_json["member_functions"].as_object()) {
-//            for (auto const & [attribute_name, attribute_json] : member_function_json.as_object()) {
-//
-//                if (attribute_name == "skip") {
-//                    if (auto skip = attribute_json.get_boolean()) {
-//                        log.info(LogT::Subjects::ClassParser,
-//                                 "Config file says skip {}: {}", member_function_name,
-//                                 *skip);
-//                    } else {
-//                        throw ClassParserException(
-//                            "Skip attribute must be boolean value, not '{}'",
-//                            attribute_json.get_source());
-//                    }
-//                } else if (attribute_name == "name") {
-//                    if (auto name = attribute_json.get_string()) {
-//                        log.info(LogT::Subjects::ClassParser,
-//                                 "Config file says use name {} for {}", *name,
-//                                 member_function_name);
-//                    } else {
-//                        throw ClassParserException(
-//                            "Name attribute must be string value, not '{}'",
-//                            attribute_json.get_source());
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//}
 
 
 xl::json::Json PrintFunctionNamesAction::get_config_data() {
+    if (!PrintFunctionNamesAction::config_data_initialized) {
+        throw ClassParserException("json config data not initialized");
+    }
     return PrintFunctionNamesAction::config_data;
 }
 

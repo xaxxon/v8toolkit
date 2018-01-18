@@ -662,7 +662,8 @@ bool MemberFunction::is_rvalue_qualified() const {
 
 
 MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl) :
+                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl,
+                               bool skip_name_check) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
 
     for (auto a = method_decl->attr_begin(); a != method_decl->attr_end(); a++) {
@@ -679,16 +680,20 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
         }
     };
 
-    this->js_name = this->look_up_js_name();
+    if (!skip_name_check) {
+        this->js_name = this->look_up_js_name();
+    }
 }
 
 
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl) :
+                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl, bool skip_name_check) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
 
 
-    this->js_name = this->look_up_js_name();
+    if (!skip_name_check) {
+        this->js_name = this->look_up_js_name();
+    }
 }
 
 

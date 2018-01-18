@@ -6,7 +6,7 @@
 #include <xl/templates.h>
 using namespace xl::templates;
 
-
+#include "../ast_action.h"
 #include "../wrapped_class.h"
 #include "javascript_stub_output.h"
 #include "../log.h"
@@ -21,7 +21,9 @@ extern Template header_template;
 extern Template member_function_template;
 extern Template static_function_template;
 
-extern std::map<std::string, Template> templates;
+std::map<std::string, Template> templates;
+void init_templates();
+
 
 std::ostream & JavascriptStubOutputStreamProvider::get_class_collection_stream() {
     if (!this->output_stream) {
@@ -116,7 +118,6 @@ struct JavascriptStubProviderContainer {
         );
     }
 
-
     static ProviderPtr get_provider(TypeInfo const & t) {
         return P::make_provider("Implement me");
 
@@ -134,6 +135,9 @@ JavascriptStubOutputModule::JavascriptStubOutputModule(std::unique_ptr<OutputStr
 
 
 void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> wrapped_classes) {
+
+    init_templates();
+
     v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Starting Javascript Stub output module");
 
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), &templates);
@@ -179,61 +183,11 @@ Template constructor_template(R"(
 
 
 Template file_template(R"(
-{{!header}}
+{{<!header>}}
 
 {{classes|class}}
 )");
 
-
-Template header_template(R"(
-
-/**
- * @type World
- */
-var world;
-
-/**
- * @type Map
- */
-var map;
-
-/**
- * @type Game
- */
-var game;
-
-/**
- * Prints a string and appends a newline
- * @param {String} str the string to be printed
- */
-function println(str){}
-
-/**
- * Prints a string without adding a newline to the end
- * @param {String} str the string to be printed
- */
-function print(str){}
-
-/**
- * Dumps the contents of the given variable - only 'own' properties
- * @param {Object} obj the variable to be dumped
- */
-function printobj(obj){}
-
-/**
- * Dumps the contents of the given variable - all properties including those of prototype chain
- * @param {Object} obj the variable to be dumped
- */
-function printobjall(obj){}
-
-/**
- * Attempts to load the given module and returns the exported data.  Requiring the same module
- *   more than once will return the cached os, not re-execute the source.
- * @param {String} module_name name of the module to require
- */
-function require(module_name){}
-
-)");
 
 
 Template member_function_template(R"(
@@ -256,14 +210,17 @@ Template static_function_template(R"(
     static {{name}}({{parameters%, |!{{name}}}}) {})");
 
 
-std::map<std::string, Template> templates {
-    std::pair("class", class_template),
-    std::pair("constructor", constructor_template),
-    std::pair("file", file_template),
-    std::pair("header", header_template),
-    std::pair("member_function", member_function_template),
-    std::pair("static_function", static_function_template),
-};
+
+void init_templates() {
+    templates =  {
+        std::pair("class", class_template),
+        std::pair("constructor", constructor_template),
+        std::pair("file", file_template),
+        std::pair("header", Template(*PrintFunctionNamesAction::get_config_data()["output_modules"]["JavaScriptStubOutputModule"]["header"].get_string(""))),
+        std::pair("member_function", member_function_template),
+        std::pair("static_function", static_function_template),
+    };
+}
 
 
 } // end namespace v8toolkit::class_parser::javascript_stub_output

@@ -124,7 +124,8 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
 
     // there's a bug during cleanup if this object is destroyed, so just leak it
     action = new v8toolkit::class_parser::PrintFunctionNamesAction();
-    action->config_data = json;
+    action->config_data = std::move(json);
+    action->config_data_initialized = true;
     for(auto & output_module : output_modules) {
         action->add_output_module(std::move(output_module));
     }
@@ -248,7 +249,7 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
 
     // this should be 2 because there shouldn't be any hard coded renames in the plugin, only in config
     //   but right now name => get_name so there's only 1 error
-    EXPECT_EQ(environment->expect_no_errors(), /** SEE NOTE ABOVE **/ 2); // one for Object, another for name()
+    EXPECT_EQ(environment->expect_no_errors(), 2); // one for Object, another for name()
 }
 
 
@@ -963,9 +964,26 @@ TEST(ClassParser, ClassComments) {
 
     output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
 
-    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    auto pruned_vector = run_code(source, std::move(output_modules), xl::json::Json(R"JSON(
+{
+    "output_modules": {
+        "JavaScriptStubOutputModule": {
+            "header": "This is the header"
+        }
+    }
+    "classes": {
+        "DuplicateFunctionNameClass": {
+            "members": {
+
+            }
+        }
+    }
+}
+)JSON"));
 
     EXPECT_FALSE(javascript_stub_string_stream.str().empty());
+    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
 
     EXPECT_FALSE(bindings_string_stream.str().empty());
     std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
@@ -1029,8 +1047,8 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
 
 
 int main(int argc, char* argv[]) {
-testing::InitGoogleTest(&argc, argv);
-return RUN_ALL_TESTS();
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
 
 

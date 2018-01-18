@@ -470,9 +470,9 @@ void WrappedClass::parse_all_methods() {
 
         std::string const signature = [&] {
             if (method->isStatic()) {
-                return StaticFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
+                return StaticFunction(*this, method, template_parameter_types, function_template_decl, true).get_signature_string();
             } else {
-                return MemberFunction(*this, method, template_parameter_types, function_template_decl).get_signature_string();
+                return MemberFunction(*this, method, template_parameter_types, function_template_decl, true).get_signature_string();
             }
         }();
 

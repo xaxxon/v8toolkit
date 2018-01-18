@@ -38,10 +38,6 @@ public:
     // Run after compiling but before running the plugin over the contents of the AST
     virtual void onStartOfTranslationUnit() override;
 
-
-
-
-
 };
 
 }

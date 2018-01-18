@@ -42,6 +42,7 @@ protected:
 public:
 
     static inline xl::json::Json config_data;
+    static inline bool config_data_initialized = false;
 
     // open up output files
     PrintFunctionNamesAction();

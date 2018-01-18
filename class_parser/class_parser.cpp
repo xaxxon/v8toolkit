@@ -101,7 +101,7 @@ vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8to
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
 
-map<string, string> static_method_renames = {{"name", "get_name"}};
+map<string, string> static_method_renames = {};
 
 // http://usejsdoc.org/tags-type.html
 vector<pair<string, string>> cpp_to_js_type_conversions = {
