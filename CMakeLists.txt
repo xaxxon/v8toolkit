@@ -46,7 +46,8 @@ find_package(xl REQUIRED)
 if(WIN32)
 
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -Werror=return-type -Wall -target ${TARGET_TRIPLE}")
+	# -fsanitize=undefined -fno-sanitize=vptr
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -stdlib=libc++ -g -Werror=return-type -Wall -target ${TARGET_TRIPLE}")
     set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
 endif()
 
@@ -97,9 +98,9 @@ add_subdirectory(test EXCLUDE_FROM_ALL)
 
 # turn off adding "d" suffix to debug versions of libraries
 set_target_properties(v8toolkit_shared PROPERTIES
-        DEBUG_POSTFIX "")
+        DEBUG_POSTFIX "d")
 set_target_properties(v8toolkit_static PROPERTIES
-		DEBUG_POSTFIX "")
+		DEBUG_POSTFIX "d")
 
 	
 add_subdirectory(class_parser)
