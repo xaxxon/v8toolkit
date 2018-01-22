@@ -47,11 +47,6 @@ struct ClassFunction {
 
     Annotations annotations;
 
-
-    bool is_static;
-    bool is_virtual;
-    bool is_virtual_final = false;
-    bool is_virtual_override = false;
     std::string comment;
 
     LogWatcher<LogT> log_watcher;
@@ -62,8 +57,8 @@ struct ClassFunction {
     // default template type mapping - empty if not templated
     map<string, QualType> template_parameter_types;
 
-    // if this virtual function doesn't exist in a parent class
-    bool new_virtual;
+
+
 
 
     /**
@@ -153,6 +148,13 @@ public:
     string generate_bidirectional();
 
     string get_signature_string() const override;
+
+    bool is_virtual;
+    bool is_virtual_final = false;
+    bool is_virtual_override = false;
+
+    // if this virtual function doesn't exist in a parent class
+    bool new_virtual;
 
 };
 

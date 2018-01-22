@@ -70,12 +70,20 @@ struct JavascriptSubclassTemplateProviderContainer {
 
     static ProviderPtr get_provider(WrappedClass const & c) {
 
-        std::vector<MemberFunction const *> virtual_functions;
+        std::vector<ClassFunction const *> virtual_functions;
         c.foreach_inheritance_level([&](auto & c) {
             for(auto & f : c.get_member_functions()) {
+//                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
                 if (f->is_virtual) {
                     virtual_functions.push_back(f.get());
                 }
+            }
+        });
+
+        c.foreach_inheritance_level([&](auto & c) {
+            for(auto & f : c.get_static_functions()) {
+//                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
+                virtual_functions.push_back(f.get());
             }
         });
 
@@ -86,7 +94,7 @@ struct JavascriptSubclassTemplateProviderContainer {
     }
 
 
-    static ProviderPtr get_provider(MemberFunction const & f) {
+    static ProviderPtr get_provider(ClassFunction const & f) {
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
             std::pair("js_name", f.js_name)
         );

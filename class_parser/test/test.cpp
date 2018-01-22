@@ -145,7 +145,7 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
         // nothing to do here
     }
 
-    return  erase_if(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){return !c->should_be_wrapped();});
+    return erase_if(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){return !c->should_be_wrapped();});
 }
 
 TEST(ClassParser, ClassParser) {
@@ -236,6 +236,45 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 
 
 
+TEST(ClassParser, ConstAndStaticCheck) {
+    std::string source = R"(
+        class C : public v8toolkit::WrappedClassBase {
+        public:
+            static void static_member_function();
+            void non_const_instance_member_function();
+            void const_instance_member_function() const;
+        };
+    )";
+
+    auto pruned_vector = run_code(source);
+    ASSERT_EQ(pruned_vector.size(), 1);
+    WrappedClass & c = *(pruned_vector[0].get());
+
+    ASSERT_EQ(c.get_member_functions().size(), 2);
+    ASSERT_EQ(c.get_static_functions().size(), 1);
+
+    {
+        StaticFunction const & f = *c.get_static_functions()[0];
+        ASSERT_EQ(f.name, "C::static_member_function");
+    }
+    {
+        MemberFunction const & f = *c.get_member_functions()[0];
+        ASSERT_EQ(f.name, "C::non_const_instance_member_function");
+        EXPECT_FALSE(f.is_const());
+    }
+    {
+        MemberFunction const & f = *c.get_member_functions()[1];
+        ASSERT_EQ(f.name, "C::const_instance_member_function");
+        EXPECT_FALSE(f.is_static);
+        EXPECT_TRUE(f.is_const());
+    }
+
+
+}
+
+
+
+
 TEST(ClassParser, ClassMatchingJSReservedWord) {
     std::string source = R"(
         class Object : public v8toolkit::WrappedClassBase {
@@ -248,8 +287,6 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
     environment->expect_errors();
     auto pruned_vector = run_code(source);
 
-    // this should be 2 because there shouldn't be any hard coded renames in the plugin, only in config
-    //   but right now name => get_name so there's only 1 error
     EXPECT_EQ(environment->expect_no_errors(), 2); // one for Object, another for name()
 }
 
@@ -939,8 +976,6 @@ TEST(ClassParser, ClassComments) {
 
         // it's important that the return type and a parameter type have a comma in them
         V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
-
-        int i;
 
         V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
 

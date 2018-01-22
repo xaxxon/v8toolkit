@@ -350,7 +350,6 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     wrapped_class(wrapped_class),
     method_decl(method_decl),
     annotations(this->method_decl),
-    is_virtual(method_decl->isVirtual()),
     function_template_decl(function_template_decl),
     template_parameter_types(template_parameter_types),
     return_type(method_decl->getReturnType(), template_parameter_types),
@@ -669,7 +668,9 @@ bool MemberFunction::is_rvalue_qualified() const {
 MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
                                map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl,
                                bool skip_name_check) :
-    ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
+    ClassFunction(wrapped_class, method_decl, map, function_template_decl),
+    is_virtual(method_decl->isVirtual())
+{
 
     for (auto a = method_decl->attr_begin(); a != method_decl->attr_end(); a++) {
 //        std::cerr << fmt::format("on function {} looking at attribute {}", this->name, (*a)->getSpelling())
