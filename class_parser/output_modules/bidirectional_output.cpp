@@ -147,7 +147,8 @@ struct BidirectionalProviderContainer {
 
     static ProviderPtr get_provider(MemberFunction const & f) {
         return xl::templates::make_provider<BidirectionalProviderContainer>(
-            std::pair("name", f.js_name),
+            std::pair("name", f.get_short_name()),
+            std::pair("js_name", f.js_name),
             std::pair("comment", f.comment),
             std::pair("params", f.parameters),
             std::pair("return_type", make_macro_safe_comma(f.return_type.get_name())),
@@ -222,7 +223,7 @@ public:
     {}
 
     {{virtual_functions|!!
-    JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}{{params%%, |!{{type}}}});}}
+    JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}, {{js_name}}{{params%%, |!{{type}}}});}}
 };)");
 
 

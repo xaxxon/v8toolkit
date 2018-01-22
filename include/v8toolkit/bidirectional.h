@@ -501,7 +501,7 @@ public:
 *   That is why static dispatch is specifically used for the C++ fallback case:
 *   `this->BASE_TYPE::name( __VA_ARGS__ );`
 */ 
-#define JS_ACCESS_CORE(ReturnType, name, ...) \
+#define JS_ACCESS_CORE(ReturnType, name, js_name, ...) \
     bool call_native = this->called_from_javascript; \
     \
     /* If there is infinite recursion happening here, it is likely                      */ \
@@ -515,7 +515,7 @@ public:
 	/* See comment above for why static dispatch is used */		\
         return this->BASE_TYPE::name( __VA_ARGS__ );			\
     } \
-	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE for %s, not calling native code\n", #name); \
+	if(JS_ACCESS_CORE_DEBUG) printf("IN JS_ACCESS_CORE for %s, not calling native code\n", #js_name); \
     /*auto parameter_tuple = std::make_tuple( __VA_ARGS__ ); */ \
    /* auto parameter_tuple = make_tuple_for_variables(__VA_ARGS__); */ \
     v8toolkit::CastToNative<std::remove_reference<ReturnType>::type> cast_to_native; \
@@ -525,8 +525,8 @@ public:
     v8::Local<v8::Function> js_function; \
     v8::TryCatch tc(isolate); \
     try { \
-        js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #name); \
-    } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true);} \
+        js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #js_name); \
+    } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true); throw();} \
     this->called_from_javascript = true; \
     auto result = v8toolkit::call_javascript_function_with_vars(context, js_function, js_object, typelist, ##__VA_ARGS__); \
     this->called_from_javascript = false; \
@@ -534,134 +534,134 @@ public:
 
 
 // defines a JS_ACCESS function for a method taking no parameters
-#define JS_ACCESS(return_type, name)\
+#define JS_ACCESS(return_type, name, js_name)\
 virtual return_type name() override {\
     v8toolkit::TypeList<> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
-#define JS_ACCESS_0(return_type, name)\
+#define JS_ACCESS_0(return_type, name, js_name)\
 virtual return_type name() override {\
     v8toolkit::TypeList<> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
-#define JS_ACCESS_1(return_type, name, t1)\
+#define JS_ACCESS_1(return_type, name, js_name, t1)\
 virtual return_type name(t1 p1) override {\
     v8toolkit::TypeList<t1> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1)\
 }
 
-#define JS_ACCESS_2(return_type, name, t1, t2) \
+#define JS_ACCESS_2(return_type, name, js_name, t1, t2) \
 virtual return_type name(t1 p1, t2 p2) override { \
     v8toolkit::TypeList<t1, t2> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2) \
 }
 
-#define JS_ACCESS_3(return_type, name, t1, t2, t3)\
+#define JS_ACCESS_3(return_type, name, js_name, t1, t2, t3)\
 virtual return_type name(t1 p1, t2 p2, t3 p3) override { \
     v8toolkit::TypeList<t1, t2, t3> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3) \
 }
 
-#define JS_ACCESS_4(return_type, name, t1, t2, t3, t4)\
+#define JS_ACCESS_4(return_type, name, js_name, t1, t2, t3, t4)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) override {\
     v8toolkit::TypeList<t1, t2, t3, t4> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4)\
 }
 
-#define JS_ACCESS_5(return_type, name, t1, t2, t3, t4, t5)\
+#define JS_ACCESS_5(return_type, name, js_name, t1, t2, t3, t4, t5)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5)\
 }
 
-#define JS_ACCESS_6(return_type, name, t1, t2, t3, t4, t5, t6)\
+#define JS_ACCESS_6(return_type, name, js_name, t1, t2, t3, t4, t5, t6)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6)\
 }
 
-#define JS_ACCESS_7(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
+#define JS_ACCESS_7(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7)\
 }
 
-#define JS_ACCESS_8(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
+#define JS_ACCESS_8(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7, t8)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8)\
 }
 
-#define JS_ACCESS_9(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
+#define JS_ACCESS_9(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8, t9> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\
 }
 
-#define JS_ACCESS_CONST(return_type, name)\
+#define JS_ACCESS_CONST(return_type, name, js_name)\
 virtual return_type name() const override {\
     v8toolkit::TypeList<> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
-#define JS_ACCESS_0_CONST(return_type, name)\
+#define JS_ACCESS_0_CONST(return_type, name, js_name)\
 virtual return_type name() const override {\
     v8toolkit::TypeList<> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name)\
 }
 
 
-#define JS_ACCESS_1_CONST(return_type, name, t1)\
+#define JS_ACCESS_1_CONST(return_type, name, js_name, t1)\
 virtual return_type name(t1 p1) const override {\
     v8toolkit::TypeList<t1> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1)\
 }
 
-#define JS_ACCESS_2_CONST(return_type, name, t1, t2)\
+#define JS_ACCESS_2_CONST(return_type, name, js_name, t1, t2)\
 virtual return_type name(t1 p1, t2 p2) const override {\
     v8toolkit::TypeList<t1, t2> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2)\
 }
 
-#define JS_ACCESS_3_CONST(return_type, name, t1, t2, t3)\
+#define JS_ACCESS_3_CONST(return_type, name, js_name, t1, t2, t3)\
 virtual return_type name(t1 p1, t2 p2, t3 p3) const override {\
     v8toolkit::TypeList<t1, t2, t3> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3)\
 }
 
-#define JS_ACCESS_4_CONST(return_type, name, t1, t2, t3, t4)\
+#define JS_ACCESS_4_CONST(return_type, name, js_name, t1, t2, t3, t4)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4)\
 }
 
-#define JS_ACCESS_5_CONST(return_type, name, t1, t2, t3, t4, t5)\
+#define JS_ACCESS_5_CONST(return_type, name, js_name, t1, t2, t3, t4, t5)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5)\
 }
 
-#define JS_ACCESS_6_CONST(return_type, name, t1, t2, t3, t4, t5, t6)\
+#define JS_ACCESS_6_CONST(return_type, name, js_name, t1, t2, t3, t4, t5, t6)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6)\
 }
 
-#define JS_ACCESS_7_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7)\
+#define JS_ACCESS_7_CONST(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7)\
 }
 
-#define JS_ACCESS_8_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8)\
+#define JS_ACCESS_8_CONST(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7, t8)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8)\
 }
 
-#define JS_ACCESS_9_CONST(return_type, name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
+#define JS_ACCESS_9_CONST(return_type, name, js_name, t1, t2, t3, t4, t5, t6, t7, t8, t9)\
 virtual return_type name(t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7, t8 p8, t9 p9) const override {\
     v8toolkit::TypeList<t1, t2, t3, t4, t5, t6, t7, t8, t9> typelist; \
     JS_ACCESS_CORE(V8TOOLKIT_MACRO_TYPE(return_type), name, p1, p2, p3, p4, p5, p6, p7, p8, p9)\

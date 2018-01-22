@@ -37,6 +37,7 @@ using namespace v8toolkit::class_parser;
 using namespace v8toolkit::class_parser::javascript_stub_output;
 using namespace v8toolkit::class_parser::bindings_output;
 using namespace v8toolkit::class_parser::bidirectional_output;
+using namespace v8toolkit::class_parser::javascript_subclass_template_output;
 
 struct  Environment : public ::testing::Environment {
     ~Environment() override {}
@@ -70,7 +71,7 @@ struct  Environment : public ::testing::Environment {
     void SetUp() override {
         xl::templates::log.add_callback([](xl::templates::LogT::LogMessage const & message) {
             if (message.level == xl::templates::LogT::Levels::Error) {
-                std::cerr << message.string << std::endl;
+//                std::cerr << message.string << std::endl;
                 EXPECT_EQ(message.string, "TEMPLATE LOG ERROR");
             }
         });
@@ -475,7 +476,6 @@ struct BidirectionalTestStreamProvider : public OutputStreamProvider {
     // static so the data hangs around after the run
     static inline std::map<std::string, std::stringstream> class_outputs;
     std::ostream & get_class_collection_stream() override {
-        std::cerr << fmt::format("HI THERE") << std::endl;
         return std::cerr;
     }
 
@@ -546,7 +546,6 @@ TEST(ClassParser, CustomExtensionInheritance) {
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 
-    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
     EXPECT_TRUE(xl::Regex("\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}.*?\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
     ));
@@ -575,7 +574,6 @@ TEST(ClassParser, Enums) {
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 
-    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
     EXPECT_TRUE(xl::Regex("class_wrapper\\.add_enum\\(\"MyEnum\", \\{\\{\"A\", 0\\}, \\{\"B\", 1\\}, \\{\"C\", 2\\}, \\{\"D\", 3\\}, \\{\"E\", 4\\}, \\{\"F\", 5\\}\\}\\);", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
     ));
@@ -940,7 +938,9 @@ TEST(ClassParser, ClassComments) {
         int data_memberC;
 
         // it's important that the return type and a parameter type have a comma in them
-        virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
+        V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
+
+        int i;
 
         V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
 
@@ -963,7 +963,7 @@ TEST(ClassParser, ClassComments) {
     output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_string_stream)));
 
     output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
-
+    output_modules.push_back(make_unique<JavascriptSubclassTemplateOutputModule>());
 
     auto pruned_vector = run_code(source, std::move(output_modules), xl::json::Json(R"JSON(
 {
@@ -983,10 +983,9 @@ TEST(ClassParser, ClassComments) {
 )JSON"));
 
     EXPECT_FALSE(javascript_stub_string_stream.str().empty());
-    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
+    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function_js_name(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
 
     EXPECT_FALSE(bindings_string_stream.str().empty());
-    std::cerr << fmt::format("{}", bindings_string_stream.str()) << std::endl;
     EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA>\\(\"data_memberA\"\\)").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("class_wrapper\\.add_static_method<void, char \\*, int>\\(\"member_static_functionC\", &C::member_static_functionC, std::tuple<int>\\(4\\)\\);").match(bindings_string_stream.str()));
     EXPECT_TRUE(xl::Regex("class_wrapper\\.add_member_readonly<&C::int_ptr_read_only>\\(\"int_ptr_read_only\"\\);").match(bindings_string_stream.str()));
@@ -1016,7 +1015,7 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-        JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
+        JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
 };)";
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);}
 

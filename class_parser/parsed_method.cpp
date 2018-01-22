@@ -270,7 +270,7 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     // check any typedef annotations as well
     if (auto plain_type_decl = this->type.type->getAsCXXRecordDecl()) {
         this->is_const |= Annotations::annotations_for_record_decls[plain_type_decl].has(V8TOOLKIT_READONLY_STRING);
-        std::cerr << fmt::format("done with annotations on typedef, final readonly value: {}", this->is_const) << std::endl;
+//        std::cerr << fmt::format("done with annotations on typedef, final readonly value: {}", this->is_const) << std::endl;
     }
 
 
@@ -283,6 +283,11 @@ DataMember::DataMember(WrappedClass & wrapped_class,
     }
 
     this->js_name = this->look_up_js_name();
+}
+
+
+std::string ClassFunction::get_short_name() const {
+    return method_decl->getNameAsString();
 }
 
 
@@ -945,7 +950,7 @@ std::set<std::string> TypeInfo::get_root_includes() const {
 //    std::cerr << fmt::format("getting root includes for type ({}) which has {} template parameter types", this->get_name(), this->template_parameter_types.size()) << std::endl;
 
     if (auto root_include = get_root_include_for_decl(this->get_plain_type_decl())) {
-        std::cerr << fmt::format("primary root include for {} is {}", this->get_name(), *root_include) << std::endl;
+//        std::cerr << fmt::format("primary root include for {} is {}", this->get_name(), *root_include) << std::endl;
         includes.insert(*root_include);
     }
 

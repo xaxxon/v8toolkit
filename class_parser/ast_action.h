@@ -17,6 +17,7 @@
 #include "output_modules/javascript_stub_output.h"
 #include "output_modules/bindings_output.h"
 #include "output_modules/bidirectional_output.h"
+#include "output_modules/javascript_subclass_template.h"
 
 
 namespace v8toolkit::class_parser {

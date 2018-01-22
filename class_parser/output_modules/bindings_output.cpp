@@ -342,13 +342,6 @@ BindingsOutputModule::BindingsOutputModule(size_t max_declarations_per_file,
     OutputModule(std::move(output_stream_provider))
 {
 
-    std::cerr << fmt::format("Looking at config: {}", PrintFunctionNamesAction::get_config_data().get_source()) << std::endl;
-    std::cerr << fmt::format("valid?  {}, {}, {}, {} ,{}",
-                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"],
-                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"],
-                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"],
-                             (bool)PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"].get_number(),
-                             (bool)PrintFunctionNamesAction::get_config_data());
     // prefer the config file
     if (auto maybe_max_declarations_per_file = PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["max_declarations_per_file"].get_number()) {
         if (*maybe_max_declarations_per_file < 0) {
@@ -358,7 +351,7 @@ BindingsOutputModule::BindingsOutputModule(size_t max_declarations_per_file,
     } else if (max_declarations_per_file != -1) {
         this->max_declarations_per_file = max_declarations_per_file;
     }
-    std::cerr << fmt::format("max declarations set to: {}", this->max_declarations_per_file) << std::endl;
+    log.info(LogT::Subjects::BindingsOutput, "max declarations set to: {}", this->max_declarations_per_file);
 }
 
 

@@ -463,12 +463,6 @@ auto reducer(const Container & container, Callable callable) ->
     return results;
 }
 
-
-
-
-
-
-
 struct StuffBase{
     // virtual destructor makes sure derived class destructor is called to actually
     //   delete the data

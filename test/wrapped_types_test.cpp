@@ -646,4 +646,12 @@ TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
     });
 }
 
+TEST_F(WrappedClassFixture, Bidirectional) {
+    auto isolate = c->isolate;
+    (*c)([&]() {
+
+
+
+    });
+
 

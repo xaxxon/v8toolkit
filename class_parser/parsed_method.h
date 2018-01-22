@@ -104,6 +104,8 @@ struct ClassFunction {
     // name used in javascript
     string js_name;
 
+    std::string get_short_name() const;
+
     string get_default_argument_tuple_string() const;
 
     // returns string containing function name and input parameters - this function is likely not exactly correct
