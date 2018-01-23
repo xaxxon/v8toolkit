@@ -120,9 +120,7 @@ struct BidirectionalProviderContainer {
         std::vector<MemberFunction const *> virtual_functions;
         c.foreach_inheritance_level([&](auto & current) {
             for(auto & f : current.get_member_functions()) {
-                std::cerr << fmt::format("in {}, {} is virtual override? {}", current.class_name, f->name, f->is_virtual_override) << std::endl;
                 if (f->is_virtual && !f->is_virtual_override) {
-                    std::cerr << fmt::format("adding it") << std::endl;
                     virtual_functions.push_back(f.get());
                 }
             }
