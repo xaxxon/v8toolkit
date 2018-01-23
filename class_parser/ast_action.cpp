@@ -128,6 +128,7 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
             output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
             output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>());
             output_modules.push_back(std::make_unique<bidirectional_output::BidirectionalOutputModule>());
+            output_modules.push_back(std::make_unique<javascript_subclass_template_output::JavascriptSubclassTemplateOutputModule>());
         } else if (auto matches = config_file_regex.match(args[i])) {
             if (!first_argument) {
                 throw ClassParserException("Config file must be first parameter if it is specified at all");

@@ -51,7 +51,7 @@ struct JavascriptStubProviderContainer {
 
             std::pair("member_functions", xl::erase_if(xl::copy(c.get_member_functions()),
                                                  [](std::unique_ptr<MemberFunction> const & member_function){
-                                                     return member_function->is_callable_overload();
+                                                     return member_function->is_callable_overload() || member_function->is_virtual_override;
                                                  })),
 
             std::pair("static_functions", std::ref(c.get_static_functions())),

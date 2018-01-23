@@ -118,9 +118,11 @@ struct BidirectionalProviderContainer {
     static ProviderPtr get_provider(WrappedClass const & c) {
 
         std::vector<MemberFunction const *> virtual_functions;
-        c.foreach_inheritance_level([&](auto & c) {
-            for(auto & f : c.get_member_functions()) {
-                if (f->is_virtual) {
+        c.foreach_inheritance_level([&](auto & current) {
+            for(auto & f : current.get_member_functions()) {
+                std::cerr << fmt::format("in {}, {} is virtual override? {}", current.class_name, f->name, f->is_virtual_override) << std::endl;
+                if (f->is_virtual && !f->is_virtual_override) {
+                    std::cerr << fmt::format("adding it") << std::endl;
                     virtual_functions.push_back(f.get());
                 }
             }
@@ -222,7 +224,7 @@ public:
       v8toolkit::JSWrapper<{{base_name}}>(context, object, created_by)
     {}
 
-    {{virtual_functions|!!
+{{virtual_functions|!!
     JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}, {{js_name}}{{params%%, |!{{type}}}});}}
 };)");
 

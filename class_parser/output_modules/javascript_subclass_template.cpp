@@ -74,7 +74,7 @@ struct JavascriptSubclassTemplateProviderContainer {
         c.foreach_inheritance_level([&](auto & c) {
             for(auto & f : c.get_member_functions()) {
 //                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
-                if (f->is_virtual) {
+                if (f->is_virtual && !f->is_virtual_override) {
                     virtual_functions.push_back(f.get());
                 }
             }

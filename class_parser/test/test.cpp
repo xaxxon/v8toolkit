@@ -265,7 +265,6 @@ TEST(ClassParser, ConstAndStaticCheck) {
     {
         MemberFunction const & f = *c.get_member_functions()[1];
         ASSERT_EQ(f.name, "C::const_instance_member_function");
-        EXPECT_FALSE(f.is_static);
         EXPECT_TRUE(f.is_const());
     }
 
@@ -945,6 +944,8 @@ TEST(ClassParser, ClassComments) {
 
             /// comment on data_memberB
             int data_memberB;
+
+            virtual void virtual_function_in_B();
         };
     } // end namespace NameSpace
     class V8TOOLKIT_BIDIRECTIONAL_CLASS C : public NameSpace::B {
@@ -976,6 +977,8 @@ TEST(ClassParser, ClassComments) {
 
         // it's important that the return type and a parameter type have a comma in them
         V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
+        void virtual_function_in_B() override;
+
 
         V8TOOLKIT_USE_NAME(DIFFERENT_JS_NAME) void this_is_cpp_name();
 
@@ -1018,7 +1021,7 @@ TEST(ClassParser, ClassComments) {
 )JSON"));
 
     EXPECT_FALSE(javascript_stub_string_stream.str().empty());
-    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function_js_name(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
+    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    virtual_function_in_B() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function_js_name(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
 
     EXPECT_FALSE(bindings_string_stream.str().empty());
     EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA>\\(\"data_memberA\"\\)").match(bindings_string_stream.str()));
@@ -1050,7 +1053,8 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-        JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
+    JS_ACCESS_0(void, virtual_function_in_B, virtual_function_in_B);
+    JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
 };)";
     EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);}
 
