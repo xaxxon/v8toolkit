@@ -26,7 +26,7 @@ supports all major platforms.
 ### Your first v8toolkit program
 
 ```language-c++
-    #include "javascript.h"
+    #include <v8toolkit/javascript.h>
     using v8toolkit;
    
    int main(int argc, char ** argv) {
