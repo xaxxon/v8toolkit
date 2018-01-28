@@ -164,13 +164,20 @@ public:
         }
     }
 
-    void foreach_inheritance_level(function<void(WrappedClass &)> callback) {
+    void foreach_inheritance_level(function<void(WrappedClass &)> callback, bool base_first = true) {
         assert(this->base_types.size() <= 1);
 
-        if (!this->base_types.empty()) {
-            (*base_types.begin())->foreach_inheritance_level(callback);
+        if (!base_first) {
+            callback(*this);
         }
-        return callback(*this);
+
+        if (!this->base_types.empty()) {
+            (*base_types.begin())->foreach_inheritance_level(callback, base_first);
+        }
+
+        if (base_first) {
+            callback(*this);
+        }
     }
 
     template <typename T = void>
@@ -183,13 +190,19 @@ public:
         }
     }
 
-    void foreach_inheritance_level(function<void(WrappedClass const &)> callback) const {
+    void foreach_inheritance_level(function<void(WrappedClass const &)> callback, bool base_first = true) const {
         assert(this->base_types.size() <= 1);
 
-        if (!this->base_types.empty()) {
-            ((WrappedClass const *)(*base_types.begin()))->foreach_inheritance_level(callback);
+        if (!base_first) {
+            callback(*this);
         }
-        return callback(*this);
+
+        if (!this->base_types.empty()) {
+            ((WrappedClass const *)(*base_types.begin()))->foreach_inheritance_level(callback, base_first);
+        }
+        if (base_first) {
+            callback(*this);
+        }
     }
 
     // all the correct annotations and name overrides may not be available when the WrappedObject is initially created

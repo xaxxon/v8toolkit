@@ -2015,6 +2015,9 @@ template<typename T>
 struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T* operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+	    if (value->IsNullOrUndefined()) {
+			throw CastException("Cannot CastToNative null/undefined JavaScript value to {}*", xl::demangle<T>());
+		}
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		v8::Local<v8::Object> object = get_value_as<v8::Object>(isolate, value);
 

@@ -368,31 +368,27 @@ Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
-    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 
 {{<<call_operator|!!
     class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
 
 {{<<static_functions|!!
-    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
+
 {{<<data_members|!!
-    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
 {{<<enums|!!
-    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
+    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});}}
 
 {{<<wrapper_extension_methods|!!
-    {{method_name}}(class_wrapper);>>}}
+    {{method_name}}(class_wrapper);}}
 
 {{<<custom_extensions|!!
     {{}}>>}}
-
-
     class_wrapper.set_parent_type<{{<<base_type_name>>}}>();
-
     class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>>}}>();
-
-
     class_wrapper.finalize(true);
     {{<constructor>}}
 })");

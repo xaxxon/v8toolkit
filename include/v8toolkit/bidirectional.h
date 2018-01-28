@@ -526,7 +526,7 @@ public:
     v8::TryCatch tc(isolate); \
     try { \
         js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #js_name); \
-    } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true); throw();} \
+    } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true); throw;} \
     this->called_from_javascript = true; \
     auto result = v8toolkit::call_javascript_function_with_vars(context, js_function, js_object, typelist, ##__VA_ARGS__); \
     this->called_from_javascript = false; \

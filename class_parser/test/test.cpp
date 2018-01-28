@@ -119,7 +119,7 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
         "-I" CLANG_HOME "/lib/clang/5.0.0/include/",
 
         // why doesn't this seem to get passed to the plugin?
-        "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
+        "-Wall", /*"-Werror",*/ "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
     };
 
 
@@ -913,6 +913,7 @@ public:
 TEST(ClassParser, ClassComments) {
     std::string source = R"(
     #include <map>
+    #include <string>
     template<typename T>
     class MyTemplate{};
 
@@ -920,7 +921,7 @@ TEST(ClassParser, ClassComments) {
     class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
     public:
         void member_instance_functionA();
-        static void member_static_functionA();
+        static int member_static_functionA();
 
         /// comment on data_memberA
         int data_memberA;
@@ -940,12 +941,18 @@ TEST(ClassParser, ClassComments) {
             B(char const * string_name = "default string name");
 
             void member_instance_functionB();
-            static void member_static_functionB();
+            static std::string member_static_functionB();
 
             /// comment on data_memberB
             int data_memberB;
 
             virtual void virtual_function_in_B();
+
+            virtual void virtual_final_in_B() final;
+            virtual void virtual_final_in_C();
+
+            virtual void using_in_C();
+            V8TOOLKIT_SKIP virtual void using_in_C(char*);
         };
     } // end namespace NameSpace
     class V8TOOLKIT_BIDIRECTIONAL_CLASS C : public NameSpace::B {
@@ -953,6 +960,11 @@ TEST(ClassParser, ClassComments) {
 
         V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR
         C(int, char* &&){}
+
+        void virtual_final_in_C() override final;
+
+        using NameSpace::B::using_in_C;
+        void using_in_C() override;
 
         /**
           * member instance function C comment
@@ -973,7 +985,7 @@ TEST(ClassParser, ClassComments) {
         static void member_static_functionC(char * p1, int p2=4);
 
         /// comment on data_memberC
-        int data_memberC;
+        std::string data_memberC;
 
         // it's important that the return type and a parameter type have a comma in them
         V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
@@ -1001,7 +1013,9 @@ TEST(ClassParser, ClassComments) {
     output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_string_stream)));
 
     output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
-    output_modules.push_back(make_unique<JavascriptSubclassTemplateOutputModule>());
+
+    std::stringstream subclass_template_string_stream;
+    output_modules.push_back(make_unique<JavascriptSubclassTemplateOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(subclass_template_string_stream)));
 
     auto pruned_vector = run_code(source, std::move(output_modules), xl::json::Json(R"JSON(
 {
@@ -1021,7 +1035,147 @@ TEST(ClassParser, ClassComments) {
 )JSON"));
 
     EXPECT_FALSE(javascript_stub_string_stream.str().empty());
-    EXPECT_EQ(javascript_stub_string_stream.str(), "\nThis is the header\n\n\n/**\n * @class A\n * @property data_memberA comment on data_memberA\n */\nclass A\n{\n\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionA() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionA() {}\n} // end class A\n\n\n\n/**\n * This is a comment on class B\n * @class B\n * @property data_memberB comment on data_memberB\n */\nclass B\n{\n\n    /**\n     * Construct a B from a string\n     * @param {String} string_name the name for creating B with\n     */\n    constructor(string_name) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_instance_functionB() {}\n\n    /**\n     * @return {undefined} \n     */\n    virtual_function_in_B() {}\n\n    /**\n     * @return {undefined} \n     */\n    static member_static_functionB() {}\n} // end class B\n\n\n\n/**\n * @class C\n * @property data_memberB comment on data_memberB\n * @property data_memberC comment on data_memberC\n * @property int_ptr_read_only \n */\nclass C extends B\n{\n\n    /**\n     * @param {Number} unspecified_position_0 \n     * @param {String} unspecified_position_1 \n     */\n    constructor(unspecified_position_0, unspecified_position_1) {}\n\n    /**\n     * member instance function C comment\n     * @param {String} p1 some string parametere\n     * @param {Number} p2 some number parameter\n     * @return {Number} some number returned\n     */\n    member_instance_functionC(p1, p2) {}\n\n    /**\n     * @return {undefined} \n     */\n    member_function_no_params() {}\n\n    /**\n     * @param {Object.{Number, Number}} foo \n     * @return {Object.{Number, Number}} \n     */\n    this_is_a_virtual_function_js_name(foo) {}\n\n    /**\n     * @return {undefined} \n     */\n    DIFFERENT_JS_NAME() {}\n\n    /**\n     * static instance function C comment\n     * @param {String} p1 static some string parametere\n     * @param {Number} p2 static some number parameter\n     * @return {undefined} static some number returned\n     */\n    static member_static_functionC(p1, p2) {}\n} // end class C\n\n\n\n/**\n * @class d_int\n */\nclass d_int\n{\n\n    /**\n     */\n    constructor() {}\n\n\n} // end class d_int\n\n\n\n");
+
+std::string expected_stub_result = R"STUB(
+This is the header
+
+
+/**
+ * @class A
+ * @property {Number} data_memberA comment on data_memberA
+ */
+class A
+{
+
+
+    /**
+     * @return {undefined}
+     */
+    member_instance_functionA() {}
+
+    /**
+     * @return {Number}
+     */
+    static member_static_functionA() {}
+} // end class A
+
+
+
+/**
+ * This is a comment on class B
+ * @class B
+ * @property {Number} data_memberB comment on data_memberB
+ */
+class B
+{
+
+    /**
+     * Construct a B from a string
+     * @param {String} string_name the name for creating B with
+     */
+    constructor(string_name) {}
+
+    /**
+     * @return {undefined}
+     */
+    member_instance_functionB() {}
+
+    /**
+     * @return {undefined}
+     */
+    virtual_function_in_B() {}
+
+    /**
+     * @return {undefined}
+     */
+    virtual_final_in_B() {}
+
+    /**
+     * @return {undefined}
+     */
+    virtual_final_in_C() {}
+
+    /**
+     * @return {undefined}
+     */
+    using_in_C() {}
+
+    /**
+     * @return {String}
+     */
+    static member_static_functionB() {}
+} // end class B
+
+
+
+/**
+ * @class C
+ * @property {Number} data_memberB comment on data_memberB
+ * @property {String} data_memberC comment on data_memberC
+ * @property {MyTemplate} int_ptr_read_only
+ */
+class C extends B
+{
+
+    /**
+     * @param {Number} unspecified_position_0
+     * @param {String} unspecified_position_1
+     */
+    constructor(unspecified_position_0, unspecified_position_1) {}
+
+    /**
+     * member instance function C comment
+     * @param {String} p1 some string parametere
+     * @param {Number} p2 some number parameter
+     * @return {Number} some number returned
+     */
+    member_instance_functionC(p1, p2) {}
+
+    /**
+     * @return {undefined}
+     */
+    member_function_no_params() {}
+
+    /**
+     * @param {Object.{Number, Number}} foo
+     * @return {Object.{Number, Number}}
+     */
+    this_is_a_virtual_function_js_name(foo) {}
+
+    /**
+     * @return {undefined}
+     */
+    DIFFERENT_JS_NAME() {}
+
+    /**
+     * static instance function C comment
+     * @param {String} p1 static some string parametere
+     * @param {Number} p2 static some number parameter
+     * @return {undefined} static some number returned
+     */
+    static member_static_functionC(p1, p2) {}
+} // end class C
+
+
+
+/**
+ * @class d_int
+ */
+class d_int
+{
+
+    /**
+     */
+    constructor() {}
+
+
+} // end class d_int
+
+
+
+)STUB";
+
+    EXPECT_EQ(javascript_stub_string_stream.str(), expected_stub_result);
 
     EXPECT_FALSE(bindings_string_stream.str().empty());
     EXPECT_TRUE(xl::Regex("add_member<&A::data_memberA>\\(\"data_memberA\"\\)").match(bindings_string_stream.str()));
@@ -1042,6 +1196,9 @@ TEST(ClassParser, ClassComments) {
     auto ExpectedJscResult = R"(#pragma once
 
 #include "v8toolkit_generated_bidirectional_C.h"
+#include <__string>
+#include <iosfwd>
+#include <memory>
 #include <v8toolkit/bidirectional.h>
 
 class JSC : public C, public v8toolkit::JSWrapper<C> {
@@ -1053,10 +1210,64 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-    JS_ACCESS_0(void, virtual_function_in_B, virtual_function_in_B);
     JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
-};)";
-    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);}
+    JS_ACCESS_0(void, virtual_function_in_B, virtual_function_in_B);
+    JS_ACCESS_0(void, using_in_C, using_in_C);
+};
+)";
+    EXPECT_EQ(BidirectionalTestStreamProvider::class_outputs["JSC"].str(), ExpectedJscResult);
+
+    std::string expected_subclass_template = R"STUB(
+
+exports.create = function(exports, world_creation, base_type) {
+
+        return base_type.subclass(
+            // JavaScript prototype object
+            {
+                /**
+                 * @return {undefined}
+                 */
+                // virtual_function_in_B: ()=>{...IMPLEMENT ME...},
+                /**
+                 * @return {undefined}
+                 */
+                // virtual_final_in_C: ()=>{...IMPLEMENT ME...},
+                /**
+                 * @return {undefined}
+                 */
+                // using_in_C: ()=>{...IMPLEMENT ME...},
+                /**
+                 * @return {Object.{Number, Number}}
+                 */
+                // this_is_a_virtual_function_js_name: ()=>{...IMPLEMENT ME...},
+                /**
+                 * @return {String}
+                 */
+                // member_static_functionB: ()=>{...IMPLEMENT ME...},
+                /**
+                 * @return {undefined}
+                 */
+                // member_static_functionC: ()=>{...IMPLEMENT ME...},
+            },
+
+            // Per-object initialization
+           /**
+            * @property {Number} data_memberB
+            * @property {String} data_memberC
+            * @property {MyTemplate} int_ptr_read_only
+            */
+            function() {
+                // this.data_memberB = ...VALUE...;
+                // this.data_memberC = ...VALUE...;
+                // this.int_ptr_read_only = ...VALUE...;
+            }
+        ); // end base_type.subclass
+} // end create function
+)STUB";
+    EXPECT_EQ(subclass_template_string_stream.str(), expected_subclass_template);
+
+
+}
 
 
 

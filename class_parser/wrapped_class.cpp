@@ -327,7 +327,7 @@ vector<unique_ptr<MemberFunction>> const & WrappedClass::get_member_functions() 
 
 vector<unique_ptr<StaticFunction>> const & WrappedClass::get_static_functions() const {
     assert(this->methods_parsed);
-        return this->static_functions;
+    return this->static_functions;
 }
 
 
@@ -1156,7 +1156,8 @@ std::string WrappedClass::get_base_class_string() const {
 
 set<ClassFunction const *> WrappedClass::get_all_functions_from_class_hierarchy() const {
     set<ClassFunction const *> results;
-
+    assert(false);
+    throw ClassParserException("This isn't implemented");
     return results;
 }
 

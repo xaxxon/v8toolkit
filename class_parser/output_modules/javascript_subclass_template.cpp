@@ -74,7 +74,7 @@ struct JavascriptSubclassTemplateProviderContainer {
         c.foreach_inheritance_level([&](auto & c) {
             for(auto & f : c.get_member_functions()) {
 //                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
-                if (f->is_virtual && !f->is_virtual_override) {
+                if (f->is_virtual && !f->is_virtual_override && !f->is_virtual_final) {
                     virtual_functions.push_back(f.get());
                 }
             }
@@ -89,14 +89,16 @@ struct JavascriptSubclassTemplateProviderContainer {
 
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
             std::pair("virtual_functions", virtual_functions),
-            std::pair("data_members", std::ref((*c.base_types.begin())->get_members()))
+            std::pair("data_members", std::ref((*c.base_types.begin())->get_members())),
+            std::pair("data_members_2", std::ref((*c.base_types.begin())->get_members()))
         );
     }
 
 
     static ProviderPtr get_provider(ClassFunction const & f) {
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
-            std::pair("js_name", f.js_name)
+            std::pair("js_name", f.js_name),
+            std::pair("js_return_type", f.return_type.get_jsdoc_type_name())
         );
     }
 
@@ -104,7 +106,8 @@ struct JavascriptSubclassTemplateProviderContainer {
     static ProviderPtr get_provider(DataMember const & d) {
 
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
-            std::pair("js_name", d.js_name)
+            std::pair("js_name", d.js_name),
+            std::pair("js_type", d.type.get_jsdoc_type_name())
         );
     }
 
@@ -160,13 +163,20 @@ exports.create = function(exports, world_creation, base_type) {
             // JavaScript prototype object
             {
 {{<<virtual_functions|!!
+                /**
+                 * @return \{{{js_return_type}}\}
+                 */
                 // {{js_name}}: ()=>{...IMPLEMENT ME...},>>}}
             },
 
             // Per-object initialization
+           /**
+{{<<data_members_2|!!
+            * @property \{{{js_type}}\} {{js_name}}}}
+            */
             function() {
 {{<<data_members|!!
-                // {{js_name}}: ...VALUE...,>>}}
+                // this.{{js_name}} = ...VALUE...;>>}}
             }
         ); // end base_type.subclass
 } // end create function

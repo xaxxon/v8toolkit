@@ -678,6 +678,8 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
         if ((*a)->getKind() == attr::Kind::Final) {
 //            std::cerr << fmt::format("setting is_virtual_final = true") << std::endl;
             this->is_virtual_final = true;
+        } else {
+//            std::cerr << fmt::format("is_virtual_final = false") << std::endl;
         }
         if ((*a)->getKind() == attr::Kind::Override) {
 //            std::cerr << fmt::format("setting is_virtual_override= true") << std::endl;

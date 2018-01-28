@@ -161,7 +161,7 @@ Template class_template(R"(
  * {{<comment}}
  * @class {{name}}
 {{<data_members|!!
- * @property {{name}} {{comment}}}}
+ * @property \{{{type}}\} {{name}} {{<comment}}}}
  */
 class {{name}}{{inheritance}}
 {
@@ -177,7 +177,7 @@ Template constructor_template(R"(
     /**
      * {{<comment}}
 {{<parameters|!!
-     * @param \{{{type}}\} {{name}} {{comment}}}}
+     * @param \{{{type}}\} {{name}} {{<comment}}}}
      */
     constructor({{parameters%, |!{{name}}}}) {})");
 
@@ -194,8 +194,8 @@ Template member_function_template(R"(
     /**
      * {{<comment}}
 {{<parameters|!!
-     * @param \{{{type}}\} {{name}} {{comment}}}}
-     * @return \{{{return_type_name}}\} {{return_comment}}
+     * @param \{{{type}}\} {{name}} {{<comment}}}}
+     * @return \{{{return_type_name}}\} {{<<return_comment}}
      */
     {{name}}({{parameters%, |!{{name}}}}) {})");
 
@@ -204,8 +204,8 @@ Template static_function_template(R"(
     /**
      * {{<comment}}
 {{<parameters|!!
-     * @param \{{{type}}\} {{name}} {{comment}}}}
-     * @return \{{{return_type_name}}\} {{return_comment}}
+     * @param \{{{type}}\} {{name}} {{<comment}}}}
+     * @return \{{{return_type_name}}\} {{<<return_comment}}
      */
     static {{name}}({{parameters%, |!{{name}}}}) {})");
 

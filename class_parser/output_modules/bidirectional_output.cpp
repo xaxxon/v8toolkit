@@ -118,13 +118,28 @@ struct BidirectionalProviderContainer {
     static ProviderPtr get_provider(WrappedClass const & c) {
 
         std::vector<MemberFunction const *> virtual_functions;
-        c.foreach_inheritance_level([&](auto & current) {
+        std::set<std::string> functions_to_ignore;
+//        std::cerr << fmt::format("getting member functions for {}", c.class_name) << std::endl;
+
+        c.foreach_inheritance_level([&](WrappedClass const & current)->void {
+//            std::cerr << fmt::format("***** foreach inheritance level: {}", current.class_name) << std::endl;
             for(auto & f : current.get_member_functions()) {
-                if (f->is_virtual && !f->is_virtual_override) {
-                    virtual_functions.push_back(f.get());
+//                std::cerr << fmt::format(" - looking at {} ({}) - virtual: {} override: {} final: {}", f->name, (void*)f.get(), f->is_virtual, f->is_virtual_override, f->is_virtual_final) << std::endl;
+
+                if (f->is_virtual && !f->is_virtual_final && functions_to_ignore.count(f->get_short_name()) == 0) {
+                    if (!f->is_virtual_override) {
+//                        std::cerr << fmt::format("adding it") << std::endl;
+                        virtual_functions.push_back(f.get());
+                    } else {
+                        // if it's an override,
+                        // don't add it, but don't force it to be ignored when found later
+                    }
+                } else {
+//                    std::cerr << fmt::format("adding {} to names to ignore", f->get_short_name()) << std::endl;
+                    functions_to_ignore.insert(f->get_short_name());
                 }
             }
-        });
+        }, false);
 
 //
         log.info(LogSubjects::BidirectionalOutput, "virtual function count for {}: {}", c.get_js_name(), virtual_functions.size());
@@ -224,7 +239,8 @@ public:
 
 {{virtual_functions|!!
     JS_ACCESS_{{param_count}}{{const}}({{return_type}}, {{<name}}, {{js_name}}{{params%%, |!{{type}}}});}}
-};)");
+};
+)");
 
 
 std::map<string, Template> bidirectional_templates {
