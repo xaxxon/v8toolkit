@@ -14,6 +14,18 @@ struct CastToNative;
 
 
 
+template<typename T, typename = void>
+struct CallableWithFunctionCallbackInfo : public std::false_type {};
+
+template<typename T>
+struct CallableWithFunctionCallbackInfo<T, std::enable_if_t<std::is_same_v<
+    T, CastToNative<T>()(std::declval<v8::Isolate*>(), std::declval<v8::FunctionCallbackInfo<v8::Value> const &>())
+>>> : public std::true_type {};
+
+template<typename T>
+constexpr bool CallableWithFunctionCallbackInfo_v = CallableWithFunctionCallbackInfo<T>::value;
+
+
 template<class T, class = void>
 struct cast_to_native_supports_default_value : public std::false_type {};
 

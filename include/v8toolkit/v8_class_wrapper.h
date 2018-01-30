@@ -604,6 +604,8 @@ private:
 			static_cast<DefaultArgsTupleType *>(v8::Local<v8::External>::Cast(info.Data())->Value());
 
 		T * new_cpp_object = nullptr;
+
+		// Store a function which calls the constructor given the correct arguments
 		func::function<void(CONSTRUCTOR_PARAMETER_TYPES...)> constructor =
 				[&new_cpp_object](CONSTRUCTOR_PARAMETER_TYPES... info)->void{new_cpp_object = new T(std::forward<CONSTRUCTOR_PARAMETER_TYPES>(info)...);};
 
@@ -615,10 +617,18 @@ private:
 												  DefaultArgsTupleType(*default_args_tuple_ptr));
 
 		} catch(std::exception & e) {
-            log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "Exception while running C++ constructor for {}: {}",
-                        xl::demangle<T>(), e.what());
-			isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
-			return;
+
+			if constexpr(constructed_from_callback_info_v<T>) {
+				std::cerr << fmt::format("attempting CallbackInfo constructor because {}", e.what()) << std::endl;
+				new_cpp_object = new T(info);
+			} else {
+
+				log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION,
+						  "Exception while running C++ constructor for {}: {}",
+						  xl::demangle<T>(), e.what());
+				isolate->ThrowException(v8::String::NewFromUtf8(isolate, e.what()));
+				return;
+			}
 		}
 
 
@@ -1880,6 +1890,9 @@ struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<
 		return result;
 
     }
+
+
+
 };
 
 
@@ -2016,7 +2029,7 @@ struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T* operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 	    if (value->IsNullOrUndefined()) {
-			throw CastException("Cannot CastToNative null/undefined JavaScript value to {}*", xl::demangle<T>());
+			throw CastException("Cannot cast null/undefined object to {}*", xl::demangle<T>());
 		}
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		v8::Local<v8::Object> object = get_value_as<v8::Object>(isolate, value);
@@ -2186,6 +2199,11 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 					}
 				}
 			}
+            if constexpr(constructed_from_callback_info_v<NoConstRefT>) {
+                stuff.emplace_back(std::make_unique<Stuff<NoConstRefT>>(NoConstRefT(info)));
+                return std::forward<T>(*(static_cast<Stuff<NoConstRefT> &>(*stuff.back()).get()));
+
+            }
 			if constexpr(std::is_move_constructible_v<NoConstRefT> && CastToNative<NoConstRefT>::callable())
 			{
 				auto result = CastToNative<NoConstRefT>()(isolate, value);

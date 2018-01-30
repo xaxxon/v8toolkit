@@ -242,5 +242,18 @@ using acts_like_map = _acts_like_map<std::decay_t<T>>;
 template<typename T>
 constexpr bool acts_like_map_v = acts_like_map<T>::value;
 
+template<typename T, typename = void>
+struct constructed_from_callback_info : public std::false_type {};
+
+
+template<typename T>
+struct constructed_from_callback_info<T,
+    std::enable_if_t<std::is_constructible_v<T, v8::FunctionCallbackInfo<v8::Value> const &>>
+    > : public std::true_type {};
+
+template<typename T>
+constexpr bool constructed_from_callback_info_v = constructed_from_callback_info<T>::value;
+
+
 } // end namespace v8toolkit
 

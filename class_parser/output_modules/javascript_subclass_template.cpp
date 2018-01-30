@@ -80,12 +80,13 @@ struct JavascriptSubclassTemplateProviderContainer {
             }
         });
 
-        c.foreach_inheritance_level([&](auto & c) {
-            for(auto & f : c.get_static_functions()) {
-//                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
-                virtual_functions.push_back(f.get());
-            }
-        });
+        // static functions shouldn't be included
+//        c.foreach_inheritance_level([&](auto & c) {
+//            for(auto & f : c.get_static_functions()) {
+////                std::cerr << fmt::format("{} virtual: {} static: {}", f->name, f->is_virtual, f->is_static) << std::endl;
+//                virtual_functions.push_back(f.get());
+//            }
+//        });
 
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
             std::pair("virtual_functions", virtual_functions),

@@ -294,13 +294,10 @@ void ClassHandler::onStartOfTranslationUnit() {
 
 void ClassHandler::onEndOfTranslationUnit() {
 
-
-
     log.info(LogSubjects::Subjects::ClassParser, "onEndOfTranslationUnit");
     log.info(LogSubjects::Subjects::ClassParser, "Processed total of {} classes from ASTMatchers", matched_classes_returned);
 
     log.info(LogT::Subjects::ClassParser, ",wrapped classes size: {}", WrappedClass::wrapped_classes.size());
-
 
     vector<WrappedClass const *> const should_be_wrapped_classes = [&] {
         vector<WrappedClass const *> results;

@@ -44,6 +44,15 @@ public:
     WrappedClass(int i) : constructor_i(i) {};
     WrappedClass(WrappedClass &&) = default;
     WrappedClass(WrappedClass const &) = delete;
+    WrappedClass(v8::FunctionCallbackInfo<v8::Value> const & info) {
+//        std::cerr << fmt::format("IN CALLBACK INFO CONSTRUCTOR") << std::endl;
+        if (info.Length() == 1 && info[0]->IsNumber()) {
+            this->constructor_i = CastToNative<int>()(info.GetIsolate(), info[0]);
+//            std::cerr << fmt::format("set constructor_i = {}", this->constructor_i) << std::endl;
+        } else {
+            throw CastException("Invalid parameters to WrappedClass constructor taking FunctionCallbackInfo object");
+        }
+    }
     virtual ~WrappedClass(){}
 
     int constructor_i;
@@ -63,6 +72,10 @@ public:
     int takes_const_int_6(int const x) const {
         EXPECT_EQ(x, 6);
         return x;
+    }
+
+    void takes_wrapped_class(WrappedClass const & wc) const {
+//        std::cerr << fmt::format("in takes wrapped class") << std::endl;
     }
 
     WrappedClass returns_uncopyable_type_by_value() {
@@ -161,6 +174,7 @@ public:
         {
             auto & w = V8ClassWrapper<WrappedClass>::get_instance(*i);
             w.add_member<&WrappedClass::i>("i");
+            w.add_member<&WrappedClass::constructor_i>("constructor_i");
             w.add_member<&WrappedClass::ci>("ci");
             w.add_member<&WrappedClass::upf>("upf");
             w.add_member<&WrappedClass::cupf>("cupf");
@@ -169,10 +183,11 @@ public:
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
 	    
-	    w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
-	    w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
+	        w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
+	        w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
 
-	    w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+            w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
+            w.add_method("takes_wrapped_class", &WrappedClass::takes_wrapped_class);
             w.add_method("takes_const_wrapped_ref", &WrappedClass::takes_const_wrapped_ref);
             w.add_static_method("takes_isolate_and_int", &WrappedClass::takes_isolate_and_int, std::tuple<int>(3));
             w.add_method("takes_this", &WrappedClass::takes_this);
@@ -264,6 +279,10 @@ TEST_F(WrappedClassFixture, Accessors) {
 
             c->run("EXPECT_TRUE(new WrappedClass(3).upf == 3.5)");
             c->run("EXPECT_TRUE(new WrappedClass(4).cupf == 4.5)");
+
+            c->run("{let wc = new WrappedClass(\"5\");  EXPECT_TRUE(wc.constructor_i == 5)}");
+
+            c->run("{let wc = new WrappedClass(\"5\");  wc.takes_wrapped_class(1);}");
         }
     });
 }
@@ -582,7 +601,7 @@ TEST_F(WrappedClassFixture, StaticMethodDefaultValue) {
     c->run("WrappedClass.inline_static_method();");
     c->run("WrappedClass.inline_static_method();");
 
-    c->run("print(WrappedClass.static_int)");
+//    c->run("print(WrappedClass.static_int)");
 
     c->run("EXPECT_TRUE(WrappedClass.static_int == 1)");
 }
@@ -645,13 +664,4 @@ TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
         EXPECT_THROW(CastToNative<WrappedClass>()(c->isolate, wrapped_class2.Get(isolate)), CastException);
     });
 }
-
-TEST_F(WrappedClassFixture, Bidirectional) {
-    auto isolate = c->isolate;
-    (*c)([&]() {
-
-
-
-    });
-
 

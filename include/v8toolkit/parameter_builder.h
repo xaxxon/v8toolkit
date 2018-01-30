@@ -163,15 +163,19 @@ struct ParameterBuilder<T*, std::enable_if_t<is_wrapped_type_v<T> >
                 return wrapped_pointer;
 
             } else if constexpr(CastToNative<WrappedT>::callable()) {
-                stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
-                return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
+                if constexpr(CallableWithFunctionCallbackInfo_v<WrappedT>) {
+                    stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info)));
+                    return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
+                } else {
+                    stuff.push_back(Stuff<WrappedT>::stuffer(CastToNative<WrappedT>()(info.GetIsolate(), info[i++])));
+                    return static_cast<Stuff<WrappedT> &>(*stuff.back()).get();
+                }
             } else {
                 throw CastException("Tried to send a pointer to a function but the JavaScript object wasn't a wrapped "
                                         "C++ object and a new object couldn't be created from the JavaScript value provided");
             }
         }
     }
-
 };
 
 
@@ -204,7 +208,7 @@ struct ParameterBuilder<T, std::enable_if_t<
 
             return std::get<(std::size_t) default_arg_position>(default_args_tuple);
         } else {
-            throw CastException("Not enough parameters and no default value for {}", xl::demangle<T>());
+            throw CastException("Not enough parameters - looking for at least {} but got {}, and no default value for {}", i, info.Length(), xl::demangle<T>());
         }
     }
 
