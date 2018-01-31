@@ -926,8 +926,8 @@ public:
      *   set_compatible_types<>()
      */
     template<class ParentType>
-    std::enable_if_t<std::is_base_of<ParentType, T>::value>
-    set_parent_type() {
+    void set_parent_type() {
+        static_assert(std::is_base_of_v<ParentType, T>, "ParentType is not parent of type");
 		assert(!is_finalized());
 
 		using ConstT = std::add_const_t<T>;
@@ -1244,9 +1244,9 @@ public:
 
     template<class MemberType,
 		class MemberClass, 	// allow members from parent types of T
-		MemberType (MemberClass::*member),
-		std::enable_if_t<std::is_base_of<MemberClass, T>::value, int> = 0>
+		MemberType (MemberClass::*member)>
 	void add_member_readonly(std::string const & member_name) {
+		static_assert(std::is_base_of_v<MemberClass, T>, "Data member class isn't in inheritance hierarchy of type");
 		this->add_member_readonly<member>(member_name);
 	}
 
@@ -1254,7 +1254,7 @@ public:
 	void add_member_readonly(std::string const & member_name) {
 
 	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
-	    if constexpr(!std::is_const<T>::value && is_wrapped_type_v<std::add_const_t<T>>) {
+	    if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
 		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<member>(member_name);
 	    }
 
@@ -1275,10 +1275,10 @@ public:
 	 * The specified function will be called when the JavaScript object is called like a function
 	 * @param method function to call
 	 */
-	template<class R, class TBase, class... Args,
-			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+	template<class R, class TBase, class... Args>
 	void make_callable(R(TBase::*method)(Args...))
 	{
+		static_assert(std::is_base_of_v<TBase, T>, "Member function type not from inheritance hierarchy");
 	    _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
 	}
 
@@ -1286,11 +1286,11 @@ public:
  * The specified function will be called when the JavaScript object is called like a function
  * @param method function to call
  */
-    template<class R, class TBase, class... Args,
-        std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    template<class R, class TBase, class... Args>
     void make_callable(R(TBase::*method)(Args...) const)
     {
-        _add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
+		static_assert(std::is_base_of_v<TBase, T>, "Member function type not from inheritance hierarchy");
+		_add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
     }
 
 
@@ -1302,9 +1302,9 @@ public:
 	 * @param method member instance function pointer
 	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
 	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
       void add_method(const std::string & method_name, R(TBase::*method)(Args...) const, DefaultArgs const & default_args = DefaultArgs()) {
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
         if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
         }
@@ -1317,9 +1317,9 @@ public:
 	 * @param method member instance function pointer
 	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
 	 */
-    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
+	void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
      	if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
             V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
         }
@@ -1333,10 +1333,10 @@ public:
 	 * @param method member ignored
 	 * @param default_args ignored
 	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
-      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&, DefaultArgs const & default_args = DefaultArgs()) {
-        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
+	void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&, DefaultArgs const & default_args = DefaultArgs()) {
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
+        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "r-value qualified member functions are not supported");
     }
 
 
@@ -1346,10 +1346,10 @@ public:
 	 * @param method member instance function pointer
 	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
 	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-			 std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
 	void add_method(const std::string & method_name, R(TBase::*method)(Args...), DefaultArgs const & default_args = DefaultArgs())
 	{
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
 		_add_method(method_name, method, TypeList<Args...>(), default_args);
 	}
 
@@ -1359,10 +1359,10 @@ public:
 	 * @param method member instance function pointer
 	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
 	 */
-    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
     void add_method(const std::string & method_name, R(TBase::*method)(Args...) &, DefaultArgs const & default_args = DefaultArgs())
     {
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
 		_add_method(method_name, method, TypeList<Args...>(), default_args);
     }
 
@@ -1373,11 +1373,11 @@ public:
 	 * @param method member ignored
 	 * @param default_args ignored
 	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>,
-            std::enable_if_t<std::is_base_of<TBase, T>::value, int> = 0>
+	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
     void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&, DefaultArgs const & default_args = DefaultArgs())
     {
-        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
+		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
+		static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
     }
 
 
