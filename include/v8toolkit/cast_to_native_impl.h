@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include <xl/demangle.h>
 
 #include "cast_to_native.h"
@@ -538,6 +540,25 @@ struct CastToNative<T, std::enable_if_t<xl::is_template_for_v<std::optional, T>>
             return {};
         } else {
             return CastToNative<typename T::value_type>()(isolate, value);
+        }
+    }
+};
+
+
+template<typename T>
+struct CastToNative<T, std::enable_if_t<xl::is_template_for_v<std::chrono::duration, T>>> {
+    using DurationRepresentation = typename T::rep;
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+        // if it's a nu mber, assume it's in seconds
+        if (value->IsNumber()) {
+            return T(CastToNative<DurationRepresentation>()(isolate, value) / DurationRepresentation(1000));
+        }
+        // if it's an object, assume it's a
+        else if (value->IsObject()) {
+            v8::Local<v8::Date> date = v8::Local<v8::Date>::Cast(value);
+            return T(DurationRepresentation(date->ValueOf() / DurationRepresentation(1000)));
+        } else {
+            throw CastException("CastToNative chrono::duration must have either a number or a JavaScript Date object");
         }
     }
 };
