@@ -397,7 +397,6 @@ TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfig) {
             int name_two;
         };
     )";
-
     environment->expect_errors();
     auto pruned_vector = run_code(source, {}, xl::json::Json(R"JSON(
 {
@@ -473,7 +472,7 @@ TEST(ClassParser, JSDocTypeNames) {
 
         struct A : public v8toolkit::WrappedClassBase {
           public:
-            std::vector<int> & do_something(int & i){static std::vector<int> v; return v;}
+            std::vector<int*> & do_something(int & i){static std::vector<int *> v; return v;}
             B & b_func(B & b1, B && b2){return b1;}
         };
     )";
@@ -490,7 +489,7 @@ TEST(ClassParser, JSDocTypeNames) {
 
     EXPECT_EQ(mf.parameters.size(), 1);
     EXPECT_EQ(mf.parameters[0].type.get_jsdoc_type_name(), "Number");
-    EXPECT_EQ(mf.return_type.get_jsdoc_type_name(), "Array.{Number}");
+    EXPECT_EQ(mf.return_type.get_jsdoc_type_name(), "Array.Number");
 
     EXPECT_EQ(mf2.parameters.size(), 2);
     EXPECT_EQ(mf2.return_type.get_jsdoc_type_name(), "B");
@@ -914,6 +913,7 @@ TEST(ClassParser, ClassComments) {
     std::string source = R"(
     #include <map>
     #include <string>
+    #include <vector>
     template<typename T>
     class MyTemplate{};
 
@@ -998,7 +998,8 @@ TEST(ClassParser, ClassComments) {
     };
 
     template<typename T>
-        class D : public v8toolkit::WrappedClassBase {
+    class D : public v8toolkit::WrappedClassBase {
+//        std::vector<int *> returns_vector_of_int_pointers;
     };
     using d_int V8TOOLKIT_NAME_ALIAS = D<int>;
     D<int> d;
@@ -1024,13 +1025,13 @@ TEST(ClassParser, ClassComments) {
             "header": "This is the header"
         }
     }
-    "classes": {
-        "DuplicateFunctionNameClass": {
-            "members": {
-
-            }
-        }
-    }
+//    "classes": {
+//        "DuplicateFunctionNameClass": {
+//            "members": {
+//
+//            }
+//        }
+//    }
 }
 )JSON"));
 
@@ -1240,14 +1241,6 @@ exports.create = function(exports, world_creation, base_type) {
                  * @return {Object.{Number, Number}}
                  */
                 // this_is_a_virtual_function_js_name: ()=>{...IMPLEMENT ME...},
-                /**
-                 * @return {String}
-                 */
-                // member_static_functionB: ()=>{...IMPLEMENT ME...},
-                /**
-                 * @return {undefined}
-                 */
-                // member_static_functionC: ()=>{...IMPLEMENT ME...},
             },
 
             // Per-object initialization

@@ -162,10 +162,11 @@ string TypeInfo::get_jsdoc_type_name(std::string const & indentation) const {
                 "Template being specialized couldn't be cast to class template spec decl (shouldn't happen)");
         }
 
+
+        // convert the potentially templated type
         specialized_template_name = this->convert_simple_typename_to_jsdoc(specialized_template_name, indentation);
 
-
-        // go through each capturing match and...
+        // then insert any remaining substitutions for templated type parameters
         for (size_t i = 0; i < template_type_jsdoc_conversions.size(); i++) {
             // look for $1, $2, etc in replacement and substitute in the matching position
             specialized_template_name = std::regex_replace(specialized_template_name,

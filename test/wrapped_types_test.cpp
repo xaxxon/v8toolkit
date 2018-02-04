@@ -82,6 +82,10 @@ public:
         return WrappedClass{4};
     }
 
+    std::vector<int *> returns_vector_of_ints() {
+        return {};
+    };
+
     bool default_parameters_called = false;
     void default_parameters(int j = 1,
                             char const * s = "asdf",
@@ -196,7 +200,7 @@ public:
             w.add_method("returns_uncopyable_type_by_value", &WrappedClass::returns_uncopyable_type_by_value);
             w.add_method("returns_unique_ptr_wrapped_class", &WrappedClass::returns_unique_ptr_wrapped_class);
             w.add_method("returns_const_ref_to_own_type", &WrappedClass::returns_const_ref_to_own_type);
-
+            w.add_method("returns_vector_of_ints", &WrappedClass::returns_vector_of_ints);
             w.add_method("default_parameters", &WrappedClass::default_parameters,
                          std::tuple<
                              int,
