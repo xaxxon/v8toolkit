@@ -191,11 +191,9 @@ public:
         while (this->paused) {
             this->web_socket_service.run_one();
         }
-        std::cerr << fmt::format("exiting runMessageLoopOnPause") << std::endl;
     }
 
     virtual void quitMessageLoopOnPause() override {
-        std::cerr << fmt::format("quitMessageLoopOnPause, setting paused=false") << std::endl;
         this->paused = false;
     }
 
