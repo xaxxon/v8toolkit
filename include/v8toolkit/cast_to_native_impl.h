@@ -428,14 +428,33 @@ struct CastToNative<T, std::enable_if_t<acts_like_map_v<T>>> {
         auto context = isolate->GetCurrentContext();
 
         NonConstT results;
-        for_each_own_property(context, value->ToObject(),
-                              [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
-                                  v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value) {
-                                      results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
-                                                      v8toolkit::CastToNative<ValueT>()(isolate, sub_value));
+
+        if (value->IsMap()) {
+            v8::Local<v8::Map> map = v8::Local<v8::Map>::Cast(value);
+            auto map_data_array = map->AsArray();
+
+            for(int i = 0; i < map_data_array->Length() / 2; i++) {
+                auto key = map_data_array->Get(i * 2);
+                auto sub_value = map_data_array->Get(i * 2 + 1);
+
+                v8toolkit::for_each_value(context, sub_value, [&](v8::Local<v8::Value> array_value) {
+
+                    results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
+                                    v8toolkit::CastToNative<ValueT>()(isolate, array_value));
+                });
+            }
+
+        } else {
+            for_each_own_property(context, value->ToObject(),
+                                  [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
+                                      v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value) {
+                                          results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
+                                                          v8toolkit::CastToNative<ValueT>()(isolate, sub_value));
+                                      });
                                   });
-                              });
+        }
         return results;
+
     }
     static constexpr bool callable(){return true;}
 
@@ -446,7 +465,7 @@ ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolat
 
     if (!value->IsObject()) {
         throw CastException(
-            fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
+            fmt::format("Javascript Object type must be passed in to convert to std::multimap - instead got {}",
                         stringify_value(isolate, value)));
     }
 
@@ -476,7 +495,7 @@ ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolat
 //    static constexpr bool callable(){return true;}
 //
 //};
-//
+
 
 
 

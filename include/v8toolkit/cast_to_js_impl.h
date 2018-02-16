@@ -134,6 +134,9 @@ struct CastToJS<v8::Global<T>> {
 };
 
 
+
+
+
 // CastToJS<std::pair<>>
 template<typename T>
 struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::pair, T>>> {
@@ -156,7 +159,7 @@ template<typename T>
 v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, T map) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
-    auto object = v8::Object::New(isolate);
+    auto object = v8::Map::New(isolate);
 
     using NoRefT = std::remove_reference_t<T>;
 
@@ -210,31 +213,26 @@ struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::vector, T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & vector) const {
         return cast_to_js_vector_helper<NoRefT const &>(isolate, vector);
     }
-
-
-//
-//
-//    template<class T, class... Rest>
-//    v8::Local<v8::Value>
-//    CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> const & vector) {
-//        return cast_to_js_vector_helper<std::vector, T &, Rest...>(isolate, vector);
-//    }
-//
-//    template<class T, class... Rest>
-//    v8::Local<v8::Value>
-//    CastToJS<std::vector<T, Rest...>>::operator()(v8::Isolate * isolate, std::vector<T, Rest...> && vector) {
-//        return cast_to_js_vector_helper<std::vector, T &&, Rest...>(isolate, vector);
-//    }
-
 };
 
 
 // CastToJS<std::list>
-template<class U, class... Rest>
-struct CastToJS<std::list<U, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U, Rest...> & list);
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::list, T>>> {
+    using NoRefT = std::remove_reference_t<T>;
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & list) {
+            assert(isolate->InContext());
+            auto context = isolate->GetCurrentContext();
+            auto array = v8::Array::New(isolate);
+            int i = 0;
+            for (auto & element : list) {
+                (void) array->Set(context, i, CastToJS<typename NoRefT::value_type>()(isolate, element));
+                i++;
+            }
+            return array;
+    }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::list<U, Rest...> && list) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && list) {
         return this->operator()(isolate, list);
     }
 };
@@ -242,53 +240,131 @@ struct CastToJS<std::list<U, Rest...>> {
 // CastToJS<std::map>
 template<typename T>
 struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::map, T>>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & map) {
+    using NoRefT = std::remove_reference_t<T>;
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & map) {
         return cast_to_js_map_helper<T>(isolate, map);
     }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && map) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && map) {
         return cast_to_js_map_helper<T>(isolate, map);
     }
 
 };
 
-// CastToJS<std::multimap>
-template<class A, class B, class... Rest>
-struct CastToJS<std::multimap<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> & multimap);
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> && multimap) {
+
+
+
+template<template<class, class, class...> class MultiMapLike, class A, class B, class... Rest>
+v8::Local<v8::Object> casttojs_multimaplike(v8::Isolate * isolate, MultiMapLike<A, B, Rest...> const & multimap) {
+    assert(isolate->InContext());
+    auto context = isolate->GetCurrentContext();
+    auto map = v8::Map::New(isolate);
+    for (auto & pair : multimap) {
+        auto key = CastToJS<A>()(isolate, const_cast<A &>(pair.first));
+        auto value = CastToJS<B>()(isolate, const_cast<B &>(pair.second));
+
+        // check to see if a value with this key has already been added
+        bool default_value = true;
+        bool map_has_key = map->Has(context, key).FromMaybe(default_value);
+        if (!map_has_key) {
+            // get the existing array, add this value to the end
+            auto array = v8::Array::New(isolate);
+            (void) array->Set(context, 0, value);
+            (void) map->Set(context, key, array);
+        } else {
+            // create an array, add the current value to it, then add it to the object
+            auto existing_array_value = map->Get(context, key).ToLocalChecked();
+            v8::Handle<v8::Array> existing_array = v8::Local<v8::Array>::Cast(existing_array_value);
+
+            //find next array position to insert into (is there no better way to push onto the end of an array?)
+//            int i = 0;
+//            while (existing_array->Has(context, i).FromMaybe(default_value)) { i++; }
+            (void) existing_array->Set(context, existing_array->Length(), value);
+        }
+    }
+    return map;
+}
+
+
+
+
+// CastToJS<std::multimap>
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::multimap, T>>> {
+    using NoRefT = std::remove_reference_t<T>;
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT & multimap) {
+        return casttojs_multimaplike(isolate, multimap);
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && multimap) {
         return this->operator()(isolate, multimap);
     }
 };
 
 
 // CastToJS<std::undordered:map>
-template<class A, class B, class... Rest>
-struct CastToJS<std::unordered_map<A, B, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> & unorderedmap);
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::unordered_map, T>>> {
+    using NoRefT = std::remove_reference_t<T>;
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unordered_map<A, B, Rest...> && unorderedmap) {
-        return this->operator()(isolate, unorderedmap);
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT & unordered_map) {
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto object = v8::Map::New(isolate);
+        for (auto pair : unordered_map) {
+            (void) object->Set(context,
+                               CastToJS<typename NoRefT::key_type &>()(isolate, pair.first),
+                               CastToJS<typename NoRefT::mapped_type &>()(isolate, pair.second));
+        }
+        return object;
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && unordered_map) {
+        return this->operator()(isolate, unordered_map);
     }
 };
 
 // CastToJS<std::deque>
-template<class T, class... Rest>
-struct CastToJS<std::deque<T, Rest...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T, Rest...> & deque);
+template<class T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::deque, T>>> {
+    using NoRefT = std::remove_reference_t<T>;
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::deque<T, Rest...> && deque) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT & deque) {
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        auto size = deque.size();
+        for (unsigned int i = 0; i < size; i++) {
+            (void) array->Set(context, i, CastToJS<typename NoRefT::value_type>()(isolate, deque[i]));
+        }
+        return array;
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && deque) {
         return this->operator()(isolate, deque);
     }
 };
 
 // CastToJS<std::array>
-template<class T, std::size_t N>
-struct CastToJS<std::array<T, N>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::array<T, N> & arr);
+template<class T>
+struct CastToJS<T, std::enable_if_t<xl::is_std_array_v<T>>> {
+    using NoRefT = std::remove_reference_t<T>;
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::array<T, N> && arr) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT & arr) {
+        assert(isolate->InContext());
+        auto context = isolate->GetCurrentContext();
+        auto array = v8::Array::New(isolate);
+        // auto size = arr.size();
+        for (unsigned int i = 0; i < arr.size(); i++) {
+            (void) array->Set(context, i, CastToJS<typename NoRefT::value_type>()(isolate, arr[i]));
+        }
+        return array;
+    }
+
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT && arr) {
         return this->operator()(isolate, arr);
     }
 };
@@ -358,162 +434,34 @@ struct CastToJS<std::shared_ptr<T>> {
 
 
 
-/**
-* supports lists containing any type also supported by CastToJS to javascript arrays
-*/
-template<class T, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::list<T, Rest...>>::operator()(v8::Isolate * isolate, std::list<T, Rest...> & list) {
+template<typename... Args, size_t... Is>
+v8::Local<v8::Array> cast_tuple_to_js(v8::Isolate * isolate, std::tuple<Args...> const & tuple, std::index_sequence<Is...>) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
-    auto array = v8::Array::New(isolate);
-    int i = 0;
-    for (auto & element : list) {
-        (void) array->Set(context, i, CastToJS<T>()(isolate, element));
-        i++;
-    }
+    v8::Local<v8::Array> array = v8::Array::New(isolate);
+    ((void)array->Set(context, Is, CastToJS<Args>()(isolate, std::get<Is>(tuple))),...);
     return array;
 }
 
 
-template<template<class, class, class...> class MultiMapLike, class A, class B, class... Rest>
-v8::Local<v8::Object> casttojs_multimaplike(v8::Isolate * isolate, MultiMapLike<A, B, Rest...> const & map) {
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto object = v8::Object::New(isolate);
-    for (auto & pair : map) {
-        auto key = CastToJS<A>()(isolate, const_cast<A &>(pair.first));
-        auto value = CastToJS<B>()(isolate, const_cast<B &>(pair.second));
 
-        // check to see if a value with this key has already been added
-        bool default_value = true;
-        bool object_has_key = object->Has(context, key).FromMaybe(default_value);
-        if (!object_has_key) {
-            // get the existing array, add this value to the end
-            auto array = v8::Array::New(isolate);
-            (void) array->Set(context, 0, value);
-            (void) object->Set(context, key, array);
-        } else {
-            // create an array, add the current value to it, then add it to the object
-            auto existing_array_value = object->Get(context, key).ToLocalChecked();
-            v8::Handle<v8::Array> existing_array = v8::Handle<v8::Array>::Cast(existing_array_value);
+template<typename T>
+struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::tuple, T>>> {
 
-            //find next array position to insert into (is there no better way to push onto the end of an array?)
-            int i = 0;
-            while (existing_array->Has(context, i).FromMaybe(default_value)) { i++; }
-            (void) existing_array->Set(context, i, value);
-        }
+private:
+
+    // private helper gets a parameter pack of the types in the tuple to fold over
+    template<typename... Args>
+    v8::Local<v8::Value> private_helper(v8::Isolate * isolate, std::tuple<Args...> const & tuple) {
+        return cast_tuple_to_js(isolate, tuple, std::index_sequence_for<Args...>());
     }
-    return object;
-}
 
-/**
-* supports maps containing any type also supported by CastToJS to javascript arrays
-* It creates an object of key => [values...]
-* All values are arrays, even if there is only one value in the array.
-*/
-template<class A, class B, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::multimap<A, B, Rest...>>::operator()(v8::Isolate * isolate, std::multimap<A, B, Rest...> & map) {
-    return casttojs_multimaplike(isolate, map);
-}
-
-
-
-
-template<int position, class T>
-struct CastTupleToJS;
-
-template<class... Args>
-struct CastTupleToJS<0, std::tuple<Args...>> {
-    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple) {
-        constexpr const int array_position = sizeof...(Args) - 0 - 1;
-
-        assert(isolate->InContext());
-        auto context = isolate->GetCurrentContext();
-        auto array = v8::Array::New(isolate);
-        using TuplePositionType = typename std::tuple_element_t<array_position, std::tuple<Args...>>;
-
-        (void) array->Set(context,
-                          array_position,
-                          CastToJS<TuplePositionType>()(isolate,
-                                                        std::get<array_position>(tuple)));
-        return array;
+public:
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & tuple) {
+        return private_helper(isolate, tuple);
     }
 };
 
-template<int position, class... Args>
-struct CastTupleToJS<position, std::tuple<Args...>> {
-    v8::Local<v8::Array> operator()(v8::Isolate * isolate, std::tuple<Args...> & tuple) {
-        constexpr const int array_position = sizeof...(Args) - position - 1;
-        using TuplePositionType = typename std::tuple_element_t<array_position, std::tuple<Args...>>;
-
-        assert(isolate->InContext());
-        auto context = isolate->GetCurrentContext();
-        auto array = CastTupleToJS<position - 1, std::tuple<Args...>>()(isolate, tuple);
-        (void) array->Set(context,
-                          array_position,
-                          CastToJS<TuplePositionType>()(isolate,
-                                                        std::get<array_position>(tuple)));
-        return array;
-    }
-};
-
-
-template<class... Args>
-struct CastToJS<std::tuple<Args...>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::tuple<Args...> tuple) {
-        return CastTupleToJS<sizeof...(Args) - 1, std::tuple<Args...>>()(isolate, tuple);
-    }
-};
-
-
-/**
-* supports unordered_maps containing any type also supported by CastToJS to javascript arrays
-*/
-template<class A, class B, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::unordered_map<A, B, Rest...>>::operator()(v8::Isolate * isolate,
-                                                        std::unordered_map<A, B, Rest...> & map) {
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto object = v8::Object::New(isolate);
-    for (auto pair : map) {
-        (void) object->Set(context, CastToJS<A &>()(isolate, pair.first), CastToJS<B &>()(isolate, pair.second));
-    }
-    return object;
-}
-
-
-/**
-* supports deques containing any type also supported by CastToJS to javascript arrays
-*/
-template<class T, class... Rest>
-v8::Local<v8::Value>
-CastToJS<std::deque<T, Rest...>>::operator()(v8::Isolate * isolate, std::deque<T, Rest...> & deque) {
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto array = v8::Array::New(isolate);
-    auto size = deque.size();
-    for (unsigned int i = 0; i < size; i++) {
-        (void) array->Set(context, i, CastToJS<T>()(isolate, deque.at(i)));
-    }
-    return array;
-}
-
-
-template<class T, std::size_t N>
-v8::Local<v8::Value>
-CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> & arr) {
-    assert(isolate->InContext());
-    auto context = isolate->GetCurrentContext();
-    auto array = v8::Array::New(isolate);
-    // auto size = arr.size();
-    for (unsigned int i = 0; i < N; i++) {
-        (void) array->Set(context, i, CastToJS<T>()(isolate, arr[i]));
-    }
-    return array;
-}
 
 
 
@@ -525,11 +473,11 @@ CastToJS<std::array<T, N>>::operator()(v8::Isolate * isolate, std::array<T, N> &
 
 template<class T>
 struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::set, T>>> {
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & set) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<T> const & set) {
         return cast_to_js_vector_helper<T>(isolate, set);
     }
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && set) {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<T> && set) {
         return cast_to_js_vector_helper<T>(isolate, set);
     }
 };

@@ -304,19 +304,19 @@ TEST_F(JavaScriptFixture, Maps) {
         {
             std::map<std::string, int> m{{"a", 1}, {"b", 2},{"c", 3}};
             c->add_variable("m", CastToJS<decltype(m)>()(*i, m));
-            c->run("assert_contents(m, {a: 1, b: 2, c: 3})");
+            c->run("assert_contents(m, new Map([['a', 1], ['b', 2], ['c', 3]]))");
         }
         // cast const map to js
         {
             std::map<std::string, int> const cm{{"a", 1}, {"b", 2}, {"c", 3}};
             c->add_variable("cm", CastToJS<decltype(cm)>()(*i, cm));
-            c->run("assert_contents(cm, {a: 1, b: 2, c: 3})");
+            c->run("assert_contents(cm, new Map([['a', 1], ['b', 2], ['c', 3]]))");
         }
         // cast const map to js
         {
             std::map<std::string, int> m{{"a", 1}, {"b", 2},{"c", 3}};
             c->add_variable("m", CastToJS<decltype(m)>()(*i, std::move(m)));
-            c->run("assert_contents(m, {a: 1, b: 2, c: 3})");
+            c->run("assert_contents(m, new Map([['a', 1], ['b', 2], ['c', 3]]))");
         }
 
         {
@@ -370,24 +370,31 @@ TEST_F(JavaScriptFixture, ContainerTypes) {
         c->add_variable("l", CastToJS<decltype(l)>()(*i, l));
         c->run("assert_contents(l, [1.5, 2.5, 3.5, 4.5]);");
 
-        std::map<std::string, int> m{{"one", 1},{"two", 2},{"three", 3}};
+        std::map<std::string, int> m{{"one", 1}, {"two", 2}, {"three", 3}};
         c->add_variable("m", CastToJS<decltype(m)>()(*i, m));
-        c->run("assert_contents(m, {'one': 1, 'two': 2, 'three': 3});");
+        c->run("assert_contents(m, new Map([['one', 1], ['two', 2], ['three', 3]]));");
 
-        std::map<std::string, int> m2{{"four", 4},{"five", 5},{"six", 6}};
+        std::map<std::string, int> m2{{"four", 4}, {"five", 5}, {"six", 6}};
         c->add_variable("m2", CastToJS<decltype(m2)>()(*i, m2));
-        c->run("assert_contents(m2, {'four': 4, 'five': 5, 'six': 6});");
+        c->run("assert_contents(m2, new Map([['four', 4], ['five', 5], ['six', 6]]));");
 
-        std::deque<long> d{7000000000, 8000000000, 9000000000};
-        c->add_variable("d", CastToJS<decltype(d)>()(*i, d));
-        c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
+        {
+            std::deque<long> d{7000000000, 8000000000, 9000000000};
+            c->add_variable("d", CastToJS<decltype(d)>()(*i, d));
+            c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
+        }
+        {
+            std::deque<long> d{7000000000, 8000000000, 9000000000};
+            c->add_variable("d", CastToJS<decltype(d) const>()(*i, d));
+            c->run("assert_contents(d, [7000000000, 8000000000, 9000000000]);");
+        }
 
-        std::multimap<string, int> mm{{"a",1},{"a",2},{"a",3},{"b",4},{"c",5},{"c",6}};
+        std::multimap<string, int> mm{{"a",1}, {"a",2}, {"a",3}, {"b",4}, {"c",5}, {"c",6}};
         c->add_variable("mm", CastToJS<decltype(mm)>()(*i, mm));
-        c->run("assert_contents(mm, {a: [1, 2, 3], b: [4], c: [5, 6]});");
+        c->run("assert_contents(mm, new Map([['a', [1, 2, 3]], ['b', [4]], ['c', [5, 6]]]));");
         auto js_mm = c->run("mm");
         auto reconstituted_mm = CastToNative<decltype(mm)>()(*i, js_mm.Get(*i));
-        assert(reconstituted_mm.size() == 6);
+        ASSERT_EQ(reconstituted_mm.size(), 6);
         assert(reconstituted_mm.count("a") == 3);
         assert(reconstituted_mm.count("b") == 1);
         assert(reconstituted_mm.count("c") == 2);
@@ -398,7 +405,7 @@ TEST_F(JavaScriptFixture, ContainerTypes) {
 
         std::map<std::string, std::vector<int>> composite = {{"a",{1,2,3}},{"b",{4,5,6}},{"c",{7,8,9}}};
         c->add_variable("composite", CastToJS<decltype(composite)>()(*i, composite));
-        c->run("assert_contents(composite, {'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]});");
+        c->run("assert_contents(composite, new Map([['a', [1, 2, 3]], ['b', [4, 5, 6]], ['c', [7, 8, 9]]]));");
 
         {
             std::string tuple_string("Hello");

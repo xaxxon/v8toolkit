@@ -723,7 +723,7 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 
 bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right)
 {
-    // printf("Comparing two things\n");
+     log.info(LogT::Subjects::V8TOOLKIT, "Comparing two things");
     auto context = isolate->GetCurrentContext();
 
     // if they're both undefined, then they are equal.  If only one, then they're not.
@@ -736,20 +736,20 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
     
     // if the left is a bool, return true if right is a bool and they match, otherwise false
     if (left->IsBoolean()) {
-        // printf("Checking two booleans\n");
+        log.info(LogT::Subjects::V8TOOLKIT, "Checking two booleans");
         return  right->IsBoolean() && left->ToBoolean(context).ToLocalChecked()->Value() == right->ToBoolean(context).ToLocalChecked()->Value();
     }
 
     if (left->IsNumber()) {
-        // printf("Checking two numbers\n");
-        // auto ln = left->ToNumber(context).ToLocalChecked()->Value();
-        // auto rn = right->ToNumber(context).ToLocalChecked()->Value();
-        // printf("Comparing %f and %f\n", ln, rn);
+        log.info(LogT::Subjects::V8TOOLKIT, "Checking two numbers");
+        auto ln = left->ToNumber(context).ToLocalChecked()->Value();
+        auto rn = right->ToNumber(context).ToLocalChecked()->Value();
+        log.info(LogT::Subjects::V8TOOLKIT, "Comparing %f and %f", ln, rn);
         return  right->IsNumber() && left->ToNumber(context).ToLocalChecked()->Value() == right->ToNumber(context).ToLocalChecked()->Value();
     }
     
     if (left->IsString()) {
-        // printf("Checking two strings\n");
+        log.info(LogT::Subjects::V8TOOLKIT, "Checking two strings");
         if (!right->IsString()) {
             return false;
         }
@@ -757,7 +757,7 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
     }
 
     if (left->IsArray()) {
-        // printf("Checking two arrays\n");
+        log.info(LogT::Subjects::V8TOOLKIT, "Checking two arrays");
         if (!right->IsArray()) {
             return false;
         }
@@ -768,7 +768,7 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
         auto right_length = get_array_length(isolate, array_right);
         
         if (left_length != right_length) {
-            // printf("Array lengths differ %d %d\n", (int)left_length, (int) right_length);
+            log.info(LogT::Subjects::V8TOOLKIT, "Array lengths differ %d %d", (int)left_length, (int) right_length);
             return false;
         }
         
@@ -787,19 +787,19 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
     // objects must have all the same keys and each key must have the same as determined by calling this function on each value
     auto object_left = v8::Local<v8::Object>::Cast(left);
     if(!object_left.IsEmpty()) {
-        // printf("Checking two arrays\n");
+        log.info(LogT::Subjects::V8TOOLKIT, "Checking two arrays\n");
         
         auto object_right = v8::Local<v8::Object>::Cast(right);
         
         // if they're not both objects, return false
         if (object_right.IsEmpty()) {
-            // printf("right value not object\n");
+            log.info(LogT::Subjects::V8TOOLKIT, "right value not object\n");
             return false;
         }
         auto left_keys = get_object_keys(isolate, object_left);
         auto right_keys = get_object_keys(isolate, object_right);
         if (left_keys.size() != right_keys.size()) {
-            // printf("key count mismatch: %d %d\n", (int)left_keys.size(), (int)right_keys.size());
+            log.info(LogT::Subjects::V8TOOLKIT, "key count mismatch: %d %d", (int)left_keys.size(), (int)right_keys.size());
             return false;
         }
 
@@ -807,17 +807,17 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
             auto left_value = object_left->Get(context, v8::String::NewFromUtf8(isolate, left_key.c_str()));
             auto right_value = object_right->Get(context, v8::String::NewFromUtf8(isolate, left_key.c_str()));
             if (right_value.IsEmpty()) {
-                // printf("right side doesn't have key: %s\n", left_key.c_str());
+                log.info(LogT::Subjects::V8TOOLKIT, "right side doesn't have key: %s", left_key.c_str());
                 return false;
             } else if (!compare_contents(isolate, left_value.ToLocalChecked(), right_value.ToLocalChecked())) {
-                // printf("Recursive check of value in both objects returned false for key %s\n", left_key.c_str());
+                log.info(LogT::Subjects::V8TOOLKIT, "Recursive check of value in both objects returned false for key %s", left_key.c_str());
                 return false;
             }
         }
         
         return true;
     }
-    // printf("Returning false because left value is of unknown/unhandled type\n");
+    log.info(LogT::Subjects::V8TOOLKIT, "Returning false because left value is of unknown/unhandled type");
     
     return false;    
 }

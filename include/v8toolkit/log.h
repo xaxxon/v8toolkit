@@ -12,7 +12,8 @@ struct LoggingSubjects {
                                                  "Compilation Exception",
                                                  "wrapped function call",
                                                  "wrapped data member access",
-                                                 "debug websocket"
+                                                 "debug websocket",
+                                                 "V8 Toolkit"
 
     };
 
@@ -23,6 +24,7 @@ struct LoggingSubjects {
         WRAPPED_FUNCTION_CALL,
         WRAPPED_DATA_MEMBER_ACCESS,
         DebugWebSocket,
+        V8TOOLKIT,
 
         LOG_LAST_SUBJECT
     };
