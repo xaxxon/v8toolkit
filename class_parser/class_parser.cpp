@@ -107,7 +107,7 @@ map<string, string> static_method_renames = {};
 vector<pair<string, string>> cpp_to_js_type_conversions = {
     {"^(?:std::|eastl)?(?:vector|set|multiset|vector_set)",                                                         "Array.$1"},
     {"^(?:std::|eastl)?(?:pair|tuple)",                                                                             "Array."},
-    {"^(?:std::|eastl::)?(?:vector_)?(?:multi)?map",                                                                "Object.{$1, $2}"},
+    {"^(?:std::|eastl::)?(?:vector_)?(?:multi)?map",                                                                "Map<$1, $2>"},
     //{"^([^<]+)\\s*[<]\\s*(.+?)\\s*[>]\\s*([^>]*)$", "$1<$2>$3"},
     {"^(?:char\\s*[*]|(?:std::)?string)\\s*(?:const)?\\s*\\s*[&]?$",                                                "String"},
     {"^(?:unsigned)?\\s*(?:char|short|int|long|long long|float|double|long double)\\s*(?:const)?\\s*[*]?\\s*[&]?$", "Number"},

@@ -1196,8 +1196,8 @@ class C extends B
     returns_const_pointer_to_const_pointer_to_const() {}
 
     /**
-     * @param {Object.{Number, Number}} foo
-     * @return {Object.{Number, Number}}
+     * @param {Map<Number, Number>} foo
+     * @return {Map<Number, Number>}
      */
     this_is_a_virtual_function_js_name(foo) {}
 
@@ -1296,7 +1296,7 @@ exports.create = function(exports, world_creation, base_type) {
                  */
                 // using_in_C: ()=>{...IMPLEMENT ME...},
                 /**
-                 * @return {Object.{Number, Number}}
+                 * @return {Map<Number, Number>}
                  */
                 // this_is_a_virtual_function_js_name: ()=>{...IMPLEMENT ME...},
             },
