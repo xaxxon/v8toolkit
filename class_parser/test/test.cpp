@@ -984,6 +984,19 @@ TEST(ClassParser, ClassComments) {
           */
         static void member_static_functionC(char * p1, int p2=4);
 
+        char returns_char();
+        char * returns_char_star();
+        char const * returns_const_char_star();
+        char const ** returns_const_char_star_pointer();
+        char const * const * returns_const_char_star_pointer_to_const();
+
+
+        B const * returns_pointer_to_const();
+        B const ** returns_double_pointer_to_const();
+        B const * const * returns_pointer_to_const_pointer_to_const();
+        B const * const * const returns_const_pointer_to_const_pointer_to_const();
+
+
         /// comment on data_memberC
         std::string data_memberC;
 
@@ -1136,6 +1149,51 @@ class C extends B
      * @return {undefined}
      */
     member_function_no_params() {}
+
+    /**
+     * @return {Number}
+     */
+    returns_char() {}
+
+    /**
+     * @return {String}
+     */
+    returns_char_star() {}
+
+    /**
+     * @return {String}
+     */
+    returns_const_char_star() {}
+
+    /**
+     * @return {String}
+     */
+    returns_const_char_star_pointer() {}
+
+    /**
+     * @return {Number}
+     */
+    returns_const_char_star_pointer_to_const() {}
+
+    /**
+     * @return {NameSpace::B}
+     */
+    returns_pointer_to_const() {}
+
+    /**
+     * @return {NameSpace::B}
+     */
+    returns_double_pointer_to_const() {}
+
+    /**
+     * @return {NameSpace::B}
+     */
+    returns_pointer_to_const_pointer_to_const() {}
+
+    /**
+     * @return {NameSpace::B}
+     */
+    returns_const_pointer_to_const_pointer_to_const() {}
 
     /**
      * @param {Object.{Number, Number}} foo

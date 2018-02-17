@@ -60,6 +60,11 @@ TypeInfo TypeInfo::get_plain_type() const {
     QualType plain_type = this->type;
     plain_type = plain_type.getNonReferenceType();
     while (!plain_type->getPointeeType().isNull()) {
+        // char * and const char * are special plain types
+        if (plain_type.getAsString() == "char *" ||
+            plain_type.getAsString() == "const char *") {
+            break;
+        }
         plain_type = plain_type->getPointeeType();
     }
     if (!this->type->isDependentType()) {
@@ -180,8 +185,9 @@ string TypeInfo::get_jsdoc_type_name(std::string const & indentation) const {
     }
         // Handle non-templated types
     else {
+
 //        std::cerr << fmt::format("{} isn't a templated type", this->plain_without_const().get_name()) << std::endl;
-        result = this->convert_simple_typename_to_jsdoc(this->get_name(), indentation);
+        result = this->convert_simple_typename_to_jsdoc(this->get_plain_name(), indentation);
     }
 
 
