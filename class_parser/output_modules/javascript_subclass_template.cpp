@@ -90,8 +90,8 @@ struct JavascriptSubclassTemplateProviderContainer {
 
         return xl::templates::make_provider<JavascriptSubclassTemplateProviderContainer>(
             std::pair("virtual_functions", virtual_functions),
-            std::pair("data_members", std::ref((*c.base_types.begin())->get_members())),
-            std::pair("data_members_2", std::ref((*c.base_types.begin())->get_members()))
+            std::pair("data_members", (*c.base_types.begin())->get_members()),
+            std::pair("data_members_2", (*c.base_types.begin())->get_members())
         );
     }
 

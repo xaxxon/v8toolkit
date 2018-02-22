@@ -38,8 +38,19 @@ bool returns_wrapped_class_lvalue_called = false;
 
 enum class TestEnum {TEST_ENUM_A, TEST_ENUM_B, TEST_ENUM_C};
 
+
 class WrappedClass : public WrappedClassBase {
 public:
+    friend struct v8toolkit::WrapperBuilder<WrappedClass>;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl = make_unique<Impl>();
+
+public:
+
+    constexpr static auto ImplPointer = &WrappedClass::impl;
+
     // class is not default constructible
     WrappedClass(int i) : constructor_i(i) {};
     WrappedClass(WrappedClass &&) = default;
@@ -151,6 +162,11 @@ public:
     static inline int static_int = 1;
 };
 
+
+struct WrappedClass::Impl {
+    int i = 4;
+};
+
 class WrappedClassChild : public WrappedClass {
 public:
     WrappedClassChild() : WrappedClass(0) {}
@@ -171,11 +187,10 @@ CAST_TO_NATIVE(WrappedString, {
 }
 
 
-class WrappedClassFixture : public JavaScriptFixture {
-public:
-    WrappedClassFixture() {
-        ISOLATE_SCOPED_RUN(*i);
-        {
+namespace v8toolkit {
+    template<>
+    struct WrapperBuilder<WrappedClass> {
+        void operator()(v8toolkit::IsolatePtr i){
             auto & w = V8ClassWrapper<WrappedClass>::get_instance(*i);
             w.add_member<&WrappedClass::i>("i");
             w.add_member<&WrappedClass::constructor_i>("constructor_i");
@@ -186,9 +201,9 @@ public:
             w.add_member<&WrappedClass::copyable_wrapped_class>("copyable_wrapped_class");
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
-	    
-	        w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
-	        w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
+
+            w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
+            w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
 
             w.add_method("takes_const_int_6", &WrappedClass::takes_const_int_6);
             w.add_method("takes_wrapped_class", &WrappedClass::takes_wrapped_class);
@@ -215,11 +230,24 @@ public:
             w.add_static_method("inline_static_method", [](int i){
                 EXPECT_EQ(i, 7);
             }, std::tuple<int>(7));
+            w.add_member<WrappedClass::ImplPointer, &WrappedClass::Impl::i>("pimpl_i");
             w.add_static_member("static_int", &WrappedClass::static_int);
             w.add_enum("enum_test", {{"A", 1}, {"B", 2}, {"C", 3}});
             w.set_compatible_types<WrappedClassChild>();
             w.finalize(true);
             w.add_constructor<int>("WrappedClass", *i);
+        }
+    };
+
+}
+
+
+class WrappedClassFixture : public JavaScriptFixture {
+public:
+    WrappedClassFixture() {
+        ISOLATE_SCOPED_RUN(*i);
+        {
+           WrapperBuilder<WrappedClass>()(i);
         }
         {
             auto & w = V8ClassWrapper<WrappedClassChild>::get_instance(*i);
@@ -666,6 +694,13 @@ TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
         auto & wrapper = v8toolkit::V8ClassWrapper<WrappedClass>::get_instance(isolate);
         wrapper.release_internal_field_memory(wrapped_class2.Get(isolate)->ToObject());
         EXPECT_THROW(CastToNative<WrappedClass>()(c->isolate, wrapped_class2.Get(isolate)), CastException);
+    });
+}
+
+
+TEST_F(WrappedClassFixture, PimplMember) {
+    (*c)([&]() {
+        c->run("EXPECT_TRUE(new WrappedClass(40).pimpl_i, 4)");
     });
 }
 

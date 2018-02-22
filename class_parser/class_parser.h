@@ -2,6 +2,17 @@
 #pragma once
 
 
+namespace v8toolkit {
+
+template<typename T>
+class WrapperBuilder {
+    static_assert(sizeof(T) == 0, "WrapperBuilder used for type that doesn't have a specialization");
+};
+
+} // end namespace v8toolkit
+
+
+
 namespace v8toolkit::class_parser {
 
 
@@ -11,6 +22,7 @@ namespace v8toolkit::class_parser {
 #define __attribute__(x) // only used by libclang plugin, so it only needs to exist under clang
 #endif
 #endif
+
 
 
 
@@ -63,6 +75,10 @@ namespace v8toolkit::class_parser {
 #define V8TOOLKIT_USE_NAME(name) \
     __attribute__((annotate(V8TOOLKIT_USE_NAME_PREFIX #name)))
 
+
+#define V8TOOLKIT_USE_PIMPL_PREFIX "v8toolkit_use_pimpl_"
+#define V8TOOLKIT_USE_PIMPL(name) \
+    __attribute__((annotate(V8TOOLKIT_USE_PIMPL_PREFIX #name)))
 
 
 /**

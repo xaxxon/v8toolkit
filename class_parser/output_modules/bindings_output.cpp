@@ -87,7 +87,7 @@ struct BindingsProviderContainer {
             std::pair("name", c.class_name),
             std::pair("long_name", c.class_name),
             std::pair("js_name", c.get_js_name()),
-            std::pair("data_members", std::ref(c.get_members())),
+            std::pair("data_members", c.get_members()),
             std::pair("member_functions", std::ref(c.get_member_functions())),
             std::pair("call_operator", call_operator_vector), // either empty vector or contains 1 element
             std::pair("static_functions", std::ref(c.get_static_functions())),

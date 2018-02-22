@@ -45,6 +45,15 @@ class Target;
 
 namespace v8toolkit {
 
+/**
+ *  Functor class which should be made a friend for any types that need to wrap `private` fields
+ * @tparam T Member whose `private` fields to access
+ */
+template<typename T>
+struct WrapperBuilder {
+	static_assert(std::is_same_v<T*, void>, "WrapperBuilder not specialized for this type");
+};
+
 
 //#define V8_CLASS_WRAPPER_DEBUG
 
@@ -330,7 +339,10 @@ struct WrappedData {
 *
 */
 template<class T, class = void>
-class V8ClassWrapper;
+class V8ClassWrapper {
+	static_assert(std::is_same_v<T*, void>, "Tried to instantiate a V8ClassWrapper with a type for which is_wrapped_type_v<T> is false");
+};
+
 
 template<class T>
 class V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>
@@ -519,7 +531,7 @@ private:
 
     // function used to return the value of a C++ variable backing a javascript variable visible
     //   via the V8 SetAccessor method
-	template<auto member> // type being returned
+	template<auto member_getter>
 	static void _getter_helper(v8::Local<v8::Name> property,
 							   v8::PropertyCallbackInfo<v8::Value> const & info) {
 
@@ -527,14 +539,18 @@ private:
 		auto isolate = info.GetIsolate();
 
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
+		using MemberT = decltype(member_getter(cpp_object));
+
 
 		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
 				 "Reading data member of type {} (need to implement having the name available)",
-				 xl::demangle<decltype(cpp_object->*member)>());
+				 xl::demangle<MemberT>());
 
 		// add lvalue ref as to know not to delete the object if the JS object is garbage collected
-        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<decltype(cpp_object->*member)>>()(isolate, cpp_object->*member));
+        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberT>>()(isolate, member_getter(cpp_object)));
     }
+
+
 
 
 	/**
@@ -543,7 +559,7 @@ private:
 	 * @param value new value for property
 	 * @param info general JavaScript state info
 	 */
-	template<auto member/*, std::enable_if_t<std::is_copy_assignable_v<pointer_to_member_t<member>>> = 0*/>
+	template<auto member_getter/*, std::enable_if_t<std::is_copy_assignable_v<pointer_to_member_t<member>>> = 0*/>
 	static void _setter_helper(v8::Local<v8::Name> property,
 							   v8::Local<v8::Value> value,
 							   v8::PropertyCallbackInfo<void> const & info) {
@@ -556,11 +572,12 @@ private:
 
 	    T * cpp_object = wrapper.get_cpp_object(info.Holder());
 
+		using MemberT = std::remove_reference_t<decltype(member_getter(cpp_object))>;
+
 		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
 				 "Setting data member of type {} (need to implement having the name available)",
-				 xl::demangle<decltype(cpp_object->*member)>());
+				 xl::demangle<MemberT>());
 
-		using MemberT = std::remove_reference_t<decltype(cpp_object->*member)>;
         static_assert(
             std::is_copy_assignable_v<MemberT> ||
             std::is_move_assignable_v<MemberT>, "Cannot add_member with a type that is not either copy or move assignable.  Use add_member_readonly instead");
@@ -570,7 +587,7 @@ private:
 		{
 			if constexpr(std::is_copy_assignable_v<MemberT>)
 			{
-				cpp_object->*member = CastToNative<MemberT &>()(isolate, value);
+				member_getter(cpp_object) = CastToNative<MemberT &>()(isolate, value);
 			}
 			// otherwise if it's a wrapped type and it's move assignable, if the object owns its memory, then try a
 			//   move assignment
@@ -579,13 +596,13 @@ private:
 
 				auto object = get_value_as<v8::Object>(isolate, value);
 				if (wrapper.does_object_own_memory(object)) {
-					cpp_object->*member = CastToNative<MemberT &&>()(isolate, value);
+					member_getter(cpp_object) = CastToNative<MemberT &&>()(isolate, value);
 				}
 			}
 		}
 		// for an unwrapped type, always try to make a copy and do a move assignment from it
 		else {
-			cpp_object->*member = CastToNative<MemberT>()(isolate, value);
+			member_getter(cpp_object) = CastToNative<MemberT>()(isolate, value);
 		}
 
 
@@ -1214,10 +1231,35 @@ public:
 	}
 
 
+
+
+    template<auto pimpl_member, auto member>
+    void add_member(std::string const & member_name) {
+        assert(this->finalized == false);
+
+        // This function could forward the request to add_member_readonly instead, but having it error instead makes the
+        //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
+        static_assert(!is_pointer_to_const_data_member_v<member>, "Cannot V8ClassWrapper::add_member a const data member.  Use add_member_readonly instead");
+
+//        if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
+//            V8ClassWrapper<ConstT>::get_instance(isolate).
+//                template add_member_readonly<member>(member_name);
+//        }
+
+        this->check_if_name_used(member_name);
+
+        // store a function for adding the member on to an object template in the future
+        member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+
+
+            constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
+                                              _getter_helper<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>);
+        });
+    };
+
 	template<auto member>
 	void add_member(std::string const & member_name) {
 	    assert(this->finalized == false);
-
 
 
         // This function could forward the request to add_member_readonly instead, but having it error instead makes the
@@ -1236,8 +1278,8 @@ public:
 
 
 		    constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
-						      _getter_helper<member>,
-						      _setter_helper<member>);
+						      _getter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>,
+						      _setter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>);
 		});
 	}
 
@@ -1265,8 +1307,8 @@ public:
 	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
-						      _getter_helper<member>,
-						      0);
+											  _getter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>,
+											  0);
 		});
 	}
 

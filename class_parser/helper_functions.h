@@ -179,5 +179,5 @@ std::string trim_doxygen_comment_whitespace(std::string const & comment);
 
 
 FullComment * get_full_comment_for_decl(Decl const * decl, bool any = false);
-
+QualType get_type_from_dereferencing_type(QualType type);
 }

@@ -103,8 +103,23 @@ struct  Environment : public ::testing::Environment {
 Environment * environment = new Environment;
 static ::testing::Environment* const dummy = ::testing::AddGlobalTestEnvironment(environment);
 
+
+template<class T, class Callable, int_t<decltype(std::remove_if(begin(std::declval<T>()), end(std::declval<T>()), std::declval<Callable>()))> = 0>
+auto & erase_if2(T & container, Callable callable) {
+    auto end_of_keep_elements = std::remove_if(begin(container), end(container), callable);
+    container.erase(end_of_keep_elements, container.end());
+    std::cerr << fmt::format("new container size: {}", container.size()) << std::endl;
+    return container;
+}
+
+template<class T, class Callable, int_t<decltype(std::remove_if(begin(std::declval<T>()), end(std::declval<T>()), std::declval<Callable>()))> = 0>
+auto && erase_if2(T && container, Callable callable) {
+    return std::move(erase_if2(container, std::move(callable)));
+}
+
+
 v8toolkit::class_parser::PrintFunctionNamesAction * action = nullptr;
-auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}, xl::json::Json json = xl::json::Json{}) {
+std::vector<std::reference_wrapper<std::unique_ptr<WrappedClass>>> run_code(std::string source, vector<unique_ptr<OutputModule>> output_modules = {}, xl::json::Json json = xl::json::Json{}) {
 
 
     static std::string source_prefix = R"(
@@ -145,10 +160,21 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
         // nothing to do here
     }
 
-    return erase_if(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){return !c->should_be_wrapped();});
+    std::cerr << fmt::format("wrapped class count: {}", WrappedClass::wrapped_classes.size()) << std::endl;
+    auto result = erase_if2(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){
+        auto result = !c->should_be_wrapped();
+        std::cerr << fmt::format("checking to see if {} should be removed: {}", c->short_name, result) << std::endl;
+        return result;
+    });
+
+    std::cerr << fmt::format("after erase_if size: {}", result.size()) << std::endl;
+    if (result.size() > 0) {
+        std::cerr << fmt::format("short name of first element: {}", result[0].get()->short_name) << std::endl;
+    }
+    return result;
 }
 
-TEST(ClassParser, ClassParser) {
+TEST(ClassParser, Simple) {
 
     std::string source = R"(
         struct SimpleWrappedClass : public v8toolkit::WrappedClassBase {
@@ -156,8 +182,8 @@ TEST(ClassParser, ClassParser) {
 };
     )";
 
-
     auto pruned_vector = run_code(source);
+    std::cerr << fmt::format("pruned vector type: {}", xl::demangle<decltype(pruned_vector)>()) << std::endl;
 
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
@@ -859,8 +885,9 @@ TEST(ClassParser, ClassAndFunctionComments) {
         EXPECT_EQ(parameter.description, "this is a longer, multiline comment which should all be captured");
     }
     {
-        auto & member = c1.get_members().at(0);
+        auto member = c1.get_members().at(0);
         EXPECT_EQ(member->type.get_name(), "int");
+        std::cerr << fmt::format("{}", member->comment) << std::endl;
         EXPECT_EQ(member->comment, "data member description");
     }
 }
@@ -1343,6 +1370,87 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
     EXPECT_FALSE(string_stream.str().empty());
     EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 
+}
+
+
+
+TEST(ClassParser, MismatchedPimplTest) {
+
+std::string source = R"(
+#include <memory>
+#include "class_parser.h"
+
+class V8TOOLKIT_USE_PIMPL(impl) V8TOOLKIT_USE_PIMPL(impl2) A : public v8toolkit::WrappedClassBase {
+    friend class v8toolkit::WrapperBuilder<A>;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl;
+};
+
+
+struct A::Impl {
+    int pimpl_int;
+};
+
+
+)";
+
+
+
+
+    vector<std::unique_ptr<OutputModule>> output_modules;
+    std::stringstream string_stream;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(string_stream)));
+    environment->expect_errors();
+    auto pruned_vector = run_code(source, std::move(output_modules));
+    EXPECT_EQ(environment->expect_no_errors(), 1); // missing impl2 in class but specified in attribute
+}
+
+
+TEST(ClassParser, PimplTest) {
+    std::string source = R"(
+    #include <memory>
+    #include "class_parser.h"
+
+    class V8TOOLKIT_USE_PIMPL(impl) V8TOOLKIT_USE_PIMPL(impl2) A : public v8toolkit::WrappedClassBase {
+        friend class v8toolkit::WrapperBuilder<A>;
+
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> impl;
+
+        struct Impl2;
+        std::unique_ptr<Impl2> impl2;
+    };
+
+
+    struct A::Impl {
+        int pimpl_int;
+    };
+
+    struct A::Impl2 {
+        char * pimpl2_string;
+    };
+
+    )";
+
+    vector<std::unique_ptr<OutputModule>> output_modules;
+    std::stringstream javascript_stub_output;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_output)));
+    auto pruned_vector = run_code(source, std::move(output_modules));
+
+    EXPECT_EQ(pruned_vector.size(), 1);
+    WrappedClass const & c = *pruned_vector[0].get();
+
+    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
+
+
+//
+//    EXPECT_EQ(c.get_member_functions().size(), 0);
+//    EXPECT_TRUE(c.call_operator_member_function);
+//    EXPECT_FALSE(string_stream.str().empty());
+//    EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 }
 
 

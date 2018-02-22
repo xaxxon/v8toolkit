@@ -26,23 +26,25 @@ ClassHandlerASTConsumer::ClassHandlerASTConsumer(CompilerInstance & ci,
 
             // must be a struct or class
             anyOf(isStruct(), isClass()),
+            unless(anyOf(matchesName("^::std::"), matchesName("^::eastl::"))),
             anyOf( // order of these matters.   If a class matches more than one it will only be returned as the first
 
+                // things here will always be wrapped
                 allOf(isDefinition(),
-                      cxxRecordDecl(isDerivedFrom("::v8toolkit::WrappedClassBase")).bind(
+                      isDerivedFrom("::v8toolkit::WrappedClassBase"),
+                      cxxRecordDecl().bind(
                           "class derived from WrappedClassBase")),
 
-                // mark a type you control with the wrapped class attribute
+                // things here might be wrapped if they are a requirement from something else
                 allOf(isDefinition(),
-                      unless(anyOf(matchesName("^::std::"), matchesName("^::eastl::"))),
-                      cxxRecordDecl(/*hasAttr(attr::Annotate)*/).bind("not std:: class")),
+                      cxxRecordDecl().bind("not std:: class")),
 
-                // used for marking types not under your control with the wrapped class attribute
+                // used for applying attributes to types you don't control
                 allOf(unless(isDefinition()),
-                      unless(matchesName("^::std::")),
                       cxxRecordDecl(hasAttr(attr::Annotate)).bind("forward declaration with annotation"))
             )
-        )), &class_handler);
+        )
+    ), &class_handler);
 
     Matcher.addMatcher(
         namedDecl(

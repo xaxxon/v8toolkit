@@ -859,12 +859,21 @@ std::string DataMember::look_up_js_name() const {
 }
 
 std::optional<std::string> check_bulk_rename(std::string const & name, std::string const & bulk_rename_type) {
+
+    // go through each bulk rename entry to see if it matches
     for(auto rename : PrintFunctionNamesAction::get_config_data()["bulk_renames"][bulk_rename_type].as_array()) {
+
         auto regex = *rename["regex"].get_string();
         auto replacement = *rename["replace"].get_string();
+
         xl::Regex r(regex);
+
+        log.info(LogT::Subjects::ConfigFile, "Checking bulk rename: {} against {}", regex, name);
         if (r.match(name)) {
+            log.info(LogT::Subjects::ConfigFile, "Bulk rename match");
             return r.replace(name, replacement);
+        } else {
+            log.info(LogT::Subjects::ConfigFile, "Bulk rename no-match");
         }
     }
 

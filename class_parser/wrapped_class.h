@@ -53,6 +53,9 @@ private:
     // can't call this directly, must use factory
     WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method);
 
+    // data members marked as being pimpl to be exposed as if part of the main class
+    std::vector<std::string> pimpl_data_member_names; // names stored from class attribute
+    std::vector<std::unique_ptr<DataMember>> pimpl_data_members; // actual found data members matching attributes
 
 public:
     // name of type that is guaranteed valid c++ (with appropriate included headers)
@@ -75,6 +78,9 @@ public:
 
     static inline vector<unique_ptr<WrappedClass>> wrapped_classes;
     static inline std::vector<std::string> used_constructor_names;
+
+    static WrappedClass * get_wrapped_class(CXXRecordDecl const * decl);
+    static WrappedClass * get_wrapped_class(TypeInfo const & type_info);
 
 
     CXXRecordDecl const * decl = nullptr;
@@ -113,7 +119,7 @@ public:
 
     vector<unique_ptr<StaticFunction>> const & get_static_functions() const;
 
-    vector<unique_ptr<DataMember>> const & get_members() const;
+    std::vector<DataMember *> get_members() const;
     void parse_members();
 
     void parse_enums();

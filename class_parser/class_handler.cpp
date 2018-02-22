@@ -19,12 +19,13 @@ ClassHandler::~ClassHandler() {
 
 void ClassHandler::run(const ast_matchers::MatchFinder::MatchResult & Result) {
 
-
-
     matched_classes_returned++;
-
     if (matched_classes_returned % 10000 == 0) {
         std::cerr << fmt::format("\n### Matcher results processed: {}", matched_classes_returned) << std::endl;
+    }
+
+    if (const CXXRecordDecl * klass = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("other")) {
+        std::cerr << fmt::format("OTHER: {}", get_canonical_name_for_decl(klass)) << std::endl;
     }
 
     // if the current result is matched from the "not std:: class"-bound matcher

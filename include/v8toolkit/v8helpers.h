@@ -331,7 +331,7 @@ void for_each_value(const v8::Local<v8::Context> context, const v8::Local<v8::Va
 * Creates a variable with the given alias_name in the context's global object to point back to the global object
 * Same as node.js "global" variable or a web browser "window" object
 */
-void set_global_object_alias(v8::Isolate * isolate, const v8::Local<v8::Context> context, std::string alias_name);
+void set_global_object_alias(v8::Local<v8::Context> context, std::string const & alias_name);
 
 
 /**

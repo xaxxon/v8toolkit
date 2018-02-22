@@ -46,7 +46,7 @@ struct JavascriptStubProviderContainer {
         return P::make_provider(
             std::pair("comment", c.comment),
             std::pair("name", c.get_js_name()),
-            std::pair("data_members", std::ref(c.get_members())),
+            std::pair("data_members", c.get_members()),
             std::pair("constructors", std::ref(c.get_constructors())),
 
             std::pair("member_functions", xl::erase_if(xl::copy(c.get_member_functions()),

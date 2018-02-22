@@ -44,10 +44,13 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
 {
     log.info(LogSubjects::Subjects::ClassParser, "converting class_name from {} to {}", get_canonical_name_for_decl(decl), this->class_name);
 
-    auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name);
-    this->class_or_struct = matches[1];
-    this->namespace_name = matches[2];
-    this->short_name = matches[3];
+    if (auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name)) {
+        this->class_or_struct = matches[1];
+        this->namespace_name = matches[2];
+        this->short_name = matches[3];
+    } else {
+        log.error(LogT::Subjects::Class, "class name doesn't match class name regex");
+    }
     log.info(LogSubjects::Subjects::ClassParser, "js_name for {} set to {}", class_name, get_js_name());
 
 //    std::cerr << fmt::format("created {}", this->class_name) << std::endl;
@@ -114,6 +117,14 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     if (!annotation_base_type_to_use.empty()) {
         must_have_base_type = true;
     }
+
+    this->pimpl_data_member_names = this->annotations.get_regex(
+        "^" V8TOOLKIT_USE_PIMPL_PREFIX "(.*)$");
+    log.info(LogT::Subjects::Class, "For {} got pimpl data members: {}",
+             this->class_name, xl::join(this->pimpl_data_member_names));
+
+
+
 
 //    print_vector(annotation_base_types_to_ignore, "base types to ignore");
 //    print_vector(annotation_base_type_to_use, "base type to use");
@@ -686,10 +697,38 @@ void WrappedClass::parse_enums() {
 };
 
 
-vector<unique_ptr<DataMember>> const & WrappedClass::get_members() const {
+std::vector<DataMember *> WrappedClass::get_members() const {
     assert(this->members_parsed);
-    return this->members;
+
+    std::vector<DataMember *> results;
+
+    for (auto & member : this->members) {
+        results.push_back(member.get());
+    }
+
+    for (auto & pimpl_member : this->pimpl_data_members) {
+
+        auto underlying_pimpl_type = get_type_from_dereferencing_type(pimpl_member->type.type);
+        auto pimpl_wrapped_class = WrappedClass::get_wrapped_class(underlying_pimpl_type->getAsCXXRecordDecl());
+        if (pimpl_wrapped_class == nullptr) {
+            log.error(LogT::Subjects::Class, "Pimpl data member's type never seen: {}", underlying_pimpl_type.getAsString());
+            continue;
+        }
+
+        // this type probably isn't wrapped so need to parse its members explicitly
+        pimpl_wrapped_class->parse_members();
+
+
+        auto pimpl_member_members = pimpl_wrapped_class->get_members();
+        if (pimpl_member_members.size() == 0) {
+            log.warn(LogT::Subjects::Class, "Pimpl member type has no members");
+        }
+        results.insert(results.end(), pimpl_member_members.begin(), pimpl_member_members.end());
+    }
+
+    return results;
 }
+
 
 void WrappedClass::parse_members() {
 
@@ -714,6 +753,7 @@ void WrappedClass::parse_members() {
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
             string field_name = field->getQualifiedNameAsString();
+            std::string short_field_name = field->getName();
 
             // if the config file has an entry for whether to skip this, use that
             auto member_function_config =
@@ -735,6 +775,11 @@ void WrappedClass::parse_members() {
             }
 
 
+            // if this field is a PIMPL field
+            if (xl::contains(this->pimpl_data_member_names, short_field_name)) {
+                this->pimpl_data_members.push_back(std::make_unique<DataMember>(*this, wrapped_class, field));
+                continue;
+            }
 
 
 
@@ -753,6 +798,15 @@ void WrappedClass::parse_members() {
             this->members.emplace_back(make_unique<DataMember>(*this, wrapped_class, field));
         }
     });
+
+    // make sure every pimpl member was found
+    std::cerr << fmt::format("pimpl: expected {} got {}", this->pimpl_data_member_names.size(), this->pimpl_data_members.size()) << std::endl;
+    if (this->pimpl_data_member_names.size() != this->pimpl_data_members.size()) {
+        log.error(LogT::Subjects::Class,
+                  "Mismatched number of pimpl members specified vs found in {}: {} specified vs {} found",
+                  this->short_name, this->pimpl_data_member_names.size(), this->pimpl_data_members.size());
+    }
+
 }
 
 
@@ -763,73 +817,6 @@ WrappedClass::WrappedClass(const std::string class_name) :
 {
     log.info(LogSubjects::Class, "Created new (no-decl) WrappedClass: '{}'", this->class_name);
 }
-
-
-//std::string WrappedClass::generate_js_stub() {
-//    if (this->name_alias.find("<") != std::string::npos) {
-//        std::cerr << fmt::format("Skipping generation of stub for {} because it has template syntax",
-//                                 this->name_alias) << std::endl;
-//        return std::string();
-//    } else if (this->base_types.size() > 0 && (*this->base_types.begin())->name_alias.find("<") != std::string::npos) {
-//        std::cerr << fmt::format("Skipping generation of stub for {} because it extends a type with template syntax ({})",
-//                                 this->name_alias,
-//                                 (*this->base_types.begin())->name_alias) << std::endl;
-//        return std::string();
-//    } else {
-//        cerr << fmt::format("Generating js stub for {}", this->name_alias) << endl;
-//    }
-//
-//
-//
-//    stringstream result;
-//    string indentation = "    ";
-//
-//    result << "/**\n";
-//    result << fmt::format(" * @class {}\n", this->name_alias);
-//
-//    this->get_enums();
-//    //    std::cerr << fmt::format("generating stub for {} data members", this->get_members().size()) << std::endl;
-//    for (auto & member : this->get_members()) {
-//        result << member->get_js_stub();
-//    }
-//    result << fmt::format(" **/\n", indentation);
-//
-//
-//    result << fmt::format("class {}", this->name_alias);
-//
-//    if (this->base_types.size() == 1) {
-//        result << fmt::format(" extends {}", (*this->base_types.begin())->name_alias);
-//    }
-//    result << " {\n\n";
-//
-//    // not sure what to do if there are multiple constructors...
-//    bool first_method = true;
-//    for (auto & constructor : this->get_constructors()) {
-//        if (!first_method) {
-//            result << ",";
-//        }
-//        first_method = false;
-//
-//        result << endl << endl;
-//        result << constructor->generate_js_stub();
-//    }
-//
-//    std::cerr << fmt::format("generating stub for {} methods", this->get_member_functions().size()) << std::endl;
-//    for (auto & method : this->get_member_functions()) {
-//        result << std::endl << method->generate_js_stub() << std::endl;
-//    }
-//
-//
-//    std::cerr << fmt::format("generating stub for {} static methods", this->get_static_functions().size()) << std::endl;
-//    for (auto & method : this->get_static_functions()) {
-//        result << std::endl << method->generate_js_stub() << std::endl;
-//    }
-//
-//
-//    result << fmt::format("\n}}\n");
-////    fprintf(stderr, "js stub result for class:\n%s", result.str().c_str());
-//    return result.str();
-//}
 
 
 bool WrappedClass::should_be_wrapped() const {
@@ -1338,6 +1325,21 @@ std::string const & WrappedClass::get_js_name() const {
 
 
 
+WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
+    std::cerr << fmt::format("here2") << std::endl;
+    for(auto & c : WrappedClass::wrapped_classes) {
+        std::cerr << fmt::format("here 2 in loop") << std::endl;
+        if (c->decl == decl) {
+            return c.get();
+        }
+    }
+    return nullptr;
+}
+
+WrappedClass * WrappedClass::get_wrapped_class(TypeInfo const & type_info) {
+    std::cerr << fmt::format("here") << std::endl;
+    return WrappedClass::get_wrapped_class(type_info.get_plain_type_decl());
+}
 
 
 

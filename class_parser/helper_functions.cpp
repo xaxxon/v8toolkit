@@ -26,6 +26,37 @@ using namespace v8toolkit::class_parser;
 namespace v8toolkit::class_parser {
 
 
+/**
+ * char * => char    std::unique_ptr<int> => int
+ * @param type
+ * @return
+ */
+QualType get_type_from_dereferencing_type(QualType type) {
+    type = type.getNonReferenceType();
+    std::cerr << fmt::format("trying to get dereferenced type for {}", type.getAsString()) << std::endl;
+
+    if (type->isAnyPointerType()) {
+        auto result = type->getPointeeType();
+        std::cerr << fmt::format("type is a pointer, so returning pointee type {}", result.getAsString()) << std::endl;
+        return result.getCanonicalType();
+    } else {
+        if (auto decl = type->getAsCXXRecordDecl()) {
+            for (CXXMethodDecl * method : decl->methods()) {
+                std::cerr << fmt::format("checking {} for operator*", method->getQualifiedNameAsString()) << std::endl;
+                if (method->getOverloadedOperator() == OO_Star) {
+                    auto result = method->getReturnType();
+                    std::cerr << fmt::format("got operator*, returning {}", result.getAsString()) << std::endl;
+                    std::cerr << fmt::format("is canonical? {}", result.isCanonical()) << std::endl;
+                    std::cerr << fmt::format("canonical version: {}", result.getCanonicalType().getAsString());
+                    return result.getCanonicalType().getNonReferenceType();
+                }
+            }
+        }
+    }
+    llvm::report_fatal_error("Could not determine dereferenced type");
+}
+
+
 // remove trailing & or && from the end of a string
 string remove_reference_from_type_string(string const & type_string) {
 //    std::cerr << fmt::format("removing reference from string: '{}'", type_string) << std::endl;
