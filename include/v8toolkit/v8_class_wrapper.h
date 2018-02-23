@@ -50,7 +50,7 @@ namespace v8toolkit {
  * @tparam T Member whose `private` fields to access
  */
 template<typename T>
-struct WrapperBuilder {
+class WrapperBuilder {
 	static_assert(std::is_same_v<T*, void>, "WrapperBuilder not specialized for this type");
 };
 
@@ -539,7 +539,9 @@ private:
 		auto isolate = info.GetIsolate();
 
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
-		using MemberT = decltype(member_getter(cpp_object));
+
+		auto non_const_cpp_object = const_cast<std::remove_const_t<T>*>(cpp_object);
+		using MemberT = decltype(member_getter(non_const_cpp_object));
 
 
 		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
@@ -547,7 +549,7 @@ private:
 				 xl::demangle<MemberT>());
 
 		// add lvalue ref as to know not to delete the object if the JS object is garbage collected
-        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberT>>()(isolate, member_getter(cpp_object)));
+        info.GetReturnValue().Set(CastToJS<std::add_lvalue_reference_t<MemberT>>()(isolate, member_getter(non_const_cpp_object)));
     }
 
 
@@ -1219,32 +1221,16 @@ public:
 
 
 
-    /**
-    * Adds a getter and setter method for the specified class member
-    * add_member(&ClassName::member_name, "javascript_attribute_name");
-    */
-    template<class MemberType,
-		class MemberClass,
-		MemberType (MemberClass::*member)>
-	void add_member(std::string const & member_name) {
-		this->add_member<member>(member_name);
-	}
 
 
-
-
-    template<auto pimpl_member, auto member>
+    template<auto reference_getter, std::enable_if_t<std::is_pointer_v<decltype(reference_getter)>, int> = 0>
     void add_member(std::string const & member_name) {
         assert(this->finalized == false);
 
-        // This function could forward the request to add_member_readonly instead, but having it error instead makes the
-        //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
-        static_assert(!is_pointer_to_const_data_member_v<member>, "Cannot V8ClassWrapper::add_member a const data member.  Use add_member_readonly instead");
-
-//        if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-//            V8ClassWrapper<ConstT>::get_instance(isolate).
-//                template add_member_readonly<member>(member_name);
-//        }
+        if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
+            V8ClassWrapper<ConstT>::get_instance(isolate).
+                template add_member_readonly<reference_getter>(member_name);
+        }
 
         this->check_if_name_used(member_name);
 
@@ -1253,65 +1239,50 @@ public:
 
 
             constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
-                                              _getter_helper<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>);
+                                              _getter_helper<reference_getter>,
+                                              _setter_helper<reference_getter>);
         });
+    }
+
+
+    template<auto pimpl_member, auto member>
+    void add_member(std::string const & member_name) {
+        add_member<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>(member_name);
     };
 
-	template<auto member>
+
+	template<auto member, std::enable_if_t<!std::is_pointer_v<decltype(member)>, int> = 0>
 	void add_member(std::string const & member_name) {
-	    assert(this->finalized == false);
-
-
-        // This function could forward the request to add_member_readonly instead, but having it error instead makes the
-        //   caller be clear that they understand it's a const type.  If it turns out this is really annoying, it can be changed
-        static_assert(!is_pointer_to_const_data_member_v<member>, "Cannot V8ClassWrapper::add_member a const data member.  Use add_member_readonly instead");
-
-	    if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-			V8ClassWrapper<ConstT>::get_instance(isolate).
-				template add_member_readonly<member>(member_name);
-	    }
-
-	    this->check_if_name_used(member_name);
-
-	    // store a function for adding the member on to an object template in the future
-	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
-
-
-		    constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
-						      _getter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>,
-						      _setter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>);
-		});
+	    add_member<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
 	}
 
 
-    template<class MemberType,
-		class MemberClass, 	// allow members from parent types of T
-		MemberType (MemberClass::*member)>
+	template<auto reference_getter, std::enable_if_t<std::is_pointer_v<decltype(reference_getter)>, int> = 0>
 	void add_member_readonly(std::string const & member_name) {
-		static_assert(std::is_base_of_v<MemberClass, T>, "Data member class isn't in inheritance hierarchy of type");
-		this->add_member_readonly<member>(member_name);
-	}
+		assert(this->finalized == false);
 
-	template<auto member>
-	void add_member_readonly(std::string const & member_name) {
+		// the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
+		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
+			V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<reference_getter>(member_name);
+		}
 
-	    // the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
-	    if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-		    V8ClassWrapper<ConstT>::get_instance(isolate).template add_member_readonly<member>(member_name);
-	    }
+		this->check_if_name_used(member_name);
 
-	    assert(this->finalized == false);
+		member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
-	    this->check_if_name_used(member_name);
-
-	    member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
-
-		    constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
-											  _getter_helper<+[](T * cpp_object)->auto&{return cpp_object->*member;}>,
+			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
+											  _getter_helper<reference_getter>,
 											  0);
 		});
 	}
 
+
+	template<auto member, std::enable_if_t<!std::is_pointer_v<decltype(member)>, int> = 0>
+	void add_member_readonly(std::string const & member_name) {
+		add_member_readonly<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
+	}
+
+	
 
 	/**
 	 * The specified function will be called when the JavaScript object is called like a function

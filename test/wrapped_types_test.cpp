@@ -41,7 +41,7 @@ enum class TestEnum {TEST_ENUM_A, TEST_ENUM_B, TEST_ENUM_C};
 
 class WrappedClass : public WrappedClassBase {
 public:
-    friend struct v8toolkit::WrapperBuilder<WrappedClass>;
+    friend class v8toolkit::WrapperBuilder<WrappedClass>;
 
 private:
     struct Impl;

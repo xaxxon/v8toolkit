@@ -50,9 +50,42 @@ Annotations::Annotations(const CXXMethodDecl * decl_to_check) {
     get_annotations_for_decl(decl_to_check);
 }
 
+std::vector<std::string> Annotations::get_regex(const std::string & regex_string) const {
+    auto re = std::regex(regex_string);
+    std::vector<std::string> results;
+
+    std::cerr << fmt::format("annotations count: {}", this->annotations.size()) << std::endl;
+    if (this->annotations.size() > 0) {
+        std::cerr << fmt::format("some annotations {}", this->annotations.size()) << std::endl;
+        if (this->annotations.size() > 100) {
+            std::cerr << fmt::format("way too big {}", this->annotations.size()) << std::endl;
+        }
+    }
+    for (auto & annotation : this->annotations) {
+        if (this->annotations.size() == 0) {
+            std::cerr << fmt::format("weird") << std::endl;
+        }
+        std::smatch matches;
+//            std::cerr << fmt::format("on annotation {}", annotation) << std::endl;
+        if (std::regex_match(annotation, matches, re)) {
+            if (matches.size() > 1) {
+                results.emplace_back(matches[1]);
+            }
+        }
+    }
+//        std::cerr << fmt::format("done with annotations") << std::endl;
+    return results;
+}
 
 
+const std::vector<std::string> Annotations::get() const {
+    std::vector<std::string> results;
 
+    for (auto & annotation : annotations) {
+        results.push_back(annotation);
+    }
+    return results;
+}
 
 
 } // end v8toolkit::class_parser namespace

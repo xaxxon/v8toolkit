@@ -57,6 +57,7 @@ private:
     std::vector<std::string> pimpl_data_member_names; // names stored from class attribute
     std::vector<std::unique_ptr<DataMember>> pimpl_data_members; // actual found data members matching attributes
 
+
 public:
     // name of type that is guaranteed valid c++ (with appropriate included headers)
     std::string class_name;
@@ -150,6 +151,12 @@ public:
     std::string get_short_name() const;
 
     bool has_static_method() { return !this->static_functions.empty(); }
+
+    /**
+     * Whether the type has annotations specifying any PIMPL members to be exposed
+     * @return true if it has 1 or more, false if it has 0
+     */
+    bool has_pimpl_members() const;
 
     /**
      * @return whether this type is a specialization of a template

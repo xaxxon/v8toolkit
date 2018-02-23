@@ -190,25 +190,20 @@ struct BidirectionalProviderContainer {
 
 void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapped_classes)
 {
-
     BidirectionalOutputStreamProvider stream_provider;
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Starting Bidirectional output module");
-
-
     log.info(LogT::Subjects::BidirectionalOutput, "Bidirectional wrapped classes count: {}",
              wrapped_classes.size());
 
-    for(auto c : wrapped_classes) {
+    for (auto c : wrapped_classes) {
         log.info(LogT::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
                  c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
-
         ostream << bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), &bidirectional_templates);
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
-
 }
 
 string BidirectionalOutputModule::get_name() {

@@ -82,7 +82,9 @@ struct BindingsProviderContainer {
             call_operator_vector.push_back(c.call_operator_member_function.get());
         }
 
+
         auto provider = P::make_provider(
+//            std::pair("class", std::ref(c)), // ability to call another template on the same object
             std::pair("comment", c.comment),
             std::pair("name", c.class_name),
             std::pair("long_name", c.class_name),
@@ -135,7 +137,6 @@ struct BindingsProviderContainer {
             std::pair("read_only", d.is_const ? "_readonly" : ""),
             std::pair("member_pointer", fmt::format("&{}", d.long_name))
         );
-
     }
 
 
@@ -220,15 +221,16 @@ struct BindingFile {
 
     // this is currently unused - it's not the clear win that it used to be
     std::set<WrappedClass const *> extern_templates;
-
     std::set<WrappedClass const *> explicit_instantiations;
     std::set<WrappedClass const *> explicit_instantiations_for_const_types;
 
+    // classes with private members to expose need to have WrapperBuilder<> specialized
+    std::set<WrappedClass const *> class_needs_wrapper_builder_specialization;
 
     std::vector<WrappedClass const *> const & get_classes() const {return this->classes;}
 
     void add_class(WrappedClass const * wrapped_class) {
-//        std::cerr << fmt::format("adding to BindingFile: {}", wrapped_class->get_name_alias()) << std::endl;
+        std::cerr << fmt::format("adding to BindingFile: {} at address {}", wrapped_class->class_name, (void*)wrapped_class) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
         assert(this->max_declaration_count == 0 ||  // unlimited
@@ -240,6 +242,9 @@ struct BindingFile {
             this->explicit_instantiations_for_const_types.insert(wrapped_class);          
         }        
         this->includes.insert(wrapped_class->include_files.begin(), wrapped_class->include_files.end());
+        if (wrapped_class->has_pimpl_members()) {
+            this->class_needs_wrapper_builder_specialization.insert(wrapped_class);
+        }
     }
 };
 
@@ -248,7 +253,6 @@ struct BindingFile {
 void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_classes)
 {
     std::vector<BindingFile> binding_files{BindingFile(this->max_declarations_per_file)};
-
     std::set<WrappedClass const *> already_wrapped_classes;
 
 
@@ -269,9 +273,6 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
             log.info(LogSubjects::BindingsOutput, "Processing class: {}", wrapped_class->class_name);
             already_wrapped_classes.insert(wrapped_class);
             found_match = true;
-
-//            std::cerr << fmt::format("writing class {} to file with declaration_count = {}", wrapped_class->get_name_alias(),
-//                                     wrapped_class->declaration_count) << std::endl;
 
 
             if (!binding_files.back().can_hold(wrapped_class)) {
@@ -294,9 +295,12 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
     }
 
 
+//    for (auto const & [binding_file, i] : xl::each_i(binding_files)) {
     for (int i = 0; i < binding_files.size(); i++) {
 
         auto & binding_file = binding_files[i];
+
+
         bool last_file = i == binding_files.size() - 1;
         int file_number = i + 1;
 
@@ -307,6 +311,7 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
             P::make_provider(
                 std::pair("file_number", fmt::format("{}", file_number)),
                 std::pair("next_file_number", fmt::format("{}", file_number + 1)), // ok if it won't actually exist
+                std::pair("pimpl_classes", P::make_provider(std::ref(binding_file.class_needs_wrapper_builder_specialization))),
                 std::pair("classes", P::make_provider(binding_file.get_classes())),
                 std::pair("includes", P::make_provider(binding_file.includes)),
                 std::pair("extern_templates", binding_file.extern_templates),
@@ -364,6 +369,19 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 }
 
 
+
+Template wrapper_builder_template(R"(
+namespace v8toolkit {
+
+template<>
+class WrapperBuilder<{{long_name}}> {
+    void operator()(v8toolkit::Isolate & isolate)
+        {{<<!class>>}}
+};
+
+}
+)");
+
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{js_name}}");
@@ -412,6 +430,8 @@ template class v8toolkit::V8ClassWrapper<{{<long_name>}} const>;>}}
 {{<extern_templates|!!
 extern template {{class_name}}>}}
 
+{{<pimpl_classes|wrapper_builder}}
+
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
@@ -433,7 +453,8 @@ Template standard_includes_template(R"(
 std::map<string, Template> bindings_templates {
     std::pair("class", class_template),
     std::pair("file", file_template),
-    std::pair("standard_includes", standard_includes_template)
+    std::pair("standard_includes", standard_includes_template),
+    std::pair("wrapper_builder", wrapper_builder_template)
 };
 
 

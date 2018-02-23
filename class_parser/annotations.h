@@ -30,32 +30,9 @@ public:
 
     Annotations() = default;
 
-    const std::vector<std::string> get() const {
-        std::vector<std::string> results;
+    const std::vector<std::string> get() const;
 
-        for (auto & annotation : annotations) {
-            results.push_back(annotation);
-        }
-        return results;
-    }
-
-    std::vector<std::string> get_regex(const std::string & regex_string) const {
-//        std::cerr << fmt::format("running annotation regex {}", regex_string) << std::endl;
-        auto re = std::regex(regex_string);
-        std::vector<std::string> results;
-
-        for (auto & annotation : annotations) {
-            std::smatch matches;
-//            std::cerr << fmt::format("on annotation {}", annotation) << std::endl;
-            if (std::regex_match(annotation, matches, re)) {
-                if (matches.size() > 1) {
-                    results.emplace_back(matches[1]);
-                }
-            }
-        }
-//        std::cerr << fmt::format("done with annotations") << std::endl;
-        return results;
-    }
+    std::vector<std::string> get_regex(const std::string & regex_string) const;
 
     bool has(const std::string & target) const {
         return std::find(annotations.begin(), annotations.end(), target) != annotations.end();

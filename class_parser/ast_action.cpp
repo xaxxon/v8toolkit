@@ -76,9 +76,10 @@ bool PrintFunctionNamesAction::BeginInvocation(CompilerInstance & ci) {
     }
 }
 
-
+#ifndef TEST_MODE
 static FrontendPluginRegistry::Add <PrintFunctionNamesAction>
     X("v8toolkit-generate-bindings", "generate v8toolkit bindings");
+#endif
 
 // This is called when all parsing is done
 void PrintFunctionNamesAction::EndSourceFileAction() {
@@ -103,8 +104,11 @@ std::unique_ptr<ASTConsumer> PrintFunctionNamesAction::CreateASTConsumer(Compile
 PrintFunctionNamesAction::PrintFunctionNamesAction()
 
 {
+    std::cerr << fmt::format("RESETTING ALL VALUES IN FOR NEW ACTION") << std::endl;
     WrappedClass::wrapped_classes.clear();
     WrappedClass::used_constructor_names.clear();
+    PrintFunctionNamesAction::config_data_initialized = false;
+    PrintFunctionNamesAction::config_data = xl::json::Json{};
 
 }
 

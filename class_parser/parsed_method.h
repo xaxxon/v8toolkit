@@ -203,6 +203,9 @@ public:
     FieldDecl const * field_decl;
     Annotations annotations;
 
+    // if this data member is in a PIMPL class, this is the most immediate data member it is accessed through
+    DataMember * accessed_through = nullptr;
+
     // whether the WRAPPING should be const, not necessarily whether the actual c++ type is
     bool is_const = false;
 

@@ -42,6 +42,8 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     annotations(decl),
     found_method(found_method)
 {
+
+    std::cerr << fmt::format("WrappedClass constructor for {} at {}", this->class_name, (void*)this) << std::endl;
     log.info(LogSubjects::Subjects::ClassParser, "converting class_name from {} to {}", get_canonical_name_for_decl(decl), this->class_name);
 
     if (auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name)) {
@@ -123,6 +125,22 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     log.info(LogT::Subjects::Class, "For {} got pimpl data members: {}",
              this->class_name, xl::join(this->pimpl_data_member_names));
 
+    if (this->pimpl_data_member_names.size() > 0) {
+        bool found_wrapper_builder = false;
+        for (FriendDecl * f : this->decl->friends()) {
+            auto friend_name = get_type_string(f->getFriendType()->getType().getCanonicalType());
+            std::cerr << fmt::format("checking friend name to see if it's the correct wrapper builder: {}", friend_name) << std::endl;
+            if (friend_name == fmt::format("v8toolkit::WrapperBuilder<{}>", this->class_name)) {
+                found_wrapper_builder = true;
+                break;
+            }
+        }
+        if (!found_wrapper_builder) {
+            log.error(LogT::Subjects::Class, "{} has PIMPL types but does not have required friend class v8toolkit::WrapperBuilder<{}>", this->class_name, this->class_name);
+        } else {
+            log.info(LogT::Subjects::Class, "Found expected WrapperBuilder in type {}", this->short_name);
+        }
+    }
 
 
 
@@ -1116,6 +1134,7 @@ std::string WrappedClass::get_derived_classes_string(int level, const std::strin
     return join(results);
 }
 
+
 void WrappedClass::add_base_type(WrappedClass & base_type) {
     if (xl::contains(base_types_to_ignore, base_type.class_name)) {
         log.info(LogSubjects::Class, "Not adding base type {} to {} because it is in ignore list", base_type.class_name, this->class_name);
@@ -1128,6 +1147,7 @@ void WrappedClass::add_base_type(WrappedClass & base_type) {
     this->base_types.insert(&base_type);
 }
 
+
 std::string WrappedClass::get_base_class_string() const {
 
     if (base_types.size() > 1) {
@@ -1137,8 +1157,6 @@ std::string WrappedClass::get_base_class_string() const {
     }
     return base_types.size() ? (*base_types.begin())->class_name : "";
 }
-
-
 
 
 set<ClassFunction const *> WrappedClass::get_all_functions_from_class_hierarchy() const {
@@ -1282,7 +1300,6 @@ void WrappedClass::validate_data() {
 }
 
 
-
 std::string const & WrappedClass::get_js_name() const {
 
 //    std::cerr << fmt::format("getting js name for {} with existing js_name = {}", this->class_name, this->js_name) << std::endl;
@@ -1324,7 +1341,6 @@ std::string const & WrappedClass::get_js_name() const {
 }
 
 
-
 WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
     std::cerr << fmt::format("here2") << std::endl;
     for(auto & c : WrappedClass::wrapped_classes) {
@@ -1336,9 +1352,15 @@ WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
     return nullptr;
 }
 
+
 WrappedClass * WrappedClass::get_wrapped_class(TypeInfo const & type_info) {
     std::cerr << fmt::format("here") << std::endl;
     return WrappedClass::get_wrapped_class(type_info.get_plain_type_decl());
+}
+
+
+bool WrappedClass::has_pimpl_members() const {
+    return this->pimpl_data_member_names.size() > 0;
 }
 
 

@@ -9,7 +9,7 @@ include_directories(${gmock_SOURCE_DIR}/include)
 add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
 
 # Uncomment next line to print debugging info from xl::template library
- target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE)
+ target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE)
 
 
 find_package(fmt REQUIRED)
