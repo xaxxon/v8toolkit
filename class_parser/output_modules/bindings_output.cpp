@@ -74,6 +74,8 @@ struct BindingsProviderContainer {
     }
 
 
+
+
     static ProviderPtr get_provider(WrappedClass const & c) {
         log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
 
@@ -125,6 +127,21 @@ struct BindingsProviderContainer {
     }
 
 
+    static std::string make_member_parameter_string(DataMember const & data_member) {
+        std::string result = "";
+        if (data_member.accessed_through == nullptr) {
+            result = fmt::format("&{}", data_member.long_name);
+        } else {
+            if (data_member.accessed_through->accessed_through != nullptr) {
+                log.error(LogT::Subjects::BindingsOutput, "Bindings output doesn't support multi-level PIMPL members: {}", data_member.long_name);
+            } else {
+                result = fmt::format("&{}, &{}", data_member.accessed_through->long_name, data_member.long_name);
+            }
+        }
+        std::cerr << fmt::format("For {}, returning add_member template parameter: {}", data_member.long_name, result) << std::endl;
+        return result;
+    }
+
     static ProviderPtr get_provider(DataMember const & d) {
         log.info(LogSubjects::BindingsOutput, "get_provider DataMember: {}", d.long_name);
 
@@ -135,7 +152,7 @@ struct BindingsProviderContainer {
             std::pair("declared_in", d.declared_in.class_name),
             std::pair("type", d.type.get_name()),
             std::pair("read_only", d.is_const ? "_readonly" : ""),
-            std::pair("member_pointer", fmt::format("&{}", d.long_name))
+            std::pair("member_pointer", make_member_parameter_string(d))
         );
     }
 
@@ -249,6 +266,18 @@ struct BindingFile {
 };
 
 
+std::vector<std::string> get_class_body(std::vector<WrappedClass const *> classes) {
+    std::vector<std::string> results;
+    for (auto c : classes) {
+        if (c->has_pimpl_members()) {
+            results.emplace_back(fmt::format("v8toolkit::WrapperBuilder<{}>()(isolate);", c->class_name));
+        } else {
+            results.emplace_back(bindings_templates["class"].fill<BindingsProviderContainer>(*c));
+        }
+    }
+    return results;
+}
+
 
 void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_classes)
 {
@@ -312,7 +341,7 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("file_number", fmt::format("{}", file_number)),
                 std::pair("next_file_number", fmt::format("{}", file_number + 1)), // ok if it won't actually exist
                 std::pair("pimpl_classes", P::make_provider(std::ref(binding_file.class_needs_wrapper_builder_specialization))),
-                std::pair("classes", P::make_provider(binding_file.get_classes())),
+                std::pair("classes", get_class_body(binding_file.get_classes())),
                 std::pair("includes", P::make_provider(binding_file.includes)),
                 std::pair("extern_templates", binding_file.extern_templates),
                 std::pair("explicit_instantiations", binding_file.explicit_instantiations),
@@ -386,27 +415,27 @@ Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
-    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
+    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 
 {{<<call_operator|!!
-    class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
+    class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}
 
 {{<<static_functions|!!
-    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 
 {{<<data_members|!!
-    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
+    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
 {{<<enums|!!
-    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});}}
+    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
 
 {{<<wrapper_extension_methods|!!
-    {{method_name}}(class_wrapper);}}
+    {{method_name}}(class_wrapper);>>}}
 
 {{<<custom_extensions|!!
     {{}}>>}}
-    class_wrapper.set_parent_type<{{<<base_type_name>>}}>();
-    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>>}}>();
+    class_wrapper.set_parent_type<{{<<base_type_name>}}>();
+    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
     class_wrapper.finalize(true);
     {{<constructor>}}
 })");
@@ -435,7 +464,7 @@ extern template {{class_name}}>}}
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
-{{classes|class}}
+{{classes|!{{}}}}
 
 {{call_next_function}}
 

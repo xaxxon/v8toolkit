@@ -1282,7 +1282,7 @@ public:
 		add_member_readonly<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
 	}
 
-	
+
 
 	/**
 	 * The specified function will be called when the JavaScript object is called like a function

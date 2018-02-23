@@ -724,6 +724,17 @@ std::vector<DataMember *> WrappedClass::get_members() const {
         results.push_back(member.get());
     }
 
+    // none of the pimpl data members can have the same type - that would lead to duplicate names and there's
+    //   currently no way to select different names based on PIMPL traversal
+    std::set<std::string> types;
+    for(auto &pimpl_data_member : this->pimpl_data_members) {
+        auto type_string = get_type_string(pimpl_data_member->type.type);
+        if (types.count(type_string)) {
+            log.error(LogT::Subjects::Class, "multiple pimpl types in {} have the same underlying type: {}", this->class_name, get_type_string(pimpl_data_member->type.type));
+        }
+        types.insert(type_string);
+    }
+
     for (auto & pimpl_member : this->pimpl_data_members) {
 
         auto underlying_pimpl_type = get_type_from_dereferencing_type(pimpl_member->type.type);
@@ -740,6 +751,14 @@ std::vector<DataMember *> WrappedClass::get_members() const {
         auto pimpl_member_members = pimpl_wrapped_class->get_members();
         if (pimpl_member_members.size() == 0) {
             log.warn(LogT::Subjects::Class, "Pimpl member type has no members");
+        }
+
+        std::cerr << fmt::format("setting accessed_through pointers for members in type: {}", pimpl_member->type.get_name()) << std::endl;
+        for (auto & pimpl_member_member : pimpl_member_members) {
+            if (pimpl_member_member->accessed_through != nullptr && pimpl_member_member->accessed_through != pimpl_member.get()) {
+                log.error(LogT::Subjects::Class, "Pimpl member / class already used as pimpl for something else - not allowed: {}", pimpl_member_member->long_name);
+            }
+            pimpl_member_member->accessed_through = pimpl_member.get();
         }
         results.insert(results.end(), pimpl_member_members.begin(), pimpl_member_members.end());
     }
@@ -774,11 +793,11 @@ void WrappedClass::parse_members() {
             std::string short_field_name = field->getName();
 
             // if the config file has an entry for whether to skip this, use that
-            auto member_function_config =
+            auto data_member_config =
                 PrintFunctionNamesAction::get_config_data()["classes"]
                 [this->class_name]["members"][field_name];
 
-            if (auto skip = member_function_config["skip"].get_boolean()) {
+            if (auto skip = data_member_config["skip"].get_boolean()) {
                 v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}", field_name, *skip);
                 if (*skip) {
                     continue;

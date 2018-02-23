@@ -810,7 +810,7 @@ std::string MemberFunction::look_up_js_name() const {
     // first check the config file for overrides
     auto member_function_config =
         PrintFunctionNamesAction::get_config_data()["classes"]
-            [this->wrapped_class.class_name]["members"][this->get_signature_string()];
+            [this->wrapped_class.class_name]["methods"][this->get_signature_string()];
 
     log.info(LogT::Subjects::ConfigFile, "Looking up member function: {} - {}", this->wrapped_class.class_name,
     this->get_signature_string());
@@ -833,13 +833,16 @@ std::string MemberFunction::look_up_js_name() const {
 
 std::string DataMember::look_up_js_name() const {
     // first check the config file for overrides
-    auto member_function_config =
+    auto data_member_config =
         PrintFunctionNamesAction::get_config_data()["classes"]
         [this->wrapped_class.class_name]["members"][this->long_name];
     log.info(LogT::Subjects::ConfigFile, "Looking up data member: {} - {}", this->wrapped_class.class_name,
              this->long_name);
+    std::cerr << fmt::format("all config is: {}", PrintFunctionNamesAction::get_config_data().get_source()) << std::endl;
+    std::cerr << fmt::format("my config is: {}", data_member_config.get_source()) << std::endl;
+    
 
-    if (auto name_config_override = member_function_config["name"].get_string()) {
+    if (auto name_config_override = data_member_config["name"].get_string()) {
         log.info(LogT::Subjects::ConfigFile, "matched");
 
         return *name_config_override;
