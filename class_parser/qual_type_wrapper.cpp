@@ -42,8 +42,8 @@ QualTypeWrapper & QualTypeWrapper::operator=(QualTypeWrapper const & other) {
     return *this;
 }
 
-QualTypeWrapper & QualTypeWrapper::operator=(QualType const & qual_type) {
-    this->qual_type = std::make_unique<QualType>(qual_type);
+QualTypeWrapper & QualTypeWrapper::operator=(QualType const & other_qual_type) {
+    this->qual_type = std::make_unique<QualType>(other_qual_type);
     return *this;
 }
 

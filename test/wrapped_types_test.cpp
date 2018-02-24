@@ -41,7 +41,7 @@ enum class TestEnum {TEST_ENUM_A, TEST_ENUM_B, TEST_ENUM_C};
 
 class WrappedClass : public WrappedClassBase {
 public:
-    friend class v8toolkit::WrapperBuilder<WrappedClass>;
+    friend struct v8toolkit::WrapperBuilder<WrappedClass>;
 
 private:
     struct Impl;
@@ -231,6 +231,7 @@ namespace v8toolkit {
                 EXPECT_EQ(i, 7);
             }, std::tuple<int>(7));
             w.add_member<WrappedClass::ImplPointer, &WrappedClass::Impl::i>("pimpl_i");
+            w.add_member_readonly<WrappedClass::ImplPointer, &WrappedClass::Impl::i>("pimpl_i_readonly");
             w.add_static_member("static_int", &WrappedClass::static_int);
             w.add_enum("enum_test", {{"A", 1}, {"B", 2}, {"C", 3}});
             w.set_compatible_types<WrappedClassChild>();

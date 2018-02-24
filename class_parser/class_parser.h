@@ -5,7 +5,7 @@
 namespace v8toolkit {
 
 template<typename T>
-class WrapperBuilder {
+struct WrapperBuilder {
     static_assert(sizeof(T) == 0, "WrapperBuilder used for type that doesn't have a specialization");
 };
 

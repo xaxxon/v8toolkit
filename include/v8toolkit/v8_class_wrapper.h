@@ -45,15 +45,6 @@ class Target;
 
 namespace v8toolkit {
 
-/**
- *  Functor class which should be made a friend for any types that need to wrap `private` fields
- * @tparam T Member whose `private` fields to access
- */
-template<typename T>
-class WrapperBuilder {
-	static_assert(std::is_same_v<T*, void>, "WrapperBuilder not specialized for this type");
-};
-
 
 //#define V8_CLASS_WRAPPER_DEBUG
 
@@ -1281,6 +1272,11 @@ public:
 	void add_member_readonly(std::string const & member_name) {
 		add_member_readonly<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
 	}
+
+	template<auto pimpl_member, auto member>
+	void add_member_readonly(std::string const & member_name) {
+		add_member_readonly<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>(member_name);
+	};
 
 
 

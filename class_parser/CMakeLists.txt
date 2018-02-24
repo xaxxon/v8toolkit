@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CLANG_HOME $ENV{CLANG_HOME})
 
 link_directories(${CLANG_HOME}/lib)
-include_directories(${V8_INCLUDE_DIR})
-include_directories(${CLANG_HOME}/include)
 
 execute_process(COMMAND ${CLANG_HOME}/bin/llvm-config --ldflags --libs --system-libs
         OUTPUT_VARIABLE llvm_config_output
@@ -32,6 +30,8 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${llvm_config_output}")
 FILE(GLOB CLASS_PARSER_SOURCES *.cpp *.h output_modules/*.h output_modules/*.cpp)
 
 add_library(class_parser_plugin SHARED ${CLASS_PARSER_SOURCES})
+target_include_directories(class_parser_plugin SYSTEM PRIVATE ${CLANG_HOME}/include)
+        
 
 # googletest sets the CMAKE_DEBUG_POSTFIX value to "d" so unset it here
 set_target_properties(class_parser_plugin PROPERTIES

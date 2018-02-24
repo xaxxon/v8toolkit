@@ -107,8 +107,8 @@ PrintFunctionNamesAction::PrintFunctionNamesAction()
     std::cerr << fmt::format("RESETTING ALL VALUES IN FOR NEW ACTION") << std::endl;
     WrappedClass::wrapped_classes.clear();
     WrappedClass::used_constructor_names.clear();
-    PrintFunctionNamesAction::config_data_initialized = false;
-    PrintFunctionNamesAction::config_data = xl::json::Json{};
+//    PrintFunctionNamesAction::config_data_initialized = false;
+//    PrintFunctionNamesAction::config_data = xl::json::Json{};
 
 }
 

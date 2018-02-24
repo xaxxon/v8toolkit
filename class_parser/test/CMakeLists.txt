@@ -2,14 +2,17 @@ project ("Class Parser Test")
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 
-include_directories(${gtest_SOURCE_DIR}/include)
-include_directories(${gmock_SOURCE_DIR}/include)
-
 
 add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
+target_include_directories(test-class-parser SYSTEM PRIVATE
+        ${gtest_SOURCE_DIR}/include
+        ${gmock_SOURCE_DIR}/include
+        ${CLANG_HOME}/include
+    )
+
 
 # Uncomment next line to print debugging info from xl::template library
- target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE)
+target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE)
 
 
 find_package(fmt REQUIRED)
@@ -29,18 +32,9 @@ target_link_libraries(test-class-parser clangFrontend clangSerialization clangAS
 add_custom_target(copy_test_resources)
 add_custom_command(TARGET copy_test_resources PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/../class_parser.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../include/v8toolkit/wrapped_class_base.h
-        ${PROJECT_BINARY_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/javascript_stub_templates/
-        ${PROJECT_BINARY_DIR}/javascript_stub_templates/
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/bindings_templates/
-        ${PROJECT_BINARY_DIR}/bindings_templates/
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/../output_modules/bidirectional_templates/
-        ${PROJECT_BINARY_DIR}/bidirectional_templates/
+            ${CMAKE_CURRENT_SOURCE_DIR}/../class_parser.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../include/v8toolkit/wrapped_class_base.h
+            ${PROJECT_BINARY_DIR}/
         )
 
 add_dependencies(test-class-parser gmock gtest copy_test_resources)

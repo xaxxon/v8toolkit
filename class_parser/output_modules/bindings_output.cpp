@@ -403,7 +403,7 @@ Template wrapper_builder_template(R"(
 namespace v8toolkit {
 
 template<>
-class WrapperBuilder<{{long_name}}> {
+struct WrapperBuilder<{{long_name}}> {
     void operator()(v8toolkit::Isolate & isolate)
         {{<<!class>>}}
 };

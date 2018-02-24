@@ -39,6 +39,21 @@ using namespace v8toolkit::class_parser::bindings_output;
 using namespace v8toolkit::class_parser::bidirectional_output;
 using namespace v8toolkit::class_parser::javascript_subclass_template_output;
 
+
+class ClassParser : public ::testing::Test {
+protected:
+    void SetUp() override {
+        PrintFunctionNamesAction::config_data = xl::json::Json{};
+        
+        // output module construction may assume the config data is present so pretend like it always is
+        // if it shouldn't be the default (empty) config, then make sure to set it before anything uses it
+        PrintFunctionNamesAction::config_data_initialized = true;
+    }
+
+};
+
+
+
 struct Environment : public ::testing::Environment {
     ~Environment() override {}
     bool _expect_errors = false;
@@ -119,7 +134,6 @@ auto && erase_if2(T && container, Callable callable) {
 
 auto run_code(std::string source, PrintFunctionNamesAction * action, vector<unique_ptr<OutputModule>> output_modules = {}) {
     assert(action != nullptr);
-    action->config_data_initialized = true;
 
     static std::string source_prefix = R"(
         #include "wrapped_class_base.h"
@@ -183,7 +197,7 @@ auto run_code(std::string source, vector<unique_ptr<OutputModule>> output_module
 
 
 
-TEST(ClassParser, Simple) {
+TEST_F(ClassParser, Simple) {
 
     std::string source = R"(
         struct SimpleWrappedClass : public v8toolkit::WrappedClassBase {
@@ -196,6 +210,13 @@ TEST(ClassParser, Simple) {
     std::cerr << fmt::format("after return: size {} - [0]: {}", pruned_vector.size(), (void*)pruned_vector[0].get().get()) << std::endl;
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
+    std::cerr << fmt::format("&c = {}", (void*)&c) << std::endl;
+    auto name = c.get_short_name();
+    std::cerr << fmt::format("name = {}", name) << std::endl;
+    
+    /*****
+     * NO CLUE WHY THIS FAILS SOMETIMES
+     */
     EXPECT_EQ(c.get_short_name(), "SimpleWrappedClass");
 
     EXPECT_EQ(c.get_members().size(), 0);
@@ -206,7 +227,7 @@ TEST(ClassParser, Simple) {
     EXPECT_EQ(c.get_constructors().size(), 1);
 }
 
-TEST(ClassParser, DoNotWrapConstructors) {
+TEST_F(ClassParser, DoNotWrapConstructors) {
 
     std::string source = R"(
         struct V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS SimpleWrappedClass : public v8toolkit::WrappedClassBase {};
@@ -228,7 +249,7 @@ TEST(ClassParser, DoNotWrapConstructors) {
 }
 
 
-TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
+TEST_F(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
 
     std::string source = R"(
         class NotWrappedBase {};
@@ -249,7 +270,7 @@ TEST(ClassParser, WrappedClassWithUnwrappedBaseClasses) {
 
 }
 
-TEST(ClassParser, ExplicitIgnoreBaseClass) {
+TEST_F(ClassParser, ExplicitIgnoreBaseClass) {
     std::string source = R"(
         class NotWrappedBaseSkip {};
         class NotWrappedSkip : public NotWrappedBaseSkip {};
@@ -271,7 +292,7 @@ TEST(ClassParser, ExplicitIgnoreBaseClass) {
 
 
 
-TEST(ClassParser, ConstAndStaticCheck) {
+TEST_F(ClassParser, ConstAndStaticCheck) {
     std::string source = R"(
         class C : public v8toolkit::WrappedClassBase {
         public:
@@ -309,7 +330,7 @@ TEST(ClassParser, ConstAndStaticCheck) {
 
 
 
-TEST(ClassParser, ClassMatchingJSReservedWord) {
+TEST_F(ClassParser, ClassMatchingJSReservedWord) {
     std::string source = R"(
         class Object : public v8toolkit::WrappedClassBase {
         public:
@@ -325,7 +346,7 @@ TEST(ClassParser, ClassMatchingJSReservedWord) {
 }
 
 
-TEST(ClassParser, DuplicateMemberFunctionName) {
+TEST_F(ClassParser, DuplicateMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -340,7 +361,7 @@ TEST(ClassParser, DuplicateMemberFunctionName) {
 }
 
 
-TEST(ClassParser, DuplicateStaticMemberFunctionName) {
+TEST_F(ClassParser, DuplicateStaticMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -354,7 +375,7 @@ TEST(ClassParser, DuplicateStaticMemberFunctionName) {
     EXPECT_EQ(environment->expect_no_errors(), 1);
 }
 
-TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
+TEST_F(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -384,7 +405,7 @@ TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfig) {
     EXPECT_EQ(environment->expect_no_errors(), 0);
 }
 
-TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfigBySkipping) {
+TEST_F(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfigBySkipping) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -415,7 +436,7 @@ TEST(ClassParser, DuplicateStaticMemberFunctionNameFixedWithJsonConfigBySkipping
 
 
 
-TEST(ClassParser, DuplicateDataMemberFunctionName) {
+TEST_F(ClassParser, DuplicateDataMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -430,7 +451,7 @@ TEST(ClassParser, DuplicateDataMemberFunctionName) {
 }
 
 
-TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfig) {
+TEST_F(ClassParser, DuplicateDataMemberFunctionNameFromConfig) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -461,7 +482,7 @@ TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfig) {
     EXPECT_EQ(environment->expect_no_errors(), 1);
 }
 
-TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfigButOneSkipped) {
+TEST_F(ClassParser, DuplicateDataMemberFunctionNameFromConfigButOneSkipped) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -496,7 +517,7 @@ TEST(ClassParser, DuplicateDataMemberFunctionNameFromConfigButOneSkipped) {
 
 
 
-TEST(ClassParser, DuplicateMixedMemberFunctionName) {
+TEST_F(ClassParser, DuplicateMixedMemberFunctionName) {
     std::string source = R"(
         class DuplicateFunctionNameClass : public v8toolkit::WrappedClassBase {
         public:
@@ -512,7 +533,7 @@ TEST(ClassParser, DuplicateMixedMemberFunctionName) {
 
 
 
-TEST(ClassParser, JSDocTypeNames) {
+TEST_F(ClassParser, JSDocTypeNames) {
     std::string source = R"(
         #include <vector>
         struct B {};
@@ -568,7 +589,7 @@ struct BidirectionalTestStreamProvider : public OutputStreamProvider {
 };
 
 
-TEST(ClassParser, CustomExtensions) {
+TEST_F(ClassParser, CustomExtensions) {
     std::string source = R"(
     class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
     public:
@@ -603,7 +624,7 @@ TEST(ClassParser, CustomExtensions) {
 }
 
 
-TEST(ClassParser, CustomExtensionInheritance) {
+TEST_F(ClassParser, CustomExtensionInheritance) {
     std::string source = R"(
     class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
     public:
@@ -635,7 +656,7 @@ TEST(ClassParser, CustomExtensionInheritance) {
 }
 
 
-TEST(ClassParser, Enums) {
+TEST_F(ClassParser, Enums) {
     std::string source = R"(
     class V8TOOLKIT_USE_NAME(DifferentNameForClassA)  A : public v8toolkit::WrappedClassBase {
     public:
@@ -667,7 +688,7 @@ TEST(ClassParser, Enums) {
 }
 
 
-TEST(ClassParser, BindingsOutputModuleConfigFileMaxDeclarationCount) {
+TEST_F(ClassParser, BindingsOutputModuleConfigFileMaxDeclarationCount) {
     PrintFunctionNamesAction::config_data = xl::json::Json("{\"output_modules\": {\"BindingsOutputModule\":{\"max_declarations_per_file\":23}}}");
     BindingsOutputModule bindings_module;
     PrintFunctionNamesAction::config_data = xl::json::Json{};
@@ -677,7 +698,7 @@ TEST(ClassParser, BindingsOutputModuleConfigFileMaxDeclarationCount) {
 
 
 
-TEST(ClassParser, ClassElements) {
+TEST_F(ClassParser, ClassElements) {
     std::string source = R"(
     class A : public v8toolkit::WrappedClassBase {
     public:
@@ -713,7 +734,7 @@ TEST(ClassParser, ClassElements) {
 
 
 
-TEST(ClassParser, UseDifferentName) {
+TEST_F(ClassParser, UseDifferentName) {
     std::string source = R"(
     class A : public v8toolkit::WrappedClassBase {
     public:
@@ -741,7 +762,7 @@ TEST(ClassParser, UseDifferentName) {
 }
 
 
-TEST(ClassParser, TemplatedClassInstantiations) {
+TEST_F(ClassParser, TemplatedClassInstantiations) {
     std::string source = R"(
         template<class T>
         class TemplatedClass : public v8toolkit::WrappedClassBase {};
@@ -771,7 +792,7 @@ TEST(ClassParser, TemplatedClassInstantiations) {
 }
 
 
-TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias) {
+TEST_F(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias) {
     std::string source = R"(
         template<class T>
         class TemplatedClass : public v8toolkit::WrappedClassBase {};
@@ -805,7 +826,7 @@ TEST(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAlias
 }
 
 
-TEST(ClassParser, AbstractClass) {
+TEST_F(ClassParser, AbstractClass) {
     std::string source = R"(
         class AbstractClass : public v8toolkit::WrappedClassBase{
         public:
@@ -830,7 +851,7 @@ TEST(ClassParser, AbstractClass) {
 
 
 
-TEST(ClassParser, ClassAndFunctionComments) {
+TEST_F(ClassParser, ClassAndFunctionComments) {
     std::string source = R"(
         /**
          * Class Description
@@ -916,7 +937,7 @@ TEST(ClassParser, ClassAndFunctionComments) {
 
 
 
-TEST(ClassParser, SkipClassEvenThoughInheritsFromWrappedClassBase) {
+TEST_F(ClassParser, SkipClassEvenThoughInheritsFromWrappedClassBase) {
     std::string source = R"(
 class V8TOOLKIT_SKIP AnnotatedNotToBeWrapped : public v8toolkit::WrappedClassBase {};
     )";
@@ -927,7 +948,7 @@ class V8TOOLKIT_SKIP AnnotatedNotToBeWrapped : public v8toolkit::WrappedClassBas
 }
 
 
-TEST(ClassParser, V8TOOLKIT_SKIP_TESTS) {
+TEST_F(ClassParser, V8TOOLKIT_SKIP_TESTS) {
     std::string source = R"(
 class ClassWithSomeMethodsMarkedToBeSkipped : public v8toolkit::WrappedClassBase {
 public:
@@ -957,7 +978,7 @@ public:
 
 
 
-TEST(ClassParser, ClassComments) {
+TEST_F(ClassParser, ClassComments) {
     std::string source = R"(
     #include <map>
     #include <string>
@@ -1372,7 +1393,7 @@ exports.create = function(exports, world_creation, base_type) {
 
 
 
-TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
+TEST_F(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
     std::string source = R"(
     class A : public v8toolkit::WrappedClassBase {
     public:
@@ -1397,7 +1418,7 @@ TEST(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
 
 
 
-TEST(ClassParser, MismatchedPimplTest) {
+TEST_F(ClassParser, MismatchedPimplTest) {
 
 std::string source = R"(
 #include <memory>
@@ -1423,7 +1444,7 @@ struct A::Impl {
 }
 
 
-TEST(ClassParser, PimplTest) {
+TEST_F(ClassParser, PimplTest) {
     std::string source = R"(
     #include <memory>
     #include "class_parser.h"
@@ -1493,7 +1514,7 @@ template class v8toolkit::V8ClassWrapper<A>;
 namespace v8toolkit {
 
 template<>
-class WrapperBuilder<A> {
+struct WrapperBuilder<A> {
     void operator()(v8toolkit::Isolate & isolate)
         {
     v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();

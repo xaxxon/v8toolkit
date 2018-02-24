@@ -738,6 +738,7 @@ std::vector<DataMember *> WrappedClass::get_members() const {
     for (auto & pimpl_member : this->pimpl_data_members) {
 
         auto underlying_pimpl_type = get_type_from_dereferencing_type(pimpl_member->type.type);
+
         auto pimpl_wrapped_class = WrappedClass::get_wrapped_class(underlying_pimpl_type->getAsCXXRecordDecl());
         if (pimpl_wrapped_class == nullptr) {
             log.error(LogT::Subjects::Class, "Pimpl data member's type never seen: {}", underlying_pimpl_type.getAsString());
@@ -815,6 +816,9 @@ void WrappedClass::parse_members() {
             // if this field is a PIMPL field
             if (xl::contains(this->pimpl_data_member_names, short_field_name)) {
                 this->pimpl_data_members.push_back(std::make_unique<DataMember>(*this, wrapped_class, field));
+                auto pimpl_includes = this->pimpl_data_members.back()->type.get_root_includes();
+                std::cerr << fmt::format("adding pimpl includes for {}: {}", this->pimpl_data_members.back()->long_name, xl::join(pimpl_includes)) << std::endl;
+                this->include_files.insert(pimpl_includes.begin(), pimpl_includes.end());
                 continue;
             }
 
@@ -1067,6 +1071,7 @@ bool WrappedClass::found_method_means_wrapped() {
 }
 
 WrappedClass::~WrappedClass() {
+    std::cerr << fmt::format("WrappedClass destructor for {} at {}", this->class_name, (void*)this) << std::endl;
     log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->class_name, (void*)this);
 }
 
