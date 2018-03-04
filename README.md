@@ -16,10 +16,20 @@ automatically.
 ## Requirements
 * Recent version of V8.  The V8 API is constantly evolving and this library tracks recent versions.
 * C++17. New language features drastically simplifying v8toolkit's implementation.  Fortunately, clang
-supports all major platforms.  
+supports all major platforms.  (Currently requires clang, as GCC never implemented the C++11 feature
+allowing function pointers without external binding as template parameters - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52036)
 
 #### Doxygen docs available here: http://xaxxon.github.io/v8toolkit/docs/doxygen/html/index.html
 
+## New Feature!
+###Auto-generation of PIMPL members.   
+
+Annotate the main class, put a friend on it, and all the 
+members of the PIMPL member pointer (subject to the usual rules/exceptions) will be exposed as
+part of the main wrapped class.
+
+Additionally, add_member(_readonly) can now expose any variable - just provide it with a function
+callback which returns the variable you want exposed when given an object pointer.
    
 ## Examples
 

@@ -822,8 +822,6 @@ void WrappedClass::parse_members() {
                 continue;
             }
 
-
-
             auto export_type = get_export_type(field, LogSubjects::DataMembers, EXPORT_ALL);
             if (export_type == EXPORT_NONE) {
                 log.info(LogSubjects::DataMembers, "Skipping data member {} because not supposed to be exported {}",

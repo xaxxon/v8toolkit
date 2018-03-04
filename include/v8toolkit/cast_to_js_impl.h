@@ -496,5 +496,12 @@ struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
     }
 };
 
+template<typename T>
+struct CastToJS<T, std::enable_if_t<std::is_same_v<nullptr_t, std::decay_t<T>>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, nullptr_t) {
+        return v8::Undefined(isolate);
+    }
+};
+
 
 } // end namespace v8toolkit
