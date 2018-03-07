@@ -71,6 +71,13 @@ int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value)
 }
 
 
+int get_array_length(v8::Local<v8::Value> array_value) {
+    auto isolate = v8::Isolate::GetCurrent();
+    return get_array_length(isolate, array_value);
+}
+
+
+
 void set_global_object_alias(v8::Local<v8::Context> context, std::string const & alias_name)
 {
     auto global_object = context->Global();
@@ -137,7 +144,7 @@ void print_v8_value_details(v8::Local<v8::Value> local_value) {
 
 
 std::vector<std::string> get_object_keys(v8::Isolate * isolate,
-                                                v8::Local<v8::Object> & object,
+                                                v8::Local<v8::Object> object,
                                                 bool own_properties_only)
 {
     auto context = isolate->GetCurrentContext();
@@ -158,12 +165,17 @@ std::vector<std::string> get_object_keys(v8::Isolate * isolate,
     return keys;
 }
 
+std::vector<std::string> get_object_keys(v8::Local<v8::Object> object, bool own_properties_only) {
+    auto isolate = v8::Isolate::GetCurrent();
+    return get_object_keys(isolate, object, own_properties_only);
+}
+
 
 // set to enable debug prints on calls to stringify
 #define STRINGIFY_VALUE_DEBUG false
 
 std::string stringify_value(v8::Isolate * isolate,
-                            const v8::Local<v8::Value> & value,
+                            v8::Local<v8::Value> value,
                             bool show_all_properties,
                             std::vector<v8::Local<v8::Value>> && processed_values)
 {

@@ -63,51 +63,51 @@ BOOST_STRONG_TYPEDEF(v8::Local<v8::Object>, This)
 
 
 template<class MemberT, class ClassT>
-    constexpr bool get_member_is_readonly(MemberT(ClassT::*member)) {
-        return std::is_const_v<MemberT>;
-    };
+constexpr bool get_member_is_readonly(MemberT(ClassT::*member)) {
+    return std::is_const_v<MemberT>;
+};
 
 
-    template<auto member>
-    constexpr bool is_pointer_to_const_data_member_v = get_member_is_readonly(member);
+template<auto member>
+constexpr bool is_pointer_to_const_data_member_v = get_member_is_readonly(member);
 
 
 
-    using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
-    struct MethodAdderData {
-        std::string method_name;
-        StdFunctionCallbackType callback;
+using StdFunctionCallbackType = func::function<void(const v8::FunctionCallbackInfo<v8::Value>& info)> ;
+struct MethodAdderData {
+    std::string method_name;
+    StdFunctionCallbackType callback;
 
-        MethodAdderData();
-        MethodAdderData(std::string const &, StdFunctionCallbackType const &);
-    };
+    MethodAdderData();
+    MethodAdderData(std::string const &, StdFunctionCallbackType const &);
+};
 
-    /**
-    * Returns a string with the given stack trace and a leading and trailing newline
-    * @param stack_trace stack trace to return a string representation of
-    * @return string representation of the given stack trace
-    */
-    std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
+/**
+* Returns a string with the given stack trace and a leading and trailing newline
+* @param stack_trace stack trace to return a string representation of
+* @return string representation of the given stack trace
+*/
+std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace);
 
 
-    namespace literals {
+namespace literals {
 
-        // put the following in your code to use these:
-        //     using namespace v8toolkit::literals;
-        inline v8::Local<v8::String> operator "" _v8(char const * string, unsigned long) {
-            v8::Isolate * isolate = v8::Isolate::GetCurrent();
-            return v8::String::NewFromUtf8(isolate, string);
-        }
-        inline v8::Local<v8::Number> operator"" _v8(long double number) {
-            v8::Isolate * isolate = v8::Isolate::GetCurrent();
-            return v8::Number::New(isolate, number);
-        }
-        inline v8::Local<v8::Integer> operator"" _v8(unsigned long long int number) {
-            v8::Isolate * isolate = v8::Isolate::GetCurrent();
-            return v8::Integer::New(isolate, number);
-        }
-
+    // put the following in your code to use these:
+    //     using namespace v8toolkit::literals;
+    inline v8::Local<v8::String> operator "" _v8(char const * string, unsigned long) {
+        v8::Isolate * isolate = v8::Isolate::GetCurrent();
+        return v8::String::NewFromUtf8(isolate, string);
     }
+    inline v8::Local<v8::Number> operator"" _v8(long double number) {
+        v8::Isolate * isolate = v8::Isolate::GetCurrent();
+        return v8::Number::New(isolate, number);
+    }
+    inline v8::Local<v8::Integer> operator"" _v8(unsigned long long int number) {
+        v8::Isolate * isolate = v8::Isolate::GetCurrent();
+        return v8::Integer::New(isolate, number);
+    }
+
+}
 
 
 
@@ -215,7 +215,7 @@ template <class... Ts>
 auto get_typelist_for_variables(Ts... ts) -> TypeList<Ts...>;
 
 template <class... Ts>
-auto make_tuple_for_variables(Ts&&... ts) -> std::tuple<Ts...> {
+auto make_tuple_for_variables(Ts&&... ts) {
     return std::tuple<Ts...>(std::forward<Ts>(ts)...);
 }
 
@@ -264,8 +264,8 @@ public:
     Exception(){}
 
     virtual const char * what() const noexcept override {return message.c_str();}
-
 };
+
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
@@ -295,9 +295,8 @@ class UndefinedPropertyException : public Exception {
 public:
     using Exception::Exception;
  virtual const char * what() const noexcept override {return message.c_str();}
-
-
 };
+
 
 /**
 * prints out a ton of info about a v8::Value
@@ -309,10 +308,14 @@ void print_v8_value_details(v8::Local<v8::Value> local_value);
 * Returns the length of an array
 */
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Value> array_value);
+int get_array_length(v8::Local<v8::Value> array_value);
 
 
 std::vector<std::string> get_object_keys(v8::Isolate * isolate,
-                                         v8::Local<v8::Object> & object,
+                                         v8::Local<v8::Object> object,
+                                         bool own_properties_only = true);
+
+std::vector<std::string> get_object_keys(v8::Local<v8::Object> object,
                                          bool own_properties_only = true);
 
 
@@ -384,95 +387,6 @@ void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local
     });
 }
 
-
-
-/**
-* Takes a container, runs each element through Callable and returns a new container
-*   of the same container type but with a data type matching the returned type
-*   of the Callable
-*/
-template<class Container,
-         class Callable>
-struct MapperHelper;
-
-
-/**
-* Takes a container containing type Data (only for single-type containers, not maps)
-*   and runs each element through a Callable returning a new container of the same container type
-*   but with a data type matching the type returned by the Callable
-*/
-template<template <typename, typename...> class Container,
-class Data,
-class... AddParams,
-class Callable>
-struct MapperHelper<Container<Data, AddParams...>, Callable>
-{
-    using Results = Container<typename std::result_of<Callable(Data)>::type>;
-    Results operator()(const Container<Data, AddParams...> & container, Callable callable)
-    {
-        Results results;
-        for (auto && element : container) {
-            try {
-                results.push_back(callable(std::forward<decltype(element)>(element)));
-            }catch(...) {} // ignore exceptions, just don't copy the element
-        }
-        return results;
-    }
-};
-
-
-/**
-* Takes a map with arbitrary key/value types and returns a new map with the types
-*   inside the std::pair returned by Callable
-*/
-template<class Key,
-        class Value,
-        class... AddParams,
-        class Callable>
-struct MapperHelper<std::map<Key, Value, AddParams...>, Callable>
-{
-    using Source = std::map<Key, Value, AddParams...>;
-    using ResultPair = typename std::result_of<Callable(typename Source::value_type)>::type;
-    using Results = std::map<typename ResultPair::T1, typename ResultPair::T2>;
-    Results operator()(std::map<Key, Value, AddParams...> container, Callable callable)
-    {
-        Results results;
-
-
-        for (auto && element : container) {
-            results.insert(callable(std::forward<decltype(element)>(element)));
-        }
-        return results;
-    }
-};
-
-
-
-/** IF YOU GET AN ERROR ABOUT RESULT_OF::TYPE NOT EXISTING, MAKE SURE YOUR LAMBDA PARAMETER TYPE IS EXACTLY RIGHT,
- * ESPECTIALLY RE; CONST
- * @param container input container
- * @param callable  transformation callback
- * @return container of the transformed results
- */
-template <class Container, class Callable>
-auto mapper(const Container & container, Callable callable) -> decltype(MapperHelper<Container, Callable>()(container, callable))
-{
-    return MapperHelper<Container, Callable>()(container, callable);
-}
-
-
-template <class Callable,
-        class Container>
-auto reducer(const Container & container, Callable callable) ->
-    std::vector<typename std::result_of<Callable(typename Container::value_type)>::type>
-{
-    using ResultType = typename std::result_of<Callable(typename Container::value_type)>::type;
-    std::vector<ResultType> results;
-    for(auto && pair : container) {
-        results.push_back(callable(std::forward<decltype(pair)>(pair)));
-    }
-    return results;
-}
 
 struct StuffBase{
     // virtual destructor makes sure derived class destructor is called to actually
@@ -596,13 +510,10 @@ v8::MaybeLocal<T> make_maybe_local(U value) {
 }
 
 
-
-
 template<class T>
 auto get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
     return get_value_as<T>(isolate, value.Get(isolate));
 }
-
 
 
 template<class T>
@@ -655,6 +566,12 @@ auto get_property_as(T object, std::string_view key) {
 }
 
 
+template<typename T>
+inline v8::Local<v8::Value> get_property(T object, std::string_view key) {
+    return get_property_as<v8::Value>(object, key);
+}
+
+
 
  v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key);
 
@@ -667,7 +584,7 @@ auto get_property_as(T object, std::string_view key) {
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
 std::string stringify_value(v8::Isolate * isolate,
-                            const v8::Local<v8::Value> & value,
+                            v8::Local<v8::Value> value,
                             bool show_all_properties=false,
                             std::vector<v8::Local<v8::Value>> && processed_values = std::vector<v8::Local<v8::Value>>{});
 

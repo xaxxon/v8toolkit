@@ -13,39 +13,47 @@ namespace v8toolkit {
 template<int position, class Tuple>
 struct TupleForEach;
 
-/**
-* Populates an array of v8::Values with the values of the tuple, casted by the tuple element's type
-*/
-template<int position, class Tuple>
-struct TupleForEach : public TupleForEach<position - 1, Tuple> {
-    using super = TupleForEach<position - 1, Tuple>;
-
-    void operator()(v8::Isolate * isolate, v8::Local <v8::Value> * params, const Tuple & tuple) {
-        constexpr const int array_position = position - 1;
-        params[array_position] = CastToJS<typename std::tuple_element<array_position, Tuple>::type>()(isolate,
-                                                                                                      std::get<array_position>(
-                                                                                                          tuple));
-        super::operator()(isolate, params, tuple);
-    }
-};
 
 /**
-* Base case for no remaining elements to parse (as determined by the position being 0)
-*/
-template<class Tuple>
-struct TupleForEach<0, Tuple> {
-    void operator()(v8::Isolate *, v8::Local <v8::Value> *, const Tuple &) {}
-};
+ * Creates a vector of JS values corresponding to the values in the specified tuple.  Useful for
+ * calling a JS function with
+ * @param tuple tuple of values to convert to JS
+ * @return vector of JS objects corresponding to the provided tuple values
+ */
+template<typename... Ts, size_t... Is>
+std::vector<v8::Local<v8::Value>> tuple_to_js_values(std::tuple<Ts...> const & tuple, std::index_sequence<Is...>) {
+    
+    auto isolate = v8::Isolate::GetCurrent();
+    using Tuple = std::tuple<Ts...>;
+    std::vector<v8::Local<v8::Value>> result;
+    result.reserve(sizeof...(Ts));
+    
+    (result.push_back(CastToJS<std::tuple_element_t<Is, Tuple>>()(isolate, std::get<Is>(tuple))), ...);
+    
+    return result;
+}
+
+
+/**
+ * Convenience version of tuple_to_js_values which creates the index_sequence for you
+ * @param tuple tuple of values to convert to JS
+ * @return vector of JS objects corresponding to the provided tuple values
+ */
+template<typename... Ts>
+std::vector<v8::Local<v8::Value>> tuple_to_js_values(std::tuple<Ts...> const & tuple) {
+    return tuple_to_js_values(tuple, std::index_sequence_for<Ts...>());
+}
+
 
 
 /**
  *
  */
 template<class R, class... OriginalTypes, class... Ts>
-v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Context> context,
-                                                         const v8::Local <v8::Function> function,
+v8::Local <v8::Value> call_javascript_function_with_vars(v8::Local <v8::Context> context,
+                                                         v8::Local <v8::Function> function,
                                                          R && receiver_object,
-                                                         const TypeList<OriginalTypes...> & type_list,
+                                                         TypeList<OriginalTypes...> type_list,
                                                          Ts && ... ts) {
     auto receiver = make_local(receiver_object);
     auto isolate = context->GetIsolate();
@@ -71,20 +79,20 @@ v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Co
 * Returns true on success with the result in the "result" parameter
 */
 template<typename T, class TupleType = std::tuple<>>
-v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> context,
-                                               const v8::Local <v8::Function> function,
+v8::Local <v8::Value> call_javascript_function(v8::Local<v8::Context> context,
+                                               v8::Local<v8::Function> function,
                                                T && receiver_object,
-                                               const TupleType & tuple = {}) {
+                                               TupleType const & tuple = {}) {
     auto receiver = make_local<v8::Object>(receiver_object);
     constexpr const int tuple_size = std::tuple_size<TupleType>::value;
     std::array<v8::Local < v8::Value>, tuple_size > parameters;
     auto isolate = context->GetIsolate();
-    TupleForEach<tuple_size, TupleType>()(isolate, parameters.data(), tuple);
+    auto v8_values = tuple_to_js_values(tuple);
 
     v8::TryCatch tc(isolate);
 
     // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
-    auto maybe_result = function->Call(context, receiver, tuple_size, parameters.data());
+    auto maybe_result = function->Call(context, receiver, tuple_size, v8_values.data());
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
         throw V8ExecutionException(isolate, tc);
@@ -96,22 +104,28 @@ v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> con
 * Returns true on success with the result in the "result" parameter
 */
 template<typename T, class TupleType = std::tuple<>>
-v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> context,
-                                               const std::string & function_name,
+v8::Local <v8::Value> call_javascript_function(v8::Local <v8::Context> context,
+                                               std::string_view function_name,
                                                T && receiver_object,
-                                               const TupleType & tuple = {}) {
+                                               TupleType const & tuple = {}) {
+    auto isolate = context->GetIsolate();
     auto receiver = make_local(receiver_object);
-    auto maybe_value = receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(), function_name.c_str()));
-    if (maybe_value.IsEmpty()) {
-        throw InvalidCallException(fmt::format("Function name {} could not be found", function_name));
+    
+    if (receiver->HasOwnProperty(context, 
+                                 v8::String::NewFromUtf8(isolate, 
+                                                         function_name.data(), 
+                                                         v8::String::NewStringType::kNormalString, 
+                                                         function_name.length()))) {
+        
+        if (auto function = get_property_as<v8::Function>(receiver, function_name)) {
+            return call_javascript_function(context, *function, receiver, tuple);
+        } else {
+            throw InvalidCallException(fmt::format("receiver has property {} but it is not a function", function_name));
+        }
+    } else {
+        throw InvalidCallException(fmt::format("receiver doesn't have a property named: {}", function_name));
     }
 
-    auto value = maybe_value.ToLocalChecked();
-    if (!value->IsFunction()) {
-        throw InvalidCallException(fmt::format("{} was found but is not a function", function_name));;
-    }
-
-    return call_javascript_function(context, v8::Local<v8::Function>::Cast(value), receiver, tuple);
 }
 
 
