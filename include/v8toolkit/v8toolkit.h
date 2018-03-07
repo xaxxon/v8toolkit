@@ -537,12 +537,12 @@ func::function<R(Args...)> bind(CLASS & object, R(METHOD_CLASS::*method)(Args...
 * If the filename `filename` exists, reeturns true and sets the last modificaiton time and contents
 *   otherwise returns false
 */
-bool get_file_contents(std::string filename, std::string & file_contents, time_t & file_modification_time);
+std::optional<std::string> get_file_contents(std::string filename, time_t & file_modification_time);
 
 /**
 * same as longer version, just doesn't return modification time if it's not desired
 */
-bool get_file_contents(std::string filename, std::string & file_contents);
+std::optional<std::string> get_file_contents(std::string filename);
 
 
 /**

@@ -2,7 +2,7 @@
 
 #include <v8.h>
 
-#include <xl/log.h>
+#include "log.h"
 
 namespace v8toolkit {
 

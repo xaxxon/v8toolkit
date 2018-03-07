@@ -11,7 +11,7 @@ namespace v8toolkit {
 
 template<typename T, class = void>
 struct CastToJS {
-    static_assert(always_false_v<T>, "Fallback CastToJS template isn't allowed");
+    static_assert(always_false_v<T>, "Fallback CastToJS template isn't allowed - make sure header with specialization desired is included at this point");
 };
 
 

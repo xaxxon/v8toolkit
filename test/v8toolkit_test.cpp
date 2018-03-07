@@ -15,6 +15,25 @@ TEST_F(JavaScriptFixture, RequireErrors) {
 }
 
 
+TEST_F(JavaScriptFixture, MakeLocal) {
+    this->create_context();
+
+    (*c)([&]{
+        {
+            v8::Local<v8::Value> value = v8::Number::New(isolate, 4.0);
+            auto result = make_maybe_local<v8::Object>(value);
+            EXPECT_TRUE(result.IsEmpty());
+        }
+        {
+            v8::Local<v8::Value> value = v8::Object::New(isolate);
+            auto result = make_maybe_local<v8::Object>(value);
+            EXPECT_FALSE(result.IsEmpty());
+        }
+    });
+
+}
+
+
 
 TEST_F(JavaScriptFixture, ReleaseRequiredModulesBeforeIsolateGoesAway) {
 

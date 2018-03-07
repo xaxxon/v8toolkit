@@ -27,10 +27,11 @@ int main(int argc, char** argv) {
     auto script = context->compile("a = 1;\r\na+=1;", "hard-coded-text-a.js");
     auto script2 = context->compile("b = 2;\r\nb+=2;", "hard-coded-text-b.js");
     const char * debugger_sample_js_filename = "debugger_sample.js";
-    std::string script_3_source;
-    bool result = v8toolkit::get_file_contents(debugger_sample_js_filename, script_3_source);
-    assert(result);
-    auto script3 = context->compile(script_3_source, debugger_sample_js_filename);
+    auto script_3_source = v8toolkit::get_file_contents(debugger_sample_js_filename)
+    if (!script_3_source) {
+        assert(false);
+    }
+    auto script3 = context->compile(*script_3_source, debugger_sample_js_filename);
 
     (*context)([&] {
 

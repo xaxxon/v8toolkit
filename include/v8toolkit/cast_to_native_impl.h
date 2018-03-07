@@ -437,7 +437,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_map_v<T>>> {
                 auto key = map_data_array->Get(i * 2);
                 auto sub_value = map_data_array->Get(i * 2 + 1);
 
-                v8toolkit::for_each_value(context, sub_value, [&](v8::Local<v8::Value> array_value) {
+                v8toolkit::for_each_value(sub_value, [&](v8::Local<v8::Value> array_value) {
 
                     results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
                                     v8toolkit::CastToNative<ValueT>()(isolate, array_value));
@@ -447,7 +447,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_map_v<T>>> {
         } else {
             for_each_own_property(context, value->ToObject(),
                                   [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
-                                      v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value) {
+                                      v8toolkit::for_each_value(value, [&](v8::Local<v8::Value> sub_value) {
                                           results.emplace(v8toolkit::CastToNative<KeyT>()(isolate, key),
                                                           v8toolkit::CastToNative<ValueT>()(isolate, sub_value));
                                       });
@@ -474,7 +474,7 @@ ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolat
     ContainerTemplate<Key, Value, Rest...> results;
     for_each_own_property(context, value->ToObject(),
                           [&](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
-                              v8toolkit::for_each_value(context, value, [&](v8::Local<v8::Value> sub_value){
+                              v8toolkit::for_each_value(value, [&](v8::Local<v8::Value> sub_value){
                                   results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
                                                   v8toolkit::CastToNative<Value>()(isolate, sub_value));
                               });

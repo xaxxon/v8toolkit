@@ -56,14 +56,12 @@ Context::~Context() {
 
 std::shared_ptr<Script> Context::compile_from_file(const std::string & filename)
 {
-    std::string contents;
     time_t modification_time = 0;
-    if (!get_file_contents(filename, contents, modification_time)) {
-        
+    if (auto contents = get_file_contents(filename, modification_time)) {
+        return compile(*contents, filename);
+    } else {
         throw V8Exception(*this, std::string("Could not load file: ") + filename);
     }
-
-    return compile(contents, filename);
 }
 
 

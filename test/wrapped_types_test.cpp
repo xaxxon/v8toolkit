@@ -4,7 +4,7 @@
 #include "v8toolkit/javascript.h"
 #include "v8toolkit/wrapped_class_base.h"
 #include "testing.h"
-
+#include "../class_parser/class_parser.h"
 
 
 void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)

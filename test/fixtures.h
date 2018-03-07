@@ -31,6 +31,7 @@ class JavaScriptFixture : public PlatformFixture {
 public:
     v8toolkit::IsolatePtr i;
     v8toolkit::ContextPtr c;
+    v8::Isolate * isolate;
     JavaScriptFixture() {
         i = v8toolkit::Platform::create_isolate();
         i->add_print();
@@ -39,6 +40,7 @@ public:
 
     void create_context() {
         c = i->create_context();
+        isolate = i->get_isolate();
 
         // does a does a deep comparison between the two objects passed and if they don't match, it prints out the info
         //   and then fails a GoogleTest EXPECT_EQ match.  Just using EXPECT_EQ works, but you can't print out what the

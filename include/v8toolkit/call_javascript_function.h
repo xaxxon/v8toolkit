@@ -41,12 +41,13 @@ struct TupleForEach<0, Tuple> {
 /**
  *
  */
-template<class... OriginalTypes, class... Ts>
+template<class R, class... OriginalTypes, class... Ts>
 v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Context> context,
                                                          const v8::Local <v8::Function> function,
-                                                         const v8::Local <v8::Object> receiver,
+                                                         R && receiver_object,
                                                          const TypeList<OriginalTypes...> & type_list,
                                                          Ts && ... ts) {
+    auto receiver = make_local(receiver_object);
     auto isolate = context->GetIsolate();
     std::vector<v8::Local < v8::Value>>
     parameters {CastToJS<OriginalTypes>()(isolate, std::forward<Ts>(ts))...};
@@ -69,11 +70,12 @@ v8::Local <v8::Value> call_javascript_function_with_vars(const v8::Local <v8::Co
 /**
 * Returns true on success with the result in the "result" parameter
 */
-template<class TupleType = std::tuple<>>
+template<typename T, class TupleType = std::tuple<>>
 v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> context,
                                                const v8::Local <v8::Function> function,
-                                               const v8::Local <v8::Object> receiver,
+                                               T && receiver_object,
                                                const TupleType & tuple = {}) {
+    auto receiver = make_local<v8::Object>(receiver_object);
     constexpr const int tuple_size = std::tuple_size<TupleType>::value;
     std::array<v8::Local < v8::Value>, tuple_size > parameters;
     auto isolate = context->GetIsolate();
@@ -93,11 +95,12 @@ v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> con
 /**
 * Returns true on success with the result in the "result" parameter
 */
-template<class TupleType = std::tuple<>>
+template<typename T, class TupleType = std::tuple<>>
 v8::Local <v8::Value> call_javascript_function(const v8::Local <v8::Context> context,
                                                const std::string & function_name,
-                                               const v8::Local <v8::Object> receiver,
+                                               T && receiver_object,
                                                const TupleType & tuple = {}) {
+    auto receiver = make_local(receiver_object);
     auto maybe_value = receiver->Get(context, v8::String::NewFromUtf8(context->GetIsolate(), function_name.c_str()));
     if (maybe_value.IsEmpty()) {
         throw InvalidCallException(fmt::format("Function name {} could not be found", function_name));

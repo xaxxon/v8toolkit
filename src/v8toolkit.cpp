@@ -224,22 +224,24 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
 
 
 
-bool get_file_contents(std::string filename, std::string & file_contents) 
+std::optional<std::string> get_file_contents(std::string filename) 
 {
-    time_t ignored_time;
-    return get_file_contents(filename, file_contents, ignored_time);
+    time_t ignored_time = 0;
+    return get_file_contents(filename, ignored_time);
 }
 
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
 
-bool get_file_contents(std::string filename, std::string & file_contents, time_t & file_modification_time)
+std::optional<std::string> get_file_contents(std::string filename, time_t & file_modification_time)
 {
+    std::string file_contents;
+    
 #ifdef _MSC_VER
 	auto file_handle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (file_handle == INVALID_HANDLE_VALUE) {
-		return false;
+		return {};
 	}
 
 	FILETIME creationTime,
@@ -259,11 +261,11 @@ bool get_file_contents(std::string filename, std::string & file_contents, time_t
 
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
-        return false;
+        return {};
     }
     struct stat file_stat;
     if (fstat(fd, &file_stat) == -1) {
-        return false;
+        return {};
     }
 
     file_modification_time = file_stat.st_mtime;
@@ -277,9 +279,9 @@ bool get_file_contents(std::string filename, std::string & file_contents, time_t
         auto bytes_read = read(fd, &file_contents[file_size - bytes_remaining], bytes_remaining);
         bytes_remaining -= bytes_read;
     }
-    
-    return true;
 #endif
+    
+    return file_contents;
 }
 
 bool _get_modification_time_of_filename(std::string filename, time_t & modification_time)
@@ -509,9 +511,10 @@ bool require(
                 resource_name = resource_name_callback(complete_filename);
             }
 
-            std::string file_contents;
             time_t file_modification_time = 0;
-            if (!get_file_contents(complete_filename, file_contents, file_modification_time)) {
+            auto file_contents = get_file_contents(complete_filename, file_modification_time);
+
+            if (!file_contents) {
                 if (REQUIRE_DEBUG_PRINTS) printf("Module not found at %s\n", complete_filename.c_str());
                 continue;
             }
@@ -561,8 +564,8 @@ bool require(
                 v8::Local<v8::Value> error;
                 v8::TryCatch try_catch(isolate);
                 // TODO: make sure requiring a json file is being tested
-                if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents.c_str());
-                auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate, file_contents.c_str()));
+                if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents->c_str());
+                auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate, file_contents->c_str()));
                 if (try_catch.HasCaught()) {
                     try_catch.ReThrow();
                     if (REQUIRE_DEBUG_PRINTS)
@@ -594,7 +597,7 @@ bool require(
                 v8::Local<v8::Value> error;
                 v8::Local<v8::Function> module_function;
 
-                result = execute_module(context, file_contents, script_origin, module_function);
+                result = execute_module(context, *file_contents, script_origin, module_function);
 
                 std::lock_guard<std::mutex> l(require_results_mutex);
                 auto & isolate_require_results = require_results[isolate];

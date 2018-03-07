@@ -388,13 +388,13 @@ int main(int argc, char* argv[])
             v8::Context::Scope context_scope_x(context);
 
             {
-                std::string js_code;
-                if (!get_file_contents("code.js", js_code)) {
+                std::string js_code = get_file_contents("code.js", js_code);
+                if (!js_code) {
                     assert(false);
                 }
 
                 v8::Local<v8::String> source =
-                        v8::String::NewFromUtf8(isolate, js_code.c_str(),
+                        v8::String::NewFromUtf8(isolate, js_code->c_str(),
                                                 v8::NewStringType::kNormal).ToLocalChecked();
 
                 // Compile the source code.

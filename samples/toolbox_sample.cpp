@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
         scoped_run(isolate, context, [isolate, context](){
             // Create a string containing the JavaScript source code.
              std::string js_code;
-            if(!get_file_contents("toolbox_sample.js", js_code)) {
+            if(!js_code = get_file_contents("toolbox_sample.js", js_code)) {
                 assert(false);
             }
             v8::Local<v8::String> source =
