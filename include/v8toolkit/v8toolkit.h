@@ -391,7 +391,7 @@ void add_print(const v8::Local<v8::Context> context, func::function<void(const s
 void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_template);
 
 // returns true if the two values are the same by value, including nested data structures
-bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
+bool compare_contents(const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right);
 
 
 /**

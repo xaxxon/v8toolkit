@@ -139,7 +139,7 @@ ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::L
                                           v8toolkit::CastToNative<SecondT>()(isolate, second));
 
     } else {
-        auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(isolate, value));
+        auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(value));
         std::cout << error << std::endl;
         throw v8toolkit::CastException(error);
     }
@@ -168,7 +168,7 @@ v8::Local<v8::Function> operator()(v8::Isolate * isolate, v8::Local<v8::Value> v
     } else {
         throw CastException(fmt::format(
             "CastToNative<v8::Local<v8::Function>> requires a javascript function but instead got '{}'",
-            stringify_value(isolate, value)));
+            stringify_value(value)));
     }
 }
 static constexpr bool callable(){return true;}
@@ -245,7 +245,7 @@ v.emplace_back(std::forward<T>(CastToNative<T>()(isolate, value)));
 } else {
 throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
                                 xl::demangle<T>(),
-                                stringify_value(isolate, value)));
+                                stringify_value(value)));
 }
 return v;
 }
@@ -271,7 +271,7 @@ SetTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate
     } else {
         throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
                                         xl::demangle<T>(),
-                                        stringify_value(isolate, value)));
+                                        stringify_value(value)));
     }
     return set;
 }
@@ -303,7 +303,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_array_v<T> && std::is_copy_con
         } else {
             throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
                                             xl::demangle<T>(),
-                                            stringify_value(isolate, value)));
+                                            stringify_value(value)));
         }
         return a;
     }
@@ -347,7 +347,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_set_v<T> && !is_wrapped_type_v
             throw CastException(
                 fmt::format("CastToNative<std::set-like<{}>> requires an array but instead got JS: '{}'",
                             xl::demangle<ValueT>(),
-                            stringify_value(isolate, value)));
+                            stringify_value(value)));
         }
         return set;
     }
@@ -398,7 +398,7 @@ ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8
     if (!value->IsObject()) {
         throw CastException(
             fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
-                        stringify_value(isolate, value)));
+                        stringify_value(value)));
     }
 
     auto context = isolate->GetCurrentContext();
@@ -422,7 +422,7 @@ struct CastToNative<T, std::enable_if_t<acts_like_map_v<T>>> {
         if (!value->IsObject()) {
             throw CastException(
                 fmt::format("Javascript Object type must be passed in to convert to std::map - instead got {}",
-                            stringify_value(isolate, value)));
+                            stringify_value(value)));
         }
 
         auto context = isolate->GetCurrentContext();
@@ -466,7 +466,7 @@ ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolat
     if (!value->IsObject()) {
         throw CastException(
             fmt::format("Javascript Object type must be passed in to convert to std::multimap - instead got {}",
-                        stringify_value(isolate, value)));
+                        stringify_value(value)));
     }
 
     auto context = isolate->GetCurrentContext();

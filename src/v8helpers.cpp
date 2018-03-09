@@ -174,12 +174,11 @@ std::vector<std::string> get_object_keys(v8::Local<v8::Object> object, bool own_
 // set to enable debug prints on calls to stringify
 #define STRINGIFY_VALUE_DEBUG false
 
-std::string stringify_value(v8::Isolate * isolate,
-                            v8::Local<v8::Value> value,
+std::string stringify_value(v8::Local<v8::Value> value,
                             bool show_all_properties,
                             std::vector<v8::Local<v8::Value>> && processed_values)
 {
-
+    auto isolate = v8::Isolate::GetCurrent();
     if (value.IsEmpty()) {
         return "<Empty v8::Local<v8::Value>>";
     }
@@ -239,7 +238,7 @@ std::string stringify_value(v8::Isolate * isolate,
             }
             first_element = false;
             auto value = array->Get(context, i);
-            output << stringify_value(isolate, value.ToLocalChecked(), show_all_properties, std::move(processed_values));
+            output << stringify_value(value.ToLocalChecked(), show_all_properties, std::move(processed_values));
         }
         output << "]";
     } else {
@@ -267,7 +266,7 @@ std::string stringify_value(v8::Isolate * isolate,
                 output << key;
                 output << ": ";
                 auto value = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
-                output << stringify_value(isolate, value.ToLocalChecked(), show_all_properties, std::move(processed_values));
+                output << stringify_value(value.ToLocalChecked(), show_all_properties, std::move(processed_values));
             }
             output << "}";
         }
@@ -364,6 +363,14 @@ bool is_reserved_word_in_static_context(std::string const & name) {
     return std::find(reserved_static_names.begin(), reserved_static_names.end(), name) != reserved_static_names.end();
 }
 
+
+v8::Local<v8::String> make_string(std::string_view str) {
+    auto isolate = v8::Isolate::GetCurrent();
+    return v8::String::NewFromUtf8(isolate,
+                                   str.data(),
+                                   v8::String::NewStringType::kNormalString,
+                                   str.length());
+}
 
 
 

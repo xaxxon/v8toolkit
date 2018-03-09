@@ -21,16 +21,15 @@ TEST_F(JavaScriptFixture, MakeLocal) {
     (*c)([&]{
         {
             v8::Local<v8::Value> value = v8::Number::New(isolate, 4.0);
-            auto result = make_maybe_local<v8::Object>(value);
-            EXPECT_TRUE(result.IsEmpty());
+            auto result = get_value_as_optional<v8::Object>(value);
+            EXPECT_FALSE(result);
         }
         {
             v8::Local<v8::Value> value = v8::Object::New(isolate);
-            auto result = make_maybe_local<v8::Object>(value);
-            EXPECT_FALSE(result.IsEmpty());
+            auto result = get_value_as_optional<v8::Object>(value);
+            EXPECT_TRUE(result);
         }
     });
-
 }
 
 

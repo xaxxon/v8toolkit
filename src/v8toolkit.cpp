@@ -160,15 +160,13 @@ void add_print(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> object
     add_function(isolate, object_template, "println",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, true));});
 
     add_function(isolate, object_template, "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
-        auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i]) + "\n");
+            callback(stringify_value(info[i]) + "\n");
         }
     });
     add_function(isolate, object_template, "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
-        auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i], true) + "\n");
+            callback(stringify_value(info[i], true) + "\n");
         }
     });
 	
@@ -185,13 +183,13 @@ void add_print(const v8::Local<v8::Context> context, func::function<void(const s
     add_function(context, context->Global(), "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i]) + "\n");
+            callback(stringify_value(info[i]) + "\n");
         }
     });
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
         auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
-            callback(stringify_value(isolate, info[i], true) + "\n");
+            callback(stringify_value(info[i], true) + "\n");
         }
     });
 }
@@ -357,7 +355,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
 
         // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
         error = try_catch.Exception();
-        printf("%s\n", stringify_value(isolate, try_catch.Exception()).c_str());
+        printf("%s\n", stringify_value(try_catch.Exception()).c_str());
         if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
         return false;
     }
@@ -611,7 +609,7 @@ bool require(
 
 
 
-            // printf("Require final result: %s\n", stringify_value(isolate, result).c_str());
+            // printf("Require final result: %s\n", stringify_value(result).c_str());
             // printf("Require returning resulting object for module %s\n", complete_filename.c_str());
             return true;
 
@@ -659,7 +657,7 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & ob
             // if require returns false, it will throw a javascript exception
             //   so it doesn't matter if the result sent back is good
             if(require(context, filename, result, paths)) {
-                if (V8_TOOLKIT_DEBUG) printf("Require returning to caller: '%s'\n", stringify_value(isolate, result).c_str());
+                if (V8_TOOLKIT_DEBUG) printf("Require returning to caller: '%s'\n", stringify_value(result).c_str());
             }
             return result;
         });
@@ -717,16 +715,17 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 	    */
 	    fprintf(stderr, "[level: %d] %s:\n", i++, *v8::String::Utf8Value(object));
 	    // print_v8_value_details(foo);
-	    fprintf(stderr, "%s\n", stringify_value(isolate, object).c_str());
+	    fprintf(stderr, "%s\n", stringify_value(object).c_str());
 	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());
 	}
 	fprintf(stderr, "Done looking at prototype chain\n");
 }
 
 
-bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right)
-{
-     log.info(LogT::Subjects::V8TOOLKIT, "Comparing two things");
+bool compare_contents(const v8::Local<v8::Value> & left, const v8::Local<v8::Value> & right)
+{   
+    log.info(LogT::Subjects::V8TOOLKIT, "Comparing two things");
+    auto isolate = v8::Isolate::GetCurrent();
     auto context = isolate->GetCurrentContext();
 
     // if they're both undefined, then they are equal.  If only one, then they're not.
@@ -778,7 +777,7 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
         for (int i = 0; i < left_length; i++) {
             auto left_value = array_left->Get(context, i);
             auto right_value = array_right->Get(context, i);
-            if (!compare_contents(isolate, left_value.ToLocalChecked(), right_value.ToLocalChecked())) {
+            if (!compare_contents(left_value.ToLocalChecked(), right_value.ToLocalChecked())) {
                 return false;
             }
         }
@@ -812,7 +811,7 @@ bool compare_contents(v8::Isolate * isolate, const v8::Local<v8::Value> & left, 
             if (right_value.IsEmpty()) {
                 log.info(LogT::Subjects::V8TOOLKIT, "right side doesn't have key: %s", left_key.c_str());
                 return false;
-            } else if (!compare_contents(isolate, left_value.ToLocalChecked(), right_value.ToLocalChecked())) {
+            } else if (!compare_contents(left_value.ToLocalChecked(), right_value.ToLocalChecked())) {
                 log.info(LogT::Subjects::V8TOOLKIT, "Recursive check of value in both objects returned false for key %s", left_key.c_str());
                 return false;
             }

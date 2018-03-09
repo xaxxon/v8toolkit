@@ -31,9 +31,15 @@
 *~
 
 # Doxygen docs
-generated-docs/*
+generated_docs/
 
 *.dSYM/
+
+# Mac directory display metadat
+**/.DS_Store
+
+# clion cmake build directories
+cmake-build-*
 
 javascript
 natives_blob.bin

@@ -51,6 +51,9 @@ v8::Local<T> make_local(v8::Global<T> const & value) {
 }
 
 
+v8::Local<v8::String> make_string(std::string_view str);
+
+
 /**
  * class used to signify the caller wants the this object of a function call.
  * Note: the `this` object may not have a wrapped C++ class containing it, even when calling a C++ function.  If a native
@@ -373,6 +376,12 @@ void expose_gc();
 // calls a javascript function with no parameters and returns the value
 v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
 						     v8::Local<v8::Function> function);
+
+inline v8::Local<v8::Value> call_simple_javascript_function(v8::Local<v8::Function> function) {
+    return call_simple_javascript_function(v8::Isolate::GetCurrent(), function);
+}
+
+
 /**
 * Calls callable with each javascript "own property" in the object passed.
 */
@@ -394,6 +403,7 @@ struct StuffBase{
     virtual ~StuffBase(){}
 };
 
+
 template<class T>
 struct Stuff : public StuffBase {
     Stuff(T && t) : stuffed(std::make_unique<T>(std::move(t))) {}
@@ -409,7 +419,7 @@ struct Stuff : public StuffBase {
 
 
 template<typename T, typename U>
-v8::MaybeLocal<T> get_value_as_maybelocal(U value_input) {
+std::optional<v8::Local<T>> get_value_as_optional(U && value_input) {
     auto value = make_local(value_input);
 
     if constexpr(std::is_same_v<T, v8::Function>) {
@@ -446,8 +456,9 @@ v8::MaybeLocal<T> get_value_as_maybelocal(U value_input) {
         //   passed in through the version that takes globals
         return v8::Local<T>::Cast(value);
     } 
-    return v8::MaybeLocal<T>();
+    return {};
 };
+
 
 /**
  * Returns the given JavaScript value as the parameterized type
@@ -456,9 +467,11 @@ v8::MaybeLocal<T> get_value_as_maybelocal(U value_input) {
  * @param value
  * @return
  */
-template<class T>
-auto get_value_as(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+template<class T, class U>
+auto get_value_as(v8::Isolate * isolate, U && input_value) {
 
+    auto value = make_local(input_value);
+    
     if constexpr(std::is_same_v<T, v8::Function>) {
         if (value->IsFunction()) {
             return v8::Local<T>::Cast(value);
@@ -503,25 +516,24 @@ auto get_value_as(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
 }
 
+template<typename T, typename U>
+auto get_value_as(U && value) {
+    auto isolate = v8::Isolate::GetCurrent();
+    return get_value_as<T>(isolate, std::forward<U>(value));
+}
+
 
 template<typename T, typename U>
-v8::MaybeLocal<T> make_maybe_local(U value) {
-    return get_value_as_maybelocal<T>(make_local(value));
-}
+auto get_key_as(v8::Local<v8::Context> context, U && input, std::string_view key) {
 
-
-template<class T>
-auto get_value_as(v8::Isolate * isolate, v8::Global<v8::Value> & value) {
-    return get_value_as<T>(isolate, value.Get(isolate));
-}
-
-
-template<class T>
-auto get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string const & key) {
-
+    auto object = get_value_as<v8::Object>(input);
+    
     auto isolate = context->GetIsolate();
     // printf("Looking up key %s\n", key.c_str());
-    auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, key.c_str()));
+    auto get_maybe = object->Get(context, v8::String::NewFromUtf8(isolate, 
+                                                                  key.data(), 
+                                                                  v8::String::NewStringType::kNormalString, 
+                                                                  key.length()));
 
     if(get_maybe.IsEmpty() || get_maybe.ToLocalChecked()->IsUndefined()) {
 //        if (get_maybe.IsEmpty()) {
@@ -529,21 +541,17 @@ auto get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Object> object, st
 //        } else {
 //            std::cerr << "undefined" << std::endl;
 //        }
-        throw UndefinedPropertyException(key);
+        throw UndefinedPropertyException(std::string(key));
     }
     return get_value_as<T>(isolate, get_maybe.ToLocalChecked());
 }
 
 
 
-template<class T>
-auto get_key_as(v8::Local<v8::Context> context, v8::Local<v8::Value> object, std::string const & key) {
-    return get_key_as<T>(context, get_value_as<v8::Object>(context->GetIsolate(), object), key);
-}
 
 
 template<class T>
-auto get_key_as(v8::Local<v8::Value> object, std::string const & key) {
+auto get_key_as(v8::Local<v8::Value> object, std::string_view key) {
     auto isolate = v8::Isolate::GetCurrent();
     auto context = isolate->GetCurrentContext();
     return get_key_as<T>(context, get_value_as<v8::Object>(context->GetIsolate(), object), key);
@@ -551,7 +559,7 @@ auto get_key_as(v8::Local<v8::Value> object, std::string const & key) {
 
 
 template<class T>
-auto get_key_as(v8::Local<v8::Context> context, v8::Global<v8::Value> & object, std::string const & key) {
+auto get_key_as(v8::Local<v8::Context> context, v8::Global<v8::Value> & object, std::string_view key) {
     return get_key_as<T>(context, object.Get(context->GetIsolate()), key);
 }
 
@@ -559,23 +567,30 @@ auto get_key_as(v8::Local<v8::Context> context, v8::Global<v8::Value> & object, 
 /**
  * This should eventually replace all the get_key_as functions
  */
-template<typename Result, typename T>
-auto get_property_as(T object, std::string_view key) {
-    v8::Local<v8::Object> local_object = make_local(object);
-    return get_key_as<Result>(local_object, key);
+template<typename Result=v8::Value, typename T>
+std::optional<v8::Local<Result>> get_property_as(T && input_value, std::string_view key) {
+    auto isolate = v8::Isolate::GetCurrent();
+    auto context = isolate->GetCurrentContext();
+    auto local_value = make_local(input_value);
+    if (!local_value->IsObject()) {
+        return {};
+    }
+    
+    auto local_object = local_value->ToObject();
+
+    auto get_result = local_object->Get(context, make_string(key));
+    if (get_result.IsEmpty()) {
+        return {};
+    }
+    auto value = get_result.ToLocalChecked();
+    return get_value_as_optional<Result>(value);
 }
 
 
 template<typename T>
-inline v8::Local<v8::Value> get_property(T object, std::string_view key) {
+std::optional<v8::Local<v8::Value>> get_property(T && object, std::string_view key) {
     return get_property_as<v8::Value>(object, key);
 }
-
-
-
- v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Object> object, std::string key);
-
- v8::Local<v8::Value> get_key(v8::Local<v8::Context> context, v8::Local<v8::Value> value, std::string key);
 
 
 /**
@@ -583,8 +598,7 @@ inline v8::Local<v8::Value> get_property(T object, std::string_view key) {
 *
 * Good for looking at the contents of a value and also used for printobj() method added by add_print
 */
-std::string stringify_value(v8::Isolate * isolate,
-                            v8::Local<v8::Value> value,
+std::string stringify_value(v8::Local<v8::Value> value,
                             bool show_all_properties=false,
                             std::vector<v8::Local<v8::Value>> && processed_values = std::vector<v8::Local<v8::Value>>{});
 

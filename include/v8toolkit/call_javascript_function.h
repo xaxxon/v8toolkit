@@ -91,7 +91,7 @@ v8::Local <v8::Value> call_javascript_function(v8::Local<v8::Context> context,
 
     v8::TryCatch tc(isolate);
 
-    // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(isolate, v8::Local<v8::Value>::Cast(receiver)).c_str());
+    // printf("\n\n**** Call_javascript_function with receiver: %s\n", stringify_value(v8::Local<v8::Value>::Cast(receiver)).c_str());
     auto maybe_result = function->Call(context, receiver, tuple_size, v8_values.data());
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
@@ -110,20 +110,27 @@ v8::Local <v8::Value> call_javascript_function(v8::Local <v8::Context> context,
                                                TupleType const & tuple = {}) {
     auto isolate = context->GetIsolate();
     auto receiver = make_local(receiver_object);
-    
-    if (receiver->HasOwnProperty(context, 
-                                 v8::String::NewFromUtf8(isolate, 
-                                                         function_name.data(), 
-                                                         v8::String::NewStringType::kNormalString, 
-                                                         function_name.length()))) {
-        
-        if (auto function = get_property_as<v8::Function>(receiver, function_name)) {
-            return call_javascript_function(context, *function, receiver, tuple);
+
+    auto has_own_property_result = receiver->HasOwnProperty(context,
+                                           v8::String::NewFromUtf8(isolate,
+                                                                   function_name.data(),
+                                                                   v8::String::NewStringType::kNormalString,
+                                                                   function_name.length()));
+    if (!has_own_property_result.IsNothing()) {
+        if (has_own_property_result.ToChecked()) {
+
+            ;
+            if (auto function_result = get_property_as<v8::Function>(receiver, function_name)) {
+                return call_javascript_function(context, *function_result, receiver, tuple);
+            } else {
+                throw InvalidCallException(
+                    fmt::format("receiver has property {} but it is not a function", function_name));
+            }
         } else {
-            throw InvalidCallException(fmt::format("receiver has property {} but it is not a function", function_name));
+            throw InvalidCallException(fmt::format("receiver doesn't have a property named: {}", function_name));
         }
     } else {
-        throw InvalidCallException(fmt::format("receiver doesn't have a property named: {}", function_name));
+        throw InvalidCallException(fmt::format("Failed to check if receiver has function property named: {}", function_name));
     }
 
 }

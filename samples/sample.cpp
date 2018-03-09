@@ -585,7 +585,7 @@ int main(int argc, char* argv[])
             // even though this is wrapped as a FooParent that doesn't have an 'i', it should actually be wrapped
             //   as the most derived type of the actual cpp object inside, which is a Foo, which does have an 'i'
             fprintf(stderr, "Testing most derived type return\n");
-            fprintf(stderr, "%s\n", stringify_value(isolate, most_derived_fooparent_js_object).c_str());
+            fprintf(stderr, "%s\n", stringify_value(most_derived_fooparent_js_object).c_str());
             assert(!most_derived_fooparent_js_object->Get(context, "i"_v8).ToLocalChecked()->IsUndefined());
             fprintf(stderr, "Testing completed\n");
             return 0;
