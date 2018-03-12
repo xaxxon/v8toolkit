@@ -389,8 +389,7 @@ void Isolate::add_assert()
 
     // Does deep element inspection to determine equality
     add_function("assert_contents", [this](const v8::FunctionCallbackInfo<v8::Value>& args){
-        auto isolate = args.GetIsolate();
-        if(args.Length() != 2 || !compare_contents(args[0], args[1])) {
+        if (args.Length() != 2 || !compare_contents(args[0], args[1])) {
             // printf("Throwing v8assertionexception\n");
             throw V8AssertionException(*this, std::string("Data structures do not contain the same contents: ")+ stringify_value(args[0]).c_str() + " " + stringify_value(args[1]));
         }

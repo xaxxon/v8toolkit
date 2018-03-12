@@ -61,11 +61,11 @@ public:
         std::vector<std::unique_ptr<StuffBase>> stuff;
         info.GetReturnValue().
             Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                  run_function(function, info, std::forward<InitialArg>(initial_arg),
-                                                               std::forward<Args>(
-                                                                   ParameterBuilder<
-                                                                       Args>().template operator()<ArgIndexes - default_arg_count>(info, i, stuff,
-                                                                                                       default_args_tuple))...)));
+                                                  function(std::forward<InitialArg>(initial_arg),
+                                                                   ParameterBuilder<Args>().
+                                                                       template operator()<ArgIndexes - default_arg_count>(
+                                                                       info, i, stuff, 
+                                                                       default_args_tuple)...)));
     }
 };
 
@@ -130,13 +130,17 @@ public:
         std::vector<std::unique_ptr<StuffBase>> stuff;
 
         info.GetReturnValue().Set(v8toolkit::CastToJS<ReturnType>()(info.GetIsolate(),
-                                                                    run_function(function, info, std::forward<Args>(
+                                                                    function( 
                                                                         ParameterBuilder<Args>().template operator()
-                                                                            <(((int) ArgIndexes) -
-                                                                              minimum_user_parameters_required), DefaultArgsTuple>(
-                                                                            info, i,
-                                                                            stuff, std::move(default_args_tuple)
-                                                                        ))...)));
+                                                                             <(((int) ArgIndexes) - 
+                                                                                 minimum_user_parameters_required), DefaultArgsTuple>(
+                                                                             info, 
+                                                                             i, 
+                                                                             stuff, 
+                                                                             std::move(default_args_tuple)
+                                                                         )...
+                                                                    )
+        ));
     }
 };
 
@@ -168,10 +172,9 @@ struct CallCallable<func::function<void(Args...)>> {
         constexpr int minimum_user_parameters_required = user_parameter_count - default_arg_count;
 
         std::vector<std::unique_ptr<StuffBase>> stuff;
-        run_function(function, info,
-                     std::forward<Args>(ParameterBuilder<Args>().
-                         template operator()<(((int) ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple>(
-                         info, i, stuff, std::move(default_args_tuple)))...);
+        function(ParameterBuilder<Args>().
+            template operator()<(((int) ArgIndexes) - minimum_user_parameters_required), DefaultArgsTuple>(
+            info, i, stuff, std::move(default_args_tuple))...);
     }
 };
 

@@ -7,28 +7,23 @@
 #include "bidirectional.h"
 #include "javascript.h"
 
-
-// eastl allocators
-void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-	return malloc(size);
-}
-
-void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-	return malloc(size);
-}
-
+//
+//// eastl allocators
+//void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+//{
+//	return malloc(size);
+//}
+//
+//void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+//{
+//	return malloc(size);
+//}
+//
 
 using namespace std;
 using namespace v8toolkit;
 
-class Thing;
-class JSThing;
 
-using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
-
-static vector<std::unique_ptr<JSThingFactory>> thing_factories;
 
 struct NonPolymorphicType : public v8toolkit::WrappedClassBase {};
 
@@ -52,27 +47,35 @@ struct Thing : public v8toolkit::WrappedClassBase {
 };
 
 struct JSThing : public Thing, public JSWrapper<Thing> {
-    JSThing(v8::Local<v8::Context> context,
-	    v8::Local<v8::Object> js_object,
-	    v8::Local<v8::FunctionTemplate> created_by,
-	    int i, const std::string & j) :
-	Thing(i, j),
-	JSWrapper(context, js_object, created_by) {}
     
-	JS_ACCESS(std::string, get_string);
-	JS_ACCESS(std::string, get_string_value);
-	JS_ACCESS_CONST(std::string, get_string_const);
+    JSThing(v8::Local<v8::Object> js_object, 
+            int i, 
+            const std::string & j) :
+	Thing(i, j),
+	JSWrapper(js_object) {}
+    
+	JS_ACCESS(std::string, get_string, get_string);
+	JS_ACCESS(std::string, get_string_value, get_string_value);
+	JS_ACCESS_CONST(std::string, get_string_const, get_string_const);
 };
 
+
+using ThingFactory = CppFactory<Thing, Thing, TypeList<int>, TypeList<std::string const &>>;
+using JSThingFactory = JSFactory<ThingFactory, JSThing, TypeList<int>, TypeList<const std::string &>>;
+static vector<std::unique_ptr<JSThingFactory>> thing_factories;
+
+ThingFactory thing_factory_3(3);
 
 void create_thing_factory(const v8::FunctionCallbackInfo<v8::Value> & info) {
 	auto isolate = info.GetIsolate();
 
-	//	thing_factories.push_back(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
+	//	thing_factories.push_bac	k(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
 
 	// Since the newly created type is not being named, we don't skip any parameters <0>.  If the javascript caller was going to
 	// provide a type/factory name as the first parameter, then it would be <1>
 	thing_factories.emplace_back(JSThingFactory::create_factory_from_javascript<0>(info));
+	
+	// return the factory back to the caller
 	info.GetReturnValue().Set(CastToJS<JSThingFactory*>()(isolate, thing_factories.back().get()));
 }
 
@@ -96,8 +99,8 @@ void test_calling_bidirectional_from_javascript()
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
 		thing.set_compatible_types<JSThing>();
-		thing.add_member_readonly<const int, Thing, &Thing::i>("i");
-		thing.add_member<std::string, Thing, &Thing::j>("j");
+		thing.add_member_readonly<&Thing::i>("i");
+		thing.add_member<&Thing::j>("j");
 
 		thing.finalize();
 		thing.add_constructor<int, const std::string &>("Thing", *isolate);
@@ -196,7 +199,7 @@ public:
 
 int main(int argc, char ** argv)
 {
-    Platform::init(argc, argv, argv[0]);
+    Platform::init(argc, argv, ".");
 	
 	printf("Calling TCBFJ\n");
     test_calling_bidirectional_from_javascript();

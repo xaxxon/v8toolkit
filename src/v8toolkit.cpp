@@ -181,13 +181,11 @@ void add_print(const v8::Local<v8::Context> context, func::function<void(const s
     add_function(context, context->Global(), "println",  [callback](const v8::FunctionCallbackInfo<v8::Value>& info){callback(_print_helper(info, true));});
 
     add_function(context, context->Global(), "printobj", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
-        auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
             callback(stringify_value(info[i]) + "\n");
         }
     });
     add_function(context, context->Global(), "printobjall", [callback](const v8::FunctionCallbackInfo<v8::Value>& info){
-        auto isolate = info.GetIsolate();
         for (int i = 0; i < info.Length(); i++) {
             callback(stringify_value(info[i], true) + "\n");
         }

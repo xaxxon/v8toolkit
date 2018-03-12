@@ -1915,6 +1915,7 @@ struct CastToJS<T, std::enable_if_t<
 	is_wrapped_type_v<std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>>
 >> {
 
+	// this may still be const
 	using WrappedType = std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>;
 
     // An lvalue is presented, so the memory will not be cleaned up by JavaScript
@@ -1922,29 +1923,35 @@ struct CastToJS<T, std::enable_if_t<
         if (cpp_object == nullptr) {
             return v8::Undefined(isolate);
         }
-
-        assert(cpp_object != (void *) 0xbebebebebebebebe);
-
+		
         V8TOOLKIT_DEBUG("CastToJS from T %s\n",  xl::demangle<_typeid_name(typeid(T).name()).c_str());
         auto context = isolate->GetCurrentContext();
         V8ClassWrapper<WrappedType> & class_wrapper = V8ClassWrapper<WrappedType>::get_instance(isolate);
 
 #ifdef V8TOOLKIT_BIDIRECTIONAL_ENABLED
-        using JSWrapperType = JSWrapper<std::remove_const_t<T>>;
+//		std::cerr << fmt::format("Checking if CastToJS type is a JSWrapper<(remove_const of){}>", xl::demangle<WrappedType>()) << std::endl;
+
+        using JSWrapperType = JSWrapper<WrappedType>;
 //		fprintf(stderr, "Checking to see if object * is a JSWrapper *\n");
 
-        if constexpr(std::is_const<T>::value) {
+        if constexpr(std::is_const<WrappedType>::value) {
             auto js_wrapper = safe_dynamic_cast<JSWrapperType const *>(cpp_object);
             if (js_wrapper) {
+//            	std::cerr << fmt::format("** YES IS A JSWRAPPER") << std::endl;
                 return CastToJS<const JSWrapperType>()(isolate, *js_wrapper);
             }
         } else {
 
             auto js_wrapper = safe_dynamic_cast<xl::match_const_of_t<JSWrapperType, WrappedType> *>(cpp_object);
             if (js_wrapper) {
+//				std::cerr << fmt::format("** YES IS A JSWRAPPER") << std::endl;
                 return CastToJS<JSWrapperType>()(isolate, *js_wrapper);
             }
         }
+//		std::cerr << fmt::format("** NO IS NOT A JSWRAPPER") << std::endl;
+
+#else
+//        std::cerr << fmt::format("Not checking if CastToJS type is a JSWrapper") << std::endl;
 
 #endif
         V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());

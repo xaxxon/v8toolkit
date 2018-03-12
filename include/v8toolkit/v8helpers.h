@@ -114,33 +114,40 @@ namespace literals {
 
 
 
-template<class ReturnType, class... Args, class... Ts>
-auto run_function(func::function<ReturnType(Args...)> & function,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) -> ReturnType {
-    return function(std::forward<Args>(ts)...);
-}
+class Exception : public std::exception {
+protected:
+    mutable std::string message;
+    v8::Global<v8::StackTrace> stack_trace;
+    mutable bool stack_trace_expanded = false;
 
+public:
+    template<class... Ts>
+    Exception(std::string const & format, Ts&&... args) :
+        message(fmt::format(format, args...)),
+        stack_trace(v8::Global<v8::StackTrace>(v8::Isolate::GetCurrent(),
+                                               v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100)))
 
-template<class ReturnType, class... Args, class Callable, class... Ts>
-auto run_function(Callable callable,
-                  const v8::FunctionCallbackInfo<v8::Value> & info,
-                  Ts&&... ts) -> ReturnType {
-    return callable(std::forward<Args>(ts)...);
+    {}
+
+    Exception(){}
+
+    virtual const char * what() const noexcept override {
+        if (!stack_trace_expanded) {
+            stack_trace_expanded = true;
+            message = fmt::format("{} - {}", message, get_stack_trace_string(make_local(stack_trace)));
+        }
+        return message.c_str();
+    }
 };
 
 
 
-
 // thrown when data cannot be converted properly
-class CastException : public std::exception {
-private:
-    std::string reason;
+class CastException : public Exception {
 
 public:
-    template<class... Ts>
-    CastException(const std::string & reason, Ts&&... ts) : reason(fmt::format(reason, std::forward<Ts>(ts)...) + get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100))) {}
-    virtual const char * what() const noexcept override {return reason.c_str();}
+    using Exception::Exception;
+
 };
 
 template<typename T, typename = void>
@@ -168,7 +175,6 @@ template<class Destination, class Source, std::enable_if_t<std::is_polymorphic<S
 Destination safe_dynamic_cast(Source * source) {
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-//    fprintf(stderr, "safe dynamic cast doing real cast\n");
     return dynamic_cast<Destination>(source);
 };
 
@@ -186,6 +192,7 @@ template<class Destination, class Source,
         !std::is_polymorphic_v<Source> && std::is_base_of_v<Destination, Source>
     > * = nullptr>
 Destination safe_dynamic_cast(Source * source) {
+
     return static_cast<Destination>(source);
 }
 
@@ -195,9 +202,9 @@ template<class Destination, class Source,
         !std::is_polymorphic_v<Source> && !std::is_base_of_v<Destination, Source>
     > * = nullptr>
 Destination safe_dynamic_cast(Source * source) {
+    
     static_assert(std::is_pointer<Destination>::value, "must be a pointer type");
     static_assert(!std::is_pointer<std::remove_pointer_t<Destination>>::value, "must be a single pointer type");
-//    fprintf(stderr, "safe dynamic cast doing fake/stub cast\n");
     return nullptr;
 };
 
@@ -255,20 +262,6 @@ template<bool... bools>
 constexpr bool static_all_of_v = static_all_of<bools...>::value;
 
 
-class Exception : public std::exception {
-protected:
-    std::string message;
-
-public:
-    template<class... Ts>
-    Exception(std::string const & format, Ts&&... args) : message(fmt::format(format, args...))
-    {}
-
-    Exception(){}
-
-    virtual const char * what() const noexcept override {return message.c_str();}
-};
-
 
 /**
 * General purpose exception for invalid uses of the v8toolkit API
@@ -277,7 +270,6 @@ class InvalidCallException : public Exception {
 
 public:
     InvalidCallException(const std::string & message);
-    virtual const char * what() const noexcept override {return message.c_str();}
 };
 
 
@@ -549,7 +541,6 @@ auto get_key_as(v8::Local<v8::Context> context, U && input, std::string_view key
 
 
 
-
 template<class T>
 auto get_key_as(v8::Local<v8::Value> object, std::string_view key) {
     auto isolate = v8::Isolate::GetCurrent();
@@ -561,6 +552,12 @@ auto get_key_as(v8::Local<v8::Value> object, std::string_view key) {
 template<class T>
 auto get_key_as(v8::Local<v8::Context> context, v8::Global<v8::Value> & object, std::string_view key) {
     return get_key_as<T>(context, object.Get(context->GetIsolate()), key);
+}
+
+
+template<typename T>
+v8::Local<v8::Value> get_key(T && object, std::string key) {
+    return get_key_as<v8::Value>(std::forward<T>(object), key);
 }
 
 

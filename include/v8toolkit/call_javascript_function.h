@@ -61,7 +61,11 @@ v8::Local <v8::Value> call_javascript_function_with_vars(v8::Local <v8::Context>
     parameters {CastToJS<OriginalTypes>()(isolate, std::forward<Ts>(ts))...};
     auto parameter_count = sizeof...(ts);
     v8::TryCatch tc(isolate);
-    auto maybe_result = function->Call(context, receiver, parameter_count, &parameters[0]);
+    
+    // make sure not to call operator[] on an empty vector
+    v8::Local<v8::Value> * parameter_pointer = parameter_count > 0 ? &parameters[0] : nullptr;
+    
+    auto maybe_result = function->Call(context, receiver, parameter_count, parameter_pointer);
     if (tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
         if (v8toolkit::static_any<std::is_const<std::remove_reference_t<OriginalTypes>>::value...>::value) {
