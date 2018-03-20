@@ -156,10 +156,19 @@ std::vector<std::string> get_object_keys(v8::Isolate * isolate,
     }
     auto array_length = get_array_length(isolate, properties);
 
-    std::vector<std::string> keys(array_length);
+    std::vector<std::string> keys;
+    keys.reserve(array_length);
 
     for (int i = 0; i < array_length; i++) {
-        keys.push_back(*v8::String::Utf8Value(properties->Get(context, i).ToLocalChecked()));
+        auto property_name = properties->Get(context, i).ToLocalChecked();
+        std::string name;
+        if (property_name->IsSymbol()) {
+            name = *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(property_name)->Name());
+        } else {
+            name = *v8::String::Utf8Value(property_name);
+        }
+        assert(!name.empty());
+        keys.push_back(name);
     }
 
     return keys;

@@ -33,6 +33,7 @@ v8::Isolate * Context::get_isolate() const
 }
 
 
+
 std::shared_ptr<Isolate> Context::get_isolate_helper() const
 {
     return this->isolate_helper;
@@ -88,6 +89,7 @@ std::shared_ptr<Script> Context::compile(const std::string & javascript_source, 
 
     v8::MaybeLocal<v8::Script> compiled_script = v8::Script::Compile(context.Get(isolate), source,  &script_origin);
     if (try_catch.HasCaught()) {
+        ReportException(isolate, &try_catch);
         throw V8CompilationException(isolate, try_catch);
     }
     return std::shared_ptr<Script>(new Script(shared_from_this(),

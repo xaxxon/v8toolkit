@@ -225,8 +225,8 @@ T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::cast(AnyBase *
 
 
 template<class T>
-void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::init_instance_object_template(
-	v8::Local<v8::ObjectTemplate> object_template) {
+void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE>::init_instance_object_template(v8::Local<v8::ObjectTemplate> object_template) 
+{
 	object_template->SetInternalFieldCount(1);
 //	fprintf(stderr, "Adding %d members\n", (int)this->member_adders.size());
 	for (auto & adder : this->member_adders) {

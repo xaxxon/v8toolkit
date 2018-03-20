@@ -3,10 +3,10 @@
 #include <string>
 
 #define V8TOOLKIT_BIDIRECTIONAL_ENABLED
-
+#include "v8_class_wrapper.h"
 #include "v8helpers.h"
 #include "v8toolkit.h"
-#include "../class_parser/class_parser.h"
+#include "class_parser.h"
 
 /**
 * This file contains things needed to create "types" and objects in both C++ and javascript
@@ -19,6 +19,7 @@
 
 
 namespace v8toolkit {
+
 
 class BidirectionalException : public std::exception {
     std::string reason;
@@ -49,7 +50,11 @@ protected:
 
 public:
     v8::Local<v8::Object> get_javascript_object() const { 
-        return global_js_object.Get(v8::Isolate::GetCurrent()); 
+        if (global_js_object.IsEmpty()) {
+            return {};
+        } else {
+            return global_js_object.Get(v8::Isolate::GetCurrent());
+        }
     }
 };
 
@@ -69,8 +74,13 @@ protected:
     using BASE_TYPE=Base; // used by JS_ACCESS macros
     
 public:
-    JSWrapper(v8::Local<v8::Object> object) :
-        JSWrapperBase(object) 
+    JSWrapper(Base * object) :
+        JSWrapperBase(v8toolkit::V8ClassWrapper<Base>::get_instance(v8::Isolate::GetCurrent()).
+            wrap_existing_cpp_object(v8::Isolate::GetCurrent()->GetCurrentContext(),
+                                     object,
+                                     *v8toolkit::V8ClassWrapper<Base>::get_instance(v8::Isolate::GetCurrent()).destructor_behavior_leave_alone,  // leave_alone may be wrong 
+                                     true)
+        )
     {}
 };
 
@@ -111,14 +121,6 @@ struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<v8toolkit::JSWrapper, 
 
 namespace v8toolkit {
 
-/**
- * Class for Factory to inherit from when no other parent is specified
- * Must be empty
- */
-class EmptyFactoryBase : public v8toolkit::WrappedClassBase {};
-
-
-
 
 /**
  * Common Factory Inheritance goes:
@@ -135,6 +137,8 @@ class EmptyFactoryBase : public v8toolkit::WrappedClassBase {};
  *   first parameter of the factory object which will be automatically populated)
  */
 
+
+
     
 /**
 * Base class for a Factory that creates a bidirectional "type" by name.  The object
@@ -142,17 +146,21 @@ class EmptyFactoryBase : public v8toolkit::WrappedClassBase {};
 *   or if it has been extended in javascript
 */
 template<typename Base, // The common base class type of object to be returned
-    typename = TypeList<>, // List of parameters that may change per-instance created
-    typename FactoryBase = EmptyFactoryBase, // base class of this factory class
-    typename Deleter = std::default_delete<Base>> 
-class Factory;
+    typename,
+    typename, // List of parameters that may change per-instance created
+    typename Deleter> 
+class Factory {
+    static_assert(always_false_v<Base>, "This shouldn't ever be instantiated, only the specialization - check your types");
+};
 
 
-template<typename Base, typename... ConstructorArgs, typename FactoryBase, typename Deleter>
-class Factory<Base, TypeList<ConstructorArgs...>, FactoryBase, Deleter> : public virtual FactoryBase
+template<typename Base, typename... FixedArgs, typename... ConstructorArgs, typename Deleter>
+class Factory<Base, TypeList<FixedArgs...>, TypeList<ConstructorArgs...>, Deleter>
 {
 public:
+    using ThisFactoryType = Factory<Base, TypeList<FixedArgs...>, TypeList<ConstructorArgs...>, Deleter>;
     using base_type = Base;
+    using js_wrapper = JSWrapper<Base>;
     
 //     Factory(ParentTs&&... parent_ts) : ParentType(std::forward<ParentTs>(parent_ts)...)
 //     {}
@@ -162,40 +170,48 @@ public:
     Factory & operator=(const Factory &) = delete;
     Factory & operator=(Factory &&) = default;
 
+    virtual ~Factory(){}
 
     /**
      * Returns a pointer to a new object inheriting from type Base
      */
-    virtual Base * operator()(ConstructorArgs&&... constructor_args) const = 0;
+    virtual Base * operator()(FixedArgs... fixed_args, ConstructorArgs... constructor_args) const = 0;
+    virtual v8::Local<v8::Object> get_prototype() const = 0;
 
-    Base * create(ConstructorArgs&&... constructor_args) const {
+
+
+    Base * create(FixedArgs... fixed_args, ConstructorArgs... constructor_args) const {
         return this->operator()(std::forward<ConstructorArgs>(constructor_args)...);
     }
 
-    /**
-     * Returns a unique_ptr to a new object inheriting from type Base
-     */
-    template <typename U = Base>
-    std::unique_ptr<U, Deleter> get_unique(ConstructorArgs&&... args) const {
+//    /**
+//     * Returns a unique_ptr to a new object inheriting from type Base
+//     */
+//    template <typename U = Base>
+//    std::unique_ptr<U, Deleter> get_unique(ConstructorArgs&&... args) const {
+//
+//	    // call operator() on the factory and put the results in a unique pointer
+//        return std::unique_ptr<U, Deleter>((*this)(std::forward<ConstructorArgs>(args)...)); 
+//    }
 
-	    // call operator() on the factory and put the results in a unique pointer
-        return std::unique_ptr<U, Deleter>((*this)(std::forward<ConstructorArgs>(args)...)); 
-    }
+//    /**
+//     * Helper to quickly turn a Base type into another type if allowed
+//     */
+//    template<typename U, typename... Args>
+//    U * as(Args&&...  args) const {
+//        // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
+//        auto result = this->operator()(std::forward<Args>(args)...);
+//        if (auto cast_result = dynamic_cast<U*>(result)) {
+//            return cast_result;
+//        } else {
+//            throw BidirectionalException("Could not convert between types");
+//        }
+//    }
 
-    /**
-     * Helper to quickly turn a Base type into another type if allowed
-     */
-    template<typename U, typename... Args>
-    U * as(Args&&...  args) const {
-        // printf("Trying to cast a %s to a %s\n", typeid(Base).name(), typeid(U).name());
-        auto result = this->operator()(std::forward<Args>(args)...);
-        if (dynamic_cast<U*>(result)) {
-            return static_cast<U*>(result);
-        } else {
-            throw BidirectionalException("Could not convert between types");
-        }
-    }
+
+//    template<typename... Ts>
 };
+
 
 
 /**
@@ -204,41 +220,36 @@ public:
 *   but v8toolkit::Factory must be in the inheritance chain somewhere
 */
 template<typename Base,
-    typename Child,
+    typename Derived,
     typename FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
     typename ExternalTypeList,
-    typename FactoryBase = Factory<Base, ExternalTypeList, EmptyFactoryBase>,
-    typename Deleter = std::default_delete<Child> > 
+    typename Deleter = std::default_delete<Base> > 
 class CppFactory;
 
 
 // if the constructor wants a reference to the factory, automatically pass it in
 template<
     typename Base, // interface being implemented
-    typename Derived, // actual type being constructed 
-    typename... ExternalConstructorParams, 
-    typename... FixedParams, 
-    typename FactoryBase, 
+    typename Derived, // object type being created
+    typename... FixedParams,
+    typename... ExternalConstructorParams,
     typename Deleter> 
 class V8TOOLKIT_SKIP CppFactory<
     Base,
     Derived,
     TypeList<FixedParams...>,
     TypeList<ExternalConstructorParams...>,
-    FactoryBase,
-    Deleter> : 
-public virtual FactoryBase {
-
-private:
-    using TupleType = std::tuple<FixedParams...>;
-    TupleType fixed_param_tuple;
+    Deleter> : public Factory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>
+{
+    static_assert(is_wrapped_type_v<Derived>, "CppFactory Base type must be a wrapped type");
+    
 
 public:
-    using base_type = Base;
+    using ThisFactoryType = CppFactory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>;
+    using FixedTypeList = TypeList<FixedParams...>;
+    using FactoryBase = Factory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>;
 
-
-    CppFactory(FixedParams&&... fixed_param_values) :
-            fixed_param_tuple(std::move(fixed_param_values)...) 
+    CppFactory()
     {}
     
     CppFactory(const CppFactory &) = delete;
@@ -247,21 +258,22 @@ public:
     CppFactory &operator=(CppFactory &&) = default;
 
 
-    template<std::size_t... Is>
-    Base *call_operator_helper(ExternalConstructorParams &&... constructor_args, std::index_sequence<Is...>) const {
 
-        // must const cast it since this method is const, so the tuple becomes const
-        return new Derived(std::forward<FixedParams>(std::get<Is>(const_cast<TupleType &>(fixed_param_tuple)))...,
-                         std::forward<ExternalConstructorParams>(constructor_args)...);
+    v8::Local<v8::Object> get_prototype() const override {
+        v8::Isolate * isolate = v8::Isolate::GetCurrent();
+        
+        // need to get the prototype from the FunctionTemplate of the wrapped type
+        return V8ClassWrapper<Derived>::get_instance(isolate).get_function_template()->GetFunction()->NewInstance();
     }
 
-    virtual Base *operator()(ExternalConstructorParams &&... constructor_args) const override {
-        return call_operator_helper(std::forward<ExternalConstructorParams>(constructor_args)...,
-                                    std::index_sequence_for<FixedParams...>());
-    }
-    
-    v8::Local<v8::Object> get_prototype() const {
-        return {};
+    /**
+     * Don't call this directly, only create objects through the Factory interface
+     * @param fixed_args 
+     * @param constructor_args 
+     * @return 
+     */
+    Base * operator()(FixedParams... fixed_args, ExternalConstructorParams... constructor_args) const override {
+        return new Derived(fixed_args..., constructor_args...);
     }
 };
 
@@ -283,58 +295,50 @@ public:
 *  Perhaps the order should be swapped to take external first, since that is maybe more common?
 */
 template<
-    typename BaseFactory,
+    typename Base,
     typename JSWrapperClass,
     typename Internal,
     typename External,
-    typename FactoryBase = Factory<typename BaseFactory::base_type, External, EmptyFactoryBase>,
-    typename Deleter = std::default_delete<JSWrapperClass>>
+    typename Deleter = std::default_delete<Base>>
 class JSFactory;
 
 
 // Begin real specialization
 template<
-	typename BaseFactory,
+	typename Base,
     typename JSWrapperClass,
-    typename... InternalConstructorParams,
+    typename... FixedParams,
     typename... ExternalConstructorParams,
-    typename FactoryBase,
     typename Deleter>
 class JSFactory<
-    BaseFactory,
+    Base,
 	JSWrapperClass,
-	TypeList<InternalConstructorParams...>,
+	TypeList<FixedParams...>,
 	TypeList<ExternalConstructorParams...>,
-    FactoryBase,
-    Deleter> : public virtual FactoryBase
+    Deleter> : public Factory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>
 {
-    
-    using Base = typename BaseFactory::base_type;
+public:
+    using FixedTypeList = TypeList<FixedParams...>;
+    using ExternalTypeList = TypeList<ExternalConstructorParams...>;
+    using FactoryBase = Factory<Base, FixedTypeList, ExternalTypeList, Deleter>;
+
+protected:
+
     
     static_assert(std::is_polymorphic_v<JSWrapperClass>, "Wrapper class must be polymorphic - that's how function interception works");
     static_assert(std::is_base_of_v<Base, JSWrapperClass>, "Base type must be a base type of JSWrapperClass");
-    static_assert(std::is_base_of_v<JSWrapper<Base>, JSWrapperClass>, "JSWrapper<Base> must be a base type of JSWrapperClass");
+//    static_assert(std::is_base_of_v<JSWrapper<Base>, JSWrapperClass>, "JSWrapper<Base> must be a base type of JSWrapperClass");
+    
+	using ThisFactoryType = JSFactory<Base, JSWrapperClass, FixedTypeList, ExternalTypeList, Deleter>;
 
-	using ThisFactoryType = JSFactory<BaseFactory, JSWrapperClass, TypeList<InternalConstructorParams...>, TypeList<ExternalConstructorParams...>, FactoryBase>;
+
     
-public:
-    using base_type = typename BaseFactory::base_type;
-    
-protected:
     // Create base portion of new object using wrapped type
     
     // javascript callback for creating properties only on the new type
-    v8::Global<v8::Function> constructor;
-    
     v8::Global<v8::Object> prototype;
-
-    func::function<JSWrapperClass * (ExternalConstructorParams&&...)> make_jswrapper_object;
-
-    using TupleType = std::tuple<InternalConstructorParams...>;
-    TupleType internal_param_tuple;
-    
-    BaseFactory * base_factory;
-
+    v8::Global<v8::Function> constructor;
+    FactoryBase const * base_factory;
 
 
     /**
@@ -346,29 +350,27 @@ protected:
      * - Internal parameters sent to every object's constructor
      */
     template<int starting_info_index, std::size_t... Is>
-    static std::unique_ptr<ThisFactoryType> _create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<Is...>) {
+    static std::unique_ptr<FactoryBase> _create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<Is...>) {
 
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
 
         // Check that the call contains parameters for the base_factory, prototype, constructor, and each internal constructor parameter
-        constexpr std::size_t parameter_count = starting_info_index + 3 + sizeof...(InternalConstructorParams);
+        constexpr std::size_t parameter_count = starting_info_index + 3 + sizeof...(ExternalConstructorParams);
         if (info.Length() != parameter_count) {
             throw InvalidCallException(fmt::format("Wrong number of parameters to create new factory - needs {}, got {}", parameter_count, info.Length()));
         }
 
         // internal constructor params start 2 after the starting_info_index 
-        int internal_param_index = starting_info_index + 2; // skip the prototype object and object constructor callback as well
+        int internal_param_index = starting_info_index + 3; // skip the base factory, prototype object and object constructor callback as well
         std::vector<std::unique_ptr<v8toolkit::StuffBase>> stuff;
 
        
         return std::make_unique<JSFactory>(
-            CastToNative<BaseFactory&>()(isolate, info[starting_info_index + 0]),         
-            info[starting_info_index + 1]->ToObject(),
-            v8::Local<v8::Function>::Cast(info[starting_info_index + 2]), 
-                                           ParameterBuilder<InternalConstructorParams>()(info, internal_param_index, stuff)...);
-
-
+            CastToNative<FactoryBase&>()(isolate, info[starting_info_index + 0]),   // base factory        
+            info[starting_info_index + 1]->ToObject(),                              // prototype
+            v8::Local<v8::Function>::Cast(info[starting_info_index + 2]),           // constructor 
+            ParameterBuilder<FixedParams>()(info, internal_param_index, stuff)...); // fixed params
     }
 
     
@@ -376,18 +378,7 @@ protected:
         return this->constructor.Get(v8::Isolate::GetCurrent());
     }
 
-
-    // actually creates the JSWrapper object
-    template<std::size_t... Is>
-    std::unique_ptr<JSWrapperClass, Deleter> call_operator_helper(v8::Local<v8::Object> new_js_object,
-                                ExternalConstructorParams&&... constructor_args,
-                                std::index_sequence<Is...>) const {
-
-        return std::unique_ptr<JSWrapperClass, Deleter>(new JSWrapperClass(
-            new_js_object,
-            std::get<Is>(this->internal_param_tuple)...,
-            std::forward<ExternalConstructorParams>(constructor_args)...));
-    }
+    
 
 public:
 
@@ -395,54 +386,35 @@ public:
      * Takes a context to use while calling a javascript_function that returns an object
      *   inheriting from JSWrapper
      */
-    JSFactory(BaseFactory & base_factory, 
+    JSFactory(FactoryBase const & input_base_factory, 
               v8::Local<v8::Object> prototype,
-              v8::Local<v8::Function> constructor,
-              InternalConstructorParams&&... internal_constructor_values) :
-        constructor(v8::Global<v8::Function>(v8::Isolate::GetCurrent(), constructor)),
+              v8::Local<v8::Function> constructor) :
         prototype(v8::Global<v8::Object>(v8::Isolate::GetCurrent(), prototype)),
-        internal_param_tuple(internal_constructor_values...)
-
+        constructor(v8::Global<v8::Function>(v8::Isolate::GetCurrent(), constructor))
     {
-        auto isolate = v8::Isolate::GetCurrent();
+        assert(!prototype.IsEmpty());
+        assert(!this->prototype.IsEmpty());
         
+        // if base_factory is a CppFactory, then ignore it because the cpp object
+        //   is created as part of the JSWrapperClass
+        base_factory = dynamic_cast<ThisFactoryType const *>(&input_base_factory);
 
-        // create a callback for making a new object using the internal constructor values provided here - external ones provided at callback time
-        // DO NOT CAPTURE/USE ANY V8::LOCAL VARIABLES IN HERE, only use v8::Global::Get(...)
-        this->make_jswrapper_object =
-                [this](ExternalConstructorParams&&... external_constructor_values) mutable ->JSWrapperClass * {
-
-            auto isolate = v8::Isolate::GetCurrent();
-            auto context = isolate->GetCurrentContext();
-    
-            // Create a new javascript object for Base but then set its prototype to the subclass's prototype
-            v8::Local<v8::Object> new_js_object = this->base_factory->get_prototype();
-
-            (void)new_js_object->SetPrototype(context, this->get_prototype());
-
-            // create a JSWrapper<Base> object that knws how to call all the virtual methods on Base
-            auto js_wrapper_class_cpp_object =
-                call_operator_helper(new_js_object,
-                                     std::forward<ExternalConstructorParams>(external_constructor_values)...,
-                                     std::index_sequence_for<InternalConstructorParams...>());
+        auto isolate = v8::Isolate::GetCurrent();
 
 
 
-            auto & wrapper = V8ClassWrapper<JSWrapperClass>::get_instance(isolate);
+        if (this->base_factory) {
 
-            // I think thi sneeds to be leave_alone because the CPP object that this would otherwise delete is holding a v8::Global reference
-            //   to the JavaScript object which prevents it from being GC'd before the CPP object has already been deleted.
-            // Also, I was running into double-free errors with this set as _delete.
-            wrapper.initialize_new_js_object(isolate, new_js_object, js_wrapper_class_cpp_object.get(), *wrapper.destructor_behavior_leave_alone);
 
-            // call javascript "constructor" method (per-instance)
-            v8toolkit::call_javascript_function_with_vars(context,
-                                                          this->constructor.Get(isolate),
-                                                          new_js_object,
-                                                          TypeList<ExternalConstructorParams...>(),
-                                                          std::forward<ExternalConstructorParams>(external_constructor_values)...);
-            return js_wrapper_class_cpp_object.release();
-        };
+            prototype->SetPrototype(this->base_factory->get_prototype());
+        } else {
+            auto base_factory_constructor = V8ClassWrapper<Base>::get_instance(isolate).get_function_template()->GetFunction();
+            auto base_factory_prototype = base_factory_constructor->NewInstance();
+            prototype->SetPrototype(base_factory_prototype);
+
+        }
+        constructor->SetPrototype(prototype);
+
     }
 
     ~JSFactory(){
@@ -450,35 +422,135 @@ public:
     }
 
     
+    JSWrapperClass * operator()(FixedParams... fixed_params, 
+                                ExternalConstructorParams... constructor_params) const override {
 
-    /**
-     * Returns a C++ object inheriting from JSWrapper that wraps a newly created javascript object which
-     *   extends the C++ functionality in javascript
-     */
-    Base * operator()(ExternalConstructorParams&&... constructor_parameters) const override {
-        auto result = this->make_jswrapper_object(std::forward<ExternalConstructorParams>(constructor_parameters)...);
-        return result;
+
+        auto isolate = v8::Isolate::GetCurrent();
+        auto context = isolate->GetCurrentContext();
+
+        JSWrapperClass * const wrapper_class = [&]() {
+
+            // at the least-derived JS factory, create the JSWrapperClass object
+            if (this->base_factory == nullptr) {
+                return new JSWrapperClass(fixed_params..., constructor_params...);
+            } else {
+                return static_cast<JSWrapperClass *>(this->base_factory->operator()(fixed_params..., constructor_params...));
+            }
+        }();
+
+       
+        wrapper_class->get_javascript_object()->SetPrototype(this->get_prototype());
+
+        call_javascript_function_with_vars(context,
+                                           this->get_constructor(),
+                                           wrapper_class->get_javascript_object(),
+                                           TypeList<ExternalConstructorParams...>(),
+                                           constructor_params...);
+        
+        
+        return wrapper_class;
     }
 
 
     template<int starting_info_index>
-    static std::unique_ptr<ThisFactoryType> create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info) {
-	    return _create_factory_from_javascript<starting_info_index>(info, std::index_sequence_for<InternalConstructorParams...>());
+    static std::unique_ptr<FactoryBase> create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info) {
+	    return _create_factory_from_javascript<starting_info_index>(info, std::index_sequence_for<FixedParams...>());
     }
 
     
-    static void wrap_factory(v8::Isolate * isolate) {
-	V8ClassWrapper<ThisFactoryType> & wrapper = V8ClassWrapper<ThisFactoryType>::get_instance(isolate);
-        wrapper.add_method("create", &ThisFactoryType::operator());
-        wrapper.finalize();
-    }
-    
-    
-    v8::Local<v8::Value> get_prototype() const {
+    v8::Local<v8::Object> get_prototype() const override {
+        assert(!this->prototype.IsEmpty());
         return this->prototype.Get(v8::Isolate::GetCurrent());
     }
- };
+};
 
+
+template<typename Base, typename FixedParamTypeList, typename ConstructorParamTypeList, typename Deleter = std::default_delete<Base>>
+class ConcreteFactory {
+    static_assert(always_false_v<Base>, "Only the specialization should ever be instantiated - check your types");
+};
+
+
+template<typename Base, typename... FixedParams, typename... ConstructorParams, typename Deleter>
+class ConcreteFactory<Base, TypeList<FixedParams...>, TypeList<ConstructorParams...>, Deleter> {
+    using FixedParamTypeList = TypeList<FixedParams...>;
+    using ConstructorParamTypeList = TypeList<ConstructorParams...>;
+    using ThisFactory = ConcreteFactory<Base, FixedParamTypeList, ConstructorParamTypeList, Deleter>;
+
+private:
+
+    using FactoryType = Factory<Base, FixedParamTypeList, ConstructorParamTypeList, Deleter>;
+    std::unique_ptr<FactoryType> factory;
+    std::tuple<FixedParams...> fixed_params;
+
+    template<size_t... Is>
+    Base * create_helper(ConstructorParams... constructor_params, std::index_sequence<Is...>) const {
+        return factory->operator()(std::get<Is>(fixed_params)..., constructor_params...);
+    }
+
+public:
+
+    template<typename Derived>
+    struct CppFactoryInfo{};
+    
+    template<typename JSWrapperClass>
+    struct JSFactoryInfo{
+        ThisFactory const * base_concrete_factory;
+        v8::Local<v8::Object> prototype;
+        v8::Local<v8::Function> constructor;
+        
+        JSFactoryInfo(ThisFactory const * base_concrete_factory,
+                      v8::Local<v8::Object> prototype,
+                      v8::Local<v8::Function> constructor) :
+            base_concrete_factory(base_concrete_factory),
+            prototype(prototype),
+            constructor(constructor)
+        {}
+    };
+    
+
+
+    template<typename Derived>
+    ConcreteFactory(CppFactoryInfo<Derived> const & cpp_factory_info, FixedParams... params) :
+        factory(std::make_unique<CppFactory<Base, Derived, FixedParamTypeList, ConstructorParamTypeList, Deleter>>()), 
+        fixed_params(params...)
+    {}
+
+
+    template<typename JSWrapperType>
+    ConcreteFactory(JSFactoryInfo<JSWrapperType> const & js_factory_info, FixedParams... params) :
+        factory(std::make_unique<JSFactory<Base, JSWrapperType, FixedParamTypeList, ConstructorParamTypeList, Deleter>>(
+            *js_factory_info.base_concrete_factory->factory,
+            js_factory_info.prototype,
+            js_factory_info.constructor
+        )),
+        fixed_params(params...)
+    {}
+
+
+
+    Base * operator()(ConstructorParams... constructor_params) const {
+        return this->create(constructor_params...);
+    }
+    
+    Base * create(ConstructorParams... constructor_params) const {
+        return create_helper(constructor_params..., std::index_sequence_for<FixedParams...>());
+    }
+
+    static void wrap_factory(v8::Isolate * isolate) {
+        V8ClassWrapper<ThisFactory> & wrapper = V8ClassWrapper<ThisFactory>::get_instance(isolate);
+        if (!wrapper.is_finalized()) {
+            wrapper.add_method("create", &ThisFactory::create);
+            wrapper.finalize();
+        }
+    }
+
+};
+
+template<typename T>
+struct is_wrapped_type<T, std::enable_if_t<xl::is_template_for_v<ConcreteFactory, T>>> : std::true_type
+{};
 
 
 

@@ -1983,7 +1983,10 @@ struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 
 template<typename T>
-struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
+struct CastToNative<T, std::enable_if_t<
+    !std::is_reference_v<T> &&
+	std::is_copy_constructible<T>::value && 
+	is_wrapped_type_v<T>>>
 {
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		auto pointer_result = CastToNative<T*>()(isolate, value);
@@ -1997,13 +2000,21 @@ struct CastToNative<T, std::enable_if_t<!std::is_const_v<T> && std::is_copy_cons
 
 
 template<typename T>
-struct CastToNative<T, std::enable_if_t<!std::is_copy_constructible<T>::value && is_wrapped_type_v<T>>>
+struct CastToNative<T, std::enable_if_t<
+	!std::is_reference_v<T> && 
+	!std::is_copy_constructible_v<T> && 
+    std::is_move_constructible_v<T> &&
+    is_wrapped_type_v<std::remove_reference_t<T>>
+>>
 {
 	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-		//static_assert(always_false_v<T>, "Cannot return a copy of an object of a type that is not copy constructible");
-		auto && result = CastToNative<T&&>()(isolate, value);
-		return T(std::move(result));
+        if (V8ClassWrapper<T>::does_object_own_memory(get_value_as<v8::Object>(value))) {
+            auto && result = CastToNative<T&&>()(isolate, value);
+            return T(std::move(result));
+        } else {
+            throw CastException("Could not move construct object of type {} from JavaScript object which does not own its memory", xl::demangle<T>());
+        }
 	}
 	static constexpr bool callable(){return false;}
 
@@ -2014,7 +2025,9 @@ template<typename T>
 struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		return *CastToNative<T*>()(isolate, value);
+		auto pointer_result = CastToNative<T*>()(isolate, value);
+		assert(pointer_result != nullptr);
+		return *pointer_result;
 	}
 	static constexpr bool callable(){return true;}
 };

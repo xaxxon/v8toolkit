@@ -18,11 +18,11 @@ namespace v8toolkit {
 /**
  * always returns false type trait
  */
-template<class T>
+template<class T = void>
 struct always_false : public std::false_type {
 };
 
-template<class T> constexpr bool always_false_v = always_false<T>::value;
+template<class T = void> constexpr bool always_false_v = always_false<T>::value;
 
 
 /**

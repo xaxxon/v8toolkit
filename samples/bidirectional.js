@@ -4,57 +4,55 @@ var js_method_result = "JS string";
 let thing2_i_val = 24;
 
 
-let thing2_factory = create_thing_factory(
+let thing_factory_4 = create_thing_factory(
+    thing_factory_3,
     {
         get_string: function(){return js_method_result;},
+        thing_factory_4_function: function(){},
 
     }, // This is the actual prototype object shared by all new instances of the type
     function(str){ // This function is called on each new object, creating non-shared, per-object properties
-        println("In new thing2 object constructor: " + str);
-        this.per_object_property = 42;
-        // printobj(new_thing2);
-        //println(`thing2 factory string input: ${str}`);
-    }, 24);
+        this.per_object_property = str;
+    }, 4);
 
 
-
-
-// let thing2_factory = create_thing_factory(function(j_value, base_thing){
-//     // println("base_thing i = " + base_thing.i);
-//     if (typeof base_thing !== 'undefined') {
-//         println("base_thing i = " + base_thing.i);
-//
-//     } else {
-//         println("Base thing not defined");
-//     }
-//     return Thing.subclass({}, 24, j_value);
-//
-// }, 11);
-//
+let thing_factory_5 = create_thing_factory(
+    thing_factory_4,
+    {
+        thing_factory_5_function: function(){},
+    },
+    function(str){
+        this.per_object_property = str;      
+    }, 5);
 
 
 
 var thing = new Thing(42, "test");
+printobj(thing);
 assert("thing.get_string() === cpp_method_result");
-
+assert("thing.thing_only_function() == \"thing only function\"");
 
 
 let count = 0;
-println("About to create thing21");
-let thing21 = thing2_factory.create("hello" + ++count);
-println("About to print thing21");
-printobjall(thing21);
-assert("thing21.get_string() == js_method_result");
-println(thing21.per_object_property);
-assert("thing21.per_object_property === 42");
+let thing41 = thing_factory_4.create(++count);
 
-println("Creating thing22");
-let thing22 = thing2_factory.create("hello" + ++count);
-assert("thing22.per_object_property === 42");
+assert("thing41.get_string() == js_method_result");
+assert("thing41.per_object_property == 1");
 
-thing21.per_object_property++;
-assert("thing21.per_object_property === 43");
-assert("thing22.per_object_property === 42");
+println("Creating thing4 - should only be one Thing created before 'thing42'");
+let thing42 = thing_factory_4.create(++count);
+println("thing42");
+printobjall(thing42);
+assert("thing42.i == 4");
+assert("thing42.per_object_property == 2");
+
+thing41.per_object_property++;
+assert("thing41.per_object_property == 2");
+assert("thing42.per_object_property == 2");
+
+
+let thing51 = thing_factory_5.create(++count);
+assert("thing51.i == 5");
 
 
 

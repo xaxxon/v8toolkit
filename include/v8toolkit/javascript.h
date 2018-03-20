@@ -69,6 +69,7 @@ public:
 	v8::Isolate * const isolate;
 
 	virtual ~Context();
+	
 
     /**
      * Allows for possible destruction of the Context once all Script objects are released.  This clears out
@@ -290,6 +291,8 @@ public:
 		GLOBAL_CONTEXT_SCOPED_RUN(isolate, context);
 		return callable(isolate, context.Get(isolate));
 	}
+    
+
 	
 	/**
 	* Adds a function to this context only

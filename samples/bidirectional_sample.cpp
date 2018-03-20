@@ -29,7 +29,9 @@ struct NonPolymorphicType : public v8toolkit::WrappedClassBase {};
 
 
 struct Thing : public v8toolkit::WrappedClassBase {
-	Thing(int i, const std::string & j): i(i), j(j) {}
+	Thing(int i, const std::string & j): i(i), j(j) {
+        std::cerr << fmt::format("Thing created at {}", (void*)this) << std::endl;
+    }
 	Thing(const Thing &) = delete;
 	Thing& operator=(const Thing &) = delete;
 	Thing(Thing &&) = delete;
@@ -38,6 +40,8 @@ struct Thing : public v8toolkit::WrappedClassBase {
 	virtual std::string get_string(){return "C++ string";}
 	virtual std::string get_string_value(){return "C++ string";}
 	virtual std::string get_string_const()const{return "const C++ string";}
+	
+	std::string thing_only_function(){return "thing only function"; }
 
 	// test case for non-polymorphic types
 	NonPolymorphicType take_and_return_non_polymorphic(const NonPolymorphicType &) const {return NonPolymorphicType();}
@@ -48,11 +52,11 @@ struct Thing : public v8toolkit::WrappedClassBase {
 
 struct JSThing : public Thing, public JSWrapper<Thing> {
     
-    JSThing(v8::Local<v8::Object> js_object, 
-            int i, 
-            const std::string & j) :
-	Thing(i, j),
-	JSWrapper(js_object) {}
+    JSThing(int i, 
+            const std::string & j) : 
+        Thing(i, j), 
+        JSWrapper(static_cast<Thing *>(this)) 
+    {}
     
 	JS_ACCESS(std::string, get_string, get_string);
 	JS_ACCESS(std::string, get_string_value, get_string_value);
@@ -60,23 +64,33 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
 };
 
 
-using ThingFactory = CppFactory<Thing, Thing, TypeList<int>, TypeList<std::string const &>>;
-using JSThingFactory = JSFactory<ThingFactory, JSThing, TypeList<int>, TypeList<const std::string &>>;
-static vector<std::unique_ptr<JSThingFactory>> thing_factories;
+using PublicFactory = ConcreteFactory<Thing, TypeList<int>, TypeList<std::string const &>>;
 
-ThingFactory thing_factory_3(3);
+PublicFactory thing_factory_3(PublicFactory::CppFactoryInfo<Thing>(), 3);
+//using BaseFactory = Factory<Thing, TypeList<int>, TypeList<std::string const &>>;
+//using JSThingFactory = JSFactory<Thing, JSThing, TypeList<int>, TypeList<const std::string &>>;
+//using ThingFactory = CppFactory<Thing, Thing, TypeList<int>, TypeList<std::string const &>>;
+//static_assert(std::is_base_of_v<BaseFactory, ThingFactory>);
+//static_assert(std::is_base_of_v<BaseFactory, JSThingFactory>);
+static vector<std::unique_ptr<PublicFactory>> thing_factories;
+
 
 void create_thing_factory(const v8::FunctionCallbackInfo<v8::Value> & info) {
 	auto isolate = info.GetIsolate();
 
-	//	thing_factories.push_bac	k(new JSThingFactory(isolate->GetCurrentContext(), info[0]->ToObject(), CastToNative<int>()(isolate, info[1])));
+	thing_factories.push_back(std::make_unique<PublicFactory>(
+		PublicFactory::JSFactoryInfo<JSThing>(
+			get_value_as<PublicFactory *>(info[0]),
+			get_value_as<v8::Object>(info[1]),
+			get_value_as<v8::Function>(info[2])
+		), CastToNative<int>()(isolate, info[3])));
 
 	// Since the newly created type is not being named, we don't skip any parameters <0>.  If the javascript caller was going to
 	// provide a type/factory name as the first parameter, then it would be <1>
-	thing_factories.emplace_back(JSThingFactory::create_factory_from_javascript<0>(info));
+//	thing_factories.emplace_back(JSThingFactory::create_factory_from_javascript<0>(info));
 	
 	// return the factory back to the caller
-	info.GetReturnValue().Set(CastToJS<JSThingFactory*>()(isolate, thing_factories.back().get()));
+	info.GetReturnValue().Set(CastToJS<PublicFactory*>()(isolate, thing_factories.back().get()));
 }
 
 
@@ -98,6 +112,7 @@ void test_calling_bidirectional_from_javascript()
 		thing.add_method("get_string_value", &Thing::get_string_value);
 		thing.add_method("get_string_const", &Thing::get_string_const);
 		thing.add_method("take_and_return_non_polymorphic", &Thing::take_and_return_non_polymorphic);
+		thing.add_method("thing_only_function", &Thing::thing_only_function);
 		thing.set_compatible_types<JSThing>();
 		thing.add_member_readonly<&Thing::i>("i");
 		thing.add_member<&Thing::j>("j");
@@ -109,7 +124,7 @@ void test_calling_bidirectional_from_javascript()
 		jsthing.set_parent_type<Thing>();
 		jsthing.finalize();
 
-		JSThingFactory::wrap_factory(*isolate);
+        PublicFactory::wrap_factory(*isolate);		
 
 		auto & non_polymoprhic = isolate->wrap_class<NonPolymorphicType>();
 		non_polymoprhic.finalize();
@@ -117,12 +132,18 @@ void test_calling_bidirectional_from_javascript()
 
 		auto context = isolate->create_context();
 
-		context->add_function("create_thing_factory", &create_thing_factory);
+		{
+			CONTEXT_SCOPED_RUN(context->get_context());
 
-		context->run_from_file("bidirectional.js");
+            PublicFactory * base_factory_3 = &thing_factory_3;
+			context->expose_variable("thing_factory_3", base_factory_3);
+			context->add_function("create_thing_factory", &create_thing_factory);
 
-		// need to clear these up before the context/isolates go away
-		thing_factories.clear();
+			context->run_from_file("bidirectional.js");
+
+			// need to clear these up before the context/isolates go away
+			thing_factories.clear();
+		}
 	});
 }
 
