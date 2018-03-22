@@ -1879,33 +1879,38 @@ struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
 };
 
 
-/**
- * CastToNative a std::unique_ptr to a wrapped type
- */
-template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<T>>> {
+template<class T>
+struct CastToJS<T, std::enable_if_t<
+	xl::is_template_for_v<std::unique_ptr, T> &&
+	is_wrapped_type_v<typename std::remove_reference_t<T>::element_type>
+>>
+{
+	using NoRefT = std::remove_reference_t<T>;
 
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-        return CastToJS<T>()(isolate, *unique_ptr.get());
-    }
+	v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT & unique_ptr) {
 
-    v8::Local<v8::Value> operator()(v8::Isolate *isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
+		if (unique_ptr.get() == nullptr) {
+			return v8::Undefined(isolate);
+		} else {
+			return CastToJS<typename NoRefT::element_type *>()(isolate, unique_ptr.get());
+		}
+	}
 
-		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
+	v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT && unique_ptr) {
 
-        // create new owning JavaScript object with the contents of the unique_ptr
-        auto result = wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.release(), *wrapper.destructor_behavior_delete);
+		if (unique_ptr.get() == nullptr) {
+			return v8::Undefined(isolate);
+		}
 
+		auto & wrapper = V8ClassWrapper<typename NoRefT::element_type>::get_instance(isolate);
+
+		// create new owning JavaScript object with the contents of the unique_ptr
+		auto result = wrapper.wrap_existing_cpp_object(isolate->GetCurrentContext(), unique_ptr.get(), *wrapper.destructor_behavior_delete);
+		(void)unique_ptr.release();
 		return result;
 
-    }
-
-
-
+	}
 };
-
-
-
 
 
 template<class T>

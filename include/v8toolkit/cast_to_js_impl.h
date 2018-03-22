@@ -42,6 +42,14 @@ struct CastToJS<T, std::enable_if_t<std::is_enum_v<T>>> {
 };
 
 
+template<>
+struct CastToJS<void *> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, void * value) const {
+        return v8::String::NewFromUtf8(isolate, fmt::format("{}", value).c_str());
+    }
+    static constexpr bool callable(){return true;}
+};
+
 
 CAST_TO_JS(bool, { return v8::Boolean::New(isolate, value); });
 
@@ -377,52 +385,30 @@ struct CastToJS<T, std::enable_if_t<xl::is_std_array_v<T>>> {
  *
  * These functions are not const because they call unique_ptr::release
  */
-template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...>, std::enable_if_t<!is_wrapped_type_v<T>>> {
+template<class T>
+struct CastToJS<T, std::enable_if_t<
+    xl::is_template_for_v<std::unique_ptr, T> && 
+    !is_wrapped_type_v<typename std::remove_reference_t<T>::element_type>
+>> 
+{
+    using NoRefT = std::remove_reference_t<T>;
+    using NoRefNoConstT = std::remove_const_t<NoRefT>;
 
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> & unique_ptr) {
-        return CastToJS<T>()(isolate, *unique_ptr.get());
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & unique_ptr) {
+        return CastToJS<typename NoRefT::element_type>()(isolate, *unique_ptr.get());
     }
 
-
-    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> && unique_ptr) {
-        auto result = CastToJS<T>()(isolate, std::move(*unique_ptr));
+    // if T is const, then don't allow moving of any sort
+    template<typename U = NoRefT>
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<U> && unique_ptr) {
+        static_assert(!std::is_const_v<U>, "cannot pass an rvalue when the type is specified as const");
+        auto result = CastToJS<typename U::element_type>()(isolate, std::move(*unique_ptr));
         unique_ptr.reset();
         return result;
     }
-
 };
 
 
-/**
- * If a data structure contains a unique_ptr and that is being returned, the unique_ptr should not ::release()
- * its memory.  This is treated just as if the call were returning a T* instead of a unique_ptr<T>
- */
-template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...> &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...>>>> {
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-    if (unique_ptr.get() == nullptr) {
-        return v8::Undefined(isolate);
-    } else {
-        return CastToJS<T *>()(isolate, unique_ptr.get());
-    }
-}
-
-};
-template<class T, class... Rest>
-struct CastToJS<std::unique_ptr<T, Rest...> const &, std::enable_if_t<!is_wrapped_type_v<std::unique_ptr<T, Rest...> const>>> {
-v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::unique_ptr<T, Rest...> const & unique_ptr) {
-//    fprintf(stderr, "**NOT** releasing UNIQUE_PTR MEMORY for ptr type %s\n", demangle<T>().c_str());
-
-    if (unique_ptr.get() == nullptr) {
-        return v8::Undefined(isolate);
-    } else {
-        return CastToJS<T *>()(isolate, unique_ptr.get());
-    }
-}
-
-};
 
 
 template<class T>

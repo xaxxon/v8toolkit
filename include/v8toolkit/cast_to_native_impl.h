@@ -48,6 +48,8 @@ struct CastToNative<void> {
 };
 
 
+
+
 CAST_TO_NATIVE(bool, {return static_cast<bool>(value->ToBoolean()->Value());});
 
 

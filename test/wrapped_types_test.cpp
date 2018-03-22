@@ -187,6 +187,8 @@ CAST_TO_NATIVE(WrappedString, {
 }
 
 
+
+
 namespace v8toolkit {
     template<>
     struct WrapperBuilder<WrappedClass> {

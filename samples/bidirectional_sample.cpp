@@ -64,6 +64,24 @@ struct JSThing : public Thing, public JSWrapper<Thing> {
 };
 
 
+class CreatedWithFactory : public WrappedClassBase {
+    int i = 0;
+    bool factory_method_called = false;
+    CreatedWithFactory(int i) : i(i) {}
+    
+public:
+    static CreatedWithFactory * make(int i) {
+		std::cerr << fmt::format("in CreatedWithFactory::make") << std::endl;
+        auto result = new CreatedWithFactory(i);
+        result->factory_method_called = true;
+        return result;
+    }
+    ~CreatedWithFactory() {
+        std::cerr << fmt::format("CreatedWithFactory destructor running, verifying factory method used to construct object...") << std::endl;
+        assert(this->factory_method_called);
+    }
+};
+
 using PublicFactory = ConcreteFactory<Thing, TypeList<int>, TypeList<std::string const &>>;
 
 PublicFactory thing_factory_3(PublicFactory::CppFactoryInfo<Thing>(), 3);
@@ -224,6 +242,16 @@ int main(int argc, char ** argv)
 	
 	printf("Calling TCBFJ\n");
     test_calling_bidirectional_from_javascript();
+
+
+    {
+        ConcreteFactory <CreatedWithFactory, TypeList<>, TypeList<int>> 
+            factory((ConcreteFactory < CreatedWithFactory,
+                    TypeList<>, TypeList < int >> ::CppFactoryInfo<CreatedWithFactory, &CreatedWithFactory::make>()));
+        
+        delete factory(4);
+    }
+    
      exit(0);
 //    auto i = Platform::create_isolate();
 //    (*i)([&]{

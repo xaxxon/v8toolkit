@@ -120,17 +120,25 @@ TEST_F(JavaScriptFixture, UniquePointer_UnwrappedTypes) {
     this->create_context();
     (*c)([&] {
         {
-            FlaggedDeleter<std::string>::deleted = false;
-            auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
-            auto object = CastToJS<decltype(upi)>()(*i, std::move(upi));
+            {
+                FlaggedDeleter<std::string>::deleted = false;
+                static_assert(!is_wrapped_type_v<std::string>);
+                auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
+                static_assert(xl::is_template_for_v<std::unique_ptr, decltype(upi)>);
+                static_assert(!is_wrapped_type_v<decltype(upi)::element_type>);
+                auto object = CastToJS<decltype(upi)>()(*i, std::move(upi));
+                // CastToJS should have taken ownership of the unique_ptr and deleted its memory because it's
+                //   an unwrapped type
+                // string should have been moved out of
+                EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
+            }
 
-
-            // CastToJS should have taken ownership of the unique_ptr and deleted its memory because it's
-            //   an unwrapped type
-            EXPECT_TRUE(FlaggedDeleter<std::string>::deleted);
-
-            // string should have been moved out of
-            EXPECT_STREQ(CastToNative<std::string>()(*i, object).c_str(), "test string");
+            { // const unique ptr test
+                FlaggedDeleter<std::string>::deleted = false;
+                auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
+                auto object = CastToJS<decltype(upi) const>()(*i, upi);
+                EXPECT_FALSE(FlaggedDeleter<std::string>::deleted); 
+            }
         }
         {
             FlaggedDeleter<std::string>::deleted = false;
@@ -152,7 +160,7 @@ TEST_F(JavaScriptFixture, UniquePointer_UnwrappedTypes) {
             {
                 FlaggedDeleter<std::string>::deleted = false;
                 auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
-                auto object = CastToJS<decltype(upi) & >()(*i, std::move(upi));
+                auto object = CastToJS<decltype(upi)>()(*i, upi);
 
                 // string should NOT have been moved out of
                 EXPECT_STREQ(upi->c_str(), "test string");
