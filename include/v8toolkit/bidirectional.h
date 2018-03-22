@@ -6,7 +6,6 @@
 #include "v8_class_wrapper.h"
 #include "v8helpers.h"
 #include "v8toolkit.h"
-#include "class_parser.h"
 
 /**
 * This file contains things needed to create "types" and objects in both C++ and javascript
@@ -223,6 +222,7 @@ template<typename Base,
     typename Derived,
     typename FixedParamsTypeList, // parameters to be sent to the constructor that are known at factory creation time
     typename ExternalTypeList,
+    auto constructor_function = nullptr,
     typename Deleter = std::default_delete<Base> > 
 class CppFactory;
 
@@ -233,15 +233,16 @@ template<
     typename Derived, // object type being created
     typename... FixedParams,
     typename... ExternalConstructorParams,
+    auto constructor_function,
     typename Deleter> 
-class V8TOOLKIT_SKIP CppFactory<
+class CppFactory<
     Base,
     Derived,
     TypeList<FixedParams...>,
     TypeList<ExternalConstructorParams...>,
+    constructor_function,
     Deleter> : public Factory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>
 {
-    static_assert(is_wrapped_type_v<Derived>, "CppFactory Base type must be a wrapped type");
     
 
 public:
@@ -273,7 +274,11 @@ public:
      * @return 
      */
     Base * operator()(FixedParams... fixed_args, ExternalConstructorParams... constructor_args) const override {
-        return new Derived(fixed_args..., constructor_args...);
+        if constexpr(constructor_function != nullptr) {
+            return constructor_function(fixed_args..., constructor_args...);
+        } else {
+            return new Derived(fixed_args..., constructor_args...);
+        }
     }
 };
 
@@ -353,7 +358,6 @@ protected:
     static std::unique_ptr<FactoryBase> _create_factory_from_javascript(const v8::FunctionCallbackInfo<v8::Value> & info, std::index_sequence<Is...>) {
 
         auto isolate = info.GetIsolate();
-        auto context = isolate->GetCurrentContext();
 
         // Check that the call contains parameters for the base_factory, prototype, constructor, and each internal constructor parameter
         constexpr std::size_t parameter_count = starting_info_index + 3 + sizeof...(ExternalConstructorParams);
@@ -491,7 +495,7 @@ private:
 
 public:
 
-    template<typename Derived>
+    template<typename Derived, Derived*(*constructor_function)(FixedParams..., ConstructorParams...) = nullptr>
     struct CppFactoryInfo{};
     
     template<typename JSWrapperClass>
@@ -511,9 +515,9 @@ public:
     
 
 
-    template<typename Derived>
-    ConcreteFactory(CppFactoryInfo<Derived> const & cpp_factory_info, FixedParams... params) :
-        factory(std::make_unique<CppFactory<Base, Derived, FixedParamTypeList, ConstructorParamTypeList, Deleter>>()), 
+    template<typename Derived, Derived*(*constructor_function)(FixedParams..., ConstructorParams...)>
+    ConcreteFactory(CppFactoryInfo<Derived, constructor_function> const & cpp_factory_info, FixedParams... params) :
+        factory(std::make_unique<CppFactory<Base, Derived, FixedParamTypeList, ConstructorParamTypeList, constructor_function, Deleter>>()), 
         fixed_params(params...)
     {}
 
