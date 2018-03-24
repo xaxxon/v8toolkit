@@ -573,8 +573,13 @@ std::optional<v8::Local<Result>> get_property_as(T && input_value, std::string_v
         return {};
     }
     
-    auto local_object = local_value->ToObject();
+    v8::Local<v8::Object> local_object = local_value->ToObject();
 
+    // if it doesn't have the property at all, don't return undefined
+    if (!local_object->HasOwnProperty(context, make_string(key)).FromMaybe(false)) {
+        return {};
+    }
+    
     auto get_result = local_object->Get(context, make_string(key));
     if (get_result.IsEmpty()) {
         return {};

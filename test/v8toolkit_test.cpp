@@ -32,7 +32,18 @@ TEST_F(JavaScriptFixture, MakeLocal) {
     });
 }
 
+TEST_F(JavaScriptFixture, GetPropertyAs) {
 
+    this->create_context();
+
+    (*c)([&]{
+        auto object = c->run("({a: 1, b: undefined})");
+        EXPECT_TRUE(get_property_as(object, "a"));
+        EXPECT_TRUE(get_property_as(object, "b"));
+        EXPECT_FALSE(get_property_as(object, "c"));
+    });
+
+}
 
 TEST_F(JavaScriptFixture, ReleaseRequiredModulesBeforeIsolateGoesAway) {
 
