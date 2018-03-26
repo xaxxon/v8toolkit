@@ -124,12 +124,12 @@ static constexpr bool callable(){return true;}
 
 
 
-template<template<class,class> class ContainerTemplate, class FirstT, class SecondT>
+template<template<typename, typename> class ContainerTemplate, typename FirstT, typename SecondT>
 ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
     if (value->IsArray()) {
         auto length = get_array_length(isolate, value);
         if (length != 2) {
-            auto error = fmt::format("Array to std::pair must be length 2, but was {}", length);
+            auto error = fmt::format("Array to pair must be length 2, but was {}", length);
             isolate->ThrowException(v8::String::NewFromUtf8(isolate, error.c_str()));
             throw v8toolkit::CastException(error);
         }
@@ -137,22 +137,27 @@ ContainerTemplate<FirstT, SecondT> pair_type_helper(v8::Isolate * isolate, v8::L
         auto array = get_value_as<v8::Array>(isolate, value);
         auto first = array->Get(context, 0).ToLocalChecked();
         auto second = array->Get(context, 1).ToLocalChecked();
-        return std::pair<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
+        return ContainerTemplate<FirstT, SecondT>(v8toolkit::CastToNative<FirstT>()(isolate, first),
                                           v8toolkit::CastToNative<SecondT>()(isolate, second));
 
     } else {
-        auto error = fmt::format("CastToNative<std::pair<T>> requires an array but instead got %s\n", stringify_value(value));
+        auto error = fmt::format("CastToNative<XXX::pair<T>> requires an array but instead got %s\n", stringify_value(value));
         std::cout << error << std::endl;
         throw v8toolkit::CastException(error);
     }
 }
 
 
-template<class FirstT, class SecondT>
-struct CastToNative<std::pair<FirstT, SecondT>>{
-std::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-    return pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
-}
+template<typename T>
+struct CastToNative<T, std::enable_if_t<
+    xl::is_template_for_v<std::pair, T>
+>>{
+    using FirstT = typename T::first_type;
+    using SecondT = typename T::second_type;
+
+    T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return pair_type_helper<std::pair, FirstT, SecondT>(isolate, value);
+    }
 };
 
 
@@ -229,27 +234,26 @@ struct CastToNative<std::basic_string<CharT, Traits, Allocator>> {
 
 template<template<class,class...> class VectorTemplate, class T, class... Rest>
 auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
-    VectorTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...>
-{
-using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
-static_assert(!std::is_reference<ValueType>::value, "vector-like value type cannot be reference");
-using ResultType = VectorTemplate<ValueType, Rest...>;
+    VectorTemplate<std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>, Rest...> {
+    using ValueType = std::remove_reference_t<std::result_of_t<CastToNative<T>(v8::Isolate *, v8::Local<v8::Value>)>>;
+    static_assert(!std::is_reference<ValueType>::value, "vector-like value type cannot be reference");
+    using ResultType = VectorTemplate<ValueType, Rest...>;
 
-auto context = isolate->GetCurrentContext();
-ResultType v;
-if (value->IsArray()) {
-auto array = v8::Local<v8::Object>::Cast(value);
-auto array_length = get_array_length(isolate, array);
-for (int i = 0; i < array_length; i++) {
-auto value = array->Get(context, i).ToLocalChecked();
-v.emplace_back(std::forward<T>(CastToNative<T>()(isolate, value)));
-}
-} else {
-throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
-                                xl::demangle<T>(),
-                                stringify_value(value)));
-}
-return v;
+    auto context = isolate->GetCurrentContext();
+    ResultType v;
+    if (value->IsArray()) {
+        auto array = v8::Local<v8::Object>::Cast(value);
+        auto array_length = get_array_length(isolate, array);
+        for (int i = 0; i < array_length; i++) {
+            auto value = array->Get(context, i).ToLocalChecked();
+            v.emplace_back(std::forward<T>(CastToNative<T>()(isolate, value)));
+        }
+    } else {
+        throw CastException(fmt::format("CastToNative<std::vector-like<{}>> requires an array but instead got JS: '{}'",
+                                        xl::demangle<T>(),
+                                        stringify_value(value)));
+    }
+    return v;
 }
 
 
@@ -368,14 +372,14 @@ template<class T, class... Rest>
 struct CastToNative<std::unique_ptr<T, Rest...>,
     std::enable_if_t<
         std::is_copy_constructible<T>::value &&
-        !is_wrapped_type_v<T>
->// end enable_if_t
->// end template
+        !is_wrapped_type_v<T> 
+    >
+>
 {
-std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-    return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
-}
-static constexpr bool callable(){return true;}
+    std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
+        return std::unique_ptr<T, Rest...>(new T(CastToNative<T>()(isolate, value)));
+    }
+    static constexpr bool callable(){return true;}
 
 };
 
@@ -389,11 +393,9 @@ struct CastToNative<v8::Local<T>> {
 
 };
 
-// cannot cast a non-copyable, standard type to a unique_ptr
-template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<!std::is_copy_constructible<T>::value && !is_wrapped_type_v<T>>>;  // INTENTIONALLY NOT IMPLEMENTED
 
-template<template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
+
+template<template<typename...> class ContainerTemplate, typename Key, typename Value, typename... Rest>
 ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
     //    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
@@ -404,8 +406,11 @@ ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8
     }
 
     auto context = isolate->GetCurrentContext();
+    
+    using ResultKey = decltype(v8toolkit::CastToNative<Key>()(isolate, std::declval<v8::Local<v8::Value>>()));
+    using ResultValue = decltype(v8toolkit::CastToNative<Value>()(isolate, std::declval<v8::Local<v8::Value>>()));
 
-    ContainerTemplate<Key, Value, Rest...> results;
+    ContainerTemplate<ResultKey, ResultValue, Rest...> results;
     for_each_own_property(context, value->ToObject(),
                           [isolate, &results](v8::Local<v8::Value> key, v8::Local<v8::Value> value) {
                               results.emplace(v8toolkit::CastToNative<Key>()(isolate, key),
