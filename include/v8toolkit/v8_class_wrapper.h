@@ -1860,8 +1860,8 @@ class JSWrapper;
 
 
 
-template<class T>
-struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
+template<class T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object) {
@@ -1879,8 +1879,8 @@ struct CastToJS<T, std::enable_if_t<is_wrapped_type_v<T>>> {
 };
 
 
-template<class T>
-struct CastToJS<T, std::enable_if_t<
+template<class T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
 	xl::is_template_for_v<std::unique_ptr, T> &&
 	is_wrapped_type_v<typename std::remove_reference_t<T>::element_type>
 >>
@@ -1892,7 +1892,7 @@ struct CastToJS<T, std::enable_if_t<
 		if (unique_ptr.get() == nullptr) {
 			return v8::Undefined(isolate);
 		} else {
-			return CastToJS<typename NoRefT::element_type *>()(isolate, unique_ptr.get());
+			return CastToJS<typename NoRefT::element_type *, Behavior>()(isolate, unique_ptr.get());
 		}
 	}
 
@@ -1913,8 +1913,8 @@ struct CastToJS<T, std::enable_if_t<
 };
 
 
-template<class T>
-struct CastToJS<T, std::enable_if_t<
+template<class T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
 	std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<T>>> && // must be a pointer
 	!std::is_pointer_v<std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>> && // no multi-pointers
 	is_wrapped_type_v<std::remove_pointer_t<std::remove_cv_t<std::remove_reference_t<T>>>>
@@ -1943,14 +1943,14 @@ struct CastToJS<T, std::enable_if_t<
             auto js_wrapper = safe_dynamic_cast<JSWrapperType const *>(cpp_object);
             if (js_wrapper) {
 //            	std::cerr << fmt::format("** YES IS A JSWRAPPER") << std::endl;
-                return CastToJS<const JSWrapperType>()(isolate, *js_wrapper);
+                return CastToJS<const JSWrapperType, Behavior>()(isolate, *js_wrapper);
             }
         } else {
 
             auto js_wrapper = safe_dynamic_cast<xl::match_const_of_t<JSWrapperType, WrappedType> *>(cpp_object);
             if (js_wrapper) {
 //				std::cerr << fmt::format("** YES IS A JSWRAPPER") << std::endl;
-                return CastToJS<JSWrapperType>()(isolate, *js_wrapper);
+                return CastToJS<JSWrapperType, Behavior>()(isolate, *js_wrapper);
             }
         }
 //		std::cerr << fmt::format("** NO IS NOT A JSWRAPPER") << std::endl;
@@ -1968,21 +1968,21 @@ struct CastToJS<T, std::enable_if_t<
 };
 
 
-template<class T>
-struct CastToJS<T&, std::enable_if_t<is_wrapped_type_v<T>>> {
+template<class T, typename Behavior>
+struct CastToJS<T&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 	// An lvalue is presented, so the memory will not be cleaned up by JavaScript
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T & cpp_object) {
-		return 	CastToJS<T*>()(isolate, &cpp_object);
+		return 	CastToJS<T*, Behavior>()(isolate, &cpp_object);
 	}
 };
 
 
-template<class T>
-struct CastToJS<T&&, std::enable_if_t<is_wrapped_type_v<T>>> {
+template<class T, typename Behavior>
+struct CastToJS<T&&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>> {
 
 	v8::Local<v8::Value> operator()(v8::Isolate * isolate, T && cpp_object) {
-		return CastToJS<std::unique_ptr<T>>()(isolate, std::make_unique<T>(std::move(cpp_object)));
+		return CastToJS<std::unique_ptr<T>, Behavior>()(isolate, std::make_unique<T>(std::move(cpp_object)));
 	}
 };
 

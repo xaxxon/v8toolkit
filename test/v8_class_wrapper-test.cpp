@@ -136,7 +136,7 @@ TEST_F(JavaScriptFixture, UniquePointer_UnwrappedTypes) {
             { // const unique ptr test
                 FlaggedDeleter<std::string>::deleted = false;
                 auto upi = unique_ptr<std::string, FlaggedDeleter<std::string>>(new std::string("test string"));
-                auto object = CastToJS<decltype(upi) const>()(*i, upi);
+                (void)CastToJS<decltype(upi) const>()(*i, upi);
                 EXPECT_FALSE(FlaggedDeleter<std::string>::deleted); 
             }
         }

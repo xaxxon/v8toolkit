@@ -29,8 +29,8 @@ struct CastToNative<eastl::pair<FirstT, SecondT>>{
 };
 
 
-template<typename T>
-struct CastToJS<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::pair, T>
 >> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & pair) const {
@@ -41,8 +41,8 @@ struct CastToJS<T, std::enable_if_t<
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
-        (void) array->Set(context, 0, CastToJS<T1 &>()(isolate, pair.first));
-        (void) array->Set(context, 1, CastToJS<T2 &>()(isolate, pair.second));
+        (void) array->Set(context, 0, CastToJS<T1 &, Behavior>()(isolate, pair.first));
+        (void) array->Set(context, 1, CastToJS<T2 &, Behavior>()(isolate, pair.second));
         return array;
     }
 };
@@ -121,8 +121,8 @@ template<typename T>
 constexpr bool IsEastlFixedString_v = IsEastlFixedString<T>::value;
 
 
-template<typename T>
-struct CastToJS<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
     IsEastlFixedString_v<T>
 >> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
@@ -142,8 +142,8 @@ struct CastToNative<T, std::enable_if_t<
 
 
 // CastToJS<eastl::vector<>>
-template<class T, class... Rest>
-struct CastToJS<T, std::enable_if_t<
+template<class T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector, T> ||
     xl::is_template_for_v<eastl::ring_buffer, T>
         
@@ -152,11 +152,11 @@ struct CastToJS<T, std::enable_if_t<
 
     using NoRefT = std::remove_reference_t<T>;
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT const & vector) {
-        return cast_to_js_vector_helper<NoRefT const &>(isolate, vector);
+        return cast_to_js_vector_helper<NoRefT const &, Behavior>(isolate, vector);
     }
 
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT && vector) {
-        return cast_to_js_vector_helper<NoRefT &&>(isolate, vector);
+        return cast_to_js_vector_helper<NoRefT &&, Behavior>(isolate, vector);
     }
 };
 
@@ -164,40 +164,40 @@ struct CastToJS<T, std::enable_if_t<
 
 
 
-template<typename T>
-struct CastToJS<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector_multimap, T> ||
     xl::is_template_for_v<eastl::multimap, T>
     > 
 > {
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, T const & multimap) {
-        return casttojs_multimaplike(isolate, multimap);
+        return casttojs_multimaplike<Behavior>(isolate, multimap);
     }
 };
 
 
-template<typename T>
-struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<eastl::vector_map, T>>> {
+template<typename T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<eastl::vector_map, T>>> {
     using NoRefT = std::remove_reference_t<T>;
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT const & map) const {
-        return cast_to_js_map_helper<NoRefT const &>(isolate, map);
+        return cast_to_js_map_helper<NoRefT const &, Behavior>(isolate, map);
     }
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT && map) const{
-        return cast_to_js_map_helper<NoRefT &&>(isolate, std::move(map));
+        return cast_to_js_map_helper<NoRefT &&, Behavior>(isolate, std::move(map));
     }
 
 };
 
 
 
-template<class T>
-struct CastToJS<T, std::enable_if_t<xl::is_template_for_v<eastl::vector_set, T>>> {
+template<class T, typename Behavior>
+struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<eastl::vector_set, T>>> {
     using NoRefT = std::remove_reference_t<T>;
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT const & set) {
-        return cast_to_js_vector_helper<NoRefT const &>(isolate, set);
+        return cast_to_js_vector_helper<NoRefT const &, Behavior>(isolate, set);
     }
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT && set) {
-        return cast_to_js_vector_helper<NoRefT &&>(isolate, set);
+        return cast_to_js_vector_helper<NoRefT &&, Behavior>(isolate, set);
     }
 };
 
