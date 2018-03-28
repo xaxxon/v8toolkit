@@ -1987,8 +1987,8 @@ struct CastToJS<T&&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>> {
 };
 
 
-template<typename T>
-struct CastToNative<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToNative<T, Behavior, std::enable_if_t<
     !std::is_reference_v<T> &&
 	std::is_copy_constructible<T>::value && 
 	is_wrapped_type_v<T>>>
@@ -2004,8 +2004,8 @@ struct CastToNative<T, std::enable_if_t<
 };
 
 
-template<typename T>
-struct CastToNative<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToNative<T, Behavior, std::enable_if_t<
 	!std::is_reference_v<T> && 
 	!std::is_copy_constructible_v<T> && 
     std::is_move_constructible_v<T> &&
@@ -2015,7 +2015,7 @@ struct CastToNative<T, std::enable_if_t<
 	template<class U = T> // just to make it dependent so the static_asserts don't fire before `callable` can be called
 	T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
         if (V8ClassWrapper<T>::does_object_own_memory(get_value_as<v8::Object>(value))) {
-            auto && result = CastToNative<T&&>()(isolate, value);
+            auto && result = Behavior().template operator()<T&&>(value);
             return T(std::move(result));
         } else {
             throw CastException("Could not move construct object of type {} from JavaScript object which does not own its memory", xl::demangle<T>());
@@ -2026,11 +2026,11 @@ struct CastToNative<T, std::enable_if_t<
 };
 
 
-template<typename T>
-struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
+template<typename T, typename Behavior>
+struct CastToNative<T&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
-		auto pointer_result = CastToNative<T*>()(isolate, value);
+		auto pointer_result = Behavior().template operator()<T*>(value);
 		assert(pointer_result != nullptr);
 		return *pointer_result;
 	}
@@ -2038,8 +2038,8 @@ struct CastToNative<T&, std::enable_if_t<is_wrapped_type_v<T>>>
 };
 
 
-template<typename T>
-struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
+template<typename T, typename Behavior>
+struct CastToNative<T&&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	// to "give permission" to have the object moved out of, this object must own the memory.  It CANNOT
 	//   release ownership of the memory for the object, just the data in the object
@@ -2058,8 +2058,8 @@ struct CastToNative<T&&, std::enable_if_t<is_wrapped_type_v<T>>>
 };
 
 
-template<typename T>
-struct CastToNative<T*, std::enable_if_t<is_wrapped_type_v<T>>>
+template<typename T, typename Behavior>
+struct CastToNative<T*, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	T* operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 	    if (value->IsNullOrUndefined()) {
@@ -2106,8 +2106,8 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	return *cpp_object;
 }
 
-template<class T, class... Rest>
-struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_type_v<T>>>
+template<class T, class... Rest, typename Behavior>
+struct CastToNative<std::unique_ptr<T, Rest...>, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 {
 	std::unique_ptr<T, Rest...> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
 
@@ -2126,7 +2126,6 @@ struct CastToNative<std::unique_ptr<T, Rest...>, std::enable_if_t<is_wrapped_typ
 		}
 	}
 	static constexpr bool callable(){return true;}
-
 };
 
 // If no more-derived option was found, wrap as this type

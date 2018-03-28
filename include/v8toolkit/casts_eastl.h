@@ -67,8 +67,8 @@ struct CastToNative<T, std::enable_if_t<
 };
 
 
-template<class T>
-struct CastToNative<T, std::enable_if_t<
+template<class T, typename Behavior>
+struct CastToNative<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector, T> ||
     xl::is_template_for_v<eastl::ring_buffer, T>
 >> 
@@ -78,17 +78,17 @@ struct CastToNative<T, std::enable_if_t<
     using allocator = typename NoRefT::allocator_type;
     
     auto operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return vector_type_helper<eastl::vector, value_type, allocator>(isolate, value);
+        return vector_type_helper<Behavior, eastl::vector, value_type, allocator>(isolate, value);
     }
 };
 
 
 
 // EASTL VECTOR_SET
-template<class T, class... Args>
-struct CastToNative<eastl::vector_set<T, Args...>> {
+template<class T, class... Args, typename Behavior>
+struct CastToNative<eastl::vector_set<T, Args...>, Behavior> {
     eastl::vector_set<T, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        auto vector = vector_type_helper<eastl::vector, T>(isolate, value);
+        auto vector = vector_type_helper<Behavior, eastl::vector, T>(isolate, value);
         eastl::vector_set<T, Args...> set;
         for(auto & i : vector) {
             set.emplace(std::move(i));

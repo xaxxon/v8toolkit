@@ -6,25 +6,36 @@
 
 namespace v8toolkit {
 
-struct JSObjectBehavior;
+struct CastToJSDefaultBehavior;
 
 /**
 * Casts from a native type to a boxed Javascript type
 */
-template<typename T, class Behavior = JSObjectBehavior, class = void>
+template<typename T, class Behavior = CastToJSDefaultBehavior, class = void>
 struct CastToJS {
     static_assert(always_false_v<T>, "Fallback CastToJS template isn't allowed - make sure header with specialization desired is included at this point");
 };
 
+
 /**
- * Default behavior, always call CastToJS for the entire call chain
+ * Subclass this type to specialize specific calls for CastToJS differently than the default implementations.
+ * The call chain of CastToJS will prefer specializations matching the behavior but fall back to CastToJS 
+ * impleementations where no behavior-specific specialization is present
+ * @tparam Derived CRTP type deriving from this 
  */
-struct JSObjectBehavior{
-    template<class T, class Behavior = JSObjectBehavior>
+template<typename Derived>
+struct CastToJSBehaviorBase{
+    template<class T, class Behavior = Derived>
     auto operator()(T && t) {
         return CastToJS<T, Behavior>()(v8::Isolate::GetCurrent(), std::forward<T>(t));
     }
 };
+
+
+/**
+ * Default behavior, always call CastToJS for the entire call chain
+ */
+struct CastToJSDefaultBehavior : CastToJSBehaviorBase<CastToJSDefaultBehavior> {};
 
 
 #define CAST_TO_JS(TYPE, FUNCTION_BODY)                                        \
