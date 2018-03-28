@@ -33,10 +33,14 @@ template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::pair, T>
 >> {
+    
+    using NoRefT = std::remove_reference_t<T>;
+    
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & pair) const {
 
-        using T1 = typename T::first_type;
-        using T2 = typename T::second_type;
+        
+        using T1 = typename NoRefT::first_type;
+        using T2 = typename NoRefT::second_type;
 
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
@@ -54,9 +58,9 @@ template<typename T>
 struct CastToNative<T, std::enable_if_t<
     xl::is_template_for_v<eastl::vector_map, T>
 >> {
-    
-    using key_type = typename T::key_type;
-    using mapped_type = typename T::mapped_type;
+    using NoRefT = std::remove_reference_t<T>;
+    using key_type = typename NoRefT::key_type;
+    using mapped_type = typename NoRefT::mapped_type;
     T operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
         return map_type_helper<eastl::vector_map, key_type, mapped_type>(isolate, value);
     }
@@ -69,8 +73,9 @@ struct CastToNative<T, std::enable_if_t<
     xl::is_template_for_v<eastl::ring_buffer, T>
 >> 
 {
-    using value_type = typename T::value_type;
-    using allocator = typename T::allocator_type;
+    using NoRefT = std::remove_reference_t<T>;
+    using value_type = typename NoRefT::value_type;
+    using allocator = typename NoRefT::allocator_type;
     
     auto operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
         return vector_type_helper<eastl::vector, value_type, allocator>(isolate, value);
@@ -115,7 +120,7 @@ template<typename T, int nodeCount, bool bEnableOverflow, typename OverflowAlloc
 struct IsEastlFixedString_helper<eastl::fixed_string<T, nodeCount, bEnableOverflow, OverflowAllocator>> : std::true_type {};
 
 template<typename T>
-struct IsEastlFixedString : IsEastlFixedString_helper<T> {};
+struct IsEastlFixedString : IsEastlFixedString_helper<std::decay_t<T>> {};
 
 template<typename T>
 constexpr bool IsEastlFixedString_v = IsEastlFixedString<T>::value;

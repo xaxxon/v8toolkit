@@ -6,7 +6,7 @@
 
 namespace v8toolkit {
 
-class JSObjectBehavior;
+struct JSObjectBehavior;
 
 /**
 * Casts from a native type to a boxed Javascript type
@@ -19,10 +19,10 @@ struct CastToJS {
 /**
  * Default behavior, always call CastToJS for the entire call chain
  */
-class JSObjectBehavior{
+struct JSObjectBehavior{
     template<class T, class Behavior = JSObjectBehavior>
     auto operator()(T && t) {
-        return CastToJS<T, Behavior>()(std::forward<T>(t));
+        return CastToJS<T, Behavior>()(v8::Isolate::GetCurrent(), std::forward<T>(t));
     }
 };
 

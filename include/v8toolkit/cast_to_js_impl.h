@@ -25,7 +25,7 @@ struct CastToJS<T *, Behavior, std::enable_if_t<!is_wrapped_type_v<T> && !std::i
         if (value == nullptr) {
             return v8::Undefined(isolate);
         } else {
-            return CastToJS<T>()(isolate, *value);
+            return Behavior()(*value);
         }
     }
 };
@@ -117,26 +117,17 @@ struct CastToJS<std::function<R(Params...)>, Behavior> {
 * Special passthrough type for objects that want to take javascript object objects directly
 */
 template<typename T, typename Behavior>
-struct CastToJS<v8::Local<T>, Behavior> {
-    v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> value) {
+struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<v8::Local, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T value) {
         //return v8::Local<v8::Value>::New(isolate, object);
         return value;
-    }
-
-    v8::Local<T> operator()(v8::Isolate * isolate, v8::Global<T> && value) {
-        //return v8::Local<v8::Value>::New(isolate, object);
-        return value.Get(isolate);
     }
 };
 
 
 template<typename T, typename Behavior>
-struct CastToJS<v8::Global<T>, Behavior> {
-    v8::Local<T> operator()(v8::Isolate * isolate, v8::Local<T> & value) {
-        value;
-    }
-
-    v8::Local<T> operator()(v8::Isolate * isolate, v8::Global<T> const & value) {
+struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<v8::Global, T>>> {
+    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T value) {
         return value.Get(isolate);
     }
 };
@@ -150,14 +141,14 @@ template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::pair, T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & pair) const {
 
-        using T1 = typename T::first_type;
-        using T2 = typename T::second_type;
+//        using T1 = typename T::first_type;
+//        using T2 = typename T::second_type;
 
         assert(isolate->InContext());
         auto context = isolate->GetCurrentContext();
         auto array = v8::Array::New(isolate);
-        (void) array->Set(context, 0, CastToJS<T1 &, Behavior>()(isolate, pair.first));
-        (void) array->Set(context, 1, CastToJS<T2 &, Behavior>()(isolate, pair.second));
+        (void) array->Set(context, 0, Behavior()(pair.first));
+        (void) array->Set(context, 1, Behavior()(pair.second));
         return array;
     }
 };
@@ -179,10 +170,8 @@ v8::Local<v8::Value> cast_to_js_map_helper(v8::Isolate * isolate, T map) {
 
     for (auto & pair : map) {
         (void) object->Set(context,
-                           CastToJS<std::remove_reference_t<KeyType>, Behavior>()(isolate, std::forward<KeyForwardT>(
-                               const_cast<KeyForwardT>  (pair.first ))),
-                           CastToJS<std::remove_reference_t<ValueType>, Behavior>()(isolate, std::forward<ValueForwardT>(
-                               const_cast<ValueForwardT>(pair.second)))
+                           Behavior()(std::forward<KeyForwardT>(const_cast<KeyForwardT>  (pair.first ))),
+                           Behavior()(std::forward<ValueForwardT>(const_cast<ValueForwardT>(pair.second)))
         );
     }
     return object;
@@ -202,8 +191,7 @@ v8::Local<v8::Value> cast_to_js_vector_helper(v8::Isolate * isolate, T vector) {
 
     int i = 0;
     for (auto & element : vector) {
-        (void) array->Set(context, i, CastToJS<std::remove_reference_t<typename NoRefT::value_type>, Behavior>()(isolate,
-            const_cast<RefMatchedValueType>(element)));
+        (void) array->Set(context, i, Behavior()(const_cast<RefMatchedValueType>(element)));
         i++;
     }
     return array;
@@ -234,7 +222,7 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::list, T
             auto array = v8::Array::New(isolate);
             int i = 0;
             for (auto & element : list) {
-                (void) array->Set(context, i, CastToJS<typename NoRefT::value_type, Behavior>()(isolate, element));
+                (void) array->Set(context, i, Behavior()(element));
                 i++;
             }
             return array;
@@ -273,8 +261,8 @@ v8::Local<v8::Object> casttojs_multimaplike(v8::Isolate * isolate, T const & mul
     auto context = isolate->GetCurrentContext();
     auto map = v8::Map::New(isolate);
     for (auto & pair : multimap) {
-        auto key = CastToJS<A, Behavior>()(isolate, const_cast<A &>(pair.first));
-        auto value = CastToJS<B, Behavior>()(isolate, const_cast<B &>(pair.second));
+        auto key = Behavior{}.template operator()(const_cast<A &>(pair.first));
+        auto value = Behavior{}.template operator()(const_cast<B &>(pair.second));
 
         // check to see if a value with this key has already been added
         bool default_value = true;
@@ -325,8 +313,8 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::unorder
         auto object = v8::Map::New(isolate);
         for (auto pair : unordered_map) {
             (void) object->Set(context,
-                               CastToJS<typename NoRefT::key_type &, Behavior>()(isolate, pair.first),
-                               CastToJS<typename NoRefT::mapped_type &, Behavior>()(isolate, pair.second));
+                               Behavior()(pair.first),
+                               Behavior()(pair.second));
         }
         return object;
     }
@@ -347,7 +335,7 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::deque, 
         auto array = v8::Array::New(isolate);
         auto size = deque.size();
         for (unsigned int i = 0; i < size; i++) {
-            (void) array->Set(context, i, CastToJS<typename NoRefT::value_type, Behavior>()(isolate, deque[i]));
+            (void) array->Set(context, i, Behavior()(deque[i]));
         }
         return array;
     }
@@ -368,7 +356,7 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_std_array_v<T>>> {
         auto array = v8::Array::New(isolate);
         // auto size = arr.size();
         for (unsigned int i = 0; i < arr.size(); i++) {
-            (void) array->Set(context, i, CastToJS<typename NoRefT::value_type, Behavior>()(isolate, arr[i]));
+            (void) array->Set(context, i, Behavior()(arr[i]));
         }
         return array;
     }
@@ -396,14 +384,14 @@ struct CastToJS<T, Behavior, std::enable_if_t<
     using NoRefNoConstT = std::remove_const_t<NoRefT>;
 
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, NoRefT const & unique_ptr) {
-        return CastToJS<typename NoRefT::element_type, Behavior>()(isolate, *unique_ptr.get());
+        return Behavior()(*unique_ptr.get());
     }
 
     // if T is const, then don't allow moving of any sort
     template<typename U = NoRefT>
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::remove_reference_t<U> && unique_ptr) {
         static_assert(!std::is_const_v<U>, "cannot pass an rvalue when the type is specified as const");
-        auto result = CastToJS<typename U::element_type, Behavior>()(isolate, std::move(*unique_ptr));
+        auto result = Behavior()(std::move(*unique_ptr));
         unique_ptr.reset();
         return result;
     }
@@ -415,18 +403,18 @@ struct CastToJS<T, Behavior, std::enable_if_t<
 template<typename T, typename Behavior>
 struct CastToJS<std::shared_ptr<T>, Behavior> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, std::shared_ptr<T> const & shared_ptr) {
-        return CastToJS<T, Behavior>()(isolate, *shared_ptr.get());
+        return Behavior()(*shared_ptr.get());
     }
 };
 
 
 
-template<typename... Args, size_t... Is>
+template<typename Behavior, typename... Args, size_t... Is>
 v8::Local<v8::Array> cast_tuple_to_js(v8::Isolate * isolate, std::tuple<Args...> const & tuple, std::index_sequence<Is...>) {
     assert(isolate->InContext());
     auto context = isolate->GetCurrentContext();
     v8::Local<v8::Array> array = v8::Array::New(isolate);
-    ((void)array->Set(context, Is, CastToJS<Args>()(isolate, std::get<Is>(tuple))),...);
+    ((void)array->Set(context, Is, Behavior()(std::get<Is>(tuple))),...);
     return array;
 }
 
@@ -440,7 +428,7 @@ private:
     // private helper gets a parameter pack of the types in the tuple to fold over
     template<typename... Args>
     v8::Local<v8::Value> private_helper(v8::Isolate * isolate, std::tuple<Args...> const & tuple) {
-        return cast_tuple_to_js(isolate, tuple, std::index_sequence_for<Args...>());
+        return cast_tuple_to_js<Behavior>(isolate, tuple, std::index_sequence_for<Args...>());
     }
 
 public:
@@ -473,10 +461,10 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::set, T>
 template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
-        using NoRefT = std::remove_reference_t<T>;
-        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
+//        using NoRefT = std::remove_reference_t<T>;
+//        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
         if (optional) {
-            return CastToJS<ConstMatchedValueType>()(isolate, *optional);
+            return Behavior()(*optional);
         } else {
             return v8::Undefined(isolate);
         }
