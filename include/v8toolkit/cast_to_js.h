@@ -23,11 +23,11 @@ struct CastToJS {
  * impleementations where no behavior-specific specialization is present
  * @tparam Derived CRTP type deriving from this 
  */
-template<typename Derived>
+template<typename Derived, template<typename, typename, typename> class CastTemplate>
 struct CastToJSBehaviorBase{
     template<class T, class Behavior = Derived>
     auto operator()(T && t) {
-        return CastToJS<T, Behavior>()(v8::Isolate::GetCurrent(), std::forward<T>(t));
+        return CastTemplate<T, Behavior, void>()(v8::Isolate::GetCurrent(), std::forward<T>(t));
     }
 };
 
@@ -35,7 +35,7 @@ struct CastToJSBehaviorBase{
 /**
  * Default behavior, always call CastToJS for the entire call chain
  */
-struct CastToJSDefaultBehavior : CastToJSBehaviorBase<CastToJSDefaultBehavior> {};
+struct CastToJSDefaultBehavior : CastToJSBehaviorBase<CastToJSDefaultBehavior, CastToJS> {};
 
 
 #define CAST_TO_JS(TYPE, FUNCTION_BODY)                                        \

@@ -19,16 +19,16 @@ struct CastToNative; // has full implementation in cast_to_native_impl.h
  * impleementations where no behavior-specific specialization is present
  * @tparam Derived CRTP type deriving from this 
  */
-template<typename Derived>
+template<typename Derived, template<typename, typename, typename> class CastTemplate>
 struct CastToNativeBehaviorBase {
     template<typename T, typename Behavior = Derived>
     auto operator()(v8::Local<v8::Value> t) {
-        return CastToNative<T, Behavior>()(v8::Isolate::GetCurrent(), t);
+        return CastTemplate<T, Behavior, void>()(v8::Isolate::GetCurrent(), t);
     }
 };
 
 
-struct CastToNativeDefaultBehavior : CastToNativeBehaviorBase<CastToNativeDefaultBehavior> {};
+struct CastToNativeDefaultBehavior : CastToNativeBehaviorBase<CastToNativeDefaultBehavior, CastToNative> {};
 
 
 template<typename T, typename = void>

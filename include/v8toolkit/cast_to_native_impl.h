@@ -233,9 +233,11 @@ struct CastToNative<std::basic_string<CharT, Traits, Allocator>, Behavior> {
 
 
 template<typename Behavior, template<class,class...> class VectorTemplate, class T, class... Rest>
-auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
-    VectorTemplate<std::remove_reference_t<std::result_of_t<Behavior(v8::Local<v8::Value>)>>, Rest...> {
-    using ValueType = std::remove_reference_t<std::result_of_t<Behavior(v8::Local<v8::Value>)>>;
+auto vector_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+    
+    using ValueType = std::remove_reference_t<
+        decltype(Behavior{}.template operator()<T>(v8::Local<v8::Value>{}))
+    >;
     static_assert(!std::is_reference<ValueType>::value, "vector-like value type cannot be reference");
     using ResultType = VectorTemplate<ValueType, Rest...>;
 
@@ -261,7 +263,9 @@ template<typename Behavior, template<class,class...> class SetTemplate, class T,
 auto set_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) ->
 SetTemplate<std::remove_reference_t<std::result_of_t<Behavior(v8::Local<v8::Value>)>>, Rest...>
 {
-    using ValueType = std::remove_reference_t<std::result_of_t<Behavior(v8::Local<v8::Value>)>>;
+    using ValueType = std::remove_reference_t<
+        decltype(Behavior::template operator()<T>(v8::Local<v8::Value>{}))
+    >;
     static_assert(!std::is_reference<ValueType>::value, "Set-like value type cannot be reference");
     using ResultType = SetTemplate<ValueType, Rest...>;
 
@@ -322,7 +326,9 @@ struct CastToNative<T, Behavior, std::enable_if_t<acts_like_array_v<T> && std::i
 template<class T, class... Rest, typename Behavior>
 struct CastToNative<std::vector<T, Rest...> &&, Behavior, std::enable_if_t<!is_wrapped_type_v<std::vector<T, Rest...>>>> {
     
-    using ResultType = std::vector<std::remove_reference_t<std::result_of_t<Behavior(v8::Local<v8::Value>)>>, Rest...>;
+    using ResultType = std::vector<std::remove_reference_t<
+        decltype(Behavior::template operator()<T>(v8::Local<v8::Value>{}))
+    >, Rest...>;
     
     ResultType operator()(v8::Isolate *isolate, v8::Local<v8::Value> value) const {
         return vector_type_helper<Behavior, std::vector, std::add_rvalue_reference_t<T>, Rest...>(isolate, value);
@@ -407,7 +413,7 @@ struct CastToNative<T, Behavior, std::enable_if_t<xl::is_template_for_v<v8::Glob
 
 
 template<typename Behavior, template<typename...> class ContainerTemplate, typename Key, typename Value, typename... Rest>
-ContainerTemplate<Behavior, Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+ContainerTemplate<Key, Value, Rest...> map_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
     //    MapType operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
     if (!value->IsObject()) {
@@ -479,7 +485,8 @@ struct CastToNative<T, Behavior, std::enable_if_t<acts_like_map_v<T>>> {
 };
 
 template<typename Behavior, template<class,class,class...> class ContainerTemplate, class Key, class Value, class... Rest>
-ContainerTemplate<Key, Value, Rest...> multimap_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
+ContainerTemplate<Key, Value, Rest...> 
+    multimap_type_helper(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 
     if (!value->IsObject()) {
         throw CastException(

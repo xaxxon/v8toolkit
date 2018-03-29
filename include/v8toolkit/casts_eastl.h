@@ -21,10 +21,10 @@ namespace v8toolkit {
 
 
 
-template<class FirstT, class SecondT>
-struct CastToNative<eastl::pair<FirstT, SecondT>>{
+template<class FirstT, class SecondT, typename Behavior>
+struct CastToNative<eastl::pair<FirstT, SecondT>, Behavior>{
     eastl::pair<FirstT, SecondT> operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return pair_type_helper<eastl::pair, FirstT, SecondT>(isolate, value);
+        return pair_type_helper<Behavior, eastl::pair, FirstT, SecondT>(isolate, value);
     }
 };
 
@@ -54,15 +54,15 @@ struct CastToJS<T, Behavior, std::enable_if_t<
 
 
 // EASTL VECTOR_MAP
-template<typename T>
-struct CastToNative<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToNative<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector_map, T>
 >> {
     using NoRefT = std::remove_reference_t<T>;
     using key_type = typename NoRefT::key_type;
     using mapped_type = typename NoRefT::mapped_type;
     T operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return map_type_helper<eastl::vector_map, key_type, mapped_type>(isolate, value);
+        return map_type_helper<Behavior, eastl::vector_map, key_type, mapped_type>(isolate, value);
     }
 };
 
@@ -101,10 +101,10 @@ struct CastToNative<eastl::vector_set<T, Args...>, Behavior> {
 
 
 
-template<class Key, class Value, class... Args>
-struct CastToNative<eastl::vector_multimap<Key, Value, Args...>> {
+template<typename Key, typename Value, typename... Args, typename Behavior>
+struct CastToNative<eastl::vector_multimap<Key, Value, Args...>, Behavior> {
     eastl::vector_multimap<Key, Value, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
-        return multimap_type_helper<eastl::vector_multimap, Key, Value, Args...>(isolate, value);
+        return multimap_type_helper<Behavior, eastl::vector_multimap, Key, Value, Args...>(isolate, value);
     }
 };
 
@@ -136,8 +136,8 @@ struct CastToJS<T, Behavior, std::enable_if_t<
 };
 
 
-template<typename T>
-struct CastToNative<T, std::enable_if_t<
+template<typename T, typename Behavior>
+struct CastToNative<T, Behavior, std::enable_if_t<
     IsEastlFixedString_v<T>
 >> {
     T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
