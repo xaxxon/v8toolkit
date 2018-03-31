@@ -22,13 +22,16 @@ struct CastToNative; // has full implementation in cast_to_native_impl.h
 template<typename Derived, template<typename, typename, typename> class CastTemplate>
 struct CastToNativeBehaviorBase {
     template<typename T, typename Behavior = Derived>
-    auto operator()(v8::Local<v8::Value> t) {
+    decltype(auto) operator()(v8::Local<v8::Value> t) {
         return CastTemplate<T, Behavior, void>()(v8::Isolate::GetCurrent(), t);
     }
 };
 
 
 struct CastToNativeDefaultBehavior : CastToNativeBehaviorBase<CastToNativeDefaultBehavior, CastToNative> {};
+
+
+
 
 
 template<typename T, typename = void>

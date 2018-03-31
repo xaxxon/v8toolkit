@@ -26,7 +26,7 @@ struct CastToJS {
 template<typename Derived, template<typename, typename, typename> class CastTemplate>
 struct CastToJSBehaviorBase{
     template<class T, class Behavior = Derived>
-    auto operator()(T && t) {
+    v8::Local<v8::Value> operator()(T && t) {
         return CastTemplate<T, Behavior, void>()(v8::Isolate::GetCurrent(), std::forward<T>(t));
     }
 };
