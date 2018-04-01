@@ -40,7 +40,7 @@ inline bool operator<(v8::Local<v8::Object> const &, v8::Local<v8::Object> const
 }
 
 template<typename T>
-v8::Local<T> make_local(v8::Local<T> & value) {
+v8::Local<T> make_local(v8::Local<T> const & value) {
     return value;
 }
 
