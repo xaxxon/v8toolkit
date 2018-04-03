@@ -51,7 +51,17 @@ v8::Local<T> make_local(v8::Global<T> const & value) {
 }
 
 
-v8::Local<v8::String> make_string(std::string_view str);
+/**
+ * Returns a javascript string of the specified string in the GetCurrent() isolate
+ */
+v8::Local<v8::String> make_js_string(std::string_view str);
+
+
+/**
+ * Returns a std::string representing the string value for the value passed in
+ * For string/symbol it is its own value, otherwise it is the to_string of the value
+ */
+std::string make_cpp_string(v8::Local<v8::Value> value);
 
 
 /**
@@ -378,15 +388,26 @@ inline v8::Local<v8::Value> call_simple_javascript_function(v8::Local<v8::Functi
 * Calls callable with each javascript "own property" in the object passed.
 */
 template<class T>
-void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T callable)
+void for_each_own_property(const v8::Local<v8::Context> context, const v8::Local<v8::Object> object, T && callable)
 {
     auto own_properties = object->GetOwnPropertyNames(context).ToLocalChecked();
     for_each_value(own_properties, [&object, &context, &callable](v8::Local<v8::Value> property_name){
         auto property_value = object->Get(context, property_name);
         
-        callable(property_name, property_value.ToLocalChecked());
+        std::forward<T>(callable)(property_name, property_value.ToLocalChecked());
     });
 }
+
+template<class T>
+void for_each_own_property(const v8::Local<v8::Object> object, T && callable)
+{
+  return for_each_own_property(
+      v8::Isolate::GetCurrent()->GetCurrentContext(), 
+      object, 
+      std::forward<T>(callable));
+}
+
+
 
 
 struct StuffBase{
@@ -576,11 +597,11 @@ std::optional<v8::Local<Result>> get_property_as(T && input_value, std::string_v
     v8::Local<v8::Object> local_object = local_value->ToObject();
 
     // if it doesn't have the property at all, don't return undefined
-    if (!local_object->HasOwnProperty(context, make_string(key)).FromMaybe(false)) {
+    if (!local_object->HasOwnProperty(context, make_js_string(key)).FromMaybe(false)) {
         return {};
     }
     
-    auto get_result = local_object->Get(context, make_string(key));
+    auto get_result = local_object->Get(context, make_js_string(key));
     if (get_result.IsEmpty()) {
         return {};
     }

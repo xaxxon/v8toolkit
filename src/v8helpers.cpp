@@ -366,12 +366,22 @@ bool is_reserved_word_in_static_context(std::string const & name) {
 }
 
 
-v8::Local<v8::String> make_string(std::string_view str) {
+v8::Local<v8::String> make_js_string(std::string_view str) {
     auto isolate = v8::Isolate::GetCurrent();
     return v8::String::NewFromUtf8(isolate,
                                    str.data(),
                                    v8::String::NewStringType::kNormalString,
                                    str.length());
+}
+
+std::string make_cpp_string(v8::Local<v8::Value> value) {
+    if (value->IsString()) {
+        return *v8::String::Utf8Value(value);
+    } else if (value->IsSymbol()) {
+        return *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(value)->Name());
+    } else {
+        return *v8::String::Utf8Value(value->ToString());
+    }
 }
 
 
