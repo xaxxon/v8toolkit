@@ -304,6 +304,7 @@ template<
     typename JSWrapperClass,
     typename Internal,
     typename External,
+    auto constructor_function = nullptr,
     typename Deleter = std::default_delete<Base>>
 class JSFactory;
 
@@ -314,12 +315,14 @@ template<
     typename JSWrapperClass,
     typename... FixedParams,
     typename... ExternalConstructorParams,
+    auto constructor_function,
     typename Deleter>
 class JSFactory<
     Base,
 	JSWrapperClass,
 	TypeList<FixedParams...>,
 	TypeList<ExternalConstructorParams...>,
+    constructor_function,
     Deleter> : public Factory<Base, TypeList<FixedParams...>, TypeList<ExternalConstructorParams...>, Deleter>
 {
 public:
@@ -334,7 +337,7 @@ protected:
     static_assert(std::is_base_of_v<Base, JSWrapperClass>, "Base type must be a base type of JSWrapperClass");
 //    static_assert(std::is_base_of_v<JSWrapper<Base>, JSWrapperClass>, "JSWrapper<Base> must be a base type of JSWrapperClass");
     
-	using ThisFactoryType = JSFactory<Base, JSWrapperClass, FixedTypeList, ExternalTypeList, Deleter>;
+	using ThisFactoryType = JSFactory<Base, JSWrapperClass, FixedTypeList, ExternalTypeList, constructor_function, Deleter>;
 
 
     
@@ -435,12 +438,17 @@ public:
 
         JSWrapperClass * const wrapper_class = [&]() {
 
+            JSWrapperClass * result = nullptr;
             // at the least-derived JS factory, create the JSWrapperClass object
             if (this->base_factory == nullptr) {
-                return new JSWrapperClass(fixed_params..., constructor_params...);
+                result = new JSWrapperClass(fixed_params..., constructor_params...);
             } else {
-                return static_cast<JSWrapperClass *>(this->base_factory->operator()(fixed_params..., constructor_params...));
+                result = static_cast<JSWrapperClass *>(this->base_factory->operator()(fixed_params..., constructor_params...));
             }
+            if constexpr(constructor_function != nullptr) {
+                (result->*constructor_function)();
+            }
+            return result;
         }();
 
        
@@ -498,11 +506,14 @@ public:
     template<typename Derived, Derived*(*constructor_function)(FixedParams..., ConstructorParams...) = nullptr>
     struct CppFactoryInfo{};
     
-    template<typename JSWrapperClass>
+    template<typename JSWrapperClass, auto constructor_function = nullptr>
     struct JSFactoryInfo{
         ThisFactory const * base_concrete_factory;
         v8::Local<v8::Object> prototype;
         v8::Local<v8::Function> constructor;
+        
+        using WrapperClass = JSWrapperClass;
+        constexpr static auto constructor_func = constructor_function;
         
         JSFactoryInfo(ThisFactory const * base_concrete_factory,
                       v8::Local<v8::Object> prototype,
@@ -522,9 +533,9 @@ public:
     {}
 
 
-    template<typename JSWrapperType>
-    ConcreteFactory(JSFactoryInfo<JSWrapperType> const & js_factory_info, FixedParams... params) :
-        factory(std::make_unique<JSFactory<Base, JSWrapperType, FixedParamTypeList, ConstructorParamTypeList, Deleter>>(
+    template<typename JSFactoryInfo>
+    ConcreteFactory(JSFactoryInfo const & js_factory_info, FixedParams... params) :
+        factory(std::make_unique<JSFactory<Base, typename JSFactoryInfo::WrapperClass, FixedParamTypeList, ConstructorParamTypeList, JSFactoryInfo::constructor_func, Deleter>>(
             *js_factory_info.base_concrete_factory->factory,
             js_factory_info.prototype,
             js_factory_info.constructor
@@ -599,7 +610,10 @@ struct is_wrapped_type<T, std::enable_if_t<xl::is_template_for_v<ConcreteFactory
     v8::TryCatch tc(isolate); \
     try { \
         js_function = v8toolkit::get_key_as<v8::Function>(context, js_object, #js_name); \
-    } catch (...) {assert(((void)"method probably not added to wrapped parent type", false) == true); throw;} \
+    } catch (...) { \
+        return this->BASE_TYPE::name( __VA_ARGS__ );			\
+        /*assert(((void)"method probably not added to wrapped parent type", false) == true); throw; */ \
+    } \
     this->called_from_javascript = true; \
     auto result = v8toolkit::call_javascript_function_with_vars(context, js_function, js_object, typelist, ##__VA_ARGS__); \
     this->called_from_javascript = false; \
