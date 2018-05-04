@@ -55,6 +55,9 @@ public:
         });
 
         c->add_function("EXPECT_TRUE", [](bool expected_true_value) {
+            if (expected_true_value == false) {
+                std::cerr << fmt::format("put breakpoint here") << std::endl;
+            }
             EXPECT_TRUE(expected_true_value);
         });
     }

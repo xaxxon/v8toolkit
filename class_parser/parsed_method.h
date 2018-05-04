@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 
 
 #include "class_parser.h"
@@ -55,7 +55,7 @@ struct ClassFunction {
     FunctionTemplateDecl const * function_template_decl = nullptr;
 
     // default template type mapping - empty if not templated
-    map<string, QualType> template_parameter_types;
+    std::unordered_map<string, QualType> template_parameter_types;
 
 
 
@@ -109,11 +109,11 @@ struct ClassFunction {
 
     ClassFunction(WrappedClass & wrapped_class,
                   CXXMethodDecl const * method_decl,
-                  std::map<string, QualType> const & template_parameter_types = {},
+                  std::unordered_map<string, QualType> const & template_parameter_types = {},
                   FunctionTemplateDecl const * function_template_decl = nullptr,
                   std::string const & preferred_js_name = "");
 
-    ~ClassFunction();
+    virtual ~ClassFunction();
 
     string get_parameter_types_string() const;
 
@@ -134,7 +134,7 @@ class MemberFunction : public ClassFunction {
 
 public:
     MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {},
+                   std::unordered_map<string, QualType> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr, bool skip_name_check = false);
 
     string generate_js_bindings();
@@ -165,7 +165,7 @@ class StaticFunction : public ClassFunction {
 
 public:
     StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                   map<string, QualType> const & map = {},
+                   std::unordered_map<string, QualType> const & map = {},
                    FunctionTemplateDecl const * function_template_decl = nullptr,
                    bool skip_name_check = false);
 

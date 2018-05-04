@@ -39,7 +39,7 @@ cotire(api-gen-template)
 
 #include <vector>
 #include <string>
-#include <map>
+#include <unordered_map>
 using namespace std;
 
 
@@ -101,7 +101,7 @@ vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8to
 vector<string> never_include_for_any_file = {"\"v8helpers.h\""};
 
 
-map<string, string> static_method_renames = {};
+std::unordered_map<string, string> static_method_renames = {};
 
 // http://usejsdoc.org/tags-type.html
 vector<pair<string, string>> cpp_to_js_type_conversions = {
@@ -538,7 +538,7 @@ bool is_trivial_std_type(QualType & qual_type, std::string & output) {
 }
 
 // Returns true if qual_type is a 'non-trivial' std:: type (containing user-specified template types like
-//   std::map<MyType1, MyType2>
+//   std::unordered_map<MyType1, MyType2>
 bool is_nontrivial_std_type(QualType & qual_type, std::string & output) {
 
     std::string name = qual_type.getAsString();
@@ -744,7 +744,7 @@ std::string get_type_string(QualType const & input_qual_type,
 }
 
 
-QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> const & template_types) {
+QualType get_substitution_type_for_type(QualType original_type, std::unordered_map<string, QualType> const & template_types) {
 
     if (!original_type->isDependentType()) {
         return original_type;
@@ -791,7 +791,7 @@ QualType get_substitution_type_for_type(QualType original_type, map<string, Qual
 }
 
 
-std::string substitute_type(QualType const & original_type, map<string, QualType> template_types) {
+std::string substitute_type(QualType const & original_type, std::unordered_map<string, QualType> template_types) {
 
     if (!original_type->isDependentType()) {
         auto result = get_type_string(original_type);
@@ -1085,7 +1085,7 @@ CXXConstructorDecl * get_bidirectional_constructor(const CXXRecordDecl * klass) 
 
 
 
-map<string, int> template_instantiations;
+std::unordered_map<string, int> template_instantiations;
 
 // called for handling matches from the matcher
 

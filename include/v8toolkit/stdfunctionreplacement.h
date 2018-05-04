@@ -9,6 +9,8 @@
 #include <typeinfo>
 #include <memory>
 
+#include <xl/member_function_type_traits.h>
+
 #ifdef _MSC_VER
 #define FUNC_NOEXCEPT
 #define FUNC_TEMPLATE_NOEXCEPT(FUNCTOR, ALLOCATOR)
@@ -582,6 +584,15 @@ namespace func
     {
         lhs.swap(rhs);
     }
+
+    template<class R, class... ArgTypes>
+    function(R(*)(ArgTypes...)) -> function<R(ArgTypes...)>;
+
+    
+    template<class T>
+    function(T &&) -> function<typename xl::pointer_to_member_function<decltype(&T::operator())>::function_type>;
+
+    
 
 } // end namespace func
 

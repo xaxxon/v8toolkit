@@ -76,9 +76,20 @@ namespace v8toolkit::class_parser {
     __attribute__((annotate(V8TOOLKIT_USE_NAME_PREFIX #name)))
 
 
+/**
+ * Put this attribute on the class and specify a data member to be used as pimpl
+ */
 #define V8TOOLKIT_USE_PIMPL_PREFIX "v8toolkit_use_pimpl_"
 #define V8TOOLKIT_USE_PIMPL(name) \
     __attribute__((annotate(V8TOOLKIT_USE_PIMPL_PREFIX #name)))
+
+/**
+ * Put this attribute on a data member
+ */
+#define V8TOOLKIT_PIMPL_STRING "v8toolkit_pimpl"
+#define V8TOOLKIT_PIMPL \
+    __attribute__((annotate(V8TOOLKIT_PIMPL_STRING)))
+
 
 
 /**

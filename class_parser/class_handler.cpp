@@ -320,7 +320,8 @@ void ClassHandler::onEndOfTranslationUnit() {
             }
         }
         if (found_data_error) {
-            throw ClassParserException("Aborting due to data error (shown in log file)");
+            llvm::report_fatal_error("Aborting due to data error(s) (search for 'ERROR SUMMARY')");
+
         }
         return results;
     }();

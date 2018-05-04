@@ -46,7 +46,7 @@ void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::call_callback
 
 
 template<class T>
-void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::check_if_name_used(const std::string & name) {
+void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::check_if_name_used(std::string_view name) {
 
 	if (std::find(used_attribute_name_list.begin(),
 				  used_attribute_name_list.end(),
@@ -57,7 +57,7 @@ void V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::check_if_name
 	}
 
 	// hasn't been used, so add it to used list
-	used_attribute_name_list.push_back(name);
+	used_attribute_name_list.emplace_back(name);
 
 }
 

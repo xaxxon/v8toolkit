@@ -10,7 +10,7 @@ QualType get_plain_type(QualType qual_type);
 
 
 // for a possibly templated type, return either the stripped down original type or the default template parameter type
-QualType get_substitution_type_for_type(QualType original_type, map<string, QualType> const & template_types);
+QualType get_substitution_type_for_type(QualType original_type, std::unordered_map<string, QualType> const & template_types);
 
 
 } // end namespace v8toolkit::class_parser

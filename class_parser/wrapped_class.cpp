@@ -53,7 +53,9 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     } else {
         log.error(LogT::Subjects::Class, "class name doesn't match class name regex");
     }
-    log.info(LogSubjects::Subjects::ClassParser, "js_name for {} set to {}", class_name, get_js_name());
+    
+    // This line is very expensive to run on types that will never have a js_name
+//    log.info(LogSubjects::Subjects::ClassParser, "js_name for {} set to {}", class_name, get_js_name());
 
 //    std::cerr << fmt::format("created {}", this->class_name) << std::endl;
     if (contains(never_wrap_class_names, this->class_name)) {
@@ -381,6 +383,8 @@ void WrappedClass::parse_all_methods() {
 
 
     log.info(LogSubjects::Methods, "Parsing class methods for {}", this->class_name);
+    
+    auto class_config = PrintFunctionNamesAction::get_config_data()["classes"][this->class_name];
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
@@ -419,7 +423,7 @@ void WrappedClass::parse_all_methods() {
         }
 
         CXXMethodDecl const * method = dyn_cast<CXXMethodDecl>(current_decl);
-        map<string, QualType> template_parameter_types;
+        std::unordered_map<string, QualType> template_parameter_types;
         FunctionTemplateDecl const * function_template_decl = nullptr;
 
 
@@ -506,9 +510,7 @@ void WrappedClass::parse_all_methods() {
         }();
 
         // if the config file has an entry for whether to skip this, use that
-        auto member_function_config =
-            PrintFunctionNamesAction::get_config_data()["classes"]
-            [this->class_name]["members"][signature];
+        auto member_function_config = class_config["members"][signature];
 
 
 
@@ -552,6 +554,11 @@ void WrappedClass::parse_all_methods() {
 
         // only deal with public methods
         if (method->getAccess() != AS_public) {
+            
+            if (!Annotations(method).get().empty()) {
+                log.error(LogSubjects::Methods, "Annotation on non-public method: {}", full_method_name);
+            }
+            
             log.info(LogSubjects::Methods, "{} is not public, skipping\n", full_method_name);
             continue;
         }
@@ -812,7 +819,10 @@ void WrappedClass::parse_members() {
                 }
             }
 
-
+            if (Annotations(field).has(V8TOOLKIT_PIMPL_STRING)) {
+                this->pimpl_data_member_names.emplace_back(short_field_name);
+            }
+            
             // if this field is a PIMPL field
             if (xl::contains(this->pimpl_data_member_names, short_field_name)) {
                 this->pimpl_data_members.push_back(std::make_unique<DataMember>(*this, wrapped_class, field));
@@ -830,6 +840,11 @@ void WrappedClass::parse_members() {
             }
 
             if (field->getAccess() != AS_public) {
+
+                if (!Annotations(field).get().empty()) {
+                    log.error(LogSubjects::Methods, "Annotation on non-public member: {}", field_name);
+                }
+
                 log.info(LogSubjects::DataMembers, "{} is not public, skipping", field_name);
                 continue;
             }
@@ -1069,7 +1084,7 @@ bool WrappedClass::found_method_means_wrapped() {
 }
 
 WrappedClass::~WrappedClass() {
-    std::cerr << fmt::format("WrappedClass destructor for {} at {}", this->class_name, (void*)this) << std::endl;
+//    std::cerr << fmt::format("WrappedClass destructor for {} at {}", this->class_name, (void*)this) << std::endl;
     log.info(LogSubjects::Class, "WrappedClass deleted: {} {}", this->class_name, (void*)this);
 }
 
@@ -1082,7 +1097,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
         llvm::report_fatal_error("unpexpected dependent type");
     }
 
-    auto class_name = get_canonical_name_for_decl(decl);
+    auto class_name = xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "");
 
 //    std::cerr << fmt::format("get or insert wrapped class for {} with found method: {}", class_name, found_method) << std::endl;
 
@@ -1107,7 +1122,7 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
         }
 
         // if this one matches another class that's already been seen
-        if (wrapped_class->decl && get_canonical_name_for_decl(wrapped_class->decl) == class_name) {
+        if (wrapped_class->decl && wrapped_class->class_name == class_name) {
 
             // promote found_method if FOUND_BASE_CLASS is specified - the type must ALWAYS be wrapped
             //   if it is the base of a wrapped type
@@ -1208,7 +1223,7 @@ void WrappedClass::validate_data() {
         log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->class_name);
     }
 
-    std::map<std::string, std::vector<StaticFunction const *>> static_classes_names;
+    std::unordered_map<std::string, std::vector<StaticFunction const *>> static_classes_names;
     for(auto & static_function : this->static_functions) {
         static_classes_names[static_function->js_name].push_back(static_function.get());
     }
@@ -1222,9 +1237,9 @@ void WrappedClass::validate_data() {
                       })));
         }
     }
+    
 
-
-    std::map<std::string, std::vector<std::variant<MemberFunction const *, DataMember const *>>> member_names;
+    std::unordered_map<std::string, std::vector<std::variant<MemberFunction const *, DataMember const *>>> member_names;
     for(auto & member_function : this->member_functions) {
         member_names[member_function->js_name].push_back(member_function.get());
     }
@@ -1250,7 +1265,7 @@ void WrappedClass::validate_data() {
 
     if (Regex("(?:[<>:]|^$)").match(this->get_js_name())) {
         log.error(LogSubjects::Subjects::Class,
-                  "JavaScript type name '{}' is either empty or has one of < > : in it, must be aliased to a standard name", this->get_js_name());
+                  "JavaScript type name '{}' for '{}' is either empty or has one of < > : in it, must be aliased to a standard name", this->get_js_name(), this->class_name);
     }
 
     if (!this->my_include.empty()) {
@@ -1318,6 +1333,12 @@ void WrappedClass::validate_data() {
 //        std::cerr << fmt::format("Looking at constructor {}", constructor->name) << std::endl;
         auto constructor_includes = constructor->get_includes();
         this->include_files.insert(constructor_includes.begin(), constructor_includes.end());
+    }
+    
+    if (this->bidirectional) {
+        if ((*this->base_types.begin())->bidirectional_constructor == nullptr) {
+            log.error(LogSubjects::Class, "Bidirectional class {} has no bidirectional constructor", this->class_name);
+        }
     }
 }
 

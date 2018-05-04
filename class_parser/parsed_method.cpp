@@ -22,7 +22,7 @@ namespace v8toolkit::class_parser {
 
 
 TypeInfo::TypeInfo(QualType const & type,
-                   std::map <std::string, QualType> const & template_parameter_types) :
+                   std::unordered_map <std::string, QualType> const & template_parameter_types) :
     template_parameter_types(template_parameter_types),
     type(type)
 //name(this->type.getAsString()),
@@ -351,7 +351,7 @@ ClassFunction::ParameterInfo::ParameterInfo(ClassFunction & method, int position
 
 ClassFunction::ClassFunction(WrappedClass & wrapped_class,
                              CXXMethodDecl const * method_decl,
-                             std::map<string, QualType> const & template_parameter_types,
+                             std::unordered_map<string, QualType> const & template_parameter_types,
                              FunctionTemplateDecl const * function_template_decl,
                              std::string const & preferred_js_name) :
     wrapped_class(wrapped_class),
@@ -673,7 +673,7 @@ bool MemberFunction::is_rvalue_qualified() const {
 
 
 MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl,
+                               std::unordered_map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl,
                                bool skip_name_check) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl),
     is_virtual(method_decl->isVirtual())
@@ -702,7 +702,7 @@ MemberFunction::MemberFunction(WrappedClass & wrapped_class, CXXMethodDecl const
 
 
 StaticFunction::StaticFunction(WrappedClass & wrapped_class, CXXMethodDecl const * method_decl,
-                               map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl, bool skip_name_check) :
+                               std::unordered_map<string, QualType> const & map, FunctionTemplateDecl const * function_template_decl, bool skip_name_check) :
     ClassFunction(wrapped_class, method_decl, map, function_template_decl) {
 
 

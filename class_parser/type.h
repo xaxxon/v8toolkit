@@ -3,7 +3,7 @@
 
 #include <string>
 #include <functional>
-#include <map>
+#include <unordered_map>
 #include <set>
 
 #pragma clang diagnostic push
@@ -25,7 +25,7 @@ private:
     // Mapping between external template names and default types, such as:
     // template<class T=int> T foo();
     // for the return value type T, this tells it it has a default type of int
-    std::map <std::string, QualType> template_parameter_types;
+    std::unordered_map <std::string, QualType> template_parameter_types;
 
     // the type cannot be gotten because after template substitution there may not be an actual
     //   Type object for the resulting type.  It is only available as a string.  However, the "plain type"
@@ -36,7 +36,7 @@ public:
     QualType const type;
 
     explicit TypeInfo(QualType const & type,
-             std::map <std::string, QualType> const & template_parameter_types = {});
+             std::unordered_map <std::string, QualType> const & template_parameter_types = {});
 
     ~TypeInfo();
 

@@ -84,6 +84,10 @@ public:
         EXPECT_EQ(x, 6);
         return x;
     }
+    
+    
+    void takes_number(int) const;
+    void takes_number(double) const;
 
     void takes_wrapped_class(WrappedClass const & wc) const {
 //        std::cerr << fmt::format("in takes wrapped class") << std::endl;
@@ -160,6 +164,27 @@ public:
     }
 
     static inline int static_int = 1;
+    
+    
+    void f1() {}
+    void f2() const {}
+    void f3() volatile {}
+    void f4() const volatile {}
+
+    void f1_lv() & {}
+    void f2_lv() const & {}
+    void f3_lv() volatile & {}
+    void f4_lv() const volatile & {}
+
+    void f1_rv() && {}
+    void f2_rv() const && {}
+    void f3_rv() volatile && {}
+    void f4_rv() const volatile && {}
+
+    void f1_noexcept() noexcept {}
+    void f2_noexcept() const noexcept {}
+    void f3_noexcept() volatile noexcept {}
+    void f4_noexcept() const volatile noexcept {}
 };
 
 
@@ -194,6 +219,7 @@ namespace v8toolkit {
     struct WrapperBuilder<WrappedClass> {
         void operator()(v8toolkit::IsolatePtr i){
             auto & w = V8ClassWrapper<WrappedClass>::get_instance(*i);
+            auto & w_v = V8ClassWrapper<WrappedClass volatile>::get_instance(*i);
             w.add_member<&WrappedClass::i>("i");
             w.add_member<&WrappedClass::constructor_i>("constructor_i");
             w.add_member<&WrappedClass::ci>("ci");
@@ -203,6 +229,7 @@ namespace v8toolkit {
             w.add_member<&WrappedClass::copyable_wrapped_class>("copyable_wrapped_class");
             w.add_member<&WrappedClass::up_wrapped_class>("up_wrapped_class");
             w.add_method("takes_int_5", &WrappedClass::takes_int_5);
+//            w.add_method("takes_number", &WrappedClass::takes_number);
 
             w.add_method("fake_method", [](WrappedClass * wc){return wc->constructor_i;});
             w.add_method("const_fake_method", [](WrappedClass const * wc, int i, bool b){if (b){return wc->constructor_i;} else {return 0;}}, std::tuple<bool>(false));
@@ -212,6 +239,7 @@ namespace v8toolkit {
             w.add_method("takes_const_wrapped_ref", &WrappedClass::takes_const_wrapped_ref);
             w.add_static_method("takes_isolate_and_int", &WrappedClass::takes_isolate_and_int, std::tuple<int>(3));
             w.add_method("takes_this", &WrappedClass::takes_this);
+
             w.add_method("returns_wrapped_class_lvalue", &WrappedClass::returns_wrapped_class_lvalue);
             w.add_method("takes_const_unwrapped_ref", &WrappedClass::takes_const_unwrapped_ref);
             w.add_method("returns_uncopyable_type_by_value", &WrappedClass::returns_uncopyable_type_by_value);
@@ -236,8 +264,29 @@ namespace v8toolkit {
             w.add_member_readonly<WrappedClass::ImplPointer, &WrappedClass::Impl::i>("pimpl_i_readonly");
             w.add_static_member("static_int", &WrappedClass::static_int);
             w.add_enum("enum_test", {{"A", 1}, {"B", 2}, {"C", 3}});
+
+            w.add("f1", &WrappedClass::f1);
+            w.add("f2", &WrappedClass::f2);
+
+            w_v.add("f3", &WrappedClass::f3);
+            w_v.add("f4", &WrappedClass::f4);
+            w.add("f1_lv", &WrappedClass::f1_lv);
+            w.add("f2_lv", &WrappedClass::f2_lv);
+            w_v.add("f3_lv", &WrappedClass::f3_lv);
+            w_v.add("f4_lv", &WrappedClass::f4_lv);
+//            w.add(&WrappedClass::f1_rv);
+//            w.add(&WrappedClass::f2_rv);
+//            w.add(&WrappedClass::f3_rv);
+//            w.add(&WrappedClass::f4_rv);
+            w.add("f1_noexcept", &WrappedClass::f1_noexcept);
+            w.add("f2_noexcept", &WrappedClass::f2_noexcept);
+            w_v.add("f3_noexcept", &WrappedClass::f3_noexcept);
+            w_v.add("f4_noexcept", &WrappedClass::f4_noexcept);
+            
+            
             w.set_compatible_types<WrappedClassChild>();
             w.finalize(true);
+            w_v.finalize(true);
             w.add_constructor<int>("WrappedClass", *i);
         }
     };

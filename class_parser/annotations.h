@@ -7,7 +7,7 @@
 #include <fmt/ostream.h>
 #include <set>
 #include <string>
-#include <map>
+#include <unordered_map>
 
 
 namespace v8toolkit::class_parser {
@@ -46,15 +46,15 @@ public:
 
     // holds a list of templates and associated annotations.  These annotations will be merged with classes created
     //   from the template.  This allows metadata associated with all instantiations of a template
-    static inline std::map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
+    static inline std::unordered_map<const ClassTemplateDecl *, Annotations> annotations_for_class_templates;
 
     // any annotations on 'using' statements should be applied to the actual CXXRecordDecl being aliased (the right side)
-    static inline std::map<const CXXRecordDecl *, Annotations> annotations_for_record_decls;
+    static inline std::unordered_map<const CXXRecordDecl *, Annotations> annotations_for_record_decls;
 
 
     // if a template instantiation is named with a 'using' statement, use that alias for the type isntead of the template/class name itself
     //   this stops them all from being named the same thing - aka CppFactory, CppFactory, ...  instead of MyThingFactory, MyOtherThingFactory, ...
-    static inline std::map<const CXXRecordDecl *, std::string> names_for_record_decls;
+    static inline std::unordered_map<const CXXRecordDecl *, std::string> names_for_record_decls;
 
 
     Annotations(const CXXRecordDecl * decl_to_check);

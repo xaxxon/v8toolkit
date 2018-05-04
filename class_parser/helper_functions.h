@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -56,8 +56,8 @@ struct WrappedClass;
 inline int print_logging = 0;
 
 // if a static method has a name matching the key, change it to the value
-extern std::map<std::string, std::string> static_method_renames;
-extern std::map<std::string, int> template_instantiations;
+extern std::unordered_map<std::string, std::string> static_method_renames;
+extern std::unordered_map<std::string, int> template_instantiations;
 extern std::vector<std::string> types_to_ignore_regex;
 extern int matched_classes_returned;
 extern std::vector<std::string> never_include_for_any_file;
@@ -84,7 +84,7 @@ std::string remove_reference_from_type_string(std::string const & type_string);
 std::string remove_local_const_from_type_string(std::string const & type_string);
 std::string make_macro_safe_comma(std::string const & input);
 
-std::string substitute_type(QualType const & original_type, std::map<std::string, QualType> template_types);
+std::string substitute_type(QualType const & original_type, std::unordered_map<std::string, QualType> template_types);
 
 
 

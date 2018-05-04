@@ -52,6 +52,7 @@ std::ostream & BidirectionalOutputStreamProvider::get_class_collection_stream() 
     return std::cerr;
 }
 
+
 ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const & c) {
     this->output_file.close();
     if (auto results = xl::RegexPcre("^\"([^\"]+)\"$").match(c.my_include)) {
@@ -63,20 +64,27 @@ ostream & BidirectionalOutputStreamProvider::get_class_stream(WrappedClass const
 }
 
 
-
-
 std::string generate_bidirectional_constructor_parameter_list(WrappedClass const & c) {
+    log.info(LogT::Subjects::BidirectionalOutput, "generate_bidirectional_constructor_parameter_list for {} with {} base types", c.class_name, c.base_types.size());
     auto base_type = *c.base_types.begin();
+    log.info(LogT::Subjects::BidirectionalOutput, "Creating ClassFunction for bidrectional_constructor: {}, ptr:{}", base_type->class_name, (void*)base_type->bidirectional_constructor);
     ClassFunction bidirectional_constructor(*base_type, base_type->bidirectional_constructor);
     int param_position = 1;
     std::string result;
     result.reserve(64);
+    bool first = true;
     for (auto & parameter : bidirectional_constructor.parameters) {
-        result += fmt::format(", {} var{}", parameter.type.get_name(), param_position++);
+        log.info(LogT::Subjects::BidirectionalOutput, "Looking at constructor parameter: {}", parameter.type.get_name());
+        if (!first) {
+            result += ", ";
+        }
+        first = false;
+        result += fmt::format("{} var{}", parameter.type.get_name(), param_position++);
     }
+    log.info(LogT::Subjects::BidirectionalOutput, "Done looking at constructor parameter");
+
     return result;
 }
-
 
 
 vector<string> generate_variable_names(vector<QualType> qual_types, bool with_std_move) {
@@ -154,7 +162,7 @@ struct BidirectionalProviderContainer {
             std::pair("includes", std::ref(c.include_files)),
             std::pair("base_name", (*c.base_types.begin())->class_name),
             std::pair("constructor_parameters", generate_bidirectional_constructor_parameter_list(c)),
-            std::pair("constructor_variables",
+            std::pair("constructor_variables", 
                       xl::join(generate_variable_names(get_method_param_qual_types((*c.base_types.begin())->bidirectional_constructor), true)))
         );
     }
@@ -200,7 +208,9 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
         log.info(LogT::Subjects::BidirectionalOutput, "Creating bidirectional output for class: {}",
                  c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
-        ostream << bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), &bidirectional_templates);
+        auto result = bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), &bidirectional_templates);
+        log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name, result);
+        ostream << result;
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
@@ -226,10 +236,9 @@ OutputCriteria & BidirectionalOutputModule::get_criteria() {
 class {{name}} : public {{base_name}}, public v8toolkit::JSWrapper<{{base_name}}> {
 public:
 
-    {{name}}(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
-        v8::Local<v8::FunctionTemplate> created_by{{constructor_parameters}}) :
+    {{name}}({{constructor_parameters}}) :
       {{base_name}}({{constructor_variables}}),
-      v8toolkit::JSWrapper<{{base_name}}>(context, object, created_by)
+      v8toolkit::JSWrapper<{{base_name}}>(this)
     {}
 
 {{virtual_functions|!!

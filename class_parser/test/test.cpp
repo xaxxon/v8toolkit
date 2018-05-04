@@ -577,7 +577,7 @@ struct BidirectionalTestStreamProvider : public OutputStreamProvider {
     }
 
     // static so the data hangs around after the run
-    static inline std::map<std::string, std::stringstream> class_outputs;
+    static inline std::unordered_map<std::string, std::stringstream> class_outputs;
     std::ostream & get_class_collection_stream() override {
         return std::cerr;
     }
@@ -980,7 +980,7 @@ public:
 
 TEST_F(ClassParser, ClassComments) {
     std::string source = R"(
-    #include <map>
+    #include <unordered_map>
     #include <string>
     #include <vector>
     template<typename T>
@@ -1070,7 +1070,7 @@ TEST_F(ClassParser, ClassComments) {
         std::string data_memberC;
 
         // it's important that the return type and a parameter type have a comma in them
-        V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::map<int, int> this_is_a_virtual_function(std::map<char, char> const & foo);
+        V8TOOLKIT_USE_NAME(this_is_a_virtual_function_js_name) virtual std::unordered_map<int, int> this_is_a_virtual_function(std::unordered_map<char, char> const & foo);
         void virtual_function_in_B() override;
 
 
@@ -1340,7 +1340,7 @@ public:
       v8toolkit::JSWrapper<C>(context, object, created_by)
     {}
 
-    JS_ACCESS_1(std::map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
+    JS_ACCESS_1(std::unordered_map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::unordered_map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
     JS_ACCESS_0(void, virtual_function_in_B, virtual_function_in_B);
     JS_ACCESS_0(void, using_in_C, using_in_C);
 };

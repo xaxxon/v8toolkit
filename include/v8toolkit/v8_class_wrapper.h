@@ -10,8 +10,10 @@
 #include <vector>
 #include <utility>
 #include <assert.h>
+#include <functional>
 
 #include <xl/demangle.h>
+#include <xl/member_function_type_traits.h>
 
 // vector_map compiles a LOT faster than std::map as the number of wrapped classes increases
 #define USE_EASTL_FOR_INTERNALS
@@ -64,6 +66,7 @@ struct DestructorBehavior
     virtual ~DestructorBehavior(){}
 
 	virtual void operator()(v8::Isolate * isolate, const void * object) const = 0;
+	virtual void operator()(v8::Isolate * isolate, const volatile void * object) const = 0;
 
 	// wehther this destructor is actually destructive to memory it is given.  Does it "own" the memory or not.
 	virtual bool destructive() const = 0;
@@ -86,6 +89,14 @@ struct DestructorBehavior_Delete : DestructorBehavior {
 		delete object;
 		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
 	}
+
+	void operator()(v8::Isolate * isolate, const volatile void * void_object) const override {
+		T* object = (T*)void_object;
+		V8TOOLKIT_DEBUG("Deleting underlying C++ object at %p during V8 garbage collection\n", void_object);
+		delete object;
+		isolate->AdjustAmountOfExternalAllocatedMemory(-static_cast<int64_t>(sizeof(T)));
+	}
+
 	bool destructive() const override {
 //		std::cerr << fmt::format("_Delete::destructive") << std::endl;
 		return true;
@@ -108,6 +119,10 @@ struct DestructorBehavior_LeaveAlone : DestructorBehavior {
 	void operator()(v8::Isolate * isolate, const void * void_object) const override {
         V8TOOLKIT_DEBUG("Not deleting underlying C++ object %p during V8 garbage collection\n", void_object);
 	}
+	void operator()(v8::Isolate * isolate, const volatile void * void_object) const override {
+		V8TOOLKIT_DEBUG("Not deleting underlying C++ object %p during V8 garbage collection\n", void_object);
+	}
+
 	bool destructive() const override {
 //		std::cerr << fmt::format("_Delete::destructive") << std::endl;
 		return false;
@@ -503,7 +518,7 @@ private:
 	 * Checks to see if a name has already been used because the V8 error message for a duplicate name is not helpful
 	 * @param name name to check
 	 */
-    void check_if_name_used(const std::string & name);
+    void check_if_name_used(std::string_view name);
 
 
     /**
@@ -1016,6 +1031,15 @@ public:
 //	    std::cerr << "Adding static-method holder (non-constructor) to global with name: " << js_name << std::endl;
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
 	}
+	
+	template<typename MemberType, typename C>
+	void add(std::string_view name, MemberType C::*member) {
+        if constexpr(std::is_function_v<MemberType>) {
+            add_method(name, member);
+        } else {
+            add_member<MemberType C::*>(name);
+        }
+    };
 
 
 	/**
@@ -1215,7 +1239,7 @@ public:
 
 
     template<auto reference_getter, std::enable_if_t<std::is_pointer_v<decltype(reference_getter)>, int> = 0>
-    void add_member(std::string const & member_name) {
+    void add_member(std::string_view member_name) {
         assert(this->finalized == false);
 
         if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
@@ -1226,10 +1250,10 @@ public:
         this->check_if_name_used(member_name);
 
         // store a function for adding the member on to an object template in the future
-        member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+        member_adders.emplace_back([member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
 
-            constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(v8::String::NewFromUtf8(isolate, member_name.c_str())),
+            constructor_template->SetAccessor(v8::Local<v8::Name>::Cast(make_js_string(member_name)),
                                               _getter_helper<reference_getter>,
                                               _setter_helper<reference_getter>);
         });
@@ -1237,19 +1261,19 @@ public:
 
 
     template<auto pimpl_member, auto member>
-    void add_member(std::string const & member_name) {
+    void add_member(std::string_view member_name) {
         add_member<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>(member_name);
     };
 
 
 	template<auto member, std::enable_if_t<!std::is_pointer_v<decltype(member)>, int> = 0>
-	void add_member(std::string const & member_name) {
+	void add_member(std::string_view member_name) {
 	    add_member<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
 	}
 
 
 	template<auto reference_getter, std::enable_if_t<std::is_pointer_v<decltype(reference_getter)>, int> = 0>
-	void add_member_readonly(std::string const & member_name) {
+	void add_member_readonly(std::string_view member_name) {
 		assert(this->finalized == false);
 
 		// the field may be added read-only even to a non-const type, so make sure it's added to the const type, too
@@ -1259,9 +1283,9 @@ public:
 
 		this->check_if_name_used(member_name);
 
-		member_adders.emplace_back([this, member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
+		member_adders.emplace_back([member_name](v8::Local<v8::ObjectTemplate> & constructor_template){
 
-			constructor_template->SetAccessor(v8::String::NewFromUtf8(isolate, member_name.c_str()),
+			constructor_template->SetAccessor(make_js_string(member_name),
 											  _getter_helper<reference_getter>,
 											  0);
 		});
@@ -1269,12 +1293,12 @@ public:
 
 
 	template<auto member, std::enable_if_t<!std::is_pointer_v<decltype(member)>, int> = 0>
-	void add_member_readonly(std::string const & member_name) {
+	void add_member_readonly(std::string_view member_name) {
 		add_member_readonly<+[](T * cpp_object)->auto&{return cpp_object->*member;}>(member_name);
 	}
 
 	template<auto pimpl_member, auto member>
-	void add_member_readonly(std::string const & member_name) {
+	void add_member_readonly(std::string_view member_name) {
 		add_member_readonly<+[](T * cpp_object)->auto&{return (*(cpp_object->*pimpl_member)).*member;}>(member_name);
 	};
 
@@ -1301,80 +1325,7 @@ public:
 		static_assert(std::is_base_of_v<TBase, T>, "Member function type not from inheritance hierarchy");
 		_add_method("unused name", method, TypeList<Args...>(), std::tuple<>(), true);
     }
-
-
-
-
-    /**
-	 * Adds const-qualified member instance functions
-	 * @param method_name JavaScript property name to use
-	 * @param method member instance function pointer
-	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
-	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-      void add_method(const std::string & method_name, R(TBase::*method)(Args...) const, DefaultArgs const & default_args = DefaultArgs()) {
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-        if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
-        }
-        _add_method(method_name, method, TypeList<Args...>(), default_args);
-    }
-
-	/**
-	 * Adds const-and-lvalue-qualified member instance functions
-	 * @param method_name JavaScript property name to use
-	 * @param method member instance function pointer
-	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
-	 */
-    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-	void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &, DefaultArgs const & default_args = DefaultArgs()) {
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-     	if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>>) {
-            V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, method, TypeList<Args...>(), default_args);
-        }
-        _add_method(method_name, method, TypeList<Args...>(), default_args);
-    }
-
-
-	/**
-	 * const rvalue instance functions not supported yet.  Using this triggers a static assertion failure
-	 * @param method_name ignored
-	 * @param method member ignored
-	 * @param default_args ignored
-	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-	void add_method(const std::string & method_name, R(TBase::*method)(Args...) const &&, DefaultArgs const & default_args = DefaultArgs()) {
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-        static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "r-value qualified member functions are not supported");
-    }
-
-
-	/**
-	 * Adds const-and-lvalue-qualified member instance functions
-	 * @param method_name JavaScript property name to use
-	 * @param method member instance function pointer
-	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
-	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-	void add_method(const std::string & method_name, R(TBase::*method)(Args...), DefaultArgs const & default_args = DefaultArgs())
-	{
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-		_add_method(method_name, method, TypeList<Args...>(), default_args);
-	}
-
-	/**
-	 * Adds lvalue-qualified member instance functions
-	 * @param method_name JavaScript property name to use
-	 * @param method member instance function pointer
-	 * @param default_args any default arguments to be used if insufficient JavaScript arguments provided
-	 */
-    template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &, DefaultArgs const & default_args = DefaultArgs())
-    {
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-		_add_method(method_name, method, TypeList<Args...>(), default_args);
-    }
-
+    
 
 	/**
 	 * rvalue instance functions not supported yet.  Using this triggers a static assertion failure
@@ -1382,22 +1333,32 @@ public:
 	 * @param method member ignored
 	 * @param default_args ignored
 	 */
-	template<class R, class TBase, class... Args, class DefaultArgs = std::tuple<>>
-    void add_method(const std::string & method_name, R(TBase::*method)(Args...) &&, DefaultArgs const & default_args = DefaultArgs())
+	template<typename F, typename DefaultArgs = std::tuple<>, typename = std::enable_if_t<xl::is_pointer_to_member_function_v<F>>>
+    void add_method(std::string_view method_name, F f, DefaultArgs const & default_args = DefaultArgs())
     {
-		static_assert(std::is_base_of_v<TBase, T>, "Member function class not in inheritance hierarchy");
-		static_assert(std::is_same<R, void>::value && !std::is_same<R, void>::value, "not supported");
-    }
+    	using F_INFO = xl::pointer_to_member_function<F>;
+		static_assert(std::is_base_of_v<typename F_INFO::class_type, T>, "Member function class not in inheritance hierarchy");
+		static_assert(F_INFO::const_v || !std::is_const_v<T>);
+		static_assert(!F_INFO::rvalue_qualified, "not supported");
+		
+		// volatile `this` can only call volatile member funcs
+		static_assert(!std::is_volatile_v<T> || F_INFO::volatile_v);
+		
+		// add the method to `const T` if appropriate
+		if constexpr(!std::is_const_v<T> && is_wrapped_type_v<std::add_const_t<T>> && F_INFO::const_v) {
+			V8ClassWrapper<std::add_const_t<T>>::get_instance(isolate)._add_method(method_name, f, typename F_INFO::template type_list<TypeList>(), default_args);
+		} 
+		
+		_add_method(method_name, f, typename F_INFO::template type_list<TypeList>(), default_args);
+	}
 
-
-
-
+	
     /**
 	* If the method is marked const, add it to the const version of the wrapped type
 	*/
 	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
         std::enable_if_t<std::is_const<Head>::value && !std::is_const<T>::value, int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+	void add_fake_method_for_const_type(std::string_view method_name, func::function<R(Head *, Tail...)> method,
                                         DefaultArgs const & default_args = DefaultArgs()) {
 		V8ClassWrapper<ConstT>::get_instance(isolate)._add_fake_method(method_name, method, default_args);
 	};
@@ -1408,53 +1369,11 @@ public:
 	 */
 	template<class R, class Head, class... Tail, class DefaultArgs = std::tuple<>,
         std::enable_if_t<!(std::is_const<Head>::value && !std::is_const<T>::value), int> = 0>
-	void add_fake_method_for_const_type(const std::string & method_name, func::function<R(Head *, Tail...)> method,
+	void add_fake_method_for_const_type(std::string_view method_name, func::function<R(Head *, Tail...)> method,
                                         DefaultArgs const & default_args = DefaultArgs()) {
 		// nothing to do here
 	};
 
-
-	/**
-	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
-	 *   the method on the const type
-	 * @param method_name JavaScript name to expose this method as
-	 * @param method method to call when JavaScript function invoked
-	 */
-    template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
-	std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
-					 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, func::function<R(Head, Args...)> & method,
-                    DefaultArgs const & default_args = DefaultArgs()) {
-		_add_fake_method(method_name, method, default_args);
-	}
-
-
-	/**
-	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
-	 *   the method on the const type
-	 * @param method_name JavaScript name to expose this method as
-	 * @param method method to call when JavaScript function invoked
-	 */
-	template<class R, class Head, class... Args, class DefaultArgs = std::tuple<>,
-		std::enable_if_t<std::is_pointer<Head>::value &&
-						 std::is_base_of<std::remove_const_t<std::remove_pointer_t<Head>>, T>::value, int> = 0>
-	void add_method(const std::string & method_name, R(*method)(Head, Args...),
-                    DefaultArgs const & default_args = DefaultArgs()) {
-
-		_add_fake_method(method_name, func::function<R(Head, Args...)>(method), default_args);
-	}
-
-
-	/**
-	 * Takes a lambda taking a T* as its first parameter and creates a 'fake method' with it
-	 */
-	template<class Callback, class DefaultArgs = std::tuple<>   >
-	void add_method(const std::string & method_name, Callback && callback,
-                                   DefaultArgs const & default_args = DefaultArgs()) {
-		function_type_t<Callback> f(callback);
-		this->_add_fake_method(method_name, f, default_args);
-
-	}
 
 
 	v8::Local<v8::Object> wrap_as_most_derived(T * cpp_object, DestructorBehavior & destructor_behavior) {
@@ -1466,7 +1385,7 @@ public:
 	template<class R, class Head, class... Tail, class DefaultArgsTuple,
 		std::enable_if_t<std::is_pointer<Head>::value && // Head must be T * or T const *
 						 std::is_same<std::remove_const_t<std::remove_pointer_t<Head>>, std::remove_const_t<T>>::value, int> = 0>
-	void _add_fake_method(const std::string & method_name, func::function<R(Head, Tail...)> method, DefaultArgsTuple const & default_args)
+	void _add_fake_method(std::string_view method_name, func::function<R(Head, Tail...)> method, DefaultArgsTuple const & default_args)
 	{
 		assert(this->finalized == false);
 
@@ -1522,9 +1441,30 @@ public:
 			function_template->SetCallHandler(callback_helper, v8::External::New(this->isolate, method_caller));
 
 			// methods are put into the protype of the newly created javascript object
-			prototype_template->Set(v8::String::NewFromUtf8(isolate, method_name.c_str()), function_template);
+			prototype_template->Set(make_js_string(method_name), function_template);
 		});
 	}
+
+
+	/**
+	 * Creates a "fake" method from any callable which takes a T* as its first parameter.  Does not create
+	 *   the method on the const type
+	 * @param method_name JavaScript name to expose this method as
+	 * @param method method to call when JavaScript function invoked
+	 */
+	template<typename F, typename DefaultArgs = std::tuple<>,
+		typename = decltype(
+		    static_cast<void(V8ClassWrapper::*)(
+		        std::string_view,
+                decltype(func::function(std::declval<F>())),
+                DefaultArgs const &
+            )>(&V8ClassWrapper::_add_fake_method)
+		    )>
+	void add_method(std::string_view method_name, F && f,
+					DefaultArgs const & default_args = DefaultArgs()) {
+		_add_fake_method(method_name, func::function(std::forward<F>(f)), default_args);
+	}
+
 
 
 	v8::Local<v8::Object> get_matching_prototype_object(v8::Local<v8::Object> object) {
@@ -1550,7 +1490,7 @@ public:
 
 
     template<class M, class... Args, class... DefaultArgTypes>
-	void _add_method(std::string const & method_name,
+	void _add_method(std::string_view method_name,
                                     M method,
                                     TypeList<Args...> const &,
                                     std::tuple<DefaultArgTypes...> const & default_args_tuple,
@@ -1563,7 +1503,7 @@ public:
 		// adds this method to the list of methods to be added when a new "javascript constructor"
 		// is created for the type being wrapped
 		MethodAdderData method_adder_data =
-			MethodAdderData{method_name, StdFunctionCallbackType(
+			MethodAdderData{std::string(method_name), StdFunctionCallbackType(
 
 				// This is the function called (via a level of indirection because this is a capturing lambda)
 				//   when the JavaScript method is called.
@@ -1575,7 +1515,9 @@ public:
 
 
 					auto cpp_object = get_cpp_object(self);
-					auto bound_method = v8toolkit::bind<T>(*cpp_object, method);
+					auto bound_method = func::function([&cpp_object, method](Args... args)->decltype(auto){
+                        return (cpp_object->*method)(std::forward<Args>(args)...);
+					});
 
 					// V8 does not support C++ exceptions, so all exceptions must be caught before control
 					//   is returned to V8 or the program will instantly terminate
@@ -1860,6 +1802,13 @@ class JSWrapper;
 
 
 
+/**
+ * If Getting strange errors about needing type definitions for class member destructors, make sure
+ * all constructors and destructors are =default'd/defined in .cpp files, not headers if the types are
+ * desired to be forward declared
+ * @tparam T 
+ * @tparam Behavior 
+ */
 template<class T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<is_wrapped_type_v<T>>> {
 

@@ -174,7 +174,7 @@
 //    std::vector<int> returns_vector_of_ints();
 //    std::vector<std::vector<std::vector<std::string>>> returns_vector_of_vector_of_vector_of_strings();
 //    std::vector<std::pair<int, char*>> returns_vector_of_pairs();
-//    std::map<std::string, int> returns_map_of_string_to_int();
+//    std::unordered_map<std::string, int> returns_map_of_string_to_int();
 //
 //    void takes_const_wrapped_ref(Foo const &);
 //
@@ -214,8 +214,8 @@
 //   std::string take_and_return_string(std::string);
 //    const std::string take_and_return_const_string(const std::string);
 //    volatile const std::string & take_and_return_const_volatile_string(const volatile std::string *&);
-//    const volatile std::map<const volatile int*&,const volatile Using2*&>*& map_test(
-//        const volatile std::map<const volatile Using2 *&, const volatile std::set<const volatile int*&>*&>*&);
+//    const volatile std::unordered_map<const volatile int*&,const volatile Using2*&>*& map_test(
+//        const volatile std::unordered_map<const volatile Using2 *&, const volatile std::set<const volatile int*&>*&>*&);
 //
 //   void nested_foo_struct_test(const NestedFooStruct *&);
 //   void call_helper_callback(HelperClass::Callback);
