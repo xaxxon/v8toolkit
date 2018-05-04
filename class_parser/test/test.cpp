@@ -144,7 +144,7 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
     std::vector<std::string> args{
         "-std=c++17",
         "-I" CLANG_HOME "/include/c++/v1/",
-        "-I" CLANG_HOME "/lib/clang/5.0.0/include/",
+        "-I" CLANG_HOME "/lib/clang/6.0.0/include/",
 
         // why doesn't this seem to get passed to the plugin?
         "-Wall", /*"-Werror",*/ "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
@@ -606,8 +606,9 @@ TEST_F(ClassParser, CustomExtensions) {
 
 
     environment->expect_errors();
+    std::cerr << fmt::format("HERE") << std::endl;
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 1);
+    EXPECT_EQ(environment->expect_no_errors(), 3);
 
 
     EXPECT_EQ(pruned_vector.size(), 1);
@@ -620,7 +621,7 @@ TEST_F(ClassParser, CustomExtensions) {
 
     // only the public static entry should actually make it through
     EXPECT_EQ(c.wrapper_custom_extensions.size(), 1);
-    EXPECT_EQ(c.log_watcher.errors.size(), 1);
+    EXPECT_EQ(c.log_watcher.errors.size(), 3);
 }
 
 
@@ -1334,13 +1335,12 @@ class d_int
 class JSC : public C, public v8toolkit::JSWrapper<C> {
 public:
 
-    JSC(v8::Local<v8::Context> context, v8::Local<v8::Object> object,
-        v8::Local<v8::FunctionTemplate> created_by, int var1, char *&& var2) :
+    JSC(int var1, char *&& var2) :
       C(var1, std::move(var2)),
-      v8toolkit::JSWrapper<C>(context, object, created_by)
+      v8toolkit::JSWrapper<C>(this)
     {}
 
-    JS_ACCESS_1(std::unordered_map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::less<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::unordered_map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::less<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
+    JS_ACCESS_1(std::unordered_map<int V8TOOLKIT_COMMA int V8TOOLKIT_COMMA std::hash<int> V8TOOLKIT_COMMA std::equal_to<int> V8TOOLKIT_COMMA std::allocator<std::pair<const int V8TOOLKIT_COMMA int> > >, this_is_a_virtual_function, this_is_a_virtual_function_js_name, const std::unordered_map<char V8TOOLKIT_COMMA char V8TOOLKIT_COMMA std::hash<char> V8TOOLKIT_COMMA std::equal_to<char> V8TOOLKIT_COMMA std::allocator<std::pair<const char V8TOOLKIT_COMMA char> > > &);
     JS_ACCESS_0(void, virtual_function_in_B, virtual_function_in_B);
     JS_ACCESS_0(void, using_in_C, using_in_C);
 };
@@ -1502,6 +1502,7 @@ std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST 
 
 
 // includes
+#include <memory>
 // /includes
 
 // explicit instantiations

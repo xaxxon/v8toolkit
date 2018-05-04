@@ -162,7 +162,13 @@ struct BindingsProviderContainer {
 
         return P::make_provider(
             std::pair("js_name", f.js_name),
-            std::pair("name", f.name),
+            std::pair("name", fmt::format("static_cast<{}({}::*)({}) {} {} {} {} {}>(&{})", 
+                                          f.return_type.get_name(), f.wrapped_class.class_name, f.get_parameter_types_string(), 
+                                          f.is_const() ? "const" : "",
+                                          f.is_volatile() ? "volatile" : "",
+                                          f.is_lvalue_qualified() ? "&" : "",
+                                          f.is_rvalue_qualified() ? "&&" : "",
+                                          f.get_exception_specifier_string() == "noexcept" ? "noexcept" : "", f.name)),
             std::pair("comment", f.comment),
             std::pair("binding_parameters", f.get_return_and_class_and_parameter_types_string()),
             std::pair("parameters", P::make_provider(f.parameters)),
@@ -415,7 +421,7 @@ Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
     class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
-    class_wrapper.add_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+    class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});>>}}
 
 {{<<call_operator|!!
     class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}

@@ -92,6 +92,7 @@ struct ClassFunction {
     TypeInfo return_type;
     string return_type_comment;
     vector<ParameterInfo> parameters;
+    QualType member_function_type;
 
     // c++ name
     string name;
@@ -123,6 +124,8 @@ struct ClassFunction {
 
     string get_js_input_parameter_string() const;
 
+    
+    std::string get_exception_specifier_string() const;
 
 };
 

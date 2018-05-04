@@ -360,6 +360,7 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
     function_template_decl(function_template_decl),
     template_parameter_types(template_parameter_types),
     return_type(method_decl->getReturnType(), template_parameter_types),
+    member_function_type(method_decl->getType()),
     name(method_decl->getQualifiedNameAsString()),
     js_name(preferred_js_name != "" ? preferred_js_name : method_decl->getNameAsString())
 {
@@ -792,6 +793,24 @@ string MemberFunction::generate_bidirectional() {
 
     return result.str();
 
+}
+
+
+
+std::string ClassFunction::get_exception_specifier_string() const {
+    auto source_range = this->method_decl->getExceptionSpecSourceRange();
+
+    if (source_range.isValid()) {
+
+        auto exception_specifier = get_source_for_source_range(
+            compiler_instance->getPreprocessor().getSourceManager(),
+            source_range);
+        
+        return exception_specifier;
+
+    } else {
+        return "";
+    }
 }
 
 

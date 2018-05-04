@@ -1032,10 +1032,10 @@ public:
 	    parent_template->Set(v8::String::NewFromUtf8(isolate, js_name.c_str()), non_constructor_template);
 	}
 	
-	template<typename MemberType, typename C>
-	void add(std::string_view name, MemberType C::*member) {
+	template<typename MemberType, typename C, typename DefaultArgs = std::tuple<>>
+	void add(std::string_view name, MemberType C::*member, DefaultArgs default_args = DefaultArgs{}) {
         if constexpr(std::is_function_v<MemberType>) {
-            add_method(name, member);
+            add_method(name, member, default_args);
         } else {
             add_member<MemberType C::*>(name);
         }

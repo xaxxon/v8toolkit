@@ -320,8 +320,10 @@ void ClassHandler::onEndOfTranslationUnit() {
             }
         }
         if (found_data_error) {
-            llvm::report_fatal_error("Aborting due to data error(s) (search for 'ERROR SUMMARY')");
-
+            
+            // this exits the process, which breaks testing
+            //llvm::report_fatal_error("Aborting due to data error(s) (search for 'ERROR SUMMARY')");
+            throw ClassParserException("Aborting due to data error(s) (search for 'ERROR SUMMARY')");
         }
         return results;
     }();
