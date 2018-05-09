@@ -99,7 +99,7 @@ struct Environment : public ::testing::Environment {
             if (message.level == LogT::Levels::Error) {
                 if (!_expect_errors) {
                     // If this fires, it means no error message was expected
-                    EXPECT_EQ(message.string, "Unexpected error message");
+                        EXPECT_EQ(message.string, "Unexpected error message");
                 } else {
                     // every error will subsequently cause an exception to be thrown, which in turn logs another error
                     //   don't count that final error
@@ -771,6 +771,9 @@ TEST_F(ClassParser, TemplatedClassInstantiations) {
         TemplatedClass<int> a;
         TemplatedClass<char> b;
     )";
+    
+    
+    
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
@@ -1420,11 +1423,11 @@ TEST_F(ClassParser, CallableOverloadFilteredFromJavascriptStub) {
 
 TEST_F(ClassParser, MismatchedPimplTest) {
 
-std::string source = R"(
+    std::string source = R"(
 #include <memory>
 #include "class_parser.h"
 
-class V8TOOLKIT_USE_PIMPL(impl) V8TOOLKIT_USE_PIMPL(impl2) A : public v8toolkit::WrappedClassBase {
+class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) A : public v8toolkit::WrappedClassBase {
 private:
     struct Impl;
     std::unique_ptr<Impl> impl;
@@ -1444,12 +1447,77 @@ struct A::Impl {
 }
 
 
+TEST_F(ClassParser, MissingFriendPimplTest) {
+
+    std::string source = R"(
+#include <memory>
+#include "class_parser.h"
+
+class A : public v8toolkit::WrappedClassBase {
+private:
+    struct Impl;
+    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+
+    friend std::ostream &operator<<(std::ostream &os, const A &);
+
+};
+
+
+struct A::Impl {
+    int pimpl_int;
+};
+
+
+)";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 1); // missing friend 
+}
+
+
+TEST_F(ClassParser, PimplInheritanceTest) {
+
+    std::string source = R"(
+#include <memory>
+#include "class_parser.h"
+
+class A : public v8toolkit::WrappedClassBase {
+private:
+    struct Impl;
+    friend struct v8toolkit::WrapperBuilder<A>;
+    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+
+
+};
+
+class B : public A {
+    struct Impl;
+    friend struct v8toolkit::WrapperBuilder<B>;
+    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+};
+
+class C : public B {};
+
+
+struct A::Impl {
+    int pimpl_int;
+};
+
+
+)";
+
+    auto pruned_vector = run_code(source);
+}
+
+
+
 TEST_F(ClassParser, PimplTest) {
     std::string source = R"(
     #include <memory>
     #include "class_parser.h"
 
-    class V8TOOLKIT_USE_PIMPL(impl) V8TOOLKIT_USE_PIMPL(impl2) A : public v8toolkit::WrappedClassBase {
+    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) A : public v8toolkit::WrappedClassBase {
         friend class v8toolkit::WrapperBuilder<A>;
 
     private:
@@ -1552,6 +1620,120 @@ v8toolkit::WrapperBuilder<A>()(isolate);
 //    EXPECT_FALSE(string_stream.str().empty());
 //    EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 }
+
+
+TEST_F(ClassParser, PimplOnMemberTest) {
+    std::string source = R"(
+    #include <memory>
+    #include "class_parser.h"
+
+    class A : public v8toolkit::WrappedClassBase {
+        friend class v8toolkit::WrapperBuilder<A>;
+
+    private:
+        struct Impl;
+        V8TOOLKIT_SKIP V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+
+    public:
+        struct Impl2;
+        V8TOOLKIT_PIMPL Impl2 * impl2;
+    };
+
+
+    struct A::Impl {
+        int pimpl_int;
+    };
+
+    struct A::Impl2 {
+        char * pimpl2_string;
+    };
+
+    )";
+
+    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
+//    action->config_data = std::move(json);
+    PrintFunctionNamesAction::config_data_initialized = true;
+    std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST BODY") << std::endl;
+
+    vector<std::unique_ptr<OutputModule>> output_modules;
+
+
+
+    // javascript stub output
+    std::stringstream javascript_stub_output;
+    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_output)));
+
+    // bindings output
+    std::stringstream bindings_output;
+    output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_output)));
+
+
+    auto pruned_vector = run_code(source, action, std::move(output_modules));
+
+    ASSERT_EQ(pruned_vector.size(), 1);
+
+    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
+
+    std::string expected_bindings_result = R"(
+
+#include "js_casts.h"
+#include <v8toolkit/v8_class_wrapper_impl.h>
+
+
+// includes
+#include <memory>
+// /includes
+
+// explicit instantiations
+template class v8toolkit::V8ClassWrapper<A>;
+
+// /explicit instantiations
+
+
+
+namespace v8toolkit {
+
+template<>
+struct WrapperBuilder<A> {
+    void operator()(v8toolkit::Isolate & isolate)
+        {
+    v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
+    class_wrapper.set_class_name("A");
+    class_wrapper.add_member<&A::impl, &A::Impl::pimpl_int>("pimpl_int");
+    class_wrapper.add_member<&A::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
+
+        
+ 
+
+    class_wrapper.finalize(true);
+    class_wrapper.expose_static_methods("A", isolate);
+}
+};
+
+}
+
+
+void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
+void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
+
+v8toolkit::WrapperBuilder<A>()(isolate);
+
+
+
+}
+)";
+
+    EXPECT_EQ(bindings_output.str(), expected_bindings_result);
+
+//
+//    EXPECT_EQ(c.get_member_functions().size(), 0);
+//    EXPECT_TRUE(c.call_operator_member_function);
+//    EXPECT_FALSE(string_stream.str().empty());
+//    EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
+}
+
+
+
 
 
 int main(int argc, char* argv[]) {

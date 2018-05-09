@@ -12,7 +12,8 @@ target_include_directories(test-class-parser SYSTEM PRIVATE
 
 
 # Uncomment next line to print debugging info from xl::template library
-target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE)
+target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE -DXL_TEMPLATE_LOG_ENABLE
+        )
 
 
 find_package(fmt REQUIRED)

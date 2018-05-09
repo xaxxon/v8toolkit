@@ -1,4 +1,71 @@
 
+
+random code:
+
+How to make class parser emit generic reflection code to be used at runtime by anything
+
+#include <vector>
+#include <string>
+
+template <auto... Members>
+struct Reflex {
+
+    std::vector<int> v;
+    Reflex(std::vector<int> v) :
+        v(std::move(v))
+    {}
+
+    template <template<auto> typename T, size_t... indexes>
+    void call(std::index_sequence<indexes...>)
+    {
+        (T<Members>()(this->v[indexes]), ...);
+    }
+
+    template <template<auto> typename T>
+    void operator()() {
+        call<T>(std::make_index_sequence<sizeof...(Members)>{});
+    }
+};
+
+template <typename T>
+struct ClassCallback;
+
+
+class A {
+    friend struct ClassCallback<A>;
+private:
+    int i;
+    char j;
+    double k;
+};
+
+template<>
+struct ClassCallback<A> {
+    static inline auto reflex = Reflex<&A::i, &A::j, &A::k>({1,2,3});
+
+    template<auto member_pointer>
+    struct DataMemberCallbackType {
+        void operator()(int i) {
+
+        }
+    };
+};
+
+
+int main() {
+
+    ClassCallback<A>::reflex.template operator()<ClassCallback<A>::DataMemberCallbackType>();
+
+}
+
+
+
+
+
+
+// END CODE
+
+
 ast_action.h/cpp
 PrintFunctionNamesAction : PluginASTAction
  - This is what is registered with clang
@@ -65,3 +132,4 @@ class DebugContext : public v8_inspector::V8InspectorClient, public v8toolkit::C
 
 
 class WebsocketChannel : public v8_inspector::V8Inspector::Channel
+

@@ -19,6 +19,66 @@ using namespace xl::templates;
 
 namespace v8toolkit::class_parser::bindings_output {
 
+struct BindingsProviderContainer;
+using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
+
+
+struct WrapperBuilderConfigData {
+    WrappedClass const * wrapped_class = nullptr;
+    bool full_definition = false;
+    std::string class_definition = "";
+};
+
+template<typename T, auto member>
+struct vector_set {
+    using key_type = std::remove_reference_t<decltype(std::declval<T>().*member)>;
+    std::vector<T> data;
+    T & operator[](key_type const & key) {
+        for(auto & e : data) {
+            if (e.*member == key) {
+                return e;
+            }
+        }
+        T t;
+        t.*member = key;
+        return data.emplace_back(std::move(t));
+    }
+    
+    auto begin() {
+        return data.begin();
+    }
+    auto end() {
+        return data.end();
+    }
+};
+
+auto build_wrapper_builder_config_data(std::vector<WrappedClass const *> const & classes) {
+    vector_set<WrapperBuilderConfigData, &WrapperBuilderConfigData::wrapped_class> results;
+    
+    for (auto c : classes) {
+        results[c].full_definition = true;
+        for(auto & pimpl : c->get_pimpl_data_members()) {
+            results[&pimpl->declared_in];
+        }
+    }
+    
+    for (auto & data : results) {
+        data.class_definition = Template(R"(
+namespace v8toolkit {
+
+template<>
+struct WrapperBuilder<{{long_name}}> {
+    void operator()(v8toolkit::Isolate & isolate);
+};
+
+}
+)").fill<BindingsProviderContainer>(data.wrapped_class);
+    }
+        
+    return results;
+};
+
+
 extern Template file_template;
 extern Template class_template;
 extern Template standard_includes_template;
@@ -51,9 +111,6 @@ std::ostream & BindingsOutputStreamProvider::get_class_collection_stream() {
 }
 
 
-struct BindingsProviderContainer;
-
-using P = xl::templates::DefaultProviders<BindingsProviderContainer>;
 
 
 struct BindingsProviderContainer {
@@ -88,6 +145,7 @@ struct BindingsProviderContainer {
         auto provider = P::make_provider(
 //            std::pair("class", std::ref(c)), // ability to call another template on the same object
             std::pair("comment", c.comment),
+            std::pair("pimpl_members", std::ref(c.get_pimpl_data_members())),
             std::pair("name", c.class_name),
             std::pair("long_name", c.class_name),
             std::pair("js_name", c.get_js_name()),
@@ -135,7 +193,9 @@ struct BindingsProviderContainer {
             if (data_member.accessed_through->accessed_through != nullptr) {
                 log.error(LogT::Subjects::BindingsOutput, "Bindings output doesn't support multi-level PIMPL members: {}", data_member.long_name);
             } else {
-                result = fmt::format("&{}, &{}", data_member.accessed_through->long_name, data_member.long_name);
+                result = fmt::format("static_cast<{}({}::*)>(&{}), &{}", 
+                                     data_member.type.get_name(), data_member.wrapped_class.class_name,
+                                     data_member.accessed_through->long_name, data_member.long_name);
             }
         }
         std::cerr << fmt::format("For {}, returning add_member template parameter: {}", data_member.long_name, result) << std::endl;
@@ -323,12 +383,11 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
         }
     }
 
-
+ 
     if (already_wrapped_classes.size() != wrapped_classes.size()) {
 //        cerr << fmt::format("Could not wrap all classes - wrapped {} out of {}",
 //                            already_wrapped_classes.size(), wrapped_classes.size()) << endl;
     }
-
 
 //    for (auto const & [binding_file, i] : xl::each_i(binding_files)) {
     for (int i = 0; i < binding_files.size(); i++) {
@@ -352,6 +411,8 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("extern_templates", binding_file.extern_templates),
                 std::pair("explicit_instantiations", binding_file.explicit_instantiations),
                 std::pair("explicit_instantiations_for_const_types", binding_file.explicit_instantiations_for_const_types),
+                std::pair("wrapper_builders", xl::transform(
+                    build_wrapper_builder_config_data(binding_file.get_classes()).data, [](auto const & e){return e.class_definition;})),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
             ),
             &bindings_templates
@@ -410,8 +471,12 @@ namespace v8toolkit {
 
 template<>
 struct WrapperBuilder<{{long_name}}> {
-    void operator()(v8toolkit::Isolate & isolate)
-        {{<<!class>>}}
+    void operator()(v8toolkit::Isolate & isolate) {
+        v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
+
+        {{data_members|!!
+        class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+    }
 };
 
 }
@@ -432,6 +497,9 @@ Template class_template(R"({
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
+{{<<pimpl_members|!!
+    v8toolkit::WrapperBuilder<{{type}}>()(isolate);}}
+
 {{<<enums|!!
     class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
 
@@ -445,6 +513,8 @@ Template class_template(R"({
     class_wrapper.finalize(true);
     {{<constructor>}}
 })");
+
+
 
 
 Template file_template(R"(
@@ -465,7 +535,7 @@ template class v8toolkit::V8ClassWrapper<{{<long_name>}} const>;>}}
 {{<extern_templates|!!
 extern template {{class_name}}>}}
 
-{{<pimpl_classes|wrapper_builder}}
+{{classes|!{{}}}}
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
@@ -488,8 +558,8 @@ Template standard_includes_template(R"(
 std::map<string, Template> bindings_templates {
     std::pair("class", class_template),
     std::pair("file", file_template),
-    std::pair("standard_includes", standard_includes_template),
-    std::pair("wrapper_builder", wrapper_builder_template)
+    std::pair("standard_includes", standard_includes_template)
+//    std::pair("wrapper_builder", wrapper_builder_template)
 };
 
 

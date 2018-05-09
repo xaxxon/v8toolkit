@@ -157,6 +157,10 @@ public:
      * @return true if it has 1 or more, false if it has 0
      */
     bool has_pimpl_members() const;
+    
+    auto const & get_pimpl_data_members() const {
+        return this->pimpl_data_members;
+    }
 
     /**
      * @return whether this type is a specialization of a template

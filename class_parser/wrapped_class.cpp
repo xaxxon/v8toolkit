@@ -127,24 +127,6 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     log.info(LogT::Subjects::Class, "For {} got pimpl data members: {}",
              this->class_name, xl::join(this->pimpl_data_member_names));
 
-    if (this->pimpl_data_member_names.size() > 0) {
-        bool found_wrapper_builder = false;
-        for (FriendDecl * f : this->decl->friends()) {
-            auto friend_name = get_type_string(f->getFriendType()->getType().getCanonicalType());
-            std::cerr << fmt::format("checking friend name to see if it's the correct wrapper builder: {}", friend_name) << std::endl;
-            if (friend_name == fmt::format("v8toolkit::WrapperBuilder<{}>", this->class_name)) {
-                found_wrapper_builder = true;
-                break;
-            }
-        }
-        if (!found_wrapper_builder) {
-            log.error(LogT::Subjects::Class, "{} has PIMPL types but does not have required friend class v8toolkit::WrapperBuilder<{}>", this->class_name, this->class_name);
-        } else {
-            log.info(LogT::Subjects::Class, "Found expected WrapperBuilder in type {}", this->short_name);
-        }
-    }
-
-
 
 //    print_vector(annotation_base_types_to_ignore, "base types to ignore");
 //    print_vector(annotation_base_type_to_use, "base type to use");
@@ -554,10 +536,12 @@ void WrappedClass::parse_all_methods() {
 
         // only deal with public methods
         if (method->getAccess() != AS_public) {
-            
-            if (!Annotations(method).get().empty()) {
-                log.error(LogSubjects::Methods, "Annotation on non-public method: {}", full_method_name);
+
+            auto annotation_list = Annotations(method).get();
+            if (!annotation_list.empty()) {
+                log.error(LogSubjects::Methods, "Annotation on non-public method: {} - {}", full_method_name, xl::join(annotation_list));
             }
+            
             
             log.info(LogSubjects::Methods, "{} is not public, skipping\n", full_method_name);
             continue;
@@ -791,19 +775,34 @@ void WrappedClass::parse_members() {
 //            std::cerr << fmt::format("No decls for {} while parsing members", this->name_alias) << std::endl;
             return;
         }
+        
+//        bool is_main_class = &wrapped_class == this;
 
 //        std::cerr << fmt::format("getting fields for {} at {} which has {} base types", wrapped_class.get_name_alias(), (void*)&wrapped_class, wrapped_class.base_types.size()) << std::endl;
 //        std::cerr << fmt::format("getting fields for {}", wrapped_class.decl->) << std::endl;
 
+        auto members_config = PrintFunctionNamesAction::get_config_data()["classes"][this->class_name]["members"];
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
             string field_name = field->getQualifiedNameAsString();
             std::string short_field_name = field->getName();
 
+            if (Annotations(field).has(V8TOOLKIT_PIMPL_STRING)) {
+                this->pimpl_data_member_names.emplace_back(field_name);
+            }
+
+            // if this field is a PIMPL field
+            if (xl::contains(this->pimpl_data_member_names, field_name)) {
+                this->pimpl_data_members.push_back(std::make_unique<DataMember>(*this, wrapped_class, field));
+                auto pimpl_includes = this->pimpl_data_members.back()->type.get_root_includes();
+                std::cerr << fmt::format("adding pimpl includes for {}: {}", this->pimpl_data_members.back()->long_name, xl::join(pimpl_includes)) << std::endl;
+                this->include_files.insert(pimpl_includes.begin(), pimpl_includes.end());
+                continue;
+            }
+
+
             // if the config file has an entry for whether to skip this, use that
-            auto data_member_config =
-                PrintFunctionNamesAction::get_config_data()["classes"]
-                [this->class_name]["members"][field_name];
+            auto data_member_config = members_config[field_name];
 
             if (auto skip = data_member_config["skip"].get_boolean()) {
                 v8toolkit::class_parser::log.info(LogT::Subjects::ConfigFile, "Config file says for {}, skip: {}", field_name, *skip);
@@ -819,19 +818,7 @@ void WrappedClass::parse_members() {
                 }
             }
 
-            if (Annotations(field).has(V8TOOLKIT_PIMPL_STRING)) {
-                this->pimpl_data_member_names.emplace_back(short_field_name);
-            }
-            
-            // if this field is a PIMPL field
-            if (xl::contains(this->pimpl_data_member_names, short_field_name)) {
-                this->pimpl_data_members.push_back(std::make_unique<DataMember>(*this, wrapped_class, field));
-                auto pimpl_includes = this->pimpl_data_members.back()->type.get_root_includes();
-                std::cerr << fmt::format("adding pimpl includes for {}: {}", this->pimpl_data_members.back()->long_name, xl::join(pimpl_includes)) << std::endl;
-                this->include_files.insert(pimpl_includes.begin(), pimpl_includes.end());
-                continue;
-            }
-
+           
             auto export_type = get_export_type(field, LogSubjects::DataMembers, EXPORT_ALL);
             if (export_type == EXPORT_NONE) {
                 log.info(LogSubjects::DataMembers, "Skipping data member {} because not supposed to be exported {}",
@@ -840,9 +827,9 @@ void WrappedClass::parse_members() {
             }
 
             if (field->getAccess() != AS_public) {
-
-                if (!Annotations(field).get().empty()) {
-                    log.error(LogSubjects::Methods, "Annotation on non-public member: {}", field_name);
+                auto annotation_list = Annotations(field).get();
+                if (!annotation_list.empty() && !(annotation_list.size() == 1 && annotation_list[0] == V8TOOLKIT_PIMPL_STRING)) {
+                        log.error(LogSubjects::Methods, "Annotation on non-public member: {}", field_name);
                 }
 
                 log.info(LogSubjects::DataMembers, "{} is not public, skipping", field_name);
@@ -857,10 +844,10 @@ void WrappedClass::parse_members() {
     std::cerr << fmt::format("pimpl: expected {} got {}", this->pimpl_data_member_names.size(), this->pimpl_data_members.size()) << std::endl;
     if (this->pimpl_data_member_names.size() != this->pimpl_data_members.size()) {
         log.error(LogT::Subjects::Class,
-                  "Mismatched number of pimpl members specified vs found in {}: {} specified vs {} found",
-                  this->short_name, this->pimpl_data_member_names.size(), this->pimpl_data_members.size());
+                  "Mismatched number of pimpl members specified vs found in {}: {} specified vs {} found - (specified: {}) (found: {})",
+                  this->short_name, this->pimpl_data_member_names.size(), this->pimpl_data_members.size(), xl::join(this->pimpl_data_member_names),
+            xl::join(xl::transform(this->pimpl_data_members, [](auto && e){return e->long_name;})));
     }
-
 }
 
 
@@ -1216,9 +1203,10 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 
 void WrappedClass::validate_data() {
 
-//    std::cerr << fmt::format("validating {}", this->class_name) << std::endl;
+    log.info(LogSubjects::Class, "validating {}", this->class_name);
     xl::log::LogCallbackGuard g(log, this->log_watcher);
 
+    log.info(LogSubjects::Class, "checking for names matching JS reserved words");
     if (xl::contains(reserved_global_names, this->get_js_name())) {
         log.error(LogSubjects::Class, "Class has same name as JavaScript reserved word: {}", this->class_name);
     }
@@ -1228,6 +1216,7 @@ void WrappedClass::validate_data() {
         static_classes_names[static_function->js_name].push_back(static_function.get());
     }
 
+    log.info(LogSubjects::Class, "checking static function names");
     for (auto & name_pair : static_classes_names) {
         if (name_pair.second.size() > 1) {
             log.error(LogT::Subjects::ClassParser, "Multiple static functions in {} with the same JavaScript name {}: {}",
@@ -1247,6 +1236,7 @@ void WrappedClass::validate_data() {
         member_names[data_member->js_name].push_back(data_member.get());
     }
 
+    log.info(LogSubjects::Class, "checking member names");
     for (auto & name_pair : member_names) {
         if (name_pair.second.size() > 1) {
             log.error(LogT::Subjects::ClassParser, "Multiple member functions/data members with the same JavaScript name {}: {}", name_pair.first,
@@ -1263,6 +1253,7 @@ void WrappedClass::validate_data() {
         }
     }
 
+    log.info(LogSubjects::Class, "Checking for illegal characters in name");
     if (Regex("(?:[<>:]|^$)").match(this->get_js_name())) {
         log.error(LogSubjects::Subjects::Class,
                   "JavaScript type name '{}' for '{}' is either empty or has one of < > : in it, must be aliased to a standard name", this->get_js_name(), this->class_name);
@@ -1334,12 +1325,52 @@ void WrappedClass::validate_data() {
         auto constructor_includes = constructor->get_includes();
         this->include_files.insert(constructor_includes.begin(), constructor_includes.end());
     }
-    
+
+    log.info(LogSubjects::Class, "checking for bidirectional constructor if bidirectional");
     if (this->bidirectional) {
         if ((*this->base_types.begin())->bidirectional_constructor == nullptr) {
             log.error(LogSubjects::Class, "Bidirectional class {} has no bidirectional constructor", this->class_name);
         }
     }
+
+    log.info(LogSubjects::Class, "checking for pimpl friend type for {} pimpl members", this->pimpl_data_members.size());
+    for (auto & pimpl_type : this->pimpl_data_members) {
+        
+        // in members of base classes, the friend class will be verified there
+        if (&pimpl_type->declared_in != this) {
+            std::cerr << fmt::format("{} not declared in {}, skipping", pimpl_type->long_name, this->class_name) << std::endl;
+            continue;
+        }
+        bool found_wrapper_builder = false;
+        std::cerr << fmt::format("{} has friends? {}", this->class_name, this->decl->hasFriends()) << std::endl;
+        for (FriendDecl * f : this->decl->friends()) {
+            std::cerr << fmt::format("friend decl: {}, friend type: {}", (void *) f, (void *) f->getFriendType())
+                      << std::endl;
+
+            // if there's no type, maybe it's a friend function
+            if (f->getFriendType() == nullptr) {
+                continue;
+            }
+
+            auto friend_name = get_type_string(f->getFriendType()->getType().getCanonicalType());
+            std::cerr
+                << fmt::format("checking friend name to see if it's the correct wrapper builder: {}", friend_name)
+                << std::endl;
+            if (friend_name == fmt::format("v8toolkit::WrapperBuilder<{}>", pimpl_type->declared_in.class_name)) {
+                found_wrapper_builder = true;
+                break;
+            }
+        }
+        
+        if (!found_wrapper_builder) {
+            log.error(LogT::Subjects::Class, "{} has PIMPL types {} but does not have required friend class v8toolkit::WrapperBuilder<{}>",
+                      this->class_name, pimpl_type->type.get_name(), pimpl_type->declared_in.class_name);
+        } else {
+            log.info(LogT::Subjects::Class, "Found expected WrapperBuilder in type {}", this->short_name);
+        }
+    }
+    
+    
 }
 
 
@@ -1387,7 +1418,6 @@ std::string const & WrappedClass::get_js_name() const {
 WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
     std::cerr << fmt::format("here2") << std::endl;
     for(auto & c : WrappedClass::wrapped_classes) {
-        std::cerr << fmt::format("here 2 in loop") << std::endl;
         if (c->decl == decl) {
             return c.get();
         }
