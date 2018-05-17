@@ -388,7 +388,7 @@ ClassFunction::ClassFunction(WrappedClass & wrapped_class,
 
     auto parameter_count = method_decl->getNumParams();
     for (int i = 0; i < parameter_count; i++) {
-//        std::cerr << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
+//        std::cerr5 << fmt::format("ParsedMethod constructor - parsing parameter {}", i) << std::endl;
         parameters.emplace_back(*this, i, method_decl->getParamDecl(i));
 
         // make sure the wrapped class has includes for all the types in the method

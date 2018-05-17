@@ -52,37 +52,9 @@ struct vector_set {
     }
 };
 
-auto build_wrapper_builder_config_data(std::vector<WrappedClass const *> const & classes) {
-    vector_set<WrapperBuilderConfigData, &WrapperBuilderConfigData::wrapped_class> results;
-    
-    for (auto c : classes) {
-        results[c].full_definition = true;
-        for(auto & pimpl : c->get_pimpl_data_members()) {
-            results[&pimpl->declared_in];
-        }
-    }
-    
-    for (auto & data : results) {
-        data.class_definition = Template(R"(
-namespace v8toolkit {
-
-template<>
-struct WrapperBuilder<{{long_name}}> {
-    void operator()(v8toolkit::Isolate & isolate);
-};
-
-}
-)").fill<BindingsProviderContainer>(data.wrapped_class);
-    }
-        
-    return results;
-};
-
-
 extern Template file_template;
 extern Template class_template;
 extern Template standard_includes_template;
-
 
 extern std::map<string, Template> bindings_templates;
 
@@ -147,7 +119,6 @@ struct BindingsProviderContainer {
             std::pair("comment", c.comment),
             std::pair("pimpl_members", std::ref(c.get_pimpl_data_members())),
             std::pair("name", c.class_name),
-            std::pair("long_name", c.class_name),
             std::pair("js_name", c.get_js_name()),
             std::pair("data_members", c.get_members()),
             std::pair("member_functions", std::ref(c.get_member_functions())),
@@ -406,13 +377,11 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("file_number", fmt::format("{}", file_number)),
                 std::pair("next_file_number", fmt::format("{}", file_number + 1)), // ok if it won't actually exist
                 std::pair("pimpl_classes", P::make_provider(std::ref(binding_file.class_needs_wrapper_builder_specialization))),
-                std::pair("classes", get_class_body(binding_file.get_classes())),
+                std::pair("classes", binding_file.get_classes()),
                 std::pair("includes", P::make_provider(binding_file.includes)),
                 std::pair("extern_templates", binding_file.extern_templates),
                 std::pair("explicit_instantiations", binding_file.explicit_instantiations),
                 std::pair("explicit_instantiations_for_const_types", binding_file.explicit_instantiations_for_const_types),
-                std::pair("wrapper_builders", xl::transform(
-                    build_wrapper_builder_config_data(binding_file.get_classes()).data, [](auto const & e){return e.class_definition;})),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
             ),
             &bindings_templates
@@ -467,23 +436,42 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 
 
 Template wrapper_builder_template(R"(
-namespace v8toolkit {
 
 template<>
-struct WrapperBuilder<{{long_name}}> {
+struct WrapperBuilder<{{name}}> {
     void operator()(v8toolkit::Isolate & isolate) {
-        v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
+        v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
+        class_wrapper.set_class_name("{{js_name}}");
+{{<<member_functions|!!
+        class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});>>}}
 
-        {{data_members|!!
+{{<<call_operator|!!
+        class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}
+
+{{<<static_functions|!!
+        class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+
+{{<<data_members|!!
         class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+
+{{<<enums|!!
+        class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
+
+{{<<wrapper_extension_methods|!!
+        {{method_name}}(class_wrapper);>>}}
+
+{{<<custom_extensions|!!
+        {{}}>>}}
+        class_wrapper.set_parent_type<{{<<base_type_name>}}>();
+        class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
+        class_wrapper.finalize(true);
+        {{constructor}}
     }
 };
-
-}
 )");
 
 Template class_template(R"({
-    v8toolkit::V8ClassWrapper<{{long_name}}> & class_wrapper = isolate.wrap_class<{{long_name}}>();
+    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
     class_wrapper.set_class_name("{{js_name}}");
 {{<<member_functions|!!
     class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});>>}}
@@ -512,7 +500,8 @@ Template class_template(R"({
     class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
     class_wrapper.finalize(true);
     {{<constructor>}}
-})");
+}
+)");
 
 
 
@@ -526,21 +515,24 @@ Template file_template(R"(
 
 // explicit instantiations
 {{<explicit_instantiations|!!
-template class v8toolkit::V8ClassWrapper<{{<long_name>}}>;>}}
+template class v8toolkit::V8ClassWrapper<{{<name>}}>;>}}
 {{<explicit_instantiations_for_const_types|!!
-template class v8toolkit::V8ClassWrapper<{{<long_name>}} const>;>}}
+template class v8toolkit::V8ClassWrapper<{{<name>}} const>;>}}
 
 // /explicit instantiations
 
 {{<extern_templates|!!
-extern template {{class_name}}>}}
+extern template {{name}}>}}
 
-{{classes|!{{}}}}
+namespace v8toolkit {
+{{classes|wrapper_builder}}
+}
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
-{{classes|!{{}}}}
+{{classes|!!
+    v8toolkit::WrapperBuilder<{{name}}>()(isolate);}}
 
 {{call_next_function}}
 
@@ -558,8 +550,8 @@ Template standard_includes_template(R"(
 std::map<string, Template> bindings_templates {
     std::pair("class", class_template),
     std::pair("file", file_template),
-    std::pair("standard_includes", standard_includes_template)
-//    std::pair("wrapper_builder", wrapper_builder_template)
+    std::pair("standard_includes", standard_includes_template),
+    std::pair("wrapper_builder", wrapper_builder_template)
 };
 
 

@@ -54,16 +54,16 @@ std::vector<std::string> Annotations::get_regex(const std::string & regex_string
     auto re = std::regex(regex_string);
     std::vector<std::string> results;
 
-    std::cerr << fmt::format("annotations count: {}", this->annotations.size()) << std::endl;
+//    std::cerr << fmt::format("annotations count: {}", this->annotations.size()) << std::endl;
     if (this->annotations.size() > 0) {
-        std::cerr << fmt::format("some annotations {}", this->annotations.size()) << std::endl;
+//        std::cerr << fmt::format("some annotations {}", this->annotations.size()) << std::endl;
         if (this->annotations.size() > 100) {
-            std::cerr << fmt::format("way too big {}", this->annotations.size()) << std::endl;
+//            std::cerr << fmt::format("way too big {}", this->annotations.size()) << std::endl;
         }
     }
     for (auto & annotation : this->annotations) {
         if (this->annotations.size() == 0) {
-            std::cerr << fmt::format("weird") << std::endl;
+//            std::cerr << fmt::format("weird") << std::endl;
         }
         std::smatch matches;
 //            std::cerr << fmt::format("on annotation {}", annotation) << std::endl;

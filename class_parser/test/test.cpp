@@ -177,14 +177,14 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
     std::cerr << fmt::format("wrapped class count: {}", WrappedClass::wrapped_classes.size()) << std::endl;
     auto result = erase_if2(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){
         auto result = !c->should_be_wrapped();
-        std::cerr << fmt::format("checking to see if {} should be removed: {}", c->short_name, result) << std::endl;
+//        std::cerr << fmt::format("checking to see if {} should be removed: {}", c->short_name, result) << std::endl;
         return result;
     });
 
-    std::cerr << fmt::format("after erase_if size: {}", result.size()) << std::endl;
-    if (result.size() > 0) {
-        std::cerr << fmt::format("short name of first element: {} - {}", result[0].get()->short_name, (void*)result[0].get().get()) << std::endl;
-    }
+//    std::cerr << fmt::format("after erase_if size: {}", result.size()) << std::endl;
+//    if (result.size() > 0) {
+//        std::cerr << fmt::format("short name of first element: {} - {}", result[0].get()->short_name, (void*)result[0].get().get()) << std::endl;
+//    }
     return result;
 }
 
@@ -206,13 +206,13 @@ TEST_F(ClassParser, Simple) {
     )";
 
     auto pruned_vector = run_code(source);
-    std::cerr << fmt::format("pruned vector type: {}", xl::demangle<decltype(pruned_vector)>()) << std::endl;
-    std::cerr << fmt::format("after return: size {} - [0]: {}", pruned_vector.size(), (void*)pruned_vector[0].get().get()) << std::endl;
+//    std::cerr << fmt::format("pruned vector type: {}", xl::demangle<decltype(pruned_vector)>()) << std::endl;
+//    std::cerr << fmt::format("after return: size {} - [0]: {}", pruned_vector.size(), (void*)pruned_vector[0].get().get()) << std::endl;
     EXPECT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
-    std::cerr << fmt::format("&c = {}", (void*)&c) << std::endl;
+//    std::cerr << fmt::format("&c = {}", (void*)&c) << std::endl;
     auto name = c.get_short_name();
-    std::cerr << fmt::format("name = {}", name) << std::endl;
+//    std::cerr << fmt::format("name = {}", name) << std::endl;
     
     /*****
      * NO CLUE WHY THIS FAILS SOMETIMES
@@ -1517,15 +1517,19 @@ TEST_F(ClassParser, PimplTest) {
     #include <memory>
     #include "class_parser.h"
 
-    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) A : public v8toolkit::WrappedClassBase {
-        friend class v8toolkit::WrapperBuilder<A>;
+//    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) A : public v8toolkit::WrappedClassBase {
+    class A : public v8toolkit::WrappedClassBase {
+        friend struct v8toolkit::WrapperBuilder<A>;
 
     private:
         struct Impl;
-        std::unique_ptr<Impl> impl;
+        V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
 
         struct Impl2;
-        Impl2 * impl2;
+        V8TOOLKIT_PIMPL Impl2 * impl2;
+
+    public: 
+        int public_int_member;
     };
 
 
@@ -1536,8 +1540,7 @@ TEST_F(ClassParser, PimplTest) {
     struct A::Impl2 {
         char * pimpl2_string;
     };
-
-    )";
+)";
 
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
 //    action->config_data = std::move(json);
@@ -1545,9 +1548,7 @@ TEST_F(ClassParser, PimplTest) {
 std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST BODY") << std::endl;
 
     vector<std::unique_ptr<OutputModule>> output_modules;
-
-
-
+    
     // javascript stub output
     std::stringstream javascript_stub_output;
     output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_output)));
@@ -1561,7 +1562,7 @@ std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST 
 
     ASSERT_EQ(pruned_vector.size(), 1);
 
-    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
+    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} public_int_member\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
 
     std::string expected_bindings_result = R"(
 
@@ -1579,33 +1580,32 @@ template class v8toolkit::V8ClassWrapper<A>;
 // /explicit instantiations
 
 
-
 namespace v8toolkit {
+
 
 template<>
 struct WrapperBuilder<A> {
-    void operator()(v8toolkit::Isolate & isolate)
-        {
-    v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
-    class_wrapper.set_class_name("A");
-    class_wrapper.add_member<&A::impl, &A::Impl::pimpl_int>("pimpl_int");
-    class_wrapper.add_member<&A::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
+    void operator()(v8toolkit::Isolate & isolate) {
+        v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
+        class_wrapper.set_class_name("A");
+        class_wrapper.add_member<&A::public_int_member>("public_int_member");
+        class_wrapper.add_member<static_cast<int(A::Impl::*)>(&A::impl), &A::Impl::pimpl_int>("pimpl_int");
+        class_wrapper.add_member<static_cast<char *(A::Impl2::*)>(&A::impl2), &A::Impl2::pimpl2_string>("pimpl2_string");
 
-    
+        
  
 
-    class_wrapper.finalize(true);
-    class_wrapper.expose_static_methods("A", isolate);
-}
+        class_wrapper.finalize(true);
+        class_wrapper.expose_static_methods("A", isolate);
+    }
 };
 
 }
 
-
 void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
-v8toolkit::WrapperBuilder<A>()(isolate);
+    v8toolkit::WrapperBuilder<A>()(isolate);
 
 
 
@@ -1628,7 +1628,7 @@ TEST_F(ClassParser, PimplOnMemberTest) {
     #include "class_parser.h"
 
     class A : public v8toolkit::WrappedClassBase {
-        friend class v8toolkit::WrapperBuilder<A>;
+        friend struct v8toolkit::WrapperBuilder<A>;
 
     private:
         struct Impl;
@@ -1690,33 +1690,31 @@ template class v8toolkit::V8ClassWrapper<A>;
 // /explicit instantiations
 
 
-
 namespace v8toolkit {
+
 
 template<>
 struct WrapperBuilder<A> {
-    void operator()(v8toolkit::Isolate & isolate)
-        {
-    v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
-    class_wrapper.set_class_name("A");
-    class_wrapper.add_member<&A::impl, &A::Impl::pimpl_int>("pimpl_int");
-    class_wrapper.add_member<&A::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
+    void operator()(v8toolkit::Isolate & isolate) {
+        v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
+        class_wrapper.set_class_name("A");
+        class_wrapper.add_member<static_cast<int(A::Impl::*)>(&A::impl), &A::Impl::pimpl_int>("pimpl_int");
+        class_wrapper.add_member<static_cast<char *(A::Impl2::*)>(&A::impl2), &A::Impl2::pimpl2_string>("pimpl2_string");
 
         
  
 
-    class_wrapper.finalize(true);
-    class_wrapper.expose_static_methods("A", isolate);
-}
+        class_wrapper.finalize(true);
+        class_wrapper.expose_static_methods("A", isolate);
+    }
 };
 
 }
 
-
 void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
-v8toolkit::WrapperBuilder<A>()(isolate);
+    v8toolkit::WrapperBuilder<A>()(isolate);
 
 
 

@@ -43,7 +43,7 @@ WrappedClass::WrappedClass(const CXXRecordDecl * decl, FOUND_METHOD found_method
     found_method(found_method)
 {
 
-    std::cerr << fmt::format("WrappedClass constructor for {} at {}", this->class_name, (void*)this) << std::endl;
+//    std::cerr << fmt::format("WrappedClass constructor for {} at {}", this->class_name, (void*)this) << std::endl;
     log.info(LogSubjects::Subjects::ClassParser, "converting class_name from {} to {}", get_canonical_name_for_decl(decl), this->class_name);
 
     if (auto matches = xl::Regex("^(class|struct)?\\s*(.*::)?(.*)$").match(this->class_name)) {

@@ -33,7 +33,7 @@ namespace v8toolkit::class_parser {
  */
 QualType get_type_from_dereferencing_type(QualType type) {
     type = type.getNonReferenceType();
-    std::cerr << fmt::format("trying to get dereferenced type for {}", type.getAsString()) << std::endl;
+//    std::cerr << fmt::format("trying to get dereferenced type for {}", type.getAsString()) << std::endl;
 
     if (type->isAnyPointerType()) {
         auto result = type->getPointeeType();
@@ -42,12 +42,12 @@ QualType get_type_from_dereferencing_type(QualType type) {
     } else {
         if (auto decl = type->getAsCXXRecordDecl()) {
             for (CXXMethodDecl * method : decl->methods()) {
-                std::cerr << fmt::format("checking {} for operator*", method->getQualifiedNameAsString()) << std::endl;
+//                std::cerr << fmt::format("checking {} for operator*", method->getQualifiedNameAsString()) << std::endl;
                 if (method->getOverloadedOperator() == OO_Star) {
                     auto result = method->getReturnType();
-                    std::cerr << fmt::format("got operator*, returning {}", result.getAsString()) << std::endl;
-                    std::cerr << fmt::format("is canonical? {}", result.isCanonical()) << std::endl;
-                    std::cerr << fmt::format("canonical version: {}", result.getCanonicalType().getAsString());
+//                    std::cerr << fmt::format("got operator*, returning {}", result.getAsString()) << std::endl;
+//                    std::cerr << fmt::format("is canonical? {}", result.isCanonical()) << std::endl;
+//                    std::cerr << fmt::format("canonical version: {}", result.getCanonicalType().getAsString());
                     return result.getCanonicalType().getNonReferenceType();
                 }
             }

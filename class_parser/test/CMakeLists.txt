@@ -7,13 +7,11 @@ add_executable(test-class-parser test.cpp ${CLASS_PARSER_SOURCES})
 target_include_directories(test-class-parser SYSTEM PRIVATE
         ${gtest_SOURCE_DIR}/include
         ${gmock_SOURCE_DIR}/include
-        ${CLANG_HOME}/include
-    )
+        ${CLANG_HOME}/include)
 
 
 # Uncomment next line to print debugging info from xl::template library
-target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE -DXL_TEMPLATE_LOG_ENABLE
-        )
+target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE -DXL_TEMPLATE_LOG_ENABLE)
 
 
 find_package(fmt REQUIRED)
