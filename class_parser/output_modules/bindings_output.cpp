@@ -179,11 +179,14 @@ struct BindingsProviderContainer {
         return P::make_provider(
             std::pair("comment", d.comment),
             std::pair("name", d.long_name),
+            std::pair("short_name", d.short_name),
             std::pair("js_name", d.js_name),
-            std::pair("declared_in", d.declared_in.class_name),
-            std::pair("type", d.type.get_name()),
+            std::pair("declared_in", std::ref(d.declared_in)),
+            std::pair("type", std::ref(d.type)),
+            std::pair("dereferenced_type_class", WrappedClass::get_wrapped_class(TypeInfo(get_type_from_dereferencing_type(d.type.type)))),
             std::pair("read_only", d.is_const ? "_readonly" : ""),
-            std::pair("member_pointer", make_member_parameter_string(d))
+            std::pair("member_pointer", make_member_parameter_string(d)),
+            std::pair("accessed_through", std::ref(d.accessed_through))
         );
     }
 
@@ -240,7 +243,10 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(TypeInfo const & t) {
-        return P::make_provider("Implement me");
+        std::cerr << fmt::format("making provider for typeinfo: {}", t.type.getAsString()) << std::endl;
+        return P::make_provider(
+            std::pair("name", t.get_name())
+            );
     }
 
 }; // end BindingsProviderContainer
@@ -439,6 +445,10 @@ Template wrapper_builder_template(R"(
 
 template<>
 struct WrapperBuilder<{{name}}> {
+
+{{#<<pimpl_members|!!
+    static constexpr auto {{name}} = &{{declared_in.name}}.{{short_name}};>>}}
+
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
         class_wrapper.set_class_name("{{js_name}}");
@@ -453,6 +463,10 @@ struct WrapperBuilder<{{name}}> {
 
 {{<<data_members|!!
         class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+
+{{<<pimpl_members.dereferenced_type_class.data_members|!!
+    add_member<v8toolkit::WrapperBuilder<{{dereferenced_type.name}}>::{{#accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");
+}}
 
 {{<<enums|!!
         class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
@@ -480,13 +494,16 @@ Template class_template(R"({
     class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}
 
 {{<<static_functions|!!
-    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+    class_wrapper.add_static_method<{{bi
+nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
 
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
 
-{{<<pimpl_members|!!
-    v8toolkit::WrapperBuilder<{{type}}>()(isolate);}}
+{{#<<pimpl_members|!{{data_members|!!
+    add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");
+
+}}}}
 
 {{<<enums|!!
     class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
@@ -526,7 +543,7 @@ extern template {{name}}>}}
 
 namespace v8toolkit {
 {{classes|wrapper_builder}}
-}
+} // end namespace v8toolkit
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
@@ -534,7 +551,7 @@ void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & is
 {{classes|!!
     v8toolkit::WrapperBuilder<{{name}}>()(isolate);}}
 
-{{call_next_function}}
+    {{<<call_next_function>>}}
 
 }
 )");

@@ -35,11 +35,27 @@ TypeInfo::TypeInfo(QualType const & type,
 //                             this->template_parameter_types.size()) << std::endl;
 //    std::cerr << fmt::format("Created typeinfo for {}", type.getAsString()) << std::endl;
 
+    
 }
 
 
 TypeInfo::~TypeInfo()
 {}
+
+
+WrappedClass * TypeInfo::get_wrapped_class() const 
+{
+    
+    auto dereferenced_qual_type = get_type_from_dereferencing_type(this->type);
+    
+    for (auto && c : WrappedClass::wrapped_classes) {
+        auto c_type_pointer = c->decl->getTypeForDecl();
+        if (c_type_pointer != nullptr && c_type_pointer == &*dereferenced_qual_type) {
+            return c.get();
+        }
+    }
+    return nullptr;
+}
 
 
 
@@ -249,8 +265,9 @@ void TypeInfo::for_each_templated_type(std::function<void(QualType const &)> cal
                 callback(template_arg_qual_type);
             }
         } else {
-            if (print_logging)
+            if (print_logging) {
                 cerr << "Not a template specializaiton type " << this->get_plain_type().get_name() << endl;
+            }
         }
     }
 }

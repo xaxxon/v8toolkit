@@ -53,7 +53,7 @@ QualType get_type_from_dereferencing_type(QualType type) {
             }
         }
     }
-    llvm::report_fatal_error("Could not determine dereferenced type");
+    return type;
 }
 
 

@@ -1598,16 +1598,17 @@ struct WrapperBuilder<A> {
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("A", isolate);
     }
+
+    static constexpr auto A::impl = &A.impl;
+    static constexpr auto A::impl2 = &A.impl2;
 };
 
-}
+} // end namespace v8toolkit
 
 void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
     v8toolkit::WrapperBuilder<A>()(isolate);
-
-
 
 }
 )";
@@ -1648,6 +1649,14 @@ TEST_F(ClassParser, PimplOnMemberTest) {
         char * pimpl2_string;
     };
 
+    class B : public v8toolkit::WrappedClassBase {
+        friend struct v8toolkit::WrapperBuilder<B>;
+
+   
+    };
+
+
+
     )";
 
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
@@ -1659,20 +1668,20 @@ TEST_F(ClassParser, PimplOnMemberTest) {
 
 
 
-    // javascript stub output
-    std::stringstream javascript_stub_output;
-    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_output)));
+//    // javascript stub output
+//    std::stringstream javascript_stub_output;
+//    output_modules.push_back(std::make_unique<JavascriptStubOutputModule>(std::make_unique<StringStreamOutputStreamProvider>(javascript_stub_output)));
 
     // bindings output
     std::stringstream bindings_output;
-    output_modules.push_back(make_unique<BindingsOutputModule>(15, std::make_unique<StringStreamOutputStreamProvider>(bindings_output)));
+    output_modules.push_back(make_unique<BindingsOutputModule>(100, std::make_unique<StringStreamOutputStreamProvider>(bindings_output)));
 
 
     auto pruned_vector = run_code(source, action, std::move(output_modules));
 
-    ASSERT_EQ(pruned_vector.size(), 1);
+    ASSERT_EQ(pruned_vector.size(), 2);
 
-    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
+//    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
 
     std::string expected_bindings_result = R"(
 
@@ -1686,6 +1695,7 @@ TEST_F(ClassParser, PimplOnMemberTest) {
 
 // explicit instantiations
 template class v8toolkit::V8ClassWrapper<A>;
+template class v8toolkit::V8ClassWrapper<B>;
 
 // /explicit instantiations
 
@@ -1707,16 +1717,33 @@ struct WrapperBuilder<A> {
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("A", isolate);
     }
+
+    static constexpr auto A::impl = &A.impl;
+    static constexpr auto A::impl2 = &A.impl2;
 };
 
-}
+
+
+template<>
+struct WrapperBuilder<B> {
+    void operator()(v8toolkit::Isolate & isolate) {
+        v8toolkit::V8ClassWrapper<B> & class_wrapper = isolate.wrap_class<B>();
+        class_wrapper.set_class_name("B");
+        
+ 
+
+        class_wrapper.finalize(true);
+        class_wrapper.expose_static_methods("B", isolate);
+    }
+};
+
+} // end namespace v8toolkit
 
 void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
     v8toolkit::WrapperBuilder<A>()(isolate);
-
-
+    v8toolkit::WrapperBuilder<B>()(isolate);
 
 }
 )";
@@ -1729,6 +1756,72 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 //    EXPECT_FALSE(string_stream.str().empty());
 //    EXPECT_FALSE(xl::Regex("operator\\(\\)").match(string_stream.str()));
 }
+
+
+
+
+
+TEST_F(ClassParser, InheritancePimpl) {
+    std::string source = R"(
+    #include <memory>
+    #include "class_parser.h"
+
+    class A : public v8toolkit::WrappedClassBase {
+        friend struct v8toolkit::WrapperBuilder<A>;
+
+    public:
+        struct Impl;
+
+    protected:
+        V8TOOLKIT_SKIP V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+
+    };
+    
+    struct A::Impl {
+        int same_name;
+    };
+    
+
+    class B : public A {
+        friend struct v8toolkit::WrapperBuilder<B>;
+
+    public:
+        struct Impl;
+
+    protected:
+        V8TOOLKIT_SKIP V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+    
+    };
+
+    struct B::Impl {
+        int same_name;
+    };
+    )";
+    
+    auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
+//    action->config_data = std::move(json);
+    PrintFunctionNamesAction::config_data_initialized = true;
+    std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST BODY") << std::endl;
+
+    vector<std::unique_ptr<OutputModule>> output_modules;
+    
+    // bindings output
+    std::stringstream bindings_output;
+    output_modules.push_back(make_unique<BindingsOutputModule>(100, std::make_unique<StringStreamOutputStreamProvider>(bindings_output)));
+
+
+    auto pruned_vector = run_code(source, action, std::move(output_modules));
+
+
+
+    std::string expected_bindings_result = R"()";
+
+//    EXPECT_EQ(bindings_output.str(), expected_bindings_result);
+    EXPECT_EQ(bindings_output.str(), "");
+
+}
+
+
 
 
 

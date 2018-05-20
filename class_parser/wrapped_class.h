@@ -42,12 +42,12 @@ private:
     vector<unique_ptr<StaticFunction>> static_functions;
 
     bool members_parsed = false;
-    vector<unique_ptr<DataMember>> members;
+    std::vector<std::unique_ptr<DataMember>> members;
 
     std::vector<Enum> enums;
     bool enums_parsed = false;
 
-    vector<unique_ptr<ConstructorFunction>> constructors;
+    std::vector<std::unique_ptr<ConstructorFunction>> constructors;
 
 
     // can't call this directly, must use factory
