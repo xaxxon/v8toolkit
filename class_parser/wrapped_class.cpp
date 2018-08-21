@@ -798,8 +798,7 @@ void WrappedClass::parse_members() {
 
                 auto underlying_pimpl_type = WrappedClass::get_wrapped_class(TypeInfo(get_type_from_dereferencing_type(pimpl_data_members.back()->type.type)));
                 if (underlying_pimpl_type == nullptr) {
-                    assert(false);
-                    log.error(LogSubjects::Class, "pimpl type not found in WrappedClasses");
+                    log.error(LogSubjects::Class, "pimpl type {} for class {} not found in WrappedClasses", TypeInfo(get_type_from_dereferencing_type(pimpl_data_members.back()->type.type)).get_name(), this->class_name );
                     continue;
                 }
                 underlying_pimpl_type->found_method = FOUND_METHOD::FOUND_INHERITANCE; // not really inheritance but kinda
@@ -1445,7 +1444,6 @@ std::string const & WrappedClass::get_js_name() const {
 
 
 WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
-    std::cerr << fmt::format("here2") << std::endl;
     for(auto & c : WrappedClass::wrapped_classes) {
         if (c->decl == decl) {
             return c.get();
@@ -1456,7 +1454,6 @@ WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
 
 
 WrappedClass * WrappedClass::get_wrapped_class(TypeInfo const & type_info) {
-    std::cerr << fmt::format("here") << std::endl;
     return WrappedClass::get_wrapped_class(type_info.get_plain_type_decl());
 }
 

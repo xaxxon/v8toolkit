@@ -1475,6 +1475,29 @@ struct A::Impl {
     EXPECT_EQ(environment->expect_no_errors(), 1); // missing friend 
 }
 
+TEST_F(ClassParser, MissingPimplTypeDefinitionTest) {
+
+    std::string source = R"(
+#include <memory>
+#include "class_parser.h"
+
+class A : public v8toolkit::WrappedClassBase {
+private:
+    struct Impl;
+    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
+
+    friend std::ostream &operator<<(std::ostream &os, const A &);
+
+};
+
+)";
+
+    environment->expect_errors();
+    auto pruned_vector = run_code(source);
+    EXPECT_EQ(environment->expect_no_errors(), 2); // missing A::Impl definition and missing friend
+}
+
+
 
 TEST_F(ClassParser, PimplInheritanceTest) {
 
@@ -1503,6 +1526,8 @@ class C : public B {};
 struct A::Impl {
     int pimpl_int;
 };
+
+struct B::Impl {};
 
 
 )";
