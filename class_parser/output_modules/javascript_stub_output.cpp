@@ -194,8 +194,8 @@ Template member_function_template(R"(
     /**
      * {{<comment}}
 {{<parameters|!!
-     * @param \{{{type}}\} {{name}} {{<comment}}}}
-     * @return \{{{return_type_name}}\} {{<<return_comment}}
+     * @param \{{{type}}\} {{name}}{{#}} {{<comment}}}}
+     * @return \{{{return_type_name>}}\}{{#}} {{<return_comment}}
      */
     {{name}}({{parameters%, |!{{name}}}}) {})");
 
@@ -204,8 +204,8 @@ Template static_function_template(R"(
     /**
      * {{<comment}}
 {{<parameters|!!
-     * @param \{{{type}}\} {{name}} {{<comment}}}}
-     * @return \{{{return_type_name}}\} {{<<return_comment}}
+     * @param \{{{type}}\} {{<name}}{{#divider}} {{<comment}}}}
+     * @return \{{{return_type_name>}}\}{{#}} {{<return_comment}}
      */
     static {{name}}({{parameters%, |!{{name}}}}) {})");
 

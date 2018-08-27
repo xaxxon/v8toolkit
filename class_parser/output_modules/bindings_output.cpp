@@ -174,7 +174,7 @@ struct BindingsProviderContainer {
     }
 
     static ProviderPtr get_provider(DataMember const & d) {
-        log.info(LogSubjects::BindingsOutput, "get_provider DataMember: {}", d.long_name);
+        log.info(LogSubjects::BindingsOutput, "get_provider DataMember: {} with dereferenced_type_class: {}", d.long_name, TypeInfo(get_type_from_dereferencing_type(d.type.type)).get_name());
 
         return P::make_provider(
             std::pair("comment", d.comment),
@@ -444,38 +444,39 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 Template wrapper_builder_template(R"(
 
 template<>
-struct WrapperBuilder<{{name}}> {
+struct WrapperBuilder<{{name}}> \{{{#}}
 
-{{#<<pimpl_members|!!
-    static constexpr auto {{name}} = &{{declared_in.name}}.{{short_name}};>>}}
+{{<<pimpl_members|!!
+    static constexpr auto {{name}} = &{{declared_in.name}}.{{short_name}};}}
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
-        class_wrapper.set_class_name("{{js_name}}");
+        class_wrapper.set_class_name("{{js_name}}");{{#}}
+
 {{<<member_functions|!!
-        class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});>>}}
+        class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});}}
 
 {{<<call_operator|!!
-        class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}
+        class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
 
 {{<<static_functions|!!
-        class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+        class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 
 {{<<data_members|!!
-        class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+        class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
 {{<<pimpl_members.dereferenced_type_class.data_members|!!
-    add_member<v8toolkit::WrapperBuilder<{{dereferenced_type.name}}>::{{#accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");
-}}
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<...dereferenced_type_class.name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
 
 {{<<enums|!!
-        class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
+        class_wrapper.add_enum("{{<<name>>}}", \{{{<<elements%, |!{"{{name}}", {{value}}\}}}\});}}
 
 {{<<wrapper_extension_methods|!!
-        {{method_name}}(class_wrapper);>>}}
+        {{<<method_name>>}}(class_wrapper);}}
 
 {{<<custom_extensions|!!
-        {{}}>>}}
+        {{<<>>}}>>}}
+
         class_wrapper.set_parent_type<{{<<base_type_name>}}>();
         class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
         class_wrapper.finalize(true);
@@ -486,33 +487,32 @@ struct WrapperBuilder<{{name}}> {
 
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
-    class_wrapper.set_class_name("{{js_name}}");
+    class_wrapper.set_class_name("{{js_name}}");{{#}}
+
 {{<<member_functions|!!
     class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});>>}}
 
 {{<<call_operator|!!
-    class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});>>}}
+    class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
 
 {{<<static_functions|!!
     class_wrapper.add_static_method<{{bi
-nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});>>}}
+nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 
 {{<<data_members|!!
-    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");>>}}
+    class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
-{{#<<pimpl_members|!{{data_members|!!
-    add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");
-
-}}}}
+{{<<pimpl_members|!{{data_members|!!
+    add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");}}}}
 
 {{<<enums|!!
-    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});>>}}
+    class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});}}
 
 {{<<wrapper_extension_methods|!!
-    {{method_name}}(class_wrapper);>>}}
+    {{method_name}}(class_wrapper);}}
 
 {{<<custom_extensions|!!
-    {{}}>>}}
+    {{}}}}
     class_wrapper.set_parent_type<{{<<base_type_name>}}>();
     class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
     class_wrapper.finalize(true);
@@ -548,11 +548,10 @@ namespace v8toolkit {
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
-{{classes|!!
-    v8toolkit::WrapperBuilder<{{name}}>()(isolate);}}
+{{<<classes|!!
+    v8toolkit::WrapperBuilder<{{<<name>>}}>()(isolate);>}}
 
-    {{<<call_next_function>>}}
-
+    {{<<call_next_function>}}
 }
 )");
 

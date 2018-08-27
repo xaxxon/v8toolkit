@@ -37,6 +37,7 @@ target_include_directories(class_parser_plugin SYSTEM PRIVATE ${CLANG_HOME}/incl
 set_target_properties(class_parser_plugin PROPERTIES
         DEBUG_POSTFIX "")
 
+# No name mangling because no rtti because of clang
 add_definitions(-DCLANG_HOME="${CLANG_HOME}" -DXL_FORCE_NO_DEMANGLE_NAMES)
 include_directories(${gtest_SOURCE_DIR}/include)
 

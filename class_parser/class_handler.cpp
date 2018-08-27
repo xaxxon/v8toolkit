@@ -304,7 +304,7 @@ void ClassHandler::onEndOfTranslationUnit() {
         vector<WrappedClass const *> results;
         bool found_data_error = false;
         for (auto & c : WrappedClass::wrapped_classes) {
-            if (c->should_be_wrapped()) {
+            if (c->should_be_parsed()) {
                 c->parse_enums();
                 c->parse_members();
                 c->parse_all_methods();

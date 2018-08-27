@@ -716,45 +716,45 @@ std::vector<DataMember *> WrappedClass::get_members() const {
         results.push_back(member.get());
     }
 
-//    // none of the pimpl data members can have the same type - that would lead to duplicate names and there's
-//    //   currently no way to select different names based on PIMPL traversal
-//    std::set<std::string> types;
-//    for(auto &pimpl_data_member : this->pimpl_data_members) {
-//        auto type_string = get_type_string(pimpl_data_member->type.type);
-//        if (types.count(type_string)) {
-//            log.error(LogT::Subjects::Class, "multiple pimpl types in {} have the same underlying type: {}", this->class_name, get_type_string(pimpl_data_member->type.type));
-//        }
-//        types.insert(type_string);
-//    }
+    // none of the pimpl data members can have the same type - that would lead to duplicate names and there's
+    //   currently no way to select different names based on PIMPL traversal
+    std::set<std::string> types;
+    for(auto &pimpl_data_member : this->pimpl_data_members) {
+        auto type_string = get_type_string(pimpl_data_member->type.type);
+        if (types.count(type_string)) {
+            log.error(LogT::Subjects::Class, "multiple pimpl types in {} have the same underlying type: {}", this->class_name, get_type_string(pimpl_data_member->type.type));
+        }
+        types.insert(type_string);
+    }
 
-//    for (auto & pimpl_member : this->pimpl_data_members) {
-//
-//        auto underlying_pimpl_type = get_type_from_dereferencing_type(pimpl_member->type.type);
-//
-//        auto pimpl_wrapped_class = WrappedClass::get_wrapped_class(underlying_pimpl_type->getAsCXXRecordDecl());
-//        if (pimpl_wrapped_class == nullptr) {
-//            log.error(LogT::Subjects::Class, "Pimpl data member's type never seen: {}", underlying_pimpl_type.getAsString());
-//            continue;
-//        }
-//
-//        // this type probably isn't wrapped so need to parse its members explicitly
-//        pimpl_wrapped_class->parse_members();
-//
-//
-//        auto pimpl_member_members = pimpl_wrapped_class->get_members();
-//        if (pimpl_member_members.size() == 0) {
-//            log.warn(LogT::Subjects::Class, "Pimpl member type has no members");
-//        }
-//
-//        std::cerr << fmt::format("setting accessed_through pointers for members in type: {}", pimpl_member->type.get_name()) << std::endl;
-//        for (auto & pimpl_member_member : pimpl_member_members) {
-//            if (pimpl_member_member->accessed_through != nullptr && pimpl_member_member->accessed_through != pimpl_member.get()) {
-//                log.error(LogT::Subjects::Class, "Pimpl member / class already used as pimpl for something else - not allowed: {}", pimpl_member_member->long_name);
-//            }
-//            pimpl_member_member->accessed_through = pimpl_member.get();
-//        }
-//        results.insert(results.end(), pimpl_member_members.begin(), pimpl_member_members.end());
-//    }
+    for (auto & pimpl_member : this->pimpl_data_members) {
+
+        auto underlying_pimpl_type = get_type_from_dereferencing_type(pimpl_member->type.type);
+
+        auto pimpl_wrapped_class = WrappedClass::get_wrapped_class(underlying_pimpl_type->getAsCXXRecordDecl());
+        if (pimpl_wrapped_class == nullptr) {
+            log.error(LogT::Subjects::Class, "Pimpl data member's type never seen: {}", underlying_pimpl_type.getAsString());
+            continue;
+        }
+
+        // this type probably isn't wrapped so need to parse its members explicitly
+        pimpl_wrapped_class->parse_members();
+
+
+        auto pimpl_member_members = pimpl_wrapped_class->get_members();
+        if (pimpl_member_members.size() == 0) {
+            log.warn(LogT::Subjects::Class, "Pimpl member type has no members");
+        }
+
+        std::cerr << fmt::format("setting accessed_through pointers for members in type: {}", pimpl_member->type.get_name()) << std::endl;
+        for (auto & pimpl_member_member : pimpl_member_members) {
+            if (pimpl_member_member->accessed_through != nullptr && pimpl_member_member->accessed_through != pimpl_member.get()) {
+                log.error(LogT::Subjects::Class, "Pimpl member / class already used as pimpl for something else - not allowed: {}", pimpl_member_member->long_name);
+            }
+            pimpl_member_member->accessed_through = pimpl_member.get();
+        }
+        //results.insert(results.end(), pimpl_member_members.begin(), pimpl_member_members.end());
+    }
 
     return results;
 }
@@ -801,7 +801,7 @@ void WrappedClass::parse_members() {
                     log.error(LogSubjects::Class, "pimpl type {} for class {} not found in WrappedClasses", TypeInfo(get_type_from_dereferencing_type(pimpl_data_members.back()->type.type)).get_name(), this->class_name );
                     continue;
                 }
-                underlying_pimpl_type->found_method = FOUND_METHOD::FOUND_INHERITANCE; // not really inheritance but kinda
+                underlying_pimpl_type->found_method = FOUND_METHOD::FOUND_PIMPL; 
 
                 auto pimpl_includes = this->pimpl_data_members.back()->type.get_root_includes();
                 std::cerr << fmt::format("adding pimpl includes for {}: {}", this->pimpl_data_members.back()->long_name, xl::join(pimpl_includes)) << std::endl;
@@ -869,13 +869,24 @@ WrappedClass::WrappedClass(const std::string class_name) :
     log.info(LogSubjects::Class, "Created new (no-decl) WrappedClass: '{}'", this->class_name);
 }
 
+bool WrappedClass::should_be_parsed() const {
+    return this->should_be_wrapped() || this->found_method == FOUND_PIMPL;
+}
 
 bool WrappedClass::should_be_wrapped() const {
+    
+    if (xl::regexer(this->class_name, "A")) {
+        std::cerr << fmt::format("HERE\n");
+    }
 
     log.info(LogSubjects::Subjects::ShouldBeWrapped, "In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get()));
 
     if (this->found_method == FOUND_METHOD::FOUND_NEVER_WRAP) {
         log.info(LogSubjects::Subjects::ShouldBeWrapped, "Class marked as FOUND_NEVER_WRAP");
+        return false;
+    }
+    
+    if (this->found_method == FOUND_PIMPL) {
         return false;
     }
 
@@ -1097,6 +1108,10 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
     auto class_name = xl::Regex("^(class|struct)?\\s*").replace(get_canonical_name_for_decl(decl), "");
 
 //    std::cerr << fmt::format("get or insert wrapped class for {} with found method: {}", class_name, found_method) << std::endl;
+
+    if (xl::regexer(class_name, "A")) {
+        std::cerr << fmt::format("HERE\n");
+    }
 
     // if this decl isn't a definition, get the actual definition
     if (!decl->isThisDeclarationADefinition()) {
