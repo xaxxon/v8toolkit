@@ -649,7 +649,7 @@ TEST_F(ClassParser, CustomExtensionInheritance) {
     output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
 
     auto pruned_vector = run_code(source, std::move(output_modules));
-    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
+//    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
 
     EXPECT_TRUE(xl::Regex("\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}.*?\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
@@ -679,7 +679,7 @@ TEST_F(ClassParser, Enums) {
 
     auto pruned_vector = run_code(source, std::move(output_modules));
 
-    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
+//    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
     EXPECT_TRUE(xl::Regex("class_wrapper\\.add_enum\\(\"MyEnum\", \\{\\{\"A\", 0\\}, \\{\"B\", 1\\}, \\{\"C\", 2\\}, \\{\"D\", 3\\}, \\{\"E\", 4\\}, \\{\"F\", 5\\}\\}\\);", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
     ));
