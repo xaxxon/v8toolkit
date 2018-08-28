@@ -738,10 +738,14 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 //    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;
     auto full_source_loc = FullSourceLoc(constructor_decl->getLocation(),
                                          compiler_instance->getSourceManager());
-//    fprintf(stderr, "%s constructor Decl at line %d, file id: %d\n",
-//            wrapped_class.name_alias.c_str(),
-//            full_source_loc.getExpansionLineNumber(),
-//            full_source_loc.getFileID().getHashValue());
+    std::cerr << fmt::format("{} constructor Decl at line {}, file id: {}, implicit: {}\n",
+            wrapped_class.class_name,
+            full_source_loc.getExpansionLineNumber(),
+            full_source_loc.getFileID().getHashValue(),
+            constructor_decl->isImplicit()
+            );
+    std::cerr << get_source_for_source_range(compiler_instance->getSourceManager(), constructor_decl->getSourceRange()) << "\n";
+    
 
     // this should be moved to ClassFunction
 //    Annotations constructor_annotations(constructor_decl);

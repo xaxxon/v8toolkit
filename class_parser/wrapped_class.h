@@ -56,7 +56,7 @@ private:
 
     // data members marked as being pimpl to be exposed as if part of the main class
     std::vector<std::string> pimpl_data_member_names; // names stored from class attribute
-    std::vector<std::unique_ptr<DataMember>> pimpl_data_members; // actual found data members matching attributes
+    std::vector<std::unique_ptr<DataMember>> pimpl_data_members; // actual data member objects in class
 
 
 public:
@@ -159,9 +159,7 @@ public:
      */
     bool has_pimpl_members() const;
     
-    auto const & get_pimpl_data_members() const {
-        return this->pimpl_data_members;
-    }
+    std::vector<DataMember *> get_pimpl_data_members() const;
 
     /**
      * @return whether this type is a specialization of a template

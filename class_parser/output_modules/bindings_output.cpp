@@ -117,7 +117,7 @@ struct BindingsProviderContainer {
         auto provider = P::make_provider(
 //            std::pair("class", std::ref(c)), // ability to call another template on the same object
             std::pair("comment", c.comment),
-            std::pair("pimpl_members", std::ref(c.get_pimpl_data_members())),
+            std::pair("pimpl_members", c.get_pimpl_data_members()),
             std::pair("name", c.class_name),
             std::pair("js_name", c.get_js_name()),
             std::pair("data_members", c.get_members()),

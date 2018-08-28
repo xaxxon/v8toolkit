@@ -785,9 +785,9 @@ TEST_F(ClassParser, TemplatedClassInstantiations) {
     WrappedClass const & c1 = *pruned_vector[0].get();
     WrappedClass const & c2 = *pruned_vector[1].get();
 
-    EXPECT_EQ(c1.get_constructors().size(), 1);
+    ASSERT_EQ(c1.get_constructors().size(), 1);
     EXPECT_EQ(c1.get_constructors()[0]->js_name, "TemplatedClass<int>");
-    EXPECT_EQ(c2.get_constructors().size(), 1);
+    ASSERT_EQ(c2.get_constructors().size(), 1);
     EXPECT_EQ(c2.get_constructors()[0]->js_name, "TemplatedClass<char>");
 
     EXPECT_EQ(c1.log_watcher.errors.size(), 1);
@@ -816,9 +816,9 @@ TEST_F(ClassParser, TemplatedClassInstantiationsSetJavascriptNameViaUsingNameAli
     WrappedClass const & c1 = *pruned_vector[0].get();
     WrappedClass const & c2 = *pruned_vector[1].get();
 
-    EXPECT_EQ(c1.get_constructors().size(), 1);
+    ASSERT_EQ(c1.get_constructors().size(), 1);
     EXPECT_TRUE(c1.get_constructors()[0]->js_name == "A" || c1.get_constructors()[0]->js_name == "B");
-    EXPECT_EQ(c2.get_constructors().size(), 1);
+    ASSERT_EQ(c2.get_constructors().size(), 1);
     EXPECT_TRUE(c2.get_constructors()[0]->js_name == "A" || c2.get_constructors()[0]->js_name == "B");
     EXPECT_NE(c1.get_constructors()[0]->js_name, c2.get_constructors()[0]->js_name);
 
@@ -844,13 +844,13 @@ TEST_F(ClassParser, AbstractClass) {
 
     auto pruned_vector = run_code(source);
 
-    EXPECT_EQ(pruned_vector.size(), 1);
+    ASSERT_EQ(pruned_vector.size(), 1);
     WrappedClass const & c = *pruned_vector[0].get();
 
     // no reason to deal with constructors of abstract types since they won't be constructed directly
-    EXPECT_EQ(c.get_constructors().size(), 0);
+    ASSERT_EQ(c.get_constructors().size(), 0);
 
-    EXPECT_EQ(c.get_member_functions().size(), 1);
+    ASSERT_EQ(c.get_member_functions().size(), 1);
 
 }
 
@@ -1511,9 +1511,7 @@ class A : public v8toolkit::WrappedClassBase {
 private:
     struct Impl;
     friend struct v8toolkit::WrapperBuilder<A>;
-    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
-
-
+    V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl; 
 };
 
 class B : public A {
@@ -1544,13 +1542,13 @@ TEST_F(ClassParser, PimplTest) {
     #include <memory>
     #include "class_parser.h"
 
-//    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) A : public v8toolkit::WrappedClassBase {
-    class A : public v8toolkit::WrappedClassBase {
+//    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
+    class V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
         friend struct v8toolkit::WrapperBuilder<A>;
 
     private:
 
-        struct Impl;
+        struct V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS Impl;
         V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
 
         struct Impl2;
@@ -1563,6 +1561,8 @@ TEST_F(ClassParser, PimplTest) {
 
     struct A::Impl {
         int pimpl_int;
+        Impl(){};
+        Impl(int){};
     };
 
     struct A::Impl2 {
