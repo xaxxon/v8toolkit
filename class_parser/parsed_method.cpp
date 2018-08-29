@@ -551,7 +551,7 @@ string ClassFunction::get_default_argument_tuple_string() const {
         // this should go away once there's proper support
         if (std::regex_search(param.type.get_plain_type().get_name(),
                               std::regex("^(class|struct)?\\s*std::function"))) {
-            std::cerr << fmt::format("Cannot handle std::function default parameters yet -- skipping") << std::endl;
+//            std::cerr << fmt::format("Cannot handle std::function default parameters yet -- skipping") << std::endl;
             // must clear out all the other defaults since you can't just skip one.
             types = std::stringstream{};
             values = std::stringstream{};
@@ -738,13 +738,13 @@ ConstructorFunction::ConstructorFunction(WrappedClass & wrapped_class, CXXConstr
 //    cerr << "About to get full source for constructor in " << wrapped_class.name_alias << endl;
     auto full_source_loc = FullSourceLoc(constructor_decl->getLocation(),
                                          compiler_instance->getSourceManager());
-    std::cerr << fmt::format("{} constructor Decl at line {}, file id: {}, implicit: {}\n",
-            wrapped_class.class_name,
-            full_source_loc.getExpansionLineNumber(),
-            full_source_loc.getFileID().getHashValue(),
-            constructor_decl->isImplicit()
-            );
-    std::cerr << get_source_for_source_range(compiler_instance->getSourceManager(), constructor_decl->getSourceRange()) << "\n";
+//    std::cerr << fmt::format("{} constructor Decl at line {}, file id: {}, implicit: {}\n",
+//            wrapped_class.class_name,
+//            full_source_loc.getExpansionLineNumber(),
+//            full_source_loc.getFileID().getHashValue(),
+//            constructor_decl->isImplicit()
+//            );
+//    std::cerr << get_source_for_source_range(compiler_instance->getSourceManager(), constructor_decl->getSourceRange()) << "\n";
     
 
     // this should be moved to ClassFunction
@@ -788,7 +788,7 @@ string MemberFunction::generate_js_bindings() {
                               this->get_return_and_class_and_parameter_types_string(), this->name);
 
     } else {
-        std::cerr << fmt::format("about to add_method for {}", this->name) << std::endl;
+//        std::cerr << fmt::format("about to add_method for {}", this->name) << std::endl;
         result << fmt::format("    class_wrapper.add_method<{}>(\"{}\", &{}, {});\n",
                               this->get_return_and_class_and_parameter_types_string(),
                               this->js_name,
@@ -878,8 +878,8 @@ std::string DataMember::look_up_js_name() const {
         [this->wrapped_class.class_name]["members"][this->long_name];
     log.info(LogT::Subjects::ConfigFile, "Looking up data member: {} - {}", this->wrapped_class.class_name,
              this->long_name);
-    std::cerr << fmt::format("all config is: {}", PrintFunctionNamesAction::get_config_data().get_source()) << std::endl;
-    std::cerr << fmt::format("my config is: {}", data_member_config.get_source()) << std::endl;
+//    std::cerr << fmt::format("all config is: {}", PrintFunctionNamesAction::get_config_data().get_source()) << std::endl;
+//    std::cerr << fmt::format("my config is: {}", data_member_config.get_source()) << std::endl;
     
 
     if (auto name_config_override = data_member_config["name"].get_string()) {

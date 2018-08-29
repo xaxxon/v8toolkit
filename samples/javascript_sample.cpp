@@ -561,7 +561,7 @@ public:
 void takes_rvalue_ref(RvalueTestClass && rvalue_test_class) {
     RvalueTestClass moved_into(std::move(rvalue_test_class));
     undeallocated_objects.insert(&moved_into); // normal constructor not run, so it wouldn't otherwise be inserted causing assertion to fire in destructor
-    std::cerr << fmt::format("moved_into: {}", moved_into.str) << std::endl;
+//    std::cerr << fmt::format("moved_into: {}", moved_into.str) << std::endl;
 }
 
 void takes_unique_ptr(std::unique_ptr<RvalueTestClass> rvalue_test_class) {
@@ -586,7 +586,7 @@ void test_rvalues() {
         "takes_rvalue_ref(str);"
         "str;");
 
-    std::cerr << fmt::format("remaining: {}", CastToNative<RvalueTestClass&>()(*isolate, moved_out_of_str.Get(*isolate)).str) << std::endl;
+//    std::cerr << fmt::format("remaining: {}", CastToNative<RvalueTestClass&>()(*isolate, moved_out_of_str.Get(*isolate)).str) << std::endl;
 
 
     // test a little GC..
@@ -595,7 +595,7 @@ void test_rvalues() {
     c->run("for(let i = 0; i < 20000; i++) {new RvalueTestClass(`${i}`);}");
 //    c->run("for(let i = 0; i < 20000; i++){new RvalueTestClass(\"some random string\");}");
     while(!isolate->get_isolate()->IdleNotification(1000)){}
-    std::cerr << fmt::format("destructor ran {} times", rvalue_test_class_destructor_ran) << std::endl;
+//    std::cerr << fmt::format("destructor ran {} times", rvalue_test_class_destructor_ran) << std::endl;
     assert(rvalue_test_class_destructor_ran > 100); // if this fires, increase the test count in the javascript above
 
     // CastToNative<unique_ptr> should clear the GC callback to free the RvalueTestClass object for these calls
@@ -603,7 +603,7 @@ void test_rvalues() {
 
     // original object from test of moving it may still exist, but that should be the only one
     while(!isolate->get_isolate()->IdleNotification(1000)){}
-    std::cerr << fmt::format("destructor ran {} times (should be 30000) with {} remaining objects", rvalue_test_class_destructor_ran, undeallocated_objects.size()) << std::endl;
+//    std::cerr << fmt::format("destructor ran {} times (should be 30000) with {} remaining objects", rvalue_test_class_destructor_ran, undeallocated_objects.size()) << std::endl;
     assert(rvalue_test_class_destructor_ran == 30000);
     assert(undeallocated_objects.size() < 2);
 
@@ -641,7 +641,7 @@ int main(int argc, char ** argv) {
     printf("Testing asserts\n");
     test_asserts();
     
-    std::cerr << fmt::format("Testing rvalues") << std::endl;
+//    std::cerr << fmt::format("Testing rvalues") << std::endl;
     test_rvalues();
 
 
@@ -651,7 +651,7 @@ int main(int argc, char ** argv) {
 
 
     // try to make a duplicate isolate
-    std::cerr << fmt::format("Testing for proper handling of a subsequent isolate with the same address as a previous one") << std::endl;
+//    std::cerr << fmt::format("Testing for proper handling of a subsequent isolate with the same address as a previous one") << std::endl;
     std::set<v8::Isolate *> isolate_addresses;
     bool got_duplicate = false;
     for(int i = 0; i < 100; i++) {

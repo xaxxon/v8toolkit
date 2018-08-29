@@ -68,6 +68,58 @@ bool BindingsCriteria::operator()(WrappedClass const & c) {
     return true;
 }
 
+//
+//MAKE THIS HAPPEN
+//#include <string>
+//
+//struct Stuff {
+//    int i;
+//};
+//
+//template<typename T>
+//struct W;
+//
+//class Base {
+//    friend struct W<Base>;
+//protected:
+//    Stuff stuff{4};
+//};
+//
+//class Derived : public Base {
+//    friend struct W<Derived>;
+//
+//protected:
+//    Stuff stuff{5};
+//};
+//
+//template<typename T>
+//class LetMeIn : T {
+//    friend struct W<T>;
+//};
+//
+//template <>
+//struct W<Base> {
+//    static constexpr auto stuff = static_cast<Stuff(Base::*)>(&LetMeIn<Base>::stuff);
+//    int go(Derived & d) {
+//        return (d.*stuff).i;
+//    }
+//};
+//
+//template <>
+//struct W<Derived> {
+//    static constexpr auto stuff = static_cast<Stuff(Derived::*)>(&LetMeIn<Derived>::stuff);
+//    int go(Derived & d) {
+//        return (d.*stuff).i;
+//    }
+//};
+//
+//
+//
+//int main() {
+//    Derived d;
+//    return W<Base>().go(d) + W<Derived>().go(d);
+//}
+
 
 std::ostream & BindingsOutputStreamProvider::get_class_collection_stream() {
     this->count++;
@@ -112,11 +164,12 @@ struct BindingsProviderContainer {
         if (c.call_operator_member_function) {
             call_operator_vector.push_back(c.call_operator_member_function.get());
         }
-
+        
 
         auto provider = P::make_provider(
 //            std::pair("class", std::ref(c)), // ability to call another template on the same object
             std::pair("comment", c.comment),
+            std::pair("my_pimpl_members", c.get_pimpl_data_members(false)),
             std::pair("pimpl_members", c.get_pimpl_data_members()),
             std::pair("name", c.class_name),
             std::pair("js_name", c.get_js_name()),
@@ -164,20 +217,27 @@ struct BindingsProviderContainer {
             if (data_member.accessed_through->accessed_through != nullptr) {
                 log.error(LogT::Subjects::BindingsOutput, "Bindings output doesn't support multi-level PIMPL members: {}", data_member.long_name);
             } else {
+                // static_cast<int(Foo::Impl::*)>(&Foo::impl), &Foo::Impl::pimpl_int
                 result = fmt::format("static_cast<{}({}::*)>(&{}), &{}", 
                                      data_member.type.get_name(), data_member.wrapped_class.class_name,
                                      data_member.accessed_through->long_name, data_member.long_name);
             }
         }
-        std::cerr << fmt::format("For {}, returning add_member template parameter: {}", data_member.long_name, result) << std::endl;
+//        std::cerr << fmt::format("For {}, returning add_member template parameter: {}", data_member.long_name, result) << std::endl;
         return result;
     }
 
     static ProviderPtr get_provider(DataMember const & d) {
         log.info(LogSubjects::BindingsOutput, "get_provider DataMember: {} with dereferenced_type_class: {}", d.long_name, TypeInfo(get_type_from_dereferencing_type(d.type.type)).get_name());
 
+        std::string safe_variable_name(d.long_name);
+        std::replace(safe_variable_name.begin(), safe_variable_name.end(), ':', '_');
+        std::cerr << fmt::format("replaced {} to {}\n", d.long_name, safe_variable_name);
+
+
         return P::make_provider(
             std::pair("comment", d.comment),
+            std::pair("safe_variable_name", safe_variable_name),
             std::pair("name", d.long_name),
             std::pair("short_name", d.short_name),
             std::pair("js_name", d.js_name),
@@ -243,7 +303,7 @@ struct BindingsProviderContainer {
 
 
     static ProviderPtr get_provider(TypeInfo const & t) {
-        std::cerr << fmt::format("making provider for typeinfo: {}", t.type.getAsString()) << std::endl;
+//        std::cerr << fmt::format("making provider for typeinfo: {}", t.type.getAsString()) << std::endl;
         return P::make_provider(
             std::pair("name", t.get_name())
             );
@@ -283,6 +343,17 @@ struct BindingFile {
     std::set<WrappedClass const *> extern_templates;
     std::set<WrappedClass const *> explicit_instantiations;
     std::set<WrappedClass const *> explicit_instantiations_for_const_types;
+    
+    // order isn't guaranteed otherwise, but unit tests need guaranteed order
+    vector<WrappedClass const *> get_sorted_extern_templates() const {
+        vector<WrappedClass const *> result;
+        
+        for(auto c : this->extern_templates) {
+            result.push_back(c);
+        }
+        std::sort(result.begin(), result.end());
+        return result;
+    }
 
     // classes with private members to expose need to have WrapperBuilder<> specialized
     std::set<WrappedClass const *> class_needs_wrapper_builder_specialization;
@@ -290,7 +361,7 @@ struct BindingFile {
     std::vector<WrappedClass const *> const & get_classes() const {return this->classes;}
 
     void add_class(WrappedClass const * wrapped_class) {
-        std::cerr << fmt::format("adding to BindingFile: {} at address {}", wrapped_class->class_name, (void*)wrapped_class) << std::endl;
+//        std::cerr << fmt::format("adding to BindingFile: {} at address {}", wrapped_class->class_name, (void*)wrapped_class) << std::endl;
         this->classes.push_back(wrapped_class);
         this->declaration_count += wrapped_class->declaration_count;
         assert(this->max_declaration_count == 0 ||  // unlimited
@@ -385,7 +456,7 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("pimpl_classes", P::make_provider(std::ref(binding_file.class_needs_wrapper_builder_specialization))),
                 std::pair("classes", binding_file.get_classes()),
                 std::pair("includes", P::make_provider(binding_file.includes)),
-                std::pair("extern_templates", binding_file.extern_templates),
+                std::pair("extern_templates", binding_file.get_sorted_extern_templates()),
                 std::pair("explicit_instantiations", binding_file.explicit_instantiations),
                 std::pair("explicit_instantiations_for_const_types", binding_file.explicit_instantiations_for_const_types),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
@@ -541,7 +612,11 @@ template class v8toolkit::V8ClassWrapper<{{<name>}} const>;>}}
 {{<extern_templates|!!
 extern template {{name}}>}}
 
+
 namespace v8toolkit {
+
+{{classes|member_pointer_helper}}
+
 {{classes|wrapper_builder}}
 } // end namespace v8toolkit
 
@@ -562,12 +637,23 @@ Template standard_includes_template(R"(
 
 )");
 
+Template member_pointer_helper(R"(
+template <>
+struct v8toolkit::WrapperBuilder<{{name}}> {
+    {{my_pimpl_members|!!
+    static constexpr auto {{safe_variable_name}} = static_cast<{{type.name}}({{...name}}::*)>(&v8toolkit::LetMeIn<{{...name}}>::{{short_name}});}}
+    
+};
+
+)");
+
 
 std::map<string, Template> bindings_templates {
     std::pair("class", class_template),
     std::pair("file", file_template),
     std::pair("standard_includes", standard_includes_template),
-    std::pair("wrapper_builder", wrapper_builder_template)
+    std::pair("wrapper_builder", wrapper_builder_template),
+    std::pair("member_pointer_helper", member_pointer_helper)
 };
 
 

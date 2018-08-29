@@ -104,7 +104,7 @@ std::unique_ptr<ASTConsumer> PrintFunctionNamesAction::CreateASTConsumer(Compile
 PrintFunctionNamesAction::PrintFunctionNamesAction()
 
 {
-    std::cerr << fmt::format("RESETTING ALL VALUES IN FOR NEW ACTION") << std::endl;
+//    std::cerr << fmt::format("RESETTING ALL VALUES IN FOR NEW ACTION") << std::endl;
     WrappedClass::wrapped_classes.clear();
     WrappedClass::used_constructor_names.clear();
 //    PrintFunctionNamesAction::config_data_initialized = false;
@@ -120,7 +120,7 @@ PrintFunctionNamesAction::~PrintFunctionNamesAction()
 
 bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
                const std::vector<std::string> & args) {
-    std::cerr << fmt::format("Parsing args (updated assertion version)") << std::endl;
+//    std::cerr << fmt::format("Parsing args (updated assertion version)") << std::endl;
     bool first_argument = true;
     for (unsigned i = 0, e = args.size(); i < e; ++i) {
         llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
@@ -128,7 +128,7 @@ bool PrintFunctionNamesAction::ParseArgs(const CompilerInstance & CI,
         static xl::Regex config_file_regex("^--config-file=(.*)$");
         std::smatch match_results;
         if (args[i] == "--use-default-output-modules") {
-            std::cerr << fmt::format("Using default output modules") << std::endl;
+//            std::cerr << fmt::format("Using default output modules") << std::endl;
             output_modules.push_back(std::make_unique<javascript_stub_output::JavascriptStubOutputModule>());
             output_modules.push_back(std::make_unique<bindings_output::BindingsOutputModule>());
             output_modules.push_back(std::make_unique<bidirectional_output::BidirectionalOutputModule>());

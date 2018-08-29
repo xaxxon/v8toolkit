@@ -192,7 +192,7 @@ std::string get_include_string_for_fileid(FileID & file_id) {
     }
 
     auto result = string(text, (text_end - text) + 1);
-    std::cerr << fmt::format("returning {}", result) << std::endl;
+//    std::cerr << fmt::format("returning {}", result) << std::endl;
     return result;
 
 }
@@ -226,7 +226,7 @@ std::optional<std::string> get_root_include_for_decl(const TypeDecl * type_decl)
 
     auto full_source_loc_for_type_decl = FullSourceLoc(type_decl->getLocStart(), compiler_instance->getPreprocessor().getSourceManager());
     if (full_source_loc_for_type_decl.isInvalid()) {
-        std::cerr << fmt::format("no source lookup available for {} - maybe this is common for primitive types?", type_decl->getNameAsString()) << std::endl;
+//        std::cerr << fmt::format("no source lookup available for {} - maybe this is common for primitive types?", type_decl->getNameAsString()) << std::endl;
         return {};
     }
     const char * text = compiler_instance->getPreprocessor().getSourceManager().getCharacterData(full_source_loc_for_type_decl,

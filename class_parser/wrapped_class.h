@@ -159,7 +159,7 @@ public:
      */
     bool has_pimpl_members() const;
     
-    std::vector<DataMember *> get_pimpl_data_members() const;
+    std::vector<DataMember *> get_pimpl_data_members(bool with_inherited_members = true) const;
 
     /**
      * @return whether this type is a specialization of a template

@@ -4,9 +4,16 @@
 
 namespace v8toolkit {
 
+// This allows access to private/protected members of a class from the code
+//   setting up the bindings
 template<typename T>
 struct WrapperBuilder {
     static_assert(sizeof(T) == 0, "WrapperBuilder used for type that doesn't have a specialization");
+};
+
+template <typename T>
+struct LetMeIn : public T {
+    friend struct v8toolkit::WrapperBuilder<T>;
 };
 
 } // end namespace v8toolkit

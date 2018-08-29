@@ -810,15 +810,18 @@ void WrappedClass::parse_members() {
     });
 
     // make sure every pimpl member was found
-    std::cerr << fmt::format("pimpl: expected {} got {}", this->pimpl_data_member_names.size(), this->pimpl_data_members.size()) << std::endl;
-    auto all_pimpl_data_members = this->get_pimpl_data_members();
-    if (this->pimpl_data_member_names.size() != all_pimpl_data_members.size()) {
-        log.error(LogT::Subjects::Class,
-                  "Mismatched number of pimpl members specified vs found in {}: {} specified vs {} found - (specified: {}) (found: {})",
-                  this->short_name, this->pimpl_data_member_names.size(), all_pimpl_data_members.size(), xl::join(this->pimpl_data_member_names),
-            xl::join(xl::transform(all_pimpl_data_members, [](auto && e){return e->long_name;})));
+    if (this->decl != nullptr) { // bidirectional stuff doesn't work right here
+        std::cerr << fmt::format("pimpl: expected {} got {}", this->pimpl_data_member_names.size(),
+                                 this->pimpl_data_members.size()) << std::endl;
+        auto all_pimpl_data_members = this->get_pimpl_data_members();
+        if (this->pimpl_data_member_names.size() != all_pimpl_data_members.size()) {
+            log.error(LogT::Subjects::Class,
+                      "Mismatbiched number of pimpl members specified vs found in {}: {} specified vs {} found - (specified: {}) (found: {})",
+                      this->short_name, this->pimpl_data_member_names.size(), all_pimpl_data_members.size(),
+                      xl::join(this->pimpl_data_member_names),
+                      xl::join(xl::transform(all_pimpl_data_members, [](auto && e) { return e->long_name; })));
+        }
     }
-
 
     // none of the pimpl data members can have the same type - that would lead to duplicate names and there's
     //   currently no way to select different names based on PIMPL traversal
@@ -1484,7 +1487,7 @@ bool WrappedClass::has_pimpl_members() const {
 }
 
 
-std::vector<DataMember *> WrappedClass::get_pimpl_data_members() const {
+std::vector<DataMember *> WrappedClass::get_pimpl_data_members(bool with_inherited_members) const {
     
     assert(this->members_parsed);
 
@@ -1492,6 +1495,9 @@ std::vector<DataMember *> WrappedClass::get_pimpl_data_members() const {
     
     
     this->foreach_inheritance_level([&](WrappedClass const & wrapped_class) {
+        if (!with_inherited_members && &wrapped_class != this) {
+            return;
+        }
         std::cerr << fmt::format("getting {} pimpl members from {}\n", wrapped_class.pimpl_data_members.size(), wrapped_class.short_name);
         for (auto const & pimpl_member : wrapped_class.pimpl_data_members) {
             results.push_back(pimpl_member.get());

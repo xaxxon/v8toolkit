@@ -123,7 +123,7 @@ template<class T, class Callable, int_t<decltype(std::remove_if(begin(std::declv
 auto & erase_if2(T & container, Callable callable) {
     auto end_of_keep_elements = std::remove_if(begin(container), end(container), callable);
     container.erase(end_of_keep_elements, container.end());
-    std::cerr << fmt::format("new container size: {}", container.size()) << std::endl;
+//    std::cerr << fmt::format("new container size: {}", container.size()) << std::endl;
     return container;
 }
 
@@ -171,7 +171,7 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
                                               args);
     } catch (v8toolkit::class_parser::ClassParserException & e) {
         // nothing to do here
-        std::cerr << fmt::format("parse exception!!") << std::endl;
+//        std::cerr << fmt::format("parse exception!!") << std::endl;
     }
 
     std::cerr << fmt::format("wrapped class count: {}", WrappedClass::wrapped_classes.size()) << std::endl;
@@ -1514,13 +1514,18 @@ private:
     V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl; 
 };
 
-class B : public A {
+
+// Making this bidirectional makes sure it ignores pimpl sanity checks on generated bidirectional type
+class V8TOOLKIT_BIDIRECTIONAL_CLASS V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS B : public A {
+
     struct Impl;
     friend struct v8toolkit::WrapperBuilder<B>;
     V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
-};
 
-class C : public B {};
+public:
+    V8TOOLKIT_BIDIRECTIONAL_CONSTRUCTOR B(){};
+
+};
 
 
 struct A::Impl {
@@ -1614,8 +1619,8 @@ namespace v8toolkit {
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto A::impl = &A.impl;
-    static constexpr auto A::impl2 = &A.impl2;
+    static constexpr auto A__impl = &A.impl;
+    static constexpr auto A__impl2 = &A.impl2;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
@@ -1780,7 +1785,6 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
 
 
-#if 0
 // Not sure if this is supposed to work or not
 
 TEST_F(ClassParser, InheritancePimpl) {
@@ -1818,6 +1822,7 @@ TEST_F(ClassParser, InheritancePimpl) {
     struct B::Impl {
         int same_name;
     };
+
     )";
     
     auto action = new v8toolkit::class_parser::PrintFunctionNamesAction();
@@ -1898,6 +1903,8 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
     v8toolkit::WrapperBuilder<A>()(isolate);
     v8toolkit::WrapperBuilder<B>()(isolate);
 }
+
+
 )";
 
 //    EXPECT_EQ(bindings_output.str(), expected_bindings_result);
@@ -1905,7 +1912,6 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
 }
 
-#endif
 
 
 
