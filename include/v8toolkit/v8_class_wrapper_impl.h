@@ -2,7 +2,6 @@
 #pragma once
 #include <deque>
 
-
 #include <algorithm>
 #include <string>
 

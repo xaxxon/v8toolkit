@@ -94,7 +94,8 @@ bool generate_v8classwrapper_sfinae = true;
 // Top level types that will be immediately discarded
 vector<string> types_to_ignore_regex = {"^struct has_custom_process[<].*[>]::mixin$"};
 
-vector<string> includes_for_every_class_wrapper_file = {"\"js_casts.h\"", "<v8toolkit/v8_class_wrapper_impl.h>"};
+vector<string> includes_for_every_class_wrapper_file = {"<v8toolkit/javascript.h>",
+                                                        "<v8toolkit/v8_class_wrapper_impl.h>"};
 
 
 // sometimes files sneak in that just shouldn't be

@@ -54,7 +54,6 @@ struct vector_set {
 
 extern Template file_template;
 extern Template class_template;
-extern Template standard_includes_template;
 
 extern std::map<string, Template> bindings_templates;
 
@@ -232,7 +231,7 @@ struct BindingsProviderContainer {
 
         std::string safe_variable_name(d.long_name);
         std::replace(safe_variable_name.begin(), safe_variable_name.end(), ':', '_');
-        std::cerr << fmt::format("replaced {} to {}\n", d.long_name, safe_variable_name);
+//        std::cerr << fmt::format("replaced {} to {}\n", d.long_name, safe_variable_name);
 
 
         return P::make_provider(
@@ -354,6 +353,28 @@ struct BindingFile {
         std::sort(result.begin(), result.end());
         return result;
     }
+    
+    vector<WrappedClass const *> get_explicit_instantiations() const {
+        vector<WrappedClass const *> result;
+
+        for(auto c : this->explicit_instantiations) {
+            result.push_back(c);
+        }
+        std::sort(result.begin(), result.end());
+        return result;
+    }
+
+    vector<WrappedClass const *> get_explicit_instantiations_for_const_types() const {
+        vector<WrappedClass const *> result;
+
+        for(auto c : this->explicit_instantiations_for_const_types) {
+            result.push_back(c);
+        }
+        std::sort(result.begin(), result.end());
+        return result;
+
+    }
+
 
     // classes with private members to expose need to have WrapperBuilder<> specialized
     std::set<WrappedClass const *> class_needs_wrapper_builder_specialization;
@@ -457,9 +478,10 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("classes", binding_file.get_classes()),
                 std::pair("includes", P::make_provider(binding_file.includes)),
                 std::pair("extern_templates", binding_file.get_sorted_extern_templates()),
-                std::pair("explicit_instantiations", binding_file.explicit_instantiations),
-                std::pair("explicit_instantiations_for_const_types", binding_file.explicit_instantiations_for_const_types),
-                std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : "")
+                std::pair("explicit_instantiations", binding_file.get_explicit_instantiations()),
+                std::pair("explicit_instantiations_for_const_types", binding_file.get_explicit_instantiations_for_const_types()),
+                std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : ""),
+                std::pair("standard_includes", includes_for_every_class_wrapper_file)
             ),
             bindings_templates
         );
@@ -517,8 +539,8 @@ Template wrapper_builder_template(R"(
 template<>
 struct WrapperBuilder<{{name}}> \{{{#}}
 
-{{<<pimpl_members|!!
-    static constexpr auto {{name}} = &{{declared_in.name}}.{{short_name}};}}
+{{<<my_pimpl_members|!!
+    static constexpr auto {{short_name}} = &{{declared_in.name}}::{{short_name}};}}
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
@@ -537,17 +559,17 @@ struct WrapperBuilder<{{name}}> \{{{#}}
         class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
 {{<<pimpl_members.dereferenced_type_class.data_members|!!
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<...dereferenced_type_class.name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
-
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<....name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
+AA
 {{<<enums|!!
         class_wrapper.add_enum("{{<<name>>}}", \{{{<<elements%, |!{"{{name}}", {{value}}\}}}\});}}
-
+BB
 {{<<wrapper_extension_methods|!!
         {{<<method_name>>}}(class_wrapper);}}
-
+CC
 {{<<custom_extensions|!!
         {{<<>>}}>>}}
-
+DD
         class_wrapper.set_parent_type<{{<<base_type_name>}}>();
         class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
         class_wrapper.finalize(true);
@@ -573,8 +595,8 @@ nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
-{{<<pimpl_members|!{{data_members|!!
-    add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &B::Impl::b_impl_int>("b_impl_int");}}}}
+{{#<<pimpl_members|!{{data_members|!!
+    add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &{{type.name}}>("");}}}}
 
 {{<<enums|!!
     class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});}}
@@ -595,10 +617,12 @@ nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 
 
 Template file_template(R"(
-{{!standard_includes}}
+{{standard_includes|!!
+#include {{<>}}>}}
+
 // includes
 {{<includes|!!
-#include {{<include>}}>}}
+#include {{<>}}>}}
 // /includes
 
 // explicit instantiations
@@ -609,13 +633,13 @@ template class v8toolkit::V8ClassWrapper<{{<name>}} const>;>}}
 
 // /explicit instantiations
 
+
 {{<extern_templates|!!
 extern template {{name}}>}}
 
 
 namespace v8toolkit {
 
-{{classes|member_pointer_helper}}
 
 {{classes|wrapper_builder}}
 } // end namespace v8toolkit
@@ -631,29 +655,21 @@ void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & is
 )");
 
 
-Template standard_includes_template(R"(
-#include "js_casts.h"
-#include <v8toolkit/v8_class_wrapper_impl.h>
-
-)");
-
-Template member_pointer_helper(R"(
-template <>
-struct v8toolkit::WrapperBuilder<{{name}}> {
-    {{my_pimpl_members|!!
-    static constexpr auto {{safe_variable_name}} = static_cast<{{type.name}}({{...name}}::*)>(&v8toolkit::LetMeIn<{{...name}}>::{{short_name}});}}
-    
-};
-
-)");
+//Template member_pointer_helper(R"(
+//template <>
+//struct v8toolkit::WrapperBuilder<{{name}}> {
+//    {{<<my_pimpl_members|!!
+//    static constexpr auto {{short_name}} = static_cast<{{dereferenced_type_class.name}}({{...name}}::*)>(&v8toolkit::LetMeIn<{{...name}}>::{{short_name}});>>}}
+//};
+//
+//)");
 
 
 std::map<string, Template> bindings_templates {
     std::pair("class", class_template),
     std::pair("file", file_template),
-    std::pair("standard_includes", standard_includes_template),
-    std::pair("wrapper_builder", wrapper_builder_template),
-    std::pair("member_pointer_helper", member_pointer_helper)
+    std::pair("wrapper_builder", wrapper_builder_template)
+//    std::pair("member_pointer_helper", member_pointer_helper)
 };
 
 

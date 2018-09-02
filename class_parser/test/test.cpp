@@ -3,11 +3,13 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshadow"
 #include "clang/Tooling/Tooling.h"
 #pragma clang diagnostic pop
+
 
 #include "../ast_action.h"
 #include "../log.h"
@@ -132,25 +134,59 @@ auto && erase_if2(T && container, Callable callable) {
     return std::move(erase_if2(container, std::move(callable)));
 }
 
-auto run_code(std::string source, PrintFunctionNamesAction * action, vector<unique_ptr<OutputModule>> output_modules = {}) {
+auto run_code(std::string source, PrintFunctionNamesAction * action, vector<unique_ptr<OutputModule>> output_modules = {}, bool run_plugin = true) {
+    
     assert(action != nullptr);
 
     static std::string source_prefix = R"(
         #include "wrapped_class_base.h"
         #include "class_parser.h"
+#define XL_USE_LIB_FMT
+
 )";
+    
+    std::string actual_source = source_prefix + source;
+
+    std::cerr << fmt::format("running code (including prefix):\n{}\n", actual_source);
+
+
+
 
     // vector crashes on cleanup for unknown reason so just leak it
     std::vector<std::string> args{
-        "-std=c++17",
+        "-std=c++17",                     // CANNOT HAVE SPACES IN THESE
+        "-I../../../include/",            // INSTEAD MADE A SECOND ENTRY IN 
+        "-I../../include/",               // VECTOR
+        "-I../../../../include/",
+        "-I../../../../../include/",
+        "-I../../../../../../include/",
+        "-I../../../class_parser/",
+        "-I../../../../class_parser/",
+        "-I/Users/xaxxon/v8toolkit/class_parser/",
+        "-I/Users/xaxxon/v8toolkit/include",
+        "-I/Users/xaxxon/v8/include", 
+        "-I../class_parser/",
+        "-I../../class_parser/",
+        "-I../include/",
         "-I" CLANG_HOME "/include/c++/v1/",
         "-I" CLANG_HOME "/lib/clang/6.0.0/include/",
 
         // why doesn't this seem to get passed to the plugin?
-        "-Wall", /*"-Werror",*/ "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
+        "-Wall", /*"-Werror",*/ 
     };
+    
+    std::vector<std::string> plugin_args {
+        "-Xclang", "-plugin-arg-v8toolkit-generate-bindings", "-Xclang", "--config-file=test_plugin_config_file.json"
+    };
+    
+    if (run_plugin) {
+        args.insert(args.end(), plugin_args.begin(), plugin_args.end());
+    } else {
+//        args.push_back("-print-search-dirs");
+    }
 
-
+    std::cerr << fmt::format("running with arguments:\n{}\n", xl::join(args,"\n"));
+    
 //    // there's a bug during cleanup if this object is destroyed, so just leak it
 //    action = new v8toolkit::class_parser::PrintFunctionNamesAction();
 //    action->config_data = std::move(json);
@@ -167,7 +203,7 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
     // This call calls delete on action
     try {
         clang::tooling::runToolOnCodeWithArgs(action,
-                                              source_prefix + source,
+                                              actual_source,
                                               args);
     } catch (v8toolkit::class_parser::ClassParserException & e) {
         // nothing to do here
@@ -606,7 +642,6 @@ TEST_F(ClassParser, CustomExtensions) {
 
 
     environment->expect_errors();
-    std::cerr << fmt::format("HERE") << std::endl;
     auto pruned_vector = run_code(source);
     EXPECT_EQ(environment->expect_no_errors(), 3);
 
@@ -1445,10 +1480,10 @@ struct A::Impl {
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 2); // missing impl2 in class but specified in attribute and missing friend declaration
+    EXPECT_EQ(environment->expect_no_errors(), 1); // missing impl2 in class but specified in attribute
 }
 
-
+// THIS USED TO BE A PROBLEM BUT IS NOW ALLOWED
 TEST_F(ClassParser, MissingFriendPimplTest) {
 
     std::string source = R"(
@@ -1472,9 +1507,7 @@ struct A::Impl {
 
 )";
 
-    environment->expect_errors();
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 1); // missing friend 
 }
 
 TEST_F(ClassParser, MissingPimplTypeDefinitionTest) {
@@ -1598,10 +1631,7 @@ std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST 
     EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} public_int_member\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n/**\n * @class Impl\n * @property {Number} pimpl_int\n */\nclass Impl\n{\n\n\n\n} // end class Impl\n\n\n\n/**\n * @class Impl2\n * @property {String} pimpl2_string\n */\nclass Impl2\n{\n\n\n\n} // end class Impl2\n\n\n\n");
 
     std::string expected_bindings_result = R"(
-
-#include "js_casts.h"
 #include <v8toolkit/v8_class_wrapper_impl.h>
-
 
 // includes
 #include <memory>
@@ -1613,14 +1643,18 @@ template class v8toolkit::V8ClassWrapper<A>;
 // /explicit instantiations
 
 
+
+
 namespace v8toolkit {
+
+
 
 
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto A__impl = &A.impl;
-    static constexpr auto A__impl2 = &A.impl2;
+    static constexpr auto impl = &A::impl;
+    static constexpr auto impl2 = &A::impl2;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
@@ -1628,8 +1662,8 @@ struct WrapperBuilder<A> {
 
         class_wrapper.add_member<&A::public_int_member>("public_int_member");
 
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl>::impl, &A::Impl::pimpl_int>("pimpl_int");
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl2>::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl, &A::Impl::pimpl_int>("pimpl_int");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("A", isolate);
     }
@@ -1646,6 +1680,8 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
     EXPECT_EQ(bindings_output.str(), expected_bindings_result);
 
+    auto action2 = new v8toolkit::class_parser::PrintFunctionNamesAction();
+    run_code(source + bindings_output.str(), action2, std::move(output_modules), false);
 //
 //    EXPECT_EQ(c.get_member_functions().size(), 0);
 //    EXPECT_TRUE(c.call_operator_member_function);
@@ -1660,7 +1696,6 @@ TEST_F(ClassParser, PimplOnMemberTest) {
     #include "class_parser.h"
 
     class A : public v8toolkit::WrappedClassBase {
-        friend struct v8toolkit::WrapperBuilder<A>;
 
     private:
         struct Impl;
@@ -1681,7 +1716,6 @@ TEST_F(ClassParser, PimplOnMemberTest) {
     };
 
     class B : public v8toolkit::WrappedClassBase {
-        friend struct v8toolkit::WrapperBuilder<B>;
 
    
     };
@@ -1716,7 +1750,6 @@ TEST_F(ClassParser, PimplOnMemberTest) {
 
     std::string expected_bindings_result = R"(
 
-#include "js_casts.h"
 #include <v8toolkit/v8_class_wrapper_impl.h>
 
 
@@ -1731,21 +1764,25 @@ template class v8toolkit::V8ClassWrapper<B>;
 // /explicit instantiations
 
 
+
+
 namespace v8toolkit {
+
+
 
 
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto A::impl = &A.impl;
-    static constexpr auto A::impl2 = &A.impl2;
+    static constexpr auto impl = &A.impl;
+    static constexpr auto impl2 = &A.impl2;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
         class_wrapper.set_class_name("A");
 
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl>::impl, &A::Impl::pimpl_int>("pimpl_int");
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl2>::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl, &A::Impl::pimpl_int>("pimpl_int");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("A", isolate);
     }
@@ -1793,7 +1830,6 @@ TEST_F(ClassParser, InheritancePimpl) {
     #include "class_parser.h"
 
     class A : public v8toolkit::WrappedClassBase {
-        friend struct v8toolkit::WrapperBuilder<A>;
 
     public:
         struct Impl;
@@ -1809,7 +1845,6 @@ TEST_F(ClassParser, InheritancePimpl) {
     
 
     class B : public A {
-        friend struct v8toolkit::WrapperBuilder<B>;
 
     public:
         struct Impl;
@@ -1842,7 +1877,6 @@ TEST_F(ClassParser, InheritancePimpl) {
 
     std::string expected_bindings_result = R"(
 
-#include "js_casts.h"
 #include <v8toolkit/v8_class_wrapper_impl.h>
 
 
@@ -1857,19 +1891,36 @@ template class v8toolkit::V8ClassWrapper<B>;
 // /explicit instantiations
 
 
+
 namespace v8toolkit {
+
+
+template <>
+struct v8toolkit::WrapperBuilder<A> {
+        static constexpr auto impl = static_cast<A::Impl(A::*)>(&v8toolkit::LetMeIn<A>::impl);
+};
+
+
+
+template <>
+struct v8toolkit::WrapperBuilder<B> {
+        static constexpr auto impl = static_cast<B::Impl(B::*)>(&v8toolkit::LetMeIn<B>::impl);
+};
+
+
+
 
 
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto A::impl = &A.impl;
+    static constexpr auto impl = &A.impl;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
         class_wrapper.set_class_name("A");
 
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl>::impl, &A::Impl::same_name>("same_name");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl, &A::Impl::same_name>("same_name");
         class_wrapper.set_compatible_types<B>();
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("A", isolate);
@@ -1881,15 +1932,14 @@ struct WrapperBuilder<A> {
 template<>
 struct WrapperBuilder<B> {
 
-    static constexpr auto A::impl = &A.impl;
-    static constexpr auto B::impl = &B.impl;
+    static constexpr auto impl = &B::impl;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<B> & class_wrapper = isolate.wrap_class<B>();
         class_wrapper.set_class_name("B");
 
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A::Impl>::impl, &A::Impl::same_name>("same_name");
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<B::Impl>::impl, &B::Impl::same_name>("same_name");A>();
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl, &A::Impl::same_name>("same_name");
+        class_wrapper.add_member<v8toolkit::WrapperBuilder<B>::impl, &B::Impl::same_name>("same_name");
         class_wrapper.finalize(true);
         class_wrapper.expose_static_methods("B", isolate);
     }
@@ -1903,8 +1953,6 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
     v8toolkit::WrapperBuilder<A>()(isolate);
     v8toolkit::WrapperBuilder<B>()(isolate);
 }
-
-
 )";
 
 //    EXPECT_EQ(bindings_output.str(), expected_bindings_result);

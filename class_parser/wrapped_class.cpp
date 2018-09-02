@@ -884,9 +884,6 @@ bool WrappedClass::should_be_parsed() const {
 
 bool WrappedClass::should_be_wrapped() const {
     
-    if (xl::regexer(this->class_name, "A")) {
-        std::cerr << fmt::format("HERE\n");
-    }
 
     log.info(LogSubjects::Subjects::ShouldBeWrapped, "In 'should be wrapped' with class {}, annotations: {}", this->class_name, join(annotations.get()));
 
@@ -1414,12 +1411,13 @@ void WrappedClass::validate_data() {
             }
         }
         
-        if (!found_wrapper_builder) {
-            log.error(LogT::Subjects::Class, "{} has PIMPL types {} but does not have required friend class v8toolkit::WrapperBuilder<{}>",
-                      this->class_name, pimpl_type->type.get_name(), pimpl_type->declared_in.class_name);
-        } else {
-            log.info(LogT::Subjects::Class, "Found expected WrapperBuilder in type {}", this->short_name);
-        }
+        // this is no longer needed with the new LetMeIn type
+//        if (!found_wrapper_builder) {
+//            log.error(LogT::Subjects::Class, "{} has PIMPL types {} but does not have required friend class v8toolkit::WrapperBuilder<{}>",
+//                      this->class_name, pimpl_type->type.get_name(), pimpl_type->declared_in.class_name);
+//        } else {
+//            log.info(LogT::Subjects::Class, "Found expected WrapperBuilder in type {}", this->short_name);
+//        }
     }
     
     
@@ -1498,13 +1496,12 @@ std::vector<DataMember *> WrappedClass::get_pimpl_data_members(bool with_inherit
         if (!with_inherited_members && &wrapped_class != this) {
             return;
         }
-        std::cerr << fmt::format("getting {} pimpl members from {}\n", wrapped_class.pimpl_data_members.size(), wrapped_class.short_name);
         for (auto const & pimpl_member : wrapped_class.pimpl_data_members) {
             results.push_back(pimpl_member.get());
         }
     });
     
-    std::cerr << fmt::format("returning {} results for {}\n", results.size(), this->short_name);
+//    std::cerr << fmt::format("returning {} results for {}\n", results.size(), this->short_name);
     return results;
 }
 

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef V8TOOLKIT_WRAPPED_CLASS_BASE_H
+#define V8TOOLKIT_WRAPPED_CLASS_BASE_H
 
 namespace v8toolkit {
     /**
@@ -10,3 +11,5 @@ namespace v8toolkit {
     class WrappedClassBase {};
 
 }
+
+#endif

@@ -37,7 +37,7 @@ QualType get_type_from_dereferencing_type(QualType type) {
 
     if (type->isAnyPointerType()) {
         auto result = type->getPointeeType();
-        std::cerr << fmt::format("type is a pointer, so returning pointee type {}", result.getAsString()) << std::endl;
+//        std::cerr << fmt::format("type is a pointer, so returning pointee type {}", result.getAsString()) << std::endl;
         return result.getCanonicalType();
     } else {
         if (auto decl = type->getAsCXXRecordDecl()) {
