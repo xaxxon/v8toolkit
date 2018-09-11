@@ -171,6 +171,7 @@ struct BindingsProviderContainer {
             std::pair("my_pimpl_members", c.get_pimpl_data_members(false)),
             std::pair("pimpl_members", c.get_pimpl_data_members()),
             std::pair("name", c.class_name),
+            std::pair("short_name", c.short_name),
             std::pair("js_name", c.get_js_name()),
             std::pair("data_members", c.get_members()),
             std::pair("member_functions", std::ref(c.get_member_functions())),
@@ -304,7 +305,8 @@ struct BindingsProviderContainer {
     static ProviderPtr get_provider(TypeInfo const & t) {
 //        std::cerr << fmt::format("making provider for typeinfo: {}", t.type.getAsString()) << std::endl;
         return P::make_provider(
-            std::pair("name", t.get_name())
+            std::pair("name", t.get_name()),
+            std::pair("short_name", t.get_wrapped_class() ? t.get_wrapped_class()->short_name : t.get_name())
             );
     }
 
@@ -407,7 +409,7 @@ std::vector<std::string> get_class_body(std::vector<WrappedClass const *> classe
         if (c->has_pimpl_members()) {
             results.emplace_back(fmt::format("v8toolkit::WrapperBuilder<{}>()(isolate);", c->class_name));
         } else {
-            results.emplace_back(bindings_templates["class"].fill<BindingsProviderContainer>(*c));
+            results.emplace_back(*bindings_templates["class"].fill<BindingsProviderContainer>(*c));
         }
     }
     return results;
@@ -487,8 +489,8 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
         );
 
         log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
-        log.info(LogSubjects::Subjects::BindingsOutput, template_result);
-        output_stream << template_result << std::flush;
+        log.info(LogSubjects::Subjects::BindingsOutput, *template_result);
+        output_stream << *template_result << std::flush;
     }
 
 //    cerr << "Classes used that were not wrapped:" << endl;
@@ -536,47 +538,56 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 
 Template wrapper_builder_template(R"(
 
+{{# This makes the 'friend'-ness show up }}
+extern template struct ::v8toolkit::LetMeIn<{{name}}>;
+
 template<>
 struct WrapperBuilder<{{name}}> \{{{#}}
 
 {{<<my_pimpl_members|!!
-    static constexpr auto {{short_name}} = &{{declared_in.name}}::{{short_name}};}}
-
-    void operator()(v8toolkit::Isolate & isolate) {
-        v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
-        class_wrapper.set_class_name("{{js_name}}");{{#}}
-
-{{<<member_functions|!!
-        class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});}}
-
-{{<<call_operator|!!
-        class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
-
-{{<<static_functions|!!
-        class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
-
-{{<<data_members|!!
-        class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
-
-{{<<pimpl_members.dereferenced_type_class.data_members|!!
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<....name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
-AA
-{{<<enums|!!
-        class_wrapper.add_enum("{{<<name>>}}", \{{{<<elements%, |!{"{{name}}", {{value}}\}}}\});}}
-BB
-{{<<wrapper_extension_methods|!!
-        {{<<method_name>>}}(class_wrapper);}}
-CC
-{{<<custom_extensions|!!
-        {{<<>>}}>>}}
-DD
-        class_wrapper.set_parent_type<{{<<base_type_name>}}>();
-        class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
-        class_wrapper.finalize(true);
-        {{constructor}}
-    }
+    static constexpr auto {{short_name}} = static_cast<{{type.name}}({{...name}}::*)>(&v8toolkit::LetMeIn<{{...name}}>::{{short_name}});}}
 };
 )");
+
+// ...name = A
+// type.short_name = impl (this is wrong - it's picking up "short name" off the variable, not the type
+// 
+
+
+// THIS USED TO BE IN WRAPPERBUILDER
+//void operator()(v8toolkit::Isolate & isolate) {
+//    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
+//    class_wrapper.set_class_name("{{js_name}}");{{#}}
+//
+//    {{<<member_functions|!!
+//                class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});}}
+//
+//    {{<<call_operator|!!
+//                class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
+//
+//    {{<<static_functions|!!
+//                class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
+//
+//    {{<<data_members|!!
+//                class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
+//
+//    {{<<pimpl_members.dereferenced_type_class.data_members|!!
+//                class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<....name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
+//    AA
+//    {{<<enums|!!
+//                class_wrapper.add_enum("{{<<name>>}}", \{{{<<elements%, |!{"{{name}}", {{value}}\}}}\});}}
+//    BB
+//    {{<<wrapper_extension_methods|!!
+//                {{<<method_name>>}}(class_wrapper);}}
+//    CC
+//    {{<<custom_extensions|!!
+//                {{<<>>}}>>}}
+//    DD
+//    class_wrapper.set_parent_type<{{<<base_type_name>}}>();
+//    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
+//    class_wrapper.finalize(true);
+//    {{constructor}}
+//}
 
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
@@ -641,7 +652,7 @@ extern template {{name}}>}}
 namespace v8toolkit {
 
 
-{{classes|wrapper_builder}}
+{{classes|wrapper_builder}}{{#}}
 } // end namespace v8toolkit
 
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok

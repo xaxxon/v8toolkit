@@ -210,7 +210,7 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
 //        std::cerr << fmt::format("parse exception!!") << std::endl;
     }
 
-    std::cerr << fmt::format("wrapped class count: {}", WrappedClass::wrapped_classes.size()) << std::endl;
+//    std::cerr << fmt::format("wrapped class count: {}", WrappedClass::wrapped_classes.size()) << std::endl;
     auto result = erase_if2(copy(WrappedClass::wrapped_classes), [](std::unique_ptr<WrappedClass> const & c){
         auto result = !c->should_be_wrapped();
 //        std::cerr << fmt::format("checking to see if {} should be removed: {}", c->short_name, result) << std::endl;
@@ -1578,6 +1578,7 @@ struct B::Impl {};
 TEST_F(ClassParser, PimplTest) {
     std::string source = R"(
     #include <memory>
+    #include <string>
     #include "class_parser.h"
 
 //    class V8TOOLKIT_USE_PIMPL(A::impl) V8TOOLKIT_USE_PIMPL(A::impl2) V8TOOLKIT_DO_NOT_WRAP_CONSTRUCTORS A : public v8toolkit::WrappedClassBase {
@@ -1604,7 +1605,7 @@ TEST_F(ClassParser, PimplTest) {
     };
 
     struct A::Impl2 {
-        char * pimpl2_string;
+        std::string pimpl2_string;
     };
 )";
 
@@ -1631,6 +1632,7 @@ std::cerr << fmt::format("Just set config data initialized = TRUE in PIMPL TEST 
     EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} public_int_member\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n/**\n * @class Impl\n * @property {Number} pimpl_int\n */\nclass Impl\n{\n\n\n\n} // end class Impl\n\n\n\n/**\n * @class Impl2\n * @property {String} pimpl2_string\n */\nclass Impl2\n{\n\n\n\n} // end class Impl2\n\n\n\n");
 
     std::string expected_bindings_result = R"(
+#include <v8toolkit/javascript.h>
 #include <v8toolkit/v8_class_wrapper_impl.h>
 
 // includes
@@ -1693,11 +1695,12 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 TEST_F(ClassParser, PimplOnMemberTest) {
     std::string source = R"(
     #include <memory>
+    #include <string>
     #include "class_parser.h"
 
     class A : public v8toolkit::WrappedClassBase {
 
-    private:
+    protected:
         struct Impl;
         V8TOOLKIT_SKIP V8TOOLKIT_PIMPL std::unique_ptr<Impl> impl;
 
@@ -1712,7 +1715,7 @@ TEST_F(ClassParser, PimplOnMemberTest) {
     };
 
     struct A::Impl2 {
-        char * pimpl2_string;
+        std::string pimpl2_string;
     };
 
     class B : public v8toolkit::WrappedClassBase {
@@ -1749,9 +1752,8 @@ TEST_F(ClassParser, PimplOnMemberTest) {
 //    EXPECT_EQ(javascript_stub_output.str(), "\n\n\n/**\n * @class A\n * @property {Number} pimpl_int\n * @property {String} pimpl2_string\n */\nclass A\n{\n\n\n\n} // end class A\n\n\n\n");
 
     std::string expected_bindings_result = R"(
-
+#include <v8toolkit/javascript.h>
 #include <v8toolkit/v8_class_wrapper_impl.h>
-
 
 // includes
 #include <memory>
@@ -1774,8 +1776,8 @@ namespace v8toolkit {
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto impl = &A.impl;
-    static constexpr auto impl2 = &A.impl2;
+    static constexpr auto impl = &A::impl;
+    static constexpr auto impl2 = &A::impl2;
 
     void operator()(v8toolkit::Isolate & isolate) {
         v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
@@ -1813,6 +1815,9 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
     EXPECT_EQ(bindings_output.str(), expected_bindings_result);
 
+    auto action2 = new v8toolkit::class_parser::PrintFunctionNamesAction();
+    run_code(source + bindings_output.str(), action2, std::move(output_modules), false);
+    
 //
 //    EXPECT_EQ(c.get_member_functions().size(), 0);
 //    EXPECT_TRUE(c.call_operator_member_function);

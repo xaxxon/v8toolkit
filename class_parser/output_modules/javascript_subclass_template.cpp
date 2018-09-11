@@ -137,7 +137,7 @@ void JavascriptSubclassTemplateOutputModule::process(std::vector < WrappedClass 
                  c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
 
-        ostream << bidirectional_templates["class"].template fill<JavascriptSubclassTemplateProviderContainer>(std::ref(*c), bidirectional_templates);
+        ostream << *bidirectional_templates["class"].template fill<JavascriptSubclassTemplateProviderContainer>(std::ref(*c), bidirectional_templates);
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished javascript subclass template output module");

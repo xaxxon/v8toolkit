@@ -370,8 +370,28 @@ void WrappedClass::parse_all_methods() {
 
     // use decls not methods because methods doesn't give templated functions
     for (Decl * current_decl : this->decl->decls()) {
+        
+        if (auto named_decl = dyn_cast<NamedDecl>(current_decl)) {
+            std::cerr << fmt::format("in {}, looking at named decl {} - {} vs {}\n", 
+                this->class_name, named_decl->getNameAsString(),
+                                     (void*)this->decl, (void*)named_decl 
+                );
+            
+            // Every class has itself as a nested decl, so skip it
+            if (auto nested_record_decl = dyn_cast<CXXRecordDecl>(current_decl)) {
+                std::cerr << fmt::format("it's a record decl, too\n");
+                if (this->decl->getTypeForDecl() == nested_record_decl->getTypeForDecl()) {
+                    std::cerr << fmt::format("skipping nested decl with same type as parent\n");
+                    this->my_other_decl = nested_record_decl;
+                    continue;
+                }
+                this->nested_record_decls.push_back(nested_record_decl);
+            }
+        }
+        
 
         if (auto using_shadow_decl = dyn_cast<UsingShadowDecl>(current_decl)) {
+            
 //            std::cerr << fmt::format("GOT USING SHADOW DECL") << std::endl;
             auto target_decl = using_shadow_decl->getTargetDecl();
 //            std::cerr << fmt::format("target decl name: {}", target_decl->getNameAsString()) << std::endl;
@@ -1115,9 +1135,6 @@ WrappedClass & WrappedClass::get_or_insert_wrapped_class(const CXXRecordDecl * d
 
 //    std::cerr << fmt::format("get or insert wrapped class for {} with found method: {}", class_name, found_method) << std::endl;
 
-    if (xl::regexer(class_name, "A")) {
-        std::cerr << fmt::format("HERE\n");
-    }
 
     // if this decl isn't a definition, get the actual definition
     if (!decl->isThisDeclarationADefinition()) {
@@ -1234,6 +1251,18 @@ decltype(WrappedClass::log_watcher.errors) const & WrappedClass::get_errors() co
 
 void WrappedClass::validate_data() {
 
+
+    std::cerr << fmt::format("validating {}\n", this->class_name);
+    for (auto nested_record_decl : this->nested_record_decls) {
+        std::cerr << fmt::format("finding match for nested class {}\n", nested_record_decl->getNameAsString());
+        if (auto nested_wrapped_class = WrappedClass::get_wrapped_class(nested_record_decl)) {
+            std::cerr << fmt::format("{}'s decl is marked as being nested in {}\n",
+                                     nested_wrapped_class->class_name, this->class_name);
+            nested_wrapped_class->nested_in = this;
+        } else {
+            log.error(LogT::Subjects::Class, "Couldn't find wrapped class for: {}", nested_record_decl->getNameAsString());
+        }
+    }
 //
 //    for (auto & pimpl_member : this->pimpl_data_members) {
 //
@@ -1390,7 +1419,7 @@ void WrappedClass::validate_data() {
             std::cerr << fmt::format("{} not declared in {}, skipping", pimpl_type->long_name, this->class_name) << std::endl;
             continue;
         }
-        bool found_wrapper_builder = false;
+//        bool found_wrapper_builder = false;
         std::cerr << fmt::format("{} has friends? {}", this->class_name, this->decl->hasFriends()) << std::endl;
         for (FriendDecl * f : this->decl->friends()) {
             std::cerr << fmt::format("friend decl: {}, friend type: {}", (void *) f, (void *) f->getFriendType())
@@ -1402,13 +1431,16 @@ void WrappedClass::validate_data() {
             }
 
             auto friend_name = get_type_string(f->getFriendType()->getType().getCanonicalType());
-            std::cerr
-                << fmt::format("checking friend name to see if it's the correct wrapper builder: {}", friend_name)
-                << std::endl;
-            if (friend_name == fmt::format("v8toolkit::WrapperBuilder<{}>", pimpl_type->declared_in.class_name)) {
-                found_wrapper_builder = true;
-                break;
-            }
+            
+            
+            // no longer needed with LetMeIn class
+//            std::cerr
+//                << fmt::format("checking friend name to see if it's the correct wrapper builder: {}", friend_name)
+//                << std::endl;
+//            if (friend_name == fmt::format("v8toolkit::WrapperBuilder<{}>", pimpl_type->declared_in.class_name)) {
+//                found_wrapper_builder = true;
+//                break;
+//            }
         }
         
         // this is no longer needed with the new LetMeIn type
@@ -1466,11 +1498,23 @@ std::string const & WrappedClass::get_js_name() const {
 
 
 WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
-    for(auto & c : WrappedClass::wrapped_classes) {
+    for (auto & c : WrappedClass::wrapped_classes) {
+        std::cerr << fmt::format("checking {} for match vs {} ({} (or {}) vs {})\n",
+                                 c->class_name, get_canonical_name_for_decl(decl),
+                                 (void *) c->decl, (void *) c->my_other_decl, (void *) decl
+        );
         if (c->decl == decl) {
+            std::cerr << fmt::format("found match!\n");
             return c.get();
         }
+
+        if (c->decl->getTypeForDecl() == decl->getTypeForDecl()) {
+            std::cerr << fmt::format("found match (method 2)\n");
+            return c.get();
+        }
+       
     }
+    std::cerr << fmt::format("no match vs {} found\n", decl->getNameAsString());
     return nullptr;
 }
 

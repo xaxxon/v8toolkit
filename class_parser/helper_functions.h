@@ -84,6 +84,8 @@ std::string remove_reference_from_type_string(std::string const & type_string);
 std::string remove_local_const_from_type_string(std::string const & type_string);
 std::string make_macro_safe_comma(std::string const & input);
 
+// take a templated type and a named set of templated substitutions and return the string representation of the resulting
+//   type with the new types plugged in
 std::string substitute_type(QualType const & original_type, std::unordered_map<std::string, QualType> template_types);
 
 

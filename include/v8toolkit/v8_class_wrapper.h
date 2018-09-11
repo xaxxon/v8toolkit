@@ -610,7 +610,9 @@ private:
 		}
 		// for an unwrapped type, always try to make a copy and do a move assignment from it
 		else {
-			member_getter(cpp_object) = CastToNative<MemberT>()(isolate, value);
+			auto native_value = CastToNative<MemberT>()(isolate, value);
+			static_assert(!std::is_pointer_v<MemberT>, "Cannot assign to a non-wrapped type pointer - Who would own the memory?");
+			member_getter(cpp_object) = std::move(native_value);
 		}
 
 

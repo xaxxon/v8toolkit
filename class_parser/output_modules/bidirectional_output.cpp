@@ -209,8 +209,9 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
                  c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
         auto result = bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), bidirectional_templates);
-        log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name, result);
-        ostream << result;
+        log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name, *result);
+        
+        ostream << *result;
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");

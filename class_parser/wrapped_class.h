@@ -58,8 +58,15 @@ private:
     std::vector<std::string> pimpl_data_member_names; // names stored from class attribute
     std::vector<std::unique_ptr<DataMember>> pimpl_data_members; // actual data member objects in class
 
+    std::vector<CXXRecordDecl const *> nested_record_decls;
+    
+    // if this class is nested in another, this will point to it, otherwise nullptr
+    WrappedClass const * nested_in = nullptr;
 
 public:
+
+    std::vector<CXXRecordDecl const *> const & get_nested_record_decls() {return this->nested_record_decls;}
+    
     // name of type that is guaranteed valid c++ (with appropriate included headers)
     std::string class_name;
 
@@ -86,6 +93,7 @@ public:
 
 
     CXXRecordDecl const * decl = nullptr;
+    CXXRecordDecl const * my_other_decl = nullptr;
 
     // if this wrapped class is a template instantiation, what was it patterned from -- else nullptr
     CXXRecordDecl const * instantiation_pattern = nullptr;

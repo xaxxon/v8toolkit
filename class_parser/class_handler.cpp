@@ -318,6 +318,7 @@ void ClassHandler::onEndOfTranslationUnit() {
                 log.info(LogT::Subjects::Class, "ERROR SUMMARY: in {}: '{}'", c->class_name, error.string);
                 found_data_error = true;
             }
+          
         }
         if (found_data_error) {
             

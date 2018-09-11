@@ -79,6 +79,7 @@ public:
   operator QualType() { return this->type; }
   
   WrappedClass * get_wrapped_class() const;
+  
 };
 
 } // end namespace v8toolkit::class_parser
