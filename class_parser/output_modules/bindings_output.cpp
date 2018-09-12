@@ -67,58 +67,9 @@ bool BindingsCriteria::operator()(WrappedClass const & c) {
     return true;
 }
 
-//
-//MAKE THIS HAPPEN
-//#include <string>
-//
-//struct Stuff {
-//    int i;
-//};
-//
-//template<typename T>
-//struct W;
-//
-//class Base {
-//    friend struct W<Base>;
-//protected:
-//    Stuff stuff{4};
-//};
-//
-//class Derived : public Base {
-//    friend struct W<Derived>;
-//
-//protected:
-//    Stuff stuff{5};
-//};
-//
-//template<typename T>
-//class LetMeIn : T {
-//    friend struct W<T>;
-//};
-//
-//template <>
-//struct W<Base> {
-//    static constexpr auto stuff = static_cast<Stuff(Base::*)>(&LetMeIn<Base>::stuff);
-//    int go(Derived & d) {
-//        return (d.*stuff).i;
-//    }
-//};
-//
-//template <>
-//struct W<Derived> {
-//    static constexpr auto stuff = static_cast<Stuff(Derived::*)>(&LetMeIn<Derived>::stuff);
-//    int go(Derived & d) {
-//        return (d.*stuff).i;
-//    }
-//};
-//
-//
-//
-//int main() {
-//    Derived d;
-//    return W<Base>().go(d) + W<Derived>().go(d);
-//}
 
+// how to do friends and LetMeIn "make this happen"
+// https://godbolt.org/z/yhHuAv
 
 std::ostream & BindingsOutputStreamProvider::get_class_collection_stream() {
     this->count++;
@@ -403,17 +354,6 @@ struct BindingFile {
 };
 
 
-std::vector<std::string> get_class_body(std::vector<WrappedClass const *> classes) {
-    std::vector<std::string> results;
-    for (auto c : classes) {
-        if (c->has_pimpl_members()) {
-            results.emplace_back(fmt::format("v8toolkit::WrapperBuilder<{}>()(isolate);", c->class_name));
-        } else {
-            results.emplace_back(*bindings_templates["class"].fill<BindingsProviderContainer>(*c));
-        }
-    }
-    return results;
-}
 
 
 void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_classes)
@@ -487,10 +427,15 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
             ),
             bindings_templates
         );
+        
+        if (!template_result) {
+            log.error(LogT::Subjects::BidirectionalOutput, template_result.error());
+        } else {
 
-        log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
-        log.info(LogSubjects::Subjects::BindingsOutput, *template_result);
-        output_stream << *template_result << std::flush;
+            log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
+            log.info(LogSubjects::Subjects::BindingsOutput, *template_result);
+            output_stream << *template_result;
+        }
     }
 
 //    cerr << "Classes used that were not wrapped:" << endl;
@@ -538,14 +483,11 @@ OutputCriteria & BindingsOutputModule::get_criteria() {
 
 Template wrapper_builder_template(R"(
 
-{{# This makes the 'friend'-ness show up }}
-extern template struct ::v8toolkit::LetMeIn<{{name}}>;
-
 template<>
 struct WrapperBuilder<{{name}}> \{{{#}}
 
 {{<<my_pimpl_members|!!
-    static constexpr auto {{short_name}} = static_cast<{{type.name}}({{...name}}::*)>(&v8toolkit::LetMeIn<{{...name}}>::{{short_name}});}}
+    }}
 };
 )");
 
@@ -600,8 +542,7 @@ Template class_template(R"({
     class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
 
 {{<<static_functions|!!
-    class_wrapper.add_static_method<{{bi
-nding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
+    class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
 
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
@@ -658,8 +599,8 @@ namespace v8toolkit {
 void v8toolkit_initialize_class_wrappers_{{next_file_number}}(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_{{file_number}}(v8toolkit::Isolate & isolate) {
 
-{{<<classes|!!
-    v8toolkit::WrapperBuilder<{{<<name>>}}>()(isolate);>}}
+{{<classes|!!
+    {{!class}}}}
 
     {{<<call_next_function>}}
 }

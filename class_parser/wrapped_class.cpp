@@ -763,10 +763,13 @@ void WrappedClass::parse_members() {
         auto members_config = PrintFunctionNamesAction::get_config_data()["classes"][this->class_name]["members"];
         for (FieldDecl * field : wrapped_class.decl->fields()) {
 
+            std::cerr << fmt::format("looking at field {}\n", field->getNameAsString());
+            
             string field_name = field->getQualifiedNameAsString();
             std::string short_field_name = field->getName();
 
             if (Annotations(field).has(V8TOOLKIT_PIMPL_STRING)) {
+                log.info(LogSubjects::Class, "adding pimpl member name because it has V8TOOLKIT_PIMPL");
                 this->pimpl_data_member_names.emplace_back(field_name);
             }
 
@@ -836,7 +839,7 @@ void WrappedClass::parse_members() {
         auto all_pimpl_data_members = this->get_pimpl_data_members();
         if (this->pimpl_data_member_names.size() != all_pimpl_data_members.size()) {
             log.error(LogT::Subjects::Class,
-                      "Mismatbiched number of pimpl members specified vs found in {}: {} specified vs {} found - (specified: {}) (found: {})",
+                      "Mismatched number of pimpl members specified vs found in {}: {} specified vs {} found - (specified: {}) (found: {})",
                       this->short_name, this->pimpl_data_member_names.size(), all_pimpl_data_members.size(),
                       xl::join(this->pimpl_data_member_names),
                       xl::join(xl::transform(all_pimpl_data_members, [](auto && e) { return e->long_name; })));
@@ -1498,7 +1501,17 @@ std::string const & WrappedClass::get_js_name() const {
 
 
 WrappedClass * WrappedClass::get_wrapped_class(CXXRecordDecl const * decl) {
+    if (decl == nullptr) {
+        return nullptr;
+    }
+    
     for (auto & c : WrappedClass::wrapped_classes) {
+        
+        if (c->decl == nullptr) {
+            // skip 'fake' bidirectional types
+            continue;
+        }
+        
         std::cerr << fmt::format("checking {} for match vs {} ({} (or {}) vs {})\n",
                                  c->class_name, get_canonical_name_for_decl(decl),
                                  (void *) c->decl, (void *) c->my_other_decl, (void *) decl
@@ -1537,6 +1550,7 @@ std::vector<DataMember *> WrappedClass::get_pimpl_data_members(bool with_inherit
     
     
     this->foreach_inheritance_level([&](WrappedClass const & wrapped_class) {
+        std::cerr << fmt::format("getting pimpl members for {}, {} count: {}\n", wrapped_class.class_name, with_inherited_members, wrapped_class.pimpl_data_members.size());
         if (!with_inherited_members && &wrapped_class != this) {
             return;
         }

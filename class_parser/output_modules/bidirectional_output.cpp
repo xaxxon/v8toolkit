@@ -209,9 +209,14 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
                  c->class_name);
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
         auto result = bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), bidirectional_templates);
-        log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name, *result);
-        
-        ostream << *result;
+        if (!result) {
+            log.error(LogT::Subjects::BidirectionalOutput, result.error());
+        } else {
+            log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name,
+                     *result);
+
+            ostream << *result;
+        }
     }
 
     log.info(LogSubjects::Subjects::BidirectionalOutput, "Finished Bidirectional output module");
@@ -232,7 +237,7 @@ OutputCriteria & BidirectionalOutputModule::get_criteria() {
 ::xl::templates::Template bidirectional_class_template(R"(#pragma once
 
 {{includes|!!
-#include {{include}}}}
+#include {{}}}}
 
 class {{name}} : public {{base_name}}, public v8toolkit::JSWrapper<{{base_name}}> {
 public:

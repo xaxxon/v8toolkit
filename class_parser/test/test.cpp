@@ -106,6 +106,7 @@ struct Environment : public ::testing::Environment {
                     // every error will subsequently cause an exception to be thrown, which in turn logs another error
                     //   don't count that final error
                     if (message.subject != LogT::Subjects::Exception) {
+                        std::cerr << fmt::format("ERROR: {}\n", message.string);
                         error_count++;
                     }
                 }
@@ -684,7 +685,7 @@ TEST_F(ClassParser, CustomExtensionInheritance) {
     output_modules.push_back(make_unique<BidirectionalOutputModule>(std::make_unique<BidirectionalTestStreamProvider>()));
 
     auto pruned_vector = run_code(source, std::move(output_modules));
-//    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
+    std::cerr << fmt::format("{}\n", bindings_string_stream.str());
 
     EXPECT_TRUE(xl::Regex("\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}.*?\\{.*?add_new_constructor_function_template_callback\\(\\&A::custom_extension_public\\).*?\\}", xl::RegexFlags::DOTALL).match(
         bindings_string_stream.str()
@@ -1529,7 +1530,11 @@ private:
 
     environment->expect_errors();
     auto pruned_vector = run_code(source);
-    EXPECT_EQ(environment->expect_no_errors(), 2); // missing A::Impl definition and missing friend
+    
+    
+    //  3 errors: missing pimpl type, pimpl member discarded (because of missing type), 
+    //    and during validation, couldn't find wrapped class for Impl
+    EXPECT_EQ(environment->expect_no_errors(), 3); 
 }
 
 
@@ -1655,20 +1660,8 @@ namespace v8toolkit {
 template<>
 struct WrapperBuilder<A> {
 
-    static constexpr auto impl = &A::impl;
-    static constexpr auto impl2 = &A::impl2;
-
-    void operator()(v8toolkit::Isolate & isolate) {
-        v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
-        class_wrapper.set_class_name("A");
-
-        class_wrapper.add_member<&A::public_int_member>("public_int_member");
-
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl, &A::Impl::pimpl_int>("pimpl_int");
-        class_wrapper.add_member<v8toolkit::WrapperBuilder<A>::impl2, &A::Impl2::pimpl2_string>("pimpl2_string");
-        class_wrapper.finalize(true);
-        class_wrapper.expose_static_methods("A", isolate);
-    }
+    
+    
 };
 
 } // end namespace v8toolkit
@@ -1676,7 +1669,19 @@ struct WrapperBuilder<A> {
 void v8toolkit_initialize_class_wrappers_2(v8toolkit::Isolate &); // may not exist -- that's ok
 void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
-    v8toolkit::WrapperBuilder<A>()(isolate);
+    {
+    v8toolkit::V8ClassWrapper<A> & class_wrapper = isolate.wrap_class<A>();
+    class_wrapper.set_class_name("A");
+
+    class_wrapper.add_member<&A::public_int_member>("public_int_member");
+
+
+
+    
+    class_wrapper.finalize(true);
+    class_wrapper.expose_static_methods("A", isolate);
+}
+
 }
 )";
 

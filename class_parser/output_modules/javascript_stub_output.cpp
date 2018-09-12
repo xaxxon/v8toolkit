@@ -141,10 +141,15 @@ void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> wrapp
     v8toolkit::class_parser::log.info(LogSubjects::Subjects::JavaScriptStubOutput, "Starting Javascript Stub output module");
 
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), templates);
+    
+    if (!result) {
+        log.error(LogT::Subjects::BidirectionalOutput, result.error());
+    } else {
 //        auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
 
 //    std::cerr << *result << std::endl;
-    output_stream_provider->get_class_collection_stream() << *result << std::endl;
+        output_stream_provider->get_class_collection_stream() << *result << std::endl;
+    }
 }
 
 string JavascriptStubOutputModule::get_name() {
