@@ -303,7 +303,7 @@ struct BindingFile {
         for(auto c : this->extern_templates) {
             result.push_back(c);
         }
-        std::sort(result.begin(), result.end());
+        std::sort(result.begin(), result.end(), [](auto l, auto r){return l->class_name < r->class_name;});
         return result;
     }
     
@@ -313,7 +313,7 @@ struct BindingFile {
         for(auto c : this->explicit_instantiations) {
             result.push_back(c);
         }
-        std::sort(result.begin(), result.end());
+        std::sort(result.begin(), result.end(), [](auto l, auto r){return l->class_name < r->class_name;});
         return result;
     }
 
@@ -323,7 +323,7 @@ struct BindingFile {
         for(auto c : this->explicit_instantiations_for_const_types) {
             result.push_back(c);
         }
-        std::sort(result.begin(), result.end());
+        std::sort(result.begin(), result.end(), [](auto l, auto r){return l->class_name < r->class_name;});
         return result;
 
     }
