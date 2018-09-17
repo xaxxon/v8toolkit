@@ -16,7 +16,7 @@ struct CastToNative; // has full implementation in cast_to_native_impl.h
 /**
  * Subclass this type to specialize specific calls for CastToNative differently than the default implementations.
  * The call chain of CastToNative will prefer specializations matching the behavior but fall back to CastToNative
- * impleementations where no behavior-specific specialization is present
+ * implementations where no behavior-specific specialization is present
  * @tparam Derived CRTP type deriving from this 
  */
 template<typename Derived, template<typename, typename, typename> class CastTemplate>

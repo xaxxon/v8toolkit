@@ -13,6 +13,7 @@
 #include "cast_to_js.h"
 
 
+
 namespace v8toolkit {
 
 
@@ -457,9 +458,40 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::set, T>
     }
 };
 
+//
+//template<typename T, typename Behavior>
+//struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
+//    v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
+////        using NoRefT = std::remove_reference_t<T>;
+////        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
+//        if (optional) {
+//            return Behavior()(*optional);
+//        } else {
+//            return v8::Undefined(isolate);
+//        }
+//    }
+//};
+
+
+// a "maybe" type is something that acts like an optional or
+//   pointer which can either be false/null or otherwise contains a value
+// *except* owning types which can transfer ownership like std::unique_ptr
+template<typename T, typename = void>
+struct is_maybe_type : std::false_type {};
+
+template<typename T>
+struct is_maybe_type<T, std::enable_if_t<
+    !std::is_pointer_v<std::remove_reference_t<T>> &&
+    !is_owning_type_v<T> &&
+    (true || static_cast<bool>(std::declval<T>())) &&
+    std::is_same_v<void, std::void_t<decltype(*std::declval<T>())>>
+    >> : std::true_type {};
+
+template<typename T>
+constexpr bool is_maybe_type_v = is_maybe_type<T>::value;
 
 template<typename T, typename Behavior>
-struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
+struct CastToJS<T, Behavior, std::enable_if_t<is_maybe_type_v<T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
 //        using NoRefT = std::remove_reference_t<T>;
 //        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
@@ -470,6 +502,13 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::optiona
         }
     }
 };
+
+static_assert(
+    !is_maybe_type_v<char *> &&
+    !is_maybe_type_v<int *> &&
+    !is_maybe_type_v<std::unique_ptr<int>> && // because it's an owning type
+    is_maybe_type_v<std::optional<int>>);
+
 
 template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<std::is_same_v<nullptr_t, std::decay_t<T>>>> {

@@ -37,6 +37,16 @@ template<class T>
 constexpr bool is_wrapped_type_v = is_wrapped_type<T>::value;
 
 
+// specialize for types which own memory (and can transfer ownership)
+template<typename T, typename = void>
+struct is_owning_type : std::false_type {};
+
+template<typename T>
+struct is_owning_type<T, std::enable_if_t<xl::is_template_for_v<std::unique_ptr, T>>> : std::true_type {};
+
+template <typename T>
+constexpr bool is_owning_type_v = is_owning_type<T>::value;
+
 /**
  * Is T a specialization of std::basic_string_view?
  */

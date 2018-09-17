@@ -581,18 +581,20 @@ private:
 	    T * cpp_object = wrapper.get_cpp_object(info.Holder());
 
 		using MemberT = std::remove_reference_t<decltype(member_getter(cpp_object))>;
+		using DereferencedMemberT = xl::dereferenced_type_t<MemberT>;
 
 		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS,
 				 "Setting data member of type {} (need to implement having the name available)",
 				 xl::demangle<MemberT>());
 
+		
         static_assert(
+        	std::is_pointer_v<MemberT> ||
             std::is_copy_assignable_v<MemberT> ||
             std::is_move_assignable_v<MemberT>, "Cannot add_member with a type that is not either copy or move assignable.  Use add_member_readonly instead");
 
 		// if it's copyable, then the assignment is pretty easy
-		if constexpr(is_wrapped_type_v<MemberT>)
-		{
+		if constexpr(is_wrapped_type_v<MemberT>) {
 			if constexpr(std::is_copy_assignable_v<MemberT>)
 			{
 				member_getter(cpp_object) = CastToNative<MemberT &>()(isolate, value);
@@ -610,9 +612,14 @@ private:
 		}
 		// for an unwrapped type, always try to make a copy and do a move assignment from it
 		else {
-			auto native_value = CastToNative<MemberT>()(isolate, value);
-			static_assert(!std::is_pointer_v<MemberT>, "Cannot assign to a non-wrapped type pointer - Who would own the memory?");
-			member_getter(cpp_object) = std::move(native_value);
+			static_assert(is_wrapped_type_v<DereferencedMemberT> || !std::is_pointer_v<MemberT>,
+						  "Cannot assign to a non-wrapped type pointer - Who would own the memory?");
+
+			if constexpr(is_wrapped_type_v<DereferencedMemberT> || !std::is_pointer_v<MemberT>) {
+
+				auto native_value = CastToNative<MemberT>()(isolate, value);
+				member_getter(cpp_object) = std::move(native_value);
+			}
 		}
 
 
