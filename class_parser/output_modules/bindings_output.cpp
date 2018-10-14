@@ -15,6 +15,9 @@ using xl::templates::ProviderPtr;
 #include "../helper_functions.h"
 #include "bindings_output.h"
 
+//ISSUES: make_callable is broken
+// - als`o including .cpp files causing duplicate definition errors
+
 using namespace xl::templates;
 
 namespace v8toolkit::class_parser::bindings_output {
@@ -132,7 +135,7 @@ struct BindingsProviderContainer {
             std::pair("wrapper_extension_methods", c.wrapper_extension_methods),
             std::pair("constructor", c.get_constructors().size() == 0 || c.force_no_constructors ?
                                      fmt::format("class_wrapper.expose_static_methods(\"{}\", isolate);",
-                                                 c.get_js_name()) :
+                                                              c.get_js_name()) :
                                      fmt::format(
                                          "class_wrapper.add_constructor<{}>(\"{}\", isolate, {});",
                                          c.get_constructors().back()->get_parameter_types_string(),
@@ -148,7 +151,7 @@ struct BindingsProviderContainer {
 
             // if you want the custom extension on the derived type, just "using" it in - this allows for
             //   more flexibility in times when you may not want it
-            std::pair("custom_extensions", c.wrapper_custom_extensions.empty() ? "" : *c.wrapper_custom_extensions.begin()),
+            std::pair("custom_extensions", c.wrapper_custom_extensions.empty() ? std::string("") : *c.wrapper_custom_extensions.begin()),
 
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
@@ -369,6 +372,10 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
 
         // go through the list to see if there is anything left to write out
         for (auto & wrapped_class : wrapped_classes) {
+            
+            if (wrapped_class->bidirectional) {
+                continue;
+            }
 
             // if it has unmet dependencies or has already been mapped, skip it
             if (!wrapped_class->ready_for_wrapping(already_wrapped_classes)) {
@@ -402,8 +409,10 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
 
 //    for (auto const & [binding_file, i] : xl::each_i(binding_files)) {
     for (int i = 0; i < binding_files.size(); i++) {
+        
 
         auto & binding_file = binding_files[i];
+        std::cerr << fmt::format("processing binding file {} with contents {}\n", i, xl::join(xl::transform(binding_file.get_classes(), [](auto const & x)->std::string{return x->class_name;})));
 
 
         bool last_file = i == binding_files.size() - 1;
@@ -423,13 +432,14 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
                 std::pair("explicit_instantiations", binding_file.get_explicit_instantiations()),
                 std::pair("explicit_instantiations_for_const_types", binding_file.get_explicit_instantiations_for_const_types()),
                 std::pair("call_next_function", !last_file ? fmt::format("v8toolkit_initialize_class_wrappers_{}(isolate);", file_number + 1) : ""),
-                std::pair("standard_includes", includes_for_every_class_wrapper_file)
+                std::pair("standard_includes", includes_for_every_class_wrapper_file),
+                std::pair("extra_includes",*PrintFunctionNamesAction::get_config_data()["output_modules"]["BindingsOutputModule"]["extra_includes"].get_string(""))
             ),
             bindings_templates
         );
         
         if (!template_result) {
-            log.error(LogT::Subjects::BidirectionalOutput, template_result.error());
+            log.error(LogT::Subjects::BindingsOutput, template_result.error().get_pretty_string());
         } else {
 
             log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
@@ -554,7 +564,7 @@ Template class_template(R"({
     class_wrapper.add_enum("{{name}}", \{{{elements%, |!{"{{name}}", {{value}}\}}}\});}}
 
 {{<<wrapper_extension_methods|!!
-    {{method_name}}(class_wrapper);}}
+    {{}}(class_wrapper);}}
 
 {{<<custom_extensions|!!
     {{}}}}
@@ -571,6 +581,7 @@ Template class_template(R"({
 Template file_template(R"(
 {{standard_includes|!!
 #include {{<>}}>}}
+{{<<extra_includes}}
 
 // includes
 {{<includes|!!

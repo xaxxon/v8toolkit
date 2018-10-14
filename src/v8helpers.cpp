@@ -187,6 +187,7 @@ std::string stringify_value(v8::Local<v8::Value> value,
                             bool show_all_properties,
                             std::vector<v8::Local<v8::Value>> && processed_values)
 {
+    
     auto isolate = v8::Isolate::GetCurrent();
     if (value.IsEmpty()) {
         return "<Empty v8::Local<v8::Value>>";
@@ -200,8 +201,8 @@ std::string stringify_value(v8::Local<v8::Value> value,
     // Only protect against cycles on container types - otherwise a numeric value with
     //   the same number won't get shown twice
     if (value->IsObject() || value->IsArray()) {
-        for(auto processed_value : processed_values) {
-            if(processed_value == value) {
+        for (auto & processed_value : processed_values) {
+            if (processed_value == value) {
                 if (STRINGIFY_VALUE_DEBUG) print_v8_value_details(value);
                 if (STRINGIFY_VALUE_DEBUG) printf("Skipping previously processed value\n");
                 return "";
@@ -211,7 +212,7 @@ std::string stringify_value(v8::Local<v8::Value> value,
     }
 
 
-    if(value.IsEmpty()) {
+    if (value.IsEmpty()) {
         if (STRINGIFY_VALUE_DEBUG) printf("Value IsEmpty\n");
         return "Value specified as an empty v8::Local";
     }

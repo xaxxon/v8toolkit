@@ -31,7 +31,10 @@ public:
 
 
     ~BidirectionalOutputStreamProvider()
-    {}
+    {
+        std::cerr << fmt::format("closing BidirectionalOutputStreamProvider object\n");
+        this->output_file.close();
+    }
 };
 
 

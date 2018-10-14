@@ -111,3 +111,12 @@ TEST_F(JavaScriptFixture, DateConversions) {
     }
 }
 
+
+TEST_F(JavaScriptFixture, Stringify) {
+    this->create_context();
+
+    auto big_object = c->run("{{a:{b:{c:{d:{e:{f:{g:{h:{}}}}}}}}}}");
+    GLOBAL_CONTEXT_SCOPED_RUN(c->get_isolate(), c->get_global_context());
+    stringify_value(big_object.Get(c->get_isolate()));
+}
+

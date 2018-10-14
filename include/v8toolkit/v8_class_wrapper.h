@@ -545,7 +545,7 @@ private:
 		auto isolate = info.GetIsolate();
 
 		auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
-
+        log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
 		auto non_const_cpp_object = const_cast<std::remove_const_t<T>*>(cpp_object);
 		using MemberT = decltype(member_getter(non_const_cpp_object));
 
@@ -579,6 +579,7 @@ private:
 
 
 	    T * cpp_object = wrapper.get_cpp_object(info.Holder());
+		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "setter got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
 
 		using MemberT = std::remove_reference_t<decltype(member_getter(cpp_object))>;
 		using DereferencedMemberT = xl::dereferenced_type_t<MemberT>;
@@ -1427,7 +1428,9 @@ public:
                 //assert(holder->InternalFieldCount() == 1);
 
                 // a crash here may have something to do with a native override of toString
-				auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
+
+                auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(info.Holder());
+                log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "fake method {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
 
 
 				// V8 does not support C++ exceptions, so all exceptions must be caught before control
@@ -1524,6 +1527,8 @@ public:
 
 
 					auto cpp_object = get_cpp_object(self);
+					log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "method got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
+
 					auto bound_method = func::function([&cpp_object, method](Args... args)->decltype(auto){
                         return (cpp_object->*method)(std::forward<Args>(args)...);
 					});
@@ -2005,6 +2010,8 @@ struct CastToNative<T&&, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 	T&& operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) {
 		v8::Local<v8::Object> object = get_value_as<v8::Object>(isolate, value);
 		T * cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(object);
+		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "CastToNative T&& got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
+
 		if (V8ClassWrapper<T>::does_object_own_memory(object)) {
 			// do not release the memory because something still needs to call delete on the object (possibly moved out of)
 			//   pointed by the InternalField of the javascript object -- even if it has no "real" content.
@@ -2026,7 +2033,10 @@ struct CastToNative<T*, Behavior, std::enable_if_t<is_wrapped_type_v<T>>>
 		auto & wrapper = V8ClassWrapper<T>::get_instance(isolate);
 		v8::Local<v8::Object> object = get_value_as<v8::Object>(isolate, value);
 
-		return wrapper.get_cpp_object(object);
+		auto cpp_object = wrapper.get_cpp_object(object);
+		log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "CastToNative T* got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
+
+		return cpp_object;
 	}
 	static constexpr bool callable(){return true;}
 };
@@ -2055,6 +2065,8 @@ T & get_object_from_embedded_cpp_object(v8::Isolate * isolate, v8::Local<v8::Val
 	V8TOOLKIT_DEBUG("cast to native\n");
 
 	auto cpp_object = V8ClassWrapper<T>::get_instance(isolate).get_cpp_object(get_value_as<v8::Object>(isolate, value));
+	log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "get_object_from_embedded_cpp_object got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
+
 //	 std::cerr << fmt::format("about to call cast on {}",  xl::demangle<T>()) << std::endl;
 	if (cpp_object == nullptr) {
 		fprintf(stderr, "Failed to convert types: want:  %d %s\n", std::is_const<T>::value, typeid(T).name());

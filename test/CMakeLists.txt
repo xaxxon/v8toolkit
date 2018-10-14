@@ -21,11 +21,14 @@ link_directories(. ${CLANG_HOME}/lib)
 
 
 add_executable(test-v8toolkit ${TEST_SRC})
-add_dependencies(test-v8toolkit copy_snapshots)
+add_dependencies(test-v8toolkit copy_snapshots v8toolkit_shared)
 
 
 add_dependencies(test-v8toolkit gmock gtest)
 message("${MY_SRC}")
+
+# Causing false positives on vector re-allocations
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
 #SdlStaticLibs(test-apb)
 

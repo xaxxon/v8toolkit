@@ -210,12 +210,14 @@ void BidirectionalOutputModule::process(std::vector < WrappedClass const*> wrapp
         auto & ostream = this->output_stream_provider->get_class_stream(*c);
         auto result = bidirectional_templates["class"].template fill<BidirectionalProviderContainer>(std::ref(*c), bidirectional_templates);
         if (!result) {
-            log.error(LogT::Subjects::BidirectionalOutput, result.error());
+            log.error(LogT::Subjects::BidirectionalOutput, result.error().get_pretty_string());
         } else {
             log.info(LogSubjects::BidirectionalOutput, "bidirectional template outpout for {}: {}", c->class_name,
                      *result);
 
-            ostream << *result;
+            ostream << *result << std::endl;
+            
+            std::cerr << fmt::format("After writing to ostream, bidir content is still: {}", *result) << std::endl;
         }
     }
 

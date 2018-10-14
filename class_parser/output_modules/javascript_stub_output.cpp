@@ -143,7 +143,7 @@ void JavascriptStubOutputModule::process(std::vector<WrappedClass const *> wrapp
     auto result = templates["file"].fill<JavascriptStubProviderContainer>(make_provider<JavascriptStubProviderContainer>(std::pair("classes", wrapped_classes)), templates);
     
     if (!result) {
-        log.error(LogT::Subjects::BidirectionalOutput, result.error());
+        log.error(LogT::Subjects::JavaScriptStubOutput, result.error().get_pretty_string());
     } else {
 //        auto result = templates["file"].fill(xl::templates::Provider(std::pair("classes", [&wrapped_classes]()->auto&{return wrapped_classes;})), templates);
 

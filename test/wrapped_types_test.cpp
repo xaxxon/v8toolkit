@@ -749,6 +749,21 @@ TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
     });
 }
 
+/// This was only for trying to reproduce an error that couldn't be reproduced 
+
+//TEST_F(WrappedClassFixture, ConsistentWrappedClassVariableAddress) {
+//    
+//    auto isolate = c->isolate;
+//    (*c)([&]() {
+//        auto wc = WrappedClass(42);
+//        std::cerr << fmt::format("&wc = {}\n", (void*)&wc);
+//        c->add_variable("wc", c->wrap_object(&wc));
+//        c->run("printobj(wc)");
+//        c->run("println(\"wc.constructor_i:\", wc.constructor_i)");
+//    });
+//    EXPECT_TRUE(false);
+//}
+
 
 TEST_F(WrappedClassFixture, PimplMember) {
     (*c)([&]() {

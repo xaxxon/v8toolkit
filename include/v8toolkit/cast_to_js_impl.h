@@ -471,27 +471,36 @@ struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::set, T>
 //        }
 //    }
 //};
-
-
-// a "maybe" type is something that acts like an optional or
-//   pointer which can either be false/null or otherwise contains a value
-// *except* owning types which can transfer ownership like std::unique_ptr
-template<typename T, typename = void>
-struct is_maybe_type : std::false_type {};
-
-template<typename T>
-struct is_maybe_type<T, std::enable_if_t<
-    !std::is_pointer_v<std::remove_reference_t<T>> &&
-    !is_owning_type_v<T> &&
-    (true || static_cast<bool>(std::declval<T>())) &&
-    std::is_same_v<void, std::void_t<decltype(*std::declval<T>())>>
-    >> : std::true_type {};
-
-template<typename T>
-constexpr bool is_maybe_type_v = is_maybe_type<T>::value;
-
+//
+//template <typename T>
+//struct Tp;
+//
+//
+//// a "maybe" type is something that acts like an optional or
+////   pointer which can either be false/null or otherwise contains a value
+//// *except* owning types which can transfer ownership like std::unique_ptr
+//template<typename T, typename = void>
+//struct _is_maybe_type : std::false_type {
+//};
+//
+//template<typename T>
+//struct _is_maybe_type<T, std::enable_if_t<
+//    !std::is_reference_v<T> && // references handled elsewhere
+//    !std::is_pointer_v<T> &&
+//    !is_owning_type_v<T> &&
+//    std::is_same_v<bool, decltype(static_cast<bool>(std::declval<std::optional<int>>()))> &&
+//    std::is_same_v<void, std::void_t<decltype(*std::declval<T>())>>
+//    >> : std::true_type {
+//};
+//
+//template<typename T>
+//using is_maybe_type = _is_maybe_type<std::remove_const_t<std::remove_reference_t<T>>>;
+//
+//template<typename T>
+//constexpr bool is_maybe_type_v = is_maybe_type<T>::value;
+//
 template<typename T, typename Behavior>
-struct CastToJS<T, Behavior, std::enable_if_t<is_maybe_type_v<T>>> {
+struct CastToJS<T, Behavior, std::enable_if_t<xl::is_template_for_v<std::optional, T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T optional) {
 //        using NoRefT = std::remove_reference_t<T>;
 //        using ConstMatchedValueType = xl::match_const_of_t<typename NoRefT::value_type, T>;
@@ -502,12 +511,17 @@ struct CastToJS<T, Behavior, std::enable_if_t<is_maybe_type_v<T>>> {
         }
     }
 };
-
-static_assert(
-    !is_maybe_type_v<char *> &&
-    !is_maybe_type_v<int *> &&
-    !is_maybe_type_v<std::unique_ptr<int>> && // because it's an owning type
-    is_maybe_type_v<std::optional<int>>);
+//
+//static_assert(    std::is_same_v<bool, decltype(static_cast<bool>(std::declval<std::optional<int>>()))>);
+//
+//static_assert(
+////    !is_maybe_type_v<char *> &&
+////    !is_maybe_type_v<int *> &&
+////    !is_maybe_type_v<std::unique_ptr<int>> && // because it's an owning type
+//     is_maybe_type_v<std::optional<int>> &&
+//     is_maybe_type_v<std::optional<int>&> &&
+//    !is_maybe_type_v<std::optional<int>*&> &&
+//     is_maybe_type_v<std::optional<int> const &>);
 
 
 template<typename T, typename Behavior>
