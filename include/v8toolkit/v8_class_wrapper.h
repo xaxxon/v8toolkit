@@ -324,7 +324,12 @@ struct WrappedData {
 				SetWeakCallbackData * weak_callback_data) :
 		native_object(new AnyPtr<T>(native_object)),
 		weak_callback_data(weak_callback_data)
-	{}
+	{
+		std::cerr << fmt::format("created WrappedData<{}> with native_object = {} - this: {}\n", xl::demangle<T>(), (void*)native_object, (void*)this);
+		if (native_object == nullptr) {
+			std::cerr << fmt::format("problem here\n");
+		}
+	}
 
 	~WrappedData(){delete native_object;}
 
@@ -1527,7 +1532,15 @@ public:
 
 
 					auto cpp_object = get_cpp_object(self);
-					log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "method got {} pointer: {}", xl::demangle<T>(), (void*)cpp_object);
+					log.info(LogT::Subjects::WRAPPED_DATA_MEMBER_ACCESS, "method '{}' got {} pointer: {}", method_name, xl::demangle<T>(), (void*)cpp_object);
+					
+					if (cpp_object == nullptr) {
+						auto stack_trace = get_stack_trace_string(v8::StackTrace::CurrentStackTrace(v8::Isolate::GetCurrent(), 100));
+			
+						std::cerr << fmt::format("{}\n", stack_trace);
+
+						std::cerr << fmt::format("PROBLEM HERE\n");
+					}
 
 					auto bound_method = func::function([&cpp_object, method](Args... args)->decltype(auto){
                         return (cpp_object->*method)(std::forward<Args>(args)...);

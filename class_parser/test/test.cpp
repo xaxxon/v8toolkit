@@ -1889,6 +1889,7 @@ TEST_F(ClassParser, InheritancePimpl) {
 
 
     std::string expected_bindings_result = R"(
+#include <v8toolkit/bidirectional.h>
 #include <v8toolkit/javascript.h>
 #include <v8toolkit/v8_class_wrapper_impl.h>
 
@@ -1936,7 +1937,7 @@ void v8toolkit_initialize_class_wrappers_1(v8toolkit::Isolate & isolate) {
 
 
     
-    class_wrapper.set_compatible_types<A>();
+    class_wrapper.set_compatible_types<B>();
     class_wrapper.finalize(true);
     class_wrapper.expose_static_methods("A", isolate);
 }

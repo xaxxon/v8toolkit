@@ -569,7 +569,7 @@ Template class_template(R"({
 {{<<custom_extensions|!!
     {{}}}}
     class_wrapper.set_parent_type<{{<<base_type_name>}}>();
-    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
+    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<>}}>}}>();
     class_wrapper.finalize(true);
     {{<constructor>}}
 }
