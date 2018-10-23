@@ -71,6 +71,8 @@ using namespace std;
 
 #include "output_modules/javascript_stub_output.h"
 
+#include <xl/regexer.h>
+
 namespace v8toolkit::class_parser {
 
 
@@ -194,6 +196,12 @@ std::string get_include_string_for_fileid(FileID & file_id) {
     }
 
     auto result = string(text, (text_end - text) + 1);
+    
+    if (!xl::regexer(result, "(\\.h|\\.hpp)$")) {
+        v8toolkit::class_parser::log.error(LogT::Subjects::Class,
+                                           "file to include ('{}') not .h or .hpp file (including source file leads to duplicate symbol linker errors.  Lazy solution - submit issue if a better solution is needed", result);
+
+    }
 //    std::cerr << fmt::format("returning {}", result) << std::endl;
     return result;
 

@@ -444,7 +444,7 @@ void BindingsOutputModule::process(std::vector<WrappedClass const*> wrapped_clas
 
             log.info(LogSubjects::Subjects::BindingsOutput, "Writing binding file {}", file_number);
             log.info(LogSubjects::Subjects::BindingsOutput, *template_result);
-            output_stream << *template_result;
+            output_stream << *template_result << std::endl;
         }
     }
 
@@ -506,40 +506,6 @@ struct WrapperBuilder<{{name}}> \{{{#}}
 // 
 
 
-// THIS USED TO BE IN WRAPPERBUILDER
-//void operator()(v8toolkit::Isolate & isolate) {
-//    v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
-//    class_wrapper.set_class_name("{{js_name}}");{{#}}
-//
-//    {{<<member_functions|!!
-//                class_wrapper.add_method("{{js_name}}", {{name}}, {{default_arg_tuple}});}}
-//
-//    {{<<call_operator|!!
-//                class_wrapper.make_callable<{{binding_parameters}}>(&{{name}});}}
-//
-//    {{<<static_functions|!!
-//                class_wrapper.add_static_method<{{binding_parameters}}>("{{js_name}}", &{{name}}, {{default_arg_tuple}});}}
-//
-//    {{<<data_members|!!
-//                class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
-//
-//    {{<<pimpl_members.dereferenced_type_class.data_members|!!
-//                class_wrapper.add_member<v8toolkit::WrapperBuilder<{{<<....name>>}}>::{{<<accessed_through.short_name>>}}, &{{<<name>>}}>("{{<<short_name>>}}");}}
-//    AA
-//    {{<<enums|!!
-//                class_wrapper.add_enum("{{<<name>>}}", \{{{<<elements%, |!{"{{name}}", {{value}}\}}}\});}}
-//    BB
-//    {{<<wrapper_extension_methods|!!
-//                {{<<method_name>>}}(class_wrapper);}}
-//    CC
-//    {{<<custom_extensions|!!
-//                {{<<>>}}>>}}
-//    DD
-//    class_wrapper.set_parent_type<{{<<base_type_name>}}>();
-//    class_wrapper.set_compatible_types<{{<<derived_types%, |!{{<name>}}>}}>();
-//    class_wrapper.finalize(true);
-//    {{constructor}}
-//}
 
 Template class_template(R"({
     v8toolkit::V8ClassWrapper<{{name}}> & class_wrapper = isolate.wrap_class<{{name}}>();
