@@ -13,7 +13,8 @@ struct LoggingSubjects {
                                                  "wrapped function call",
                                                  "wrapped data member access",
                                                  "debug websocket",
-                                                 "V8 Toolkit"
+                                                 "V8 Toolkit",
+                                                 "default"
 
     };
 
@@ -25,7 +26,7 @@ struct LoggingSubjects {
         WRAPPED_DATA_MEMBER_ACCESS,
         DebugWebSocket,
         V8TOOLKIT,
-
+        Default,
         LOG_LAST_SUBJECT
     };
 };

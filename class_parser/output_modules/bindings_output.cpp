@@ -15,6 +15,12 @@ using xl::templates::ProviderPtr;
 #include "../helper_functions.h"
 #include "bindings_output.h"
 
+#define NDEBUG
+#define RANGES_ASSERT(x)
+#include <range/v3/core.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/view/transform.hpp>
+
 //ISSUES: make_callable is broken
 // - als`o including .cpp files causing duplicate definition errors
 
@@ -106,10 +112,7 @@ struct BindingsProviderContainer {
             std::pair("elements", e.elements)
         );
     }
-
-
-
-
+    
     static ProviderPtr get_provider(WrappedClass const & c) {
         log.info(LogSubjects::BindingsOutput, "get_provider WrappedClass: {}", c.class_name);
 
@@ -117,7 +120,7 @@ struct BindingsProviderContainer {
         if (c.call_operator_member_function) {
             call_operator_vector.push_back(c.call_operator_member_function.get());
         }
-        
+
 
         auto provider = P::make_provider(
 //            std::pair("class", std::ref(c)), // ability to call another template on the same object
@@ -156,7 +159,7 @@ struct BindingsProviderContainer {
             // convert to string because it may be a bidirectional type.   Full WrappedClass information isn't
             //   available for them.
 //            xl::forward_as_pair("derived_types", xl::transform_if(c.derived_types, [](WrappedClass * c)->std::optional<std::string>{return c->get_name_alias();}))
-            xl::forward_as_pair("derived_types", xl::transform(c.derived_types, [](WrappedClass * c){return c->class_name;}))
+            xl::forward_as_pair("derived_types", xl::transform(xl::erase_if(xl::copy(c.derived_types), [](WrappedClass * c){return c->bidirectional;}), [](WrappedClass * c){return c->class_name;}))
         );
 
         return provider;
@@ -523,7 +526,7 @@ Template class_template(R"({
 {{<<data_members|!!
     class_wrapper.add_member{{read_only}}<{{member_pointer}}>("{{js_name}}");}}
 
-{{#<<pimpl_members|!{{data_members|!!
+{{<<pimpl_members|!{{data_members|!!
     add_member<v8toolkit::WrapperBuilder<{{type.name}}>::{{accessed_through.name}}, &{{type.name}}>("");}}}}
 
 {{<<enums|!!

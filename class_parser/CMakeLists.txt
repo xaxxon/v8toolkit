@@ -38,7 +38,7 @@ set_target_properties(class_parser_plugin PROPERTIES
         DEBUG_POSTFIX "")
 
 # No name mangling because no rtti because of clang
-add_definitions(-DCLANG_HOME="${CLANG_HOME}" -DXL_FORCE_NO_DEMANGLE_NAMES)
+add_definitions(-DCLANG_HOME="${CLANG_HOME}" -DXL_FORCE_NO_DEMANGLE_NAMES -DXL_USE_LIB_FMT)
 include_directories(${gtest_SOURCE_DIR}/include)
 
 # clang libs

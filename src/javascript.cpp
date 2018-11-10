@@ -433,7 +433,8 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
 
 
     if (!fs::is_directory(snapshot_path)) {
-        std::cerr << fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)) << std::endl;
+        
+        log.error("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path));
         throw Exception(fmt::format("Snapshot path doesn't exist: {}", fs::canonical(snapshot_path)));
     } else {
 //        std::cerr << fmt::format("{} is a directory", snapshot_path) << std::endl;
@@ -443,13 +444,13 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
     std::string snapshot_blob_filename = "snapshot_blob.bin";
     fs::path snapshot_blob_path = snapshot_path / snapshot_blob_filename;
     if (!fs::exists(snapshot_blob_path)) {
-        std::cerr << fmt::format("snapshot blob not found at {}", snapshot_blob_path) << std::endl;
+        log.error("snapshot blob not found at {}", snapshot_blob_path);
         throw Exception(fmt::format("snapshot blob not found at {}", snapshot_blob_path));
     }
     std::string natives_blob_filename = "natives_blob.bin";
     fs::path natives_blob_path = snapshot_path / natives_blob_filename;
     if (!fs::exists(natives_blob_path)) {
-        std::cerr << fmt::format("natives blob not found at {}", natives_blob_path) << std::endl;
+        log.error("natives blob not found at {}", natives_blob_path);
         throw Exception(fmt::format("natives blob not found at {}", natives_blob_path));
     }
 

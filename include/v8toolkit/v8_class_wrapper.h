@@ -325,10 +325,7 @@ struct WrappedData {
 		native_object(new AnyPtr<T>(native_object)),
 		weak_callback_data(weak_callback_data)
 	{
-		std::cerr << fmt::format("created WrappedData<{}> with native_object = {} - this: {}\n", xl::demangle<T>(), (void*)native_object, (void*)this);
-		if (native_object == nullptr) {
-			std::cerr << fmt::format("problem here\n");
-		}
+//		std::cerr << fmt::format("created WrappedData<{}> with native_object = {} - this: {}\n", xl::demangle<T>(), (void*)native_object, (void*)this);
 	}
 
 	~WrappedData(){delete native_object;}
@@ -659,7 +656,6 @@ private:
 		} catch(std::exception & e) {
 
 			if constexpr(constructed_from_callback_info_v<T>) {
-				std::cerr << fmt::format("attempting CallbackInfo constructor because {}", e.what()) << std::endl;
 				new_cpp_object = new T(info);
 			} else {
 

@@ -16,6 +16,8 @@ include(v8)
 set(CLANG_HOME $ENV{CLANG_HOME})
 link_directories(. ${CLANG_HOME}/lib)
 
+add_definitions(-DXL_USE_BOOST -DXL_USE_LIB_FMT)
+
 
 file(GLOB HEADER_FILES
         include/*.h

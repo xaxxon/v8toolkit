@@ -187,7 +187,6 @@ T * V8ClassWrapper<T, V8TOOLKIT_V8CLASSWRAPPER_TEMPLATE_SFINAE >::get_cpp_object
 
 	auto wrap = v8::Local<v8::External>::Cast(object->GetInternalField(0));
 	WrappedData<T> * wrapped_data = static_cast<WrappedData<T> *>(wrap->Value());
-	std::cerr << fmt::format("got wrapped data object for {} at {}\n", xl::demangle<T>(), (void*)wrapped_data);
 	V8TOOLKIT_DEBUG("uncasted internal field: %p\n", wrapped_data->native_object);
 
 	T * result = this->cast(wrapped_data->native_object);
