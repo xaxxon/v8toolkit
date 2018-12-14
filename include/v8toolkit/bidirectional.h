@@ -375,7 +375,7 @@ protected:
        
         return std::make_unique<JSFactory>(
             CastToNative<FactoryBase&>()(isolate, info[starting_info_index + 0]),   // base factory        
-            info[starting_info_index + 1]->ToObject(),                              // prototype
+            info[starting_info_index + 1]->ToObject(isolate->GetCurrentContext()).ToLocalChecked(),                              // prototype
             v8::Local<v8::Function>::Cast(info[starting_info_index + 2]),           // constructor 
             ParameterBuilder<FixedParams>()(info, internal_param_index, stuff)...); // fixed params
     }
@@ -420,7 +420,7 @@ public:
             prototype->SetPrototype(base_factory_prototype);
 
         }
-        constructor->SetPrototype(prototype);
+        (void)constructor->SetPrototype(isolate->GetCurrentContext(), prototype);
 
     }
 

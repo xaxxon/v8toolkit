@@ -20,7 +20,7 @@ private:
 
 public:
     V8Exception(v8::Isolate * isolate, v8::Global<v8::Value>&& value) : isolate(isolate), value(std::move(value)) {
-        std::string str(*v8::String::Utf8Value(this->value.Get(isolate)));
+        std::string str(*v8::String::Utf8Value(isolate, this->value.Get(isolate)));
         value_for_what = str == "" ? "unknown error" : str;
         log.error(LogT::Subjects::RUNTIME_EXCEPTION, "V8Exception: {}", this->value_for_what);
     }
@@ -60,7 +60,7 @@ public:
     {
         auto stacktrace_maybe = tc.StackTrace(isolate->GetCurrentContext());
         if (!stacktrace_maybe.IsEmpty()) {
-            stacktrace = *v8::String::Utf8Value(stacktrace_maybe.ToLocalChecked());
+            stacktrace = *v8::String::Utf8Value(isolate, stacktrace_maybe.ToLocalChecked());
         } else {
             stacktrace = "No stacktrace available";
         }

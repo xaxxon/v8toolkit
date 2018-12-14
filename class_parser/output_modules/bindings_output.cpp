@@ -15,12 +15,6 @@ using xl::templates::ProviderPtr;
 #include "../helper_functions.h"
 #include "bindings_output.h"
 
-#define NDEBUG
-#define RANGES_ASSERT(x)
-#include <range/v3/core.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/transform.hpp>
-
 //ISSUES: make_callable is broken
 // - als`o including .cpp files causing duplicate definition errors
 

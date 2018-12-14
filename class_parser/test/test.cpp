@@ -165,12 +165,13 @@ auto run_code(std::string source, PrintFunctionNamesAction * action, vector<uniq
         "-I../../../../class_parser/",
         "-I/Users/xaxxon/v8toolkit/class_parser/",
         "-I/Users/xaxxon/v8toolkit/include",
-        "-I/Users/xaxxon/v8/include", 
+        "-I" V8_INCLUDE_DIR,
         "-I../class_parser/",
         "-I../../class_parser/",
         "-I../include/",
         "-I" CLANG_HOME "/include/c++/v1/",
-        "-I" CLANG_HOME "/lib/clang/6.0.0/include/",
+        "-I" CLANG_HOME "/lib/clang/7.0.0/include/",
+        "-DXL_USE_BOOST",
 
         // why doesn't this seem to get passed to the plugin?
         "-Wall", /*"-Werror",*/ 

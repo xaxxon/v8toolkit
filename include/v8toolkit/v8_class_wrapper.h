@@ -627,7 +627,7 @@ private:
 
 
 	    // call any registered change callbacks
-	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(property), value);
+	    V8ClassWrapper<T>::get_instance(isolate).call_callbacks(info.Holder(), *v8::String::Utf8Value(isolate, property), value);
 	}
 
 
@@ -1104,8 +1104,8 @@ public:
 			if (this->wrap_as_most_derived_flag && !force_wrap_this_type) {
                 javascript_object = this->wrap_as_most_derived(existing_cpp_object, destructor_behavior);
             } else {
-                v8::TryCatch tc;
-				javascript_object = get_function_template()->GetFunction(context).ToLocalChecked()->NewInstance();
+                v8::TryCatch tc(isolate);
+				javascript_object = get_function_template()->GetFunction(context).ToLocalChecked()->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
 
 
 				// this shouldn't be able to fire because the FunctionTemplate being used shouldn't have a constructor
@@ -2101,7 +2101,7 @@ struct CastToNative<std::unique_ptr<T, Rest...>, Behavior, std::enable_if_t<is_w
 			return std::unique_ptr<T, Rest...>(new T(cpp_object));
 		} else {
 			throw CastException("Cannot CastToNative<unique_ptr<{}>> from object that doesn't own it's memory and isn't copy constructible: {}",
-				 xl::demangle<T>(), *v8::String::Utf8Value(value));
+				 xl::demangle<T>(), *v8::String::Utf8Value(isolate, value));
 		}
 	}
 	static constexpr bool callable(){return true;}
@@ -2114,7 +2114,7 @@ v8::Local<v8::Object> WrapAsMostDerived<T, v8toolkit::TypeList<>>::operator()(T 
 
 		// TODO: Expensive
 	auto & wrapper = v8toolkit::V8ClassWrapper<T>::get_instance(this->isolate);
-	return wrapper.template wrap_existing_cpp_object(context, cpp_object, destructor_behavior, true /* don't infinitely recurse */);
+	return wrapper.wrap_existing_cpp_object(context, cpp_object, destructor_behavior, true /* don't infinitely recurse */);
 }
 
 
@@ -2190,7 +2190,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_reference_v<T> && is_wrapped
 			auto value = info[i++];
 
 			if (value->IsObject()) {
-				auto object = value->ToObject();
+				auto object = value->ToObject(isolate->GetCurrentContext()).ToLocalChecked();
 				if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
 
 					if constexpr(std::is_rvalue_reference_v<T>)
@@ -2246,7 +2246,7 @@ struct ParameterBuilder<T, std::enable_if_t<std::is_copy_constructible_v<T> && i
 		} else {
 			auto value = info[i++];
 			if (value->IsObject()) {
-				auto object = value->ToObject();
+				auto object = value->ToObject(isolate->GetCurrentContext()).ToLocalChecked();
 				if (auto cpp_object = wrapper.get_instance(isolate).get_cpp_object(object)) {
 					// make a copy, put it in stuff, and return an rvalue ref to the copy
 					return *cpp_object;

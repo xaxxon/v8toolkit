@@ -32,7 +32,7 @@ message("${MY_SRC}")
 
 #SdlStaticLibs(test-apb)
 
-target_link_libraries(test-v8toolkit v8toolkit_shared fmt gmock gmock_main ${V8_SHARED_LIBS} boost_system EASTL )
+target_link_libraries(test-v8toolkit v8toolkit_shared fmt gmock gmock_main ${V8_SHARED_LIBS} boost_system EASTL c++fs)
 add_custom_target(copy_javascript_sources)
 add_custom_command(TARGET copy_javascript_sources PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/*.js ${PROJECT_BINARY_DIR})

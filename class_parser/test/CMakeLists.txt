@@ -11,11 +11,14 @@ target_include_directories(test-class-parser SYSTEM PRIVATE
 
 
 # Uncomment next line to print debugging info from xl::template library
-target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE -DXL_TEMPLATE_LOG_ENABLE)
+target_compile_definitions(test-class-parser PRIVATE -DXL_TEMPLATE_LOG_ENABLE -DTEST_MODE -DXL_TEMPLATE_LOG_ENABLE
+        -DV8_INCLUDE_DIR="${V8_INCLUDE_DIR}"
+        -DCLANG_HOME="${CLANG_HOME}"
+        )
 
 
 find_package(fmt REQUIRED)
-target_link_libraries(test-class-parser fmt gmock gmock_main)
+target_link_libraries(test-class-parser fmt gmock gmock_main c++fs)
 
 # Can't have RTTI because the clang libs don't have it which means
 target_compile_options(test-class-parser PRIVATE -fno-rtti)

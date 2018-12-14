@@ -68,7 +68,7 @@ add_library(v8toolkit_shared SHARED ${SOURCE_FILES})
 add_library(v8toolkit::v8toolkit_shared ALIAS v8toolkit_shared)
 
 # make sure that libc++experimental.a from clang can be found.  May need to move it from clang distribution into /usr/lib
-target_link_libraries(v8toolkit_shared xl::xl ${V8_LIBS} ${Boost_LIBRARIES} c++experimental fmt ${Boost_LIBRARIES} websocketpp::websocketpp)
+target_link_libraries(v8toolkit_shared xl::xl ${V8_LIBS} ${Boost_LIBRARIES} c++experimental fmt ${Boost_LIBRARIES} websocketpp::websocketpp c++fs)
 
 
 add_library(v8toolkit_static STATIC ${SOURCE_FILES})

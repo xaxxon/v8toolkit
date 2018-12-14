@@ -644,7 +644,7 @@ public:
     */
     v8::Local<v8::Value> json(std::string json) {
         v8::TryCatch tc(this->isolate);
-        auto maybe = v8::JSON::Parse(this->isolate, v8::String::NewFromUtf8(this->isolate, json.c_str()));
+        auto maybe = v8::JSON::Parse(isolate->GetCurrentContext(), v8::String::NewFromUtf8(this->isolate, json.c_str()));
         if (tc.HasCaught()) {
             throw V8ExecutionException(this->isolate, tc);
         }
