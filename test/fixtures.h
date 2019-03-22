@@ -45,9 +45,9 @@ public:
         // does a does a deep comparison between the two objects passed and if they don't match, it prints out the info
         //   and then fails a GoogleTest EXPECT_EQ match.  Just using EXPECT_EQ works, but you can't print out what the
         //   comparison was
-        c->add_function("EXPECT_EQJS", [](v8::Local<v8::Value> lhs, v8::Local<v8::Value> rhs) {
+        c->add_function("EXPECT_EQJS", [this](v8::Local<v8::Value> lhs, v8::Local<v8::Value> rhs) {
             if (!v8toolkit::compare_contents(lhs, rhs)) {
-                std::cerr << fmt::format("EXPECT_EQJS failed: {} != {}", *v8::String::Utf8Value(lhs), *v8::String::Utf8Value(rhs)) << std::endl;
+                std::cerr << fmt::format("EXPECT_EQJS failed: {} != {}", *v8::String::Utf8Value(i->get_isolate(), lhs), *v8::String::Utf8Value(i->get_isolate(), rhs)) << std::endl;
                 std::cerr << fmt::format("{}", v8toolkit::stringify_value(lhs)) << std::endl;
                 std::cerr << fmt::format("{}", v8toolkit::stringify_value(rhs)) << std::endl;
                 EXPECT_TRUE(v8toolkit::compare_contents(lhs, rhs));

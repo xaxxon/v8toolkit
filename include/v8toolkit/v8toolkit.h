@@ -119,7 +119,6 @@ v8::Local<v8::FunctionTemplate> make_function_template(v8::Isolate * isolate,
 }
 
 
-
 /**
  * Takes a class with a const-qualified operator() defined on it and returns a func::function calling it
  */
@@ -128,6 +127,7 @@ func::function<R(Args...)> make_std_function_from_callable(R(CLASS::*f)(Args...)
 {
     return func::function<R(Args...)>(callable);
 }
+
 
 /**
  * Takes a class with an operator() defined on it and returns a func::function calling it
@@ -168,6 +168,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
     object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
 
+
 /**
 * Helper to both create a function template from an arbitrary callable and bind it with the specified name to the specified object template
 * Adding functions to an object_template allows creation of multiple contexts with the function already added to each context
@@ -178,6 +179,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
     object_template->Set(isolate, name, make_function_template(isolate, f, name));
 }
 
+
 /**
 * Helper to both create a function template from an arbitrary function pointer and bind it with the specified name to the specified object template
 * Adding functions to an object_template allows creation of multiple contexts with the function already added to each context
@@ -186,6 +188,7 @@ template<class R, class... Args>
 void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template, const char * name, R(*function)(Args...)) {
     object_template->Set(isolate, name, make_function_template(isolate, function, name));
 }
+
 
 /**
 * Helper to both create a function template from an arbitrary callable and bind it with the specified name to the specified object template
@@ -202,6 +205,7 @@ void add_function(const v8::Local<v8::Context> & context, const v8::Local<v8::Ob
     auto function = function_template->GetFunction(context).ToLocalChecked();
     (void)object->Set(context, v8::String::NewFromUtf8(isolate, name), function);
 }
+
 
 /**
 * Makes the given javascript value available to all objects created with the object_template as name.
@@ -231,7 +235,7 @@ void add_function(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & o
 
 // helper for getting exposed variables
 template<class T>
-void _variable_getter(v8::Local<v8::String> property,
+void _variable_getter(v8::Local<v8::Name> property,
                       const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     auto isolate = info.GetIsolate();
@@ -251,7 +255,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 
 // if the type is not const, then set the value as requested
 template<class T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
-void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info)
+void _variable_setter(v8::Local<v8::Name> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info)
 {
     // TODO: This doesnt work well with pointer types - we want to assign to the dereferenced version, most likely.
     *(T*)v8::External::Cast(*(info.Data()))->Value() = CastToNative<T>()(info.GetIsolate(), value);
@@ -266,6 +270,7 @@ void _variable_setter(v8::Local<v8::String> property, v8::Local<v8::Value> value
 //        return_most_derived(return_most_derived)
 //    {}
 //};
+
 
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
@@ -292,7 +297,6 @@ object_template->SetAccessor(v8::String::NewFromUtf8(isolate, name),
 }
 
 
-
 /**
 * Exposes the specified variable to javascript as the specified name in the given object template (usually the global template).
 * Allows reads to the variable.  Writes are ignored.
@@ -306,6 +310,7 @@ void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectT
                                  v8::External::New(isolate, &variable));
 }
 
+
 /**
 * Exposes the C++ variable 'variable' to a specific javascript object as a read/write variable
 * Often used to add the variable to a context's global object
@@ -313,11 +318,15 @@ void expose_variable_readonly(v8::Isolate * isolate, const v8::Local<v8::ObjectT
 template<class T>
 void expose_variable(v8::Local<v8::Context> context, const v8::Local<v8::Object> & object, const char * name, T & variable) {
     auto isolate = context->GetIsolate();
-    object->SetAccessor(v8::String::NewFromUtf8(isolate, name),
-                        _variable_getter<T>,
-                        _variable_setter<T>,
-                        v8::External::New(isolate, &variable));
+    if (object->SetAccessor(context,
+            v8::String::NewFromUtf8(isolate, name),
+            _variable_getter<T>,
+            _variable_setter<T>,
+            v8::External::New(isolate, &variable)).IsNothing()) {
+        // TODO: what to do here?
+    }
 }
+
 
 /**
 * Exposes the C++ variable 'variable' to a specific javascript object as a read-only variable (writes are ignored but are not errors)
@@ -331,8 +340,6 @@ void expose_variable_readonly(v8::Local<v8::Context> context, const v8::Local<v8
 }
 
 
-
-
 /**
 * Takes a local and creates a weak global reference callback for it
 * Useful for clearing out C++-allocated memory on javascript garbage collection of an associated javascript object
@@ -342,7 +349,6 @@ SetWeakCallbackData * global_set_weak(v8::Isolate * isolate,
                      const v8::Local<v8::Object> & javascript_object,
                      func::function<void(v8::WeakCallbackInfo<SetWeakCallbackData> const &)> callback,
                       bool destructive);
-
 
 
 // takes a format string and some javascript objects and does a printf-style print using boost::format
@@ -357,9 +363,9 @@ std::string _printf_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
 std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<v8::Value>& args, int depth = 1);
 
 
-
 // prints out arguments with a space between them
 std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline);
+
 
 /**
 * Adds the print functions listed below to the given object_template (usually a v8::Context's global object)
@@ -382,6 +388,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
 void add_print(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> object_template, func::function<void(const std::string &)> = [](const std::string & s){printf("%s", s.c_str());} );
 void add_print(const v8::Local<v8::Context> context, func::function<void(const std::string &)> callback = [](const std::string & s){printf("%s", s.c_str());});
 
+
 /**
 * Adds an assert method that calls assert.h assert() on failure.  This is different than the add_assert() in javascript.h that throws an exception on failure
 *   because if an exception is not caught before it reaches V8 execution, the program is terminated.  javascript.h *Helper classes automatically catch
@@ -399,6 +406,7 @@ bool compare_contents(const v8::Local<v8::Value> & left, const v8::Local<v8::Val
 *   otherwise returns false
 */
 std::optional<std::string> get_file_contents(std::string filename, time_t & file_modification_time);
+
 
 /**
 * same as longer version, just doesn't return modification time if it's not desired
@@ -430,7 +438,6 @@ void add_require(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & co
 void add_module_list(v8::Isolate * isolate, const v8::Local<v8::ObjectTemplate> & object_template);
 
 
-
 struct RequireResult {
     v8::Isolate * isolate;
     v8::Global<v8::Context> context;
@@ -452,7 +459,7 @@ struct RequireResult {
 };
 
 
-    /**
+/**
 * Attempts to load the specified module name from the given paths (in order).
 *   Returns the exported object from the module.
 * Same as calling require() from javascript - this is the code that is actually run for that

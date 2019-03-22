@@ -1,6 +1,6 @@
 #include <fstream>
 #include <memory>
-//#include <v8-debug.h>
+#include <v8-inspector.h>
 
 #include "v8toolkit/debugger.h"
 
@@ -122,7 +122,7 @@ v8::Global<v8::Value> Context::run(const v8::Global<v8::Script> & script)
 //            // TODO: Are we leaking a copy of this exception by not cleaning up the exception_ptr ref count?
 //            std::rethrow_exception(anyptr_exception_ptr->get());
         } else {
-            log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "v8 internal exception thrown: {}\n", *v8::String::Utf8Value(e));
+            log.error(LoggingSubjects::Subjects::RUNTIME_EXCEPTION, "v8 internal exception thrown: {}\n", *v8::String::Utf8Value(isolate, e));
             throw V8Exception(isolate, v8::Global<v8::Value>(isolate, e));
         }
     }
@@ -143,7 +143,7 @@ v8::Global<v8::Value> Context::run(const std::string & source)
 v8::Global<v8::Value> Context::run(const v8::Local<v8::Value> value)
 {
     return (*this)([this, value]{
-        return run(*v8::String::Utf8Value(value));
+        return run(*v8::String::Utf8Value(v8::Isolate::GetCurrent(), value));
     });
 }
 
@@ -330,13 +330,6 @@ v8::Local<v8::ObjectTemplate> Isolate::get_object_template()
 }
 
 
-ContextPtr Isolate::get_debug_context() {
-    v8::Local<v8::Context> debug_context = v8::Debug::GetDebugContext(this->isolate);
-    assert(!debug_context.IsEmpty());
-
-    return v8toolkit::ContextPtr(new v8toolkit::Context(this->shared_from_this(), debug_context));
-}
-
 
 Isolate::~Isolate()
 {
@@ -366,7 +359,7 @@ void Isolate::add_assert()
         auto context = isolate->GetCurrentContext();
 
         v8::TryCatch tc(isolate);
-        auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
+        auto script_maybe = v8::Script::Compile(context, info[0]->ToString(context).ToLocalChecked());
         if(tc.HasCaught()) {
             // printf("Caught compilation error\n");
             tc.ReThrow();
@@ -384,7 +377,7 @@ void Isolate::add_assert()
         bool default_value = false;
         bool assert_result = result->BooleanValue(context).FromMaybe(default_value);
         if (!assert_result) {
-            throw V8AssertionException(isolate, std::string("Expression returned false: ") + *v8::String::Utf8Value(info[0]));
+            throw V8AssertionException(isolate, std::string("Expression returned false: ") + *v8::String::Utf8Value(isolate, info[0]));
         }
         
     });
@@ -467,7 +460,7 @@ void Platform::init(int argc, char ** argv, std::string const & snapshot_directo
 
     v8::V8::InitializeExternalStartupData(std::string(natives_blob_path).c_str(), std::string(snapshot_blob_path).c_str());
 
-    Platform::platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
+    Platform::platform = v8::platform::NewDefaultPlatform();
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();
     
@@ -546,7 +539,7 @@ std::string const & Script::get_source_code() const {
 
 std::string Script::get_source_location() const {
 //    return *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetSourceURL()->ToString());
-    return std::string("v8toolkit://") + this->context_helper->get_uuid_string() + "/" + *v8::String::Utf8Value(this->script.Get(this->isolate)->GetUnboundScript()->GetScriptName());
+    return std::string("v8toolkit://") + this->context_helper->get_uuid_string() + "/" + *v8::String::Utf8Value(v8::Isolate::GetCurrent(), this->script.Get(this->isolate)->GetUnboundScript()->GetScriptName());
 }
 
 

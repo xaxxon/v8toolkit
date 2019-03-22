@@ -1,5 +1,4 @@
 
-//#include <v8-debug.h>
 
 #include <websocketpp/endpoint.hpp>
 
@@ -224,7 +223,7 @@ DebugContext::DebugContext(std::shared_ptr<v8toolkit::Isolate> isolate, v8::Loca
 
     inspector->contextCreated(v8_inspector::V8ContextInfo(*this, kContextGroupId, v8_inspector::StringView()));
 
-    v8::Debug::SetLiveEditEnabled(this->isolate, true);
+    //v8::Debug::SetLiveEditEnabled(this->isolate, true);
 }
 
 

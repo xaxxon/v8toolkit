@@ -49,9 +49,11 @@ constexpr bool is_owning_type_v = is_owning_type<T>::value;
 
 /**
  * Is T a specialization of std::basic_string_view?
+ * May be further specialized as needed
  */
 template<class T>
 struct is_string_view : public std::false_type {};
+
 
 template<class CharT, class Traits>
 struct is_string_view<std::basic_string_view<CharT, Traits>> : public std::true_type {};
@@ -62,6 +64,8 @@ constexpr bool is_string_view_v = is_string_view<T>::value;
 
 /**
  * is T a type that refers to a string but is not responsible for the memory associated with the string
+ * For example, char *
+ * May be further specialized as needed
  */
 template<class T, class = void>
 struct is_string_not_owning_memory : public std::false_type {};

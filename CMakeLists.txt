@@ -50,7 +50,6 @@ if(WIN32)
 else()
 	# -fsanitize=undefined -fno-sanitize=vptr
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -stdlib=libc++ -g -Werror=return-type -Wall -target ${TARGET_TRIPLE}")
-    set(V8_INCLUDE_DIR_DEFAULT ../v8/include)
 endif()
 
 
@@ -58,7 +57,6 @@ set(V8_LIB_DIR CACHE PATH "full path containing V8 library files")
 
 
 # -DV8_INCLUDE_DIR:PATH=/path/to/v8/include/
-set(V8_INCLUDE_DIR ${V8_INCLUDE_DIR_DEFAULT} CACHE PATH "full path to v8 public headers directory containing v8.h")
 include_directories(./include ${V8_INCLUDE_DIR})
 
 

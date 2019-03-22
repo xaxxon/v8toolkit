@@ -39,13 +39,14 @@ MethodAdderData::MethodAdderData(std::string const & method_name,
 std::string get_stack_trace_string(v8::Local<v8::StackTrace> stack_trace) {
     std::stringstream result;
     result << std::endl;
+    auto isolate = v8::Isolate::GetCurrent();
     int frame_count = stack_trace->GetFrameCount();
     for (int i = 0; i < frame_count; i++) {
-        auto frame = stack_trace->GetFrame(i);
+        auto frame = stack_trace->GetFrame(isolate, i);
         result << fmt::format("{}:{} {}",
-                              *v8::String::Utf8Value(frame->GetScriptName()),
+                              *v8::String::Utf8Value(isolate, frame->GetScriptName()),
                               frame->GetLineNumber(),
-                              *v8::String::Utf8Value(frame->GetFunctionName())) << std::endl;
+                              *v8::String::Utf8Value(isolate, frame->GetFunctionName())) << std::endl;
     }
     return result.str();
 }
@@ -56,7 +57,7 @@ using namespace literals;
 
 int get_array_length(v8::Isolate * isolate, v8::Local<v8::Array> array) {
     auto context = isolate->GetCurrentContext();
-    return array->Get(context, "length"_v8).ToLocalChecked()->Uint32Value();
+    return array->Get(context, "length"_v8).ToLocalChecked()->Uint32Value(context).ToChecked();
 }
 
 
@@ -163,9 +164,9 @@ std::vector<std::string> get_object_keys(v8::Isolate * isolate,
         auto property_name = properties->Get(context, i).ToLocalChecked();
         std::string name;
         if (property_name->IsSymbol()) {
-            name = *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(property_name)->Name());
+            name = *v8::String::Utf8Value(isolate, v8::Local<v8::Symbol>::Cast(property_name)->Name());
         } else {
-            name = *v8::String::Utf8Value(property_name);
+            name = *v8::String::Utf8Value(isolate, property_name);
         }
         assert(!name.empty());
         keys.push_back(name);
@@ -220,12 +221,12 @@ std::string stringify_value(v8::Local<v8::Value> value,
     // if the left is a bool, return true if right is a bool and they match, otherwise false
     if (value->IsBoolean() || value->IsNumber() || value->IsUndefined() || value->IsNull()) {
         if (STRINGIFY_VALUE_DEBUG) printf("Stringify: treating value as 'normal'\n");
-        v8::String::Utf8Value value_utf8value(value);
+        v8::String::Utf8Value value_utf8value(isolate, value);
         auto string = *value_utf8value;
         output << (string ? string : "<COULD NOT CONVERT TO STRING>");
         //output << "<something broken here>";
     } else if (value->IsFunction()) {
-        v8::String::Utf8Value value_utf8value(value);
+        v8::String::Utf8Value value_utf8value(isolate, value);
         auto string = *value_utf8value;
         output << (string ? string : "FUNCTION: <COULD NOT CONVERT TO STRING>");
 //
@@ -234,7 +235,7 @@ std::string stringify_value(v8::Local<v8::Value> value,
 //            output << " - and is object too";
 //        }
     } else if (value->IsString()) {
-        output << "\"" << *v8::String::Utf8Value(value) << "\"";
+        output << "\"" << *v8::String::Utf8Value(isolate, value) << "\"";
     } else if (value->IsArray()) {
         // printf("Stringify: treating value as array\n");
         auto array = v8::Local<v8::Array>::Cast(value);
@@ -258,7 +259,7 @@ std::string stringify_value(v8::Local<v8::Value> value,
         // printf("About to see if we can stringify this as an object\n");
         // print_v8_value_details(value);
         auto object = v8::Local<v8::Object>::Cast(value);
-        output << "Object type: " << *v8::String::Utf8Value(object->GetConstructorName()) << std::endl;
+        output << "Object type: " << *v8::String::Utf8Value(isolate, object->GetConstructorName()) << std::endl;
         if (object->InternalFieldCount() > 0) {
             output << "Internal field pointer: " << (void *)v8::External::Cast(*object->GetInternalField(0))->Value() << std::endl;
         }
@@ -297,7 +298,7 @@ v8::Local<v8::Value> call_simple_javascript_function(v8::Isolate * isolate,
     auto maybe_result = function->Call(context, context->Global(), 0, nullptr);
     if(tc.HasCaught() || maybe_result.IsEmpty()) {
         ReportException(isolate, &tc);
-        throw InvalidCallException(*v8::String::Utf8Value(tc.Exception()));
+        throw InvalidCallException(*v8::String::Utf8Value(isolate, tc.Exception()));
     }
     return maybe_result.ToLocalChecked();
 }
@@ -309,7 +310,7 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
     std::stringstream result;
 
     v8::HandleScope handle_scope(isolate);
-    v8::String::Utf8Value exception(try_catch->Exception());
+    v8::String::Utf8Value exception(isolate, try_catch->Exception());
     const char* exception_string = *exception;
     v8::Local<v8::Message> message = try_catch->Message();
     if (message.IsEmpty()) {
@@ -318,13 +319,13 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
         result << exception_string;
     } else {
         // Print (filename):(line number): (message).
-        v8::String::Utf8Value filename(message->GetScriptOrigin().ResourceName());
+        v8::String::Utf8Value filename(isolate, message->GetScriptOrigin().ResourceName());
         v8::Local<v8::Context> context(isolate->GetCurrentContext());
         const char* filename_string = *filename;
         int linenum = message->GetLineNumber(context).FromJust();
         result << fmt::format("{}:{}: {}", filename_string, linenum, exception_string) << std::endl;
         // Print line of source code.
-        v8::String::Utf8Value sourceline(
+        v8::String::Utf8Value sourceline(isolate,
                 message->GetSourceLine(context).ToLocalChecked());
         const char* sourceline_string = *sourceline;
         result << sourceline_string << std::endl;
@@ -342,7 +343,7 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
         if (try_catch->StackTrace(context).ToLocal(&stack_trace_string) &&
             stack_trace_string->IsString() &&
             v8::Local<v8::String>::Cast(stack_trace_string)->Length() > 0) {
-            v8::String::Utf8Value stack_trace(stack_trace_string);
+            v8::String::Utf8Value stack_trace(isolate, stack_trace_string);
             const char* stack_trace_string = *stack_trace;
             result << stack_trace_string;
         }
@@ -376,12 +377,14 @@ v8::Local<v8::String> make_js_string(std::string_view str) {
 }
 
 std::string make_cpp_string(v8::Local<v8::Value> value) {
+    auto isolate = v8::Isolate::GetCurrent();
+    auto context = isolate->GetCurrentContext();
     if (value->IsString()) {
-        return *v8::String::Utf8Value(value);
+        return *v8::String::Utf8Value(isolate, value);
     } else if (value->IsSymbol()) {
-        return *v8::String::Utf8Value(v8::Local<v8::Symbol>::Cast(value)->Name());
+        return *v8::String::Utf8Value(isolate, v8::Local<v8::Symbol>::Cast(value)->Name());
     } else {
-        return *v8::String::Utf8Value(value->ToString());
+        return *v8::String::Utf8Value(isolate, value->ToString(context).ToLocalChecked());
     }
 }
 

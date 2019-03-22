@@ -412,7 +412,7 @@ TEST_F(WrappedClassFixture, CallingWithLvalueWrappedClass) {
                 "wc = new WrappedClass(7); takes_wrapped_class_lvalue(wc);"
                     "EXPECT_EQJS(wc.string, `string value`); wc;"
             );
-            EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject()));
+            EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject(c->get_context()).ToLocalChecked()));
         }
         {
 
@@ -435,7 +435,7 @@ TEST_F(WrappedClassFixture, CallingWithRvalueWrappedClass) {
             );
 
             // object still owns its memory, even though the contents may have been moved out of
-            EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject()));
+            EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject(c->get_context()).ToLocalChecked()));
         }
 
         {
@@ -460,7 +460,7 @@ TEST_F(WrappedClassFixture, CallingWithUniquePtr) {
                     // "EXPECT_EQJS(wc.string, ``);" <== can't do this, the memory is *GONE* not just moved out of
                 "wc;"
             );
-            EXPECT_FALSE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject()));
+            EXPECT_FALSE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result.Get(*i)->ToObject(c->get_context()).ToLocalChecked()));
 
         }
         {
@@ -648,7 +648,7 @@ TEST_F(WrappedClassFixture, CastToJSRValueRef) {
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
-        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject(c->get_context()).ToLocalChecked()));
     });
 }
 
@@ -658,7 +658,7 @@ TEST_F(WrappedClassFixture, TakesConstWrappedRef) {
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
-        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject(c->get_context()).ToLocalChecked()));
     });
 }
 
@@ -670,7 +670,7 @@ TEST_F(WrappedClassFixture, TakesConstUnwrappedRef) {
     (*c)([&]() {
 
         auto result = CastToJS<WrappedClass &&>()(*i, std::move(wc));
-        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject()));
+        EXPECT_TRUE(V8ClassWrapper<WrappedClass>::does_object_own_memory(result->ToObject(c->get_context()).ToLocalChecked()));
     });
 }
 
@@ -744,7 +744,7 @@ TEST_F(WrappedClassFixture, CastToNativeNonCopyableTypeByValue) {
         // try again, but with a non-owning javascript object
         auto wrapped_class2 = c->run("new WrappedClass(41);");
         auto & wrapper = v8toolkit::V8ClassWrapper<WrappedClass>::get_instance(isolate);
-        wrapper.release_internal_field_memory(wrapped_class2.Get(isolate)->ToObject());
+        wrapper.release_internal_field_memory(wrapped_class2.Get(isolate)->ToObject(c->get_context()).ToLocalChecked());
         EXPECT_THROW(CastToNative<WrappedClass>()(c->isolate, wrapped_class2.Get(isolate)), CastException);
     });
 }

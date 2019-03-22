@@ -1934,7 +1934,7 @@ struct CastToJS<T, Behavior, std::enable_if_t<
         V8TOOLKIT_DEBUG("CastToJS<T*> returning wrapped existing object for %s\n", typeid(T).name());
 
         /** If you are here looking for an INFINITE RECURSION make sure the type is wrapped **/
-        return class_wrapper.template wrap_existing_cpp_object(context, cpp_object,
+        return class_wrapper.wrap_existing_cpp_object(context, cpp_object,
                                                                *class_wrapper.destructor_behavior_leave_alone);
     }
 };

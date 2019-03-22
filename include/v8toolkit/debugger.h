@@ -9,9 +9,7 @@
 #include <sstream>
 #include <fmt/ostream.h>
 
-#include <v8-debug.h>
 #include <v8-inspector.h>
-#include <v8-debug.h>
 
 
 #include "javascript.h"

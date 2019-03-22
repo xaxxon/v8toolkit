@@ -73,21 +73,22 @@ std::string _format_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool
 {
     std::stringstream sstream;
     auto values = get_all_values(args);
+    auto isolate = v8::Isolate::GetCurrent();
     
     if (args.Length() > 0) {
-        auto format = boost::format(*v8::String::Utf8Value(values[0]));
+        auto format = boost::format(*v8::String::Utf8Value(isolate, values[0]));
 
         unsigned int i;
         for (i = 1; format.remaining_args() > 0; i++) {
             if (i < values.size()) {
-                format % *v8::String::Utf8Value(values[i]);
+                format % *v8::String::Utf8Value(isolate, values[i]);
             } else {
                 format % "";
             }
         }
         sstream << format;
         while (i < values.size()) {
-            sstream << " " << *v8::String::Utf8Value(values[i]);
+            sstream << " " << *v8::String::Utf8Value(isolate, values[i]);
             i++;
         }
     }
@@ -133,6 +134,7 @@ std::vector<v8::Local<v8::Value>> get_all_values(const v8::FunctionCallbackInfo<
 
 // prints out arguments with a space between them
 std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool append_newline) {
+    auto isolate = v8::Isolate::GetCurrent();
     std::stringstream sstream;
     auto values = get_all_values(args);
     int i = 0;
@@ -140,7 +142,7 @@ std::string _print_helper(const v8::FunctionCallbackInfo<v8::Value>& args, bool 
         if (i > 0) {
             sstream << " ";
         }
-        sstream << *v8::String::Utf8Value(value);
+        sstream << *v8::String::Utf8Value(isolate, value);
         i++;    
     }
     if (append_newline) {
@@ -199,10 +201,10 @@ void add_assert(v8::Isolate * isolate,  v8::Local<v8::ObjectTemplate> object_tem
 #ifndef NDEBUG
         auto isolate = info.GetIsolate();
         auto context = isolate->GetCurrentContext();
-        if (V8_TOOLKIT_DEBUG) printf("Asserting: '%s'\n", *v8::String::Utf8Value(info[0]));
+        if (V8_TOOLKIT_DEBUG) printf("Asserting: '%s'\n", *v8::String::Utf8Value(isolate, info[0]));
 
         v8::TryCatch tc(isolate);
-        auto script_maybe = v8::Script::Compile(context, info[0]->ToString());
+        auto script_maybe = v8::Script::Compile(context, info[0]->ToString(context).ToLocalChecked());
         assert(!tc.HasCaught());
 
         auto script = script_maybe.ToLocalChecked();
@@ -354,7 +356,7 @@ bool compile_source(v8::Local<v8::Context> & context, std::string source, v8::Lo
         // TODO: Is this the rignt thing to do?   Can this function be called from within a javascript context?  Maybe for assert()?
         error = try_catch.Exception();
         printf("%s\n", stringify_value(try_catch.Exception()).c_str());
-        if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(try_catch.Exception()));
+        if (V8_TOOLKIT_DEBUG) printf("Failed to compile: %s\n", *v8::String::Utf8Value(isolate, try_catch.Exception()));
         return false;
     }
     
@@ -445,7 +447,7 @@ v8::Local<v8::Value> execute_module(v8::Local<v8::Context> context,
     module_params[0] = v8::Object::New(isolate);
     auto exports_object = v8::Object::New(isolate);
     module_params[1] = exports_object;
-    add_variable(context, module_params[0]->ToObject(), "exports", exports_object);
+    add_variable(context, module_params[0]->ToObject(context).ToLocalChecked(), "exports", exports_object);
 
     {
         v8::TryCatch module_execution_try_catch(isolate);
@@ -561,12 +563,12 @@ bool require(
                 v8::TryCatch try_catch(isolate);
                 // TODO: make sure requiring a json file is being tested
                 if (REQUIRE_DEBUG_PRINTS) printf("About to try to parse json: %s\n", file_contents->c_str());
-                auto maybe_result = v8::JSON::Parse(isolate, v8::String::NewFromUtf8(isolate, file_contents->c_str()));
+                auto maybe_result = v8::JSON::Parse(context, v8::String::NewFromUtf8(isolate, file_contents->c_str()));
                 if (try_catch.HasCaught()) {
                     try_catch.ReThrow();
                     if (REQUIRE_DEBUG_PRINTS)
                         printf("Couldn't run json for %s, error: %s\n", complete_filename.c_str(),
-                               *v8::String::Utf8Value(try_catch.Exception()));
+                               *v8::String::Utf8Value(isolate, try_catch.Exception()));
                     return false;
                 }
                 result = maybe_result.ToLocalChecked();
@@ -711,7 +713,7 @@ void dump_prototypes(v8::Isolate * isolate, v8::Local<v8::Object> object)
 		fprintf(stderr, "Prototype is wrapped object with debug string type name: %s\n", wrapped_data->native_object_type.c_str());
 	    }
 	    */
-	    fprintf(stderr, "[level: %d] %s:\n", i++, *v8::String::Utf8Value(object));
+	    fprintf(stderr, "[level: %d] %s:\n", i++, *v8::String::Utf8Value(isolate, object));
 	    // print_v8_value_details(foo);
 	    fprintf(stderr, "%s\n", stringify_value(object).c_str());
 	    object = v8::Local<v8::Object>::Cast(object->GetPrototype());
@@ -753,7 +755,7 @@ bool compare_contents(const v8::Local<v8::Value> & left, const v8::Local<v8::Val
         if (!right->IsString()) {
             return false;
         }
-        return !strcmp(*v8::String::Utf8Value(left), *v8::String::Utf8Value(right));            
+        return !strcmp(*v8::String::Utf8Value(isolate, left), *v8::String::Utf8Value(isolate, right));
     }
 
     if (left->IsArray()) {

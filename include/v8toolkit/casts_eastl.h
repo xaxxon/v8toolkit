@@ -31,14 +31,12 @@ struct CastToNative<eastl::pair<FirstT, SecondT>, Behavior>{
 
 template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<
-    xl::is_template_for_v<eastl::pair, T>
->> {
+    xl::is_template_for_v<eastl::pair, T>>> {
     
     using NoRefT = std::remove_reference_t<T>;
     
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & pair) const {
 
-        
         using T1 = typename NoRefT::first_type;
         using T2 = typename NoRefT::second_type;
 
@@ -52,12 +50,10 @@ struct CastToJS<T, Behavior, std::enable_if_t<
 };
 
 
-
-// EASTL VECTOR_MAP
 template<typename T, typename Behavior>
 struct CastToNative<T, Behavior, std::enable_if_t<
-    xl::is_template_for_v<eastl::vector_map, T>
->> {
+    xl::is_template_for_v<eastl::vector_map, T>>> {
+
     using NoRefT = std::remove_reference_t<T>;
     using key_type = typename NoRefT::key_type;
     using mapped_type = typename NoRefT::mapped_type;
@@ -70,8 +66,7 @@ struct CastToNative<T, Behavior, std::enable_if_t<
 template<class T, typename Behavior>
 struct CastToNative<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector, T> ||
-    xl::is_template_for_v<eastl::ring_buffer, T>
->> 
+    xl::is_template_for_v<eastl::ring_buffer, T>>>
 {
     using NoRefT = std::remove_reference_t<T>;
     using value_type = typename NoRefT::value_type;
@@ -83,8 +78,6 @@ struct CastToNative<T, Behavior, std::enable_if_t<
 };
 
 
-
-// EASTL VECTOR_SET
 template<class T, class... Args, typename Behavior>
 struct CastToNative<eastl::vector_set<T, Args...>, Behavior> {
     eastl::vector_set<T, Args...> operator()(v8::Isolate *isolate, v8::Local <v8::Value> value) const {
@@ -108,7 +101,7 @@ struct CastToNative<eastl::vector_multimap<Key, Value, Args...>, Behavior> {
     }
 };
 
-CAST_TO_NATIVE(eastl::string, {return eastl::string(*v8::String::Utf8Value(value)); });
+CAST_TO_NATIVE(eastl::string, {return eastl::string(*v8::String::Utf8Value(isolate, value)); });
 
 CAST_TO_JS(eastl::string, {return v8::String::NewFromUtf8(isolate, value.c_str());});
 
@@ -128,8 +121,7 @@ constexpr bool IsEastlFixedString_v = IsEastlFixedString<T>::value;
 
 template<typename T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<
-    IsEastlFixedString_v<T>
->> {
+    IsEastlFixedString_v<T>>> {
     v8::Local<v8::Value> operator()(v8::Isolate * isolate, T const & value) const {
         return v8::String::NewFromUtf8(isolate, value.c_str(), v8::String::kNormalString, value.length());
     }
@@ -138,10 +130,9 @@ struct CastToJS<T, Behavior, std::enable_if_t<
 
 template<typename T, typename Behavior>
 struct CastToNative<T, Behavior, std::enable_if_t<
-    IsEastlFixedString_v<T>
->> {
+    IsEastlFixedString_v<T>>> {
     T operator()(v8::Isolate * isolate, v8::Local<v8::Value> value) const {
-        return T(*v8::String::Utf8Value(value));
+        return T(*v8::String::Utf8Value(isolate, value));
     }
 };
 
@@ -150,10 +141,7 @@ struct CastToNative<T, Behavior, std::enable_if_t<
 template<class T, typename Behavior>
 struct CastToJS<T, Behavior, std::enable_if_t<
     xl::is_template_for_v<eastl::vector, T> ||
-    xl::is_template_for_v<eastl::ring_buffer, T>
-        
-    >
-> {
+    xl::is_template_for_v<eastl::ring_buffer, T>>> {
 
     using NoRefT = std::remove_reference_t<T>;
     v8::Local<v8::Value> operator()(v8::Isolate *isolate, NoRefT const & vector) {

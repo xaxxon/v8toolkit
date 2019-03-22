@@ -594,7 +594,7 @@ std::optional<v8::Local<Result>> get_property_as(T && input_value, std::string_v
         return {};
     }
     
-    v8::Local<v8::Object> local_object = local_value->ToObject();
+    v8::Local<v8::Object> local_object = local_value->ToObject(context).ToLocalChecked();
 
     // if it doesn't have the property at all, don't return undefined
     if (!local_object->HasOwnProperty(context, make_js_string(key)).FromMaybe(false)) {
